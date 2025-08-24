@@ -2,6 +2,8 @@ import { DataSourceOptions } from 'typeorm';
 import * as dotenv from 'dotenv';
 dotenv.config();
 import { User } from '../entities/user.entity';
+import { Agent } from '../entities/agent.entity';
+import { Admin } from '../entities/admin.entity';
 
 const { DEV_DATABASE_URI, MAIN_DATABASE_URI, DB_PORT, NODE_ENV } = process.env;
 
@@ -10,7 +12,7 @@ const config: DataSourceOptions = {
   type: 'postgres',
   url: NODE_ENV === 'development' ? DEV_DATABASE_URI : MAIN_DATABASE_URI,
   port: parseInt(DB_PORT!, 10),
-  entities: [User],
+  entities: [User, Agent, Admin],
   migrations: ['src/typeorm/migrations/*.ts'],
   subscribers: [],
   // logging: NODE_ENV === 'development' ? true : false,

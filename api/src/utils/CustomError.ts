@@ -24,6 +24,14 @@ class CustomError extends Error {
     this.message = message;
     this.data = data;
   }
+
+  static security(
+    statusCode: number,
+    message: string,
+    data: { [key: string]: any } = {}
+  ) {
+    return new CustomError(statusCode, message, data);
+  }
 }
 
 export default CustomError;

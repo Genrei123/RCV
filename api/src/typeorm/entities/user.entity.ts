@@ -2,12 +2,9 @@ import {
   Entity,
   Column,
   PrimaryColumn,
-  OneToMany,
   BeforeInsert,
-  BeforeUpdate,
   CreateDateColumn,
   UpdateDateColumn,
-  JoinColumn,
 } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -31,6 +28,9 @@ export class User {
 
   @Column()
   password!: string;
+
+  @Column()
+  stationedAt!: string;
 
   @CreateDateColumn()
   createdAt!: Date;

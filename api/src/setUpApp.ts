@@ -12,16 +12,23 @@ import cookieParser from 'cookie-parser';
 import AuthRouter from './routes/v1/auth';
 import ConnectDatabase from './typeorm/connectDB';
 import customErrorHandler from './middleware/customErrorHandler';
+import { rateLimit, validateToken } from './middleware/securityConfig';
 
 // Instantiate the express app
 const setUpApp = async () => {
   const app = express();
+
+  
 
   // Register middlewares on the app
   app.use(cors({ origin: '*' }));
   app.use(cookieParser(COOKIE_SECRET!));
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
+
+  // Security Middlewares
+  app.use(rateLimit);
+  // app.use(validateToken);
 
   // API VERSIONING - Version 1.0
   app.use('/api/v1/auth', AuthRouter);
@@ -35,6 +42,8 @@ const setUpApp = async () => {
 
   // Custom Error handler placed after all other routes
   app.use(customErrorHandler);
+
+  
 
   // Connect to Database and on success, return the app instance
   await ConnectDatabase();
