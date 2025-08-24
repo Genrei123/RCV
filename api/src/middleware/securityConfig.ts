@@ -1,5 +1,4 @@
 import { NextFunction, Request, Response } from 'express';
-import jwt from 'jsonwebtoken';
 import CustomError from '../utils/CustomError';
 
 /**
@@ -16,6 +15,7 @@ const requestCounts = new Map<string, { count: number; resetTime: number }>();
 const NOW = Date.now();
 const WINDOWMS = 15 * 60 * 1000; // 15 minutes
 const MAXREQUESTS = 100; // 100 requests per window
+
 const rateLimit = (req: Request, res: Response, next: NextFunction) => {
     const ip = req.ip || 'unknown';
 
