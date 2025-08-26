@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform,);
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const MyApp());
 }
 
@@ -32,9 +33,12 @@ class MyApp extends StatelessWidget {
         //
         // This works for code too, not just values: Most code changes can be
         // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        scaffoldBackgroundColor: Colors.white,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color.fromARGB(255, 221, 220, 223),
+        ),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MyHomePage(title: 'RCV Home'),
     );
   }
 }
@@ -90,8 +94,8 @@ class _MyHomePageState extends State<MyHomePage> {
         title: Text(widget.title),
       ),
       body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
+      // Center is a layout widget. It takes a single child and positions it
+      // in the middle of the parent.
         child: Column(
           // Column is also a layout widget. It takes a list of children and
           // arranges them vertically. By default, it sizes itself to fit its
@@ -115,6 +119,44 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
           ],
         ),
+      ),
+      //nav bar
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: Color(0xFF005440),
+        items: [
+          const BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.history),
+            label: 'History',
+          ),
+          BottomNavigationBarItem(
+            icon: Container(
+              width: 66,
+              height: 66,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Color(0xFF005440),
+              ),
+              padding: const EdgeInsets.all(12),
+              child: const Icon(
+                LucideIcons.scan,
+                color: Colors.white,
+                size: 24, // 2x default size (default is 24)
+              ),
+            ),
+            label: '',
+          ),
+          const BottomNavigationBarItem(icon: Icon(Icons.add), label: 'Add'),
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Profile',
+          ),
+        ],
+        currentIndex: 0,
+        onTap: (index) {
+          // Handle navigation tap here
+        },
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _incrementCounter,
