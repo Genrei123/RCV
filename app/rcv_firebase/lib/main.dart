@@ -63,6 +63,7 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   int _counter = 0;
+  int _selectedIndex = 0;
 
   void _incrementCounter() {
     setState(() {
@@ -94,8 +95,8 @@ class _MyHomePageState extends State<MyHomePage> {
         title: Text(widget.title),
       ),
       body: Center(
-      // Center is a layout widget. It takes a single child and positions it
-      // in the middle of the parent.
+        // Center is a layout widget. It takes a single child and positions it
+        // in the middle of the parent.
         child: Column(
           // Column is also a layout widget. It takes a list of children and
           // arranges them vertically. By default, it sizes itself to fit its
@@ -125,36 +126,45 @@ class _MyHomePageState extends State<MyHomePage> {
         type: BottomNavigationBarType.fixed,
         selectedItemColor: Color(0xFF005440),
         items: [
-          const BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.history),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home, color: 0 == _selectedIndex ? Color(0xFF005440) : Colors.grey),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.history, color: 1 == _selectedIndex ? Color(0xFF005440) : Colors.grey),
             label: 'History',
           ),
           BottomNavigationBarItem(
             icon: Container(
               width: 66,
               height: 66,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Color(0xFF005440),
+                color: 2 == _selectedIndex ? Color(0xFF005440) : Colors.grey.shade300,
               ),
               padding: const EdgeInsets.all(12),
-              child: const Icon(
+              child: Icon(
                 LucideIcons.scan,
-                color: Colors.white,
-                size: 24, // 2x default size (default is 24)
+                color: 2 == _selectedIndex ? Colors.white : Colors.grey,
+                size: 24,
               ),
             ),
             label: '',
           ),
-          const BottomNavigationBarItem(icon: Icon(Icons.add), label: 'Add'),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.person),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.add, color: 3 == _selectedIndex ? Color(0xFF005440) : Colors.grey),
+            label: 'Add',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person, color: 4 == _selectedIndex ? Color(0xFF005440) : Colors.grey),
             label: 'Profile',
           ),
         ],
-        currentIndex: 0,
+        currentIndex: _selectedIndex,
         onTap: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
           // Handle navigation tap here
         },
       ),
