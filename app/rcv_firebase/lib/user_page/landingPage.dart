@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:rcv_firebase/themes/app_colors.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:rcv_firebase/widgets/app_buttons.dart'; // Import your AppButtons widget
+import 'package:rcv_firebase/widgets/app_buttons.dart';
+import 'package:rcv_firebase/auth/login_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -60,7 +61,10 @@ class LandingPage extends StatelessWidget {
                       size: 28,
                     ),
                     onPressed: () {
-                      // TODO: Add button action
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => LoginPage()),
+                      );
                     },
                   ),
                 ),

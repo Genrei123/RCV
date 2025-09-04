@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import '../widgets/navigation_bar.dart';
 
 void main() {
   runApp(const MyApp());
@@ -91,59 +92,8 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
       //nav bar
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: Color(0xFF005440),
-        items: [
-          BottomNavigationBarItem(
-            icon: Icon(
-              Icons.home,
-              color: 0 == _selectedIndex ? Color(0xFF005440) : Colors.grey,
-            ),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(
-              Icons.history,
-              color: 1 == _selectedIndex ? Color(0xFF005440) : Colors.grey,
-            ),
-            label: 'History',
-          ),
-          BottomNavigationBarItem(
-            icon: Container(
-              width: 66,
-              height: 66,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: 2 == _selectedIndex
-                    ? Color(0xFF005440)
-                    : Color(0xFF005440),
-              ),
-              padding: const EdgeInsets.all(12),
-              child: Icon(
-                LucideIcons.scan,
-                color: 2 == _selectedIndex ? Colors.white : Colors.white,
-                size: 24,
-              ),
-            ),
-            label: '',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(
-              Icons.add,
-              color: 3 == _selectedIndex ? Color(0xFF005440) : Colors.grey,
-            ),
-            label: 'Add',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(
-              Icons.person,
-              color: 4 == _selectedIndex ? Color(0xFF005440) : Colors.grey,
-            ),
-            label: 'Profile',
-          ),
-        ],
-        currentIndex: _selectedIndex,
+      bottomNavigationBar: CustomBottomNavBar(
+        selectedIndex: _selectedIndex,
         onTap: (index) {
           setState(() {
             _selectedIndex = index;
