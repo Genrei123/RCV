@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
+
 
 class CustomBottomNavBar extends StatelessWidget {
   final int selectedIndex;
@@ -14,19 +16,19 @@ class CustomBottomNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return BottomNavigationBar(
       type: BottomNavigationBarType.fixed,
-      selectedItemColor: Color(0xFF005440),
+      selectedItemColor: app_colors.AppColors.primary,
       items: [
         BottomNavigationBarItem(
           icon: Icon(
             Icons.home,
-            color: selectedIndex == 0 ? Color(0xFF005440) : Colors.grey,
+            color: selectedIndex == 0 ? app_colors.AppColors.primary : app_colors.AppColors.muted,
           ),
           label: 'Home',
         ),
         BottomNavigationBarItem(
           icon: Icon(
             Icons.history,
-            color: selectedIndex == 1 ? Color(0xFF005440) : Colors.grey,
+            color: selectedIndex == 1 ? app_colors.AppColors.primary : app_colors.AppColors.muted,
           ),
           label: 'History',
         ),
@@ -36,7 +38,7 @@ class CustomBottomNavBar extends StatelessWidget {
             height: 66,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: selectedIndex == 2 ? Color(0xFF005440) : Color(0xFF005440),
+              color: selectedIndex == 2 ? app_colors.AppColors.primary : app_colors.AppColors.primary,
             ),
             padding: const EdgeInsets.all(12),
             child: Icon(
@@ -50,14 +52,14 @@ class CustomBottomNavBar extends StatelessWidget {
         BottomNavigationBarItem(
           icon: Icon(
             Icons.add,
-            color: selectedIndex == 3 ? Color(0xFF005440) : Colors.grey,
+            color: selectedIndex == 3 ? app_colors.AppColors.primary : app_colors.AppColors.muted,
           ),
           label: 'Add',
         ),
         BottomNavigationBarItem(
           icon: Icon(
             Icons.person,
-            color: selectedIndex == 4 ? Color(0xFF005440) : Colors.grey,
+            color: selectedIndex == 4 ? app_colors.AppColors.primary : app_colors.AppColors.muted,
           ),
           label: 'Profile',
         ),

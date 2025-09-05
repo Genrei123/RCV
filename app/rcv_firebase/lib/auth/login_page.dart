@@ -4,6 +4,11 @@ import 'package:rcv_firebase/auth/reset_password.dart';
 import '../widgets/app_buttons.dart';
 import '../widgets/animated_form_field.dart'; // Your stateless animated form field
 
+// Define AppColors if not already defined elsewhere
+class AppColors {
+  static const Color primary = Color(0xFF00BA8E); // Use your desired primary color
+}
+
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
 
@@ -73,7 +78,7 @@ class LoginPage extends StatelessWidget {
                     AppButtons(
                       text: 'Log In',
                       size: 48,
-                      textColor: Color(0xFF005440),
+                        textColor: AppColors.primary,
                       backgroundColor: Colors.white,
                       borderColor: Color(0xFF005440),
                       icon: Icon(Icons.login, color: Color(0xFF005440)),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../widgets/navigation_bar.dart';
+import '../widgets/app_bar.dart';
+import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
 
 void main() {
   runApp(const MyApp());
@@ -35,48 +37,24 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Welcome back',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.normal,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Admin user',
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
+      appBar: CustomAppBar(
+        greeting: 'Welcome back',
+        userRole: 'Admin user',
+        trailing: Align(
+          alignment: Alignment.centerRight,
+          child: Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: app_colors.AppColors.muted,
             ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.grey.shade300,
-                ),
-                child: Icon(
-                  LucideIcons.user,
-                  color: Colors.grey.shade600,
-                  size: 22,
-                ),
-              ),
+            child: Icon(
+              LucideIcons.user,
+              color: Colors.grey.shade600,
+              size: 22,
             ),
-          ],
+          ),
         ),
       ),
       body: Center(
