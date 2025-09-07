@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../widgets/app_buttons.dart';
 import '../widgets/animated_form_field.dart';
 import 'package:rcv_firebase/auth/login_page.dart';
+import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
 
 class ResetNewPasswordPage extends StatelessWidget {
   const ResetNewPasswordPage({super.key});
@@ -14,7 +15,10 @@ class ResetNewPasswordPage extends StatelessWidget {
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF00BA8E), Color(0xFF005440)],
+            colors: [
+              app_colors.AppColors.primaryLight,
+              app_colors.AppColors.primary,
+            ],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -30,7 +34,7 @@ class ResetNewPasswordPage extends StatelessWidget {
                     'RESET YOUR PASSWORD',
                     style: TextStyle(
                       fontSize: 22,
-                      color: Colors.white,
+                      color: app_colors.AppColors.white,
                       fontWeight: FontWeight.w500,
                       letterSpacing: 1.2,
                     ),
@@ -41,7 +45,10 @@ class ResetNewPasswordPage extends StatelessWidget {
                     hint: 'New Password',
                     controller: newPasswordController,
                     obscureText: true,
-                    suffixIcon: Icon(Icons.visibility),
+                    suffixIcon: Icon(
+                      Icons.visibility,
+                      color: app_colors.AppColors.muted,
+                    ),
                   ),
                   SizedBox(height: 16),
                   AnimatedFormField(
@@ -49,16 +56,22 @@ class ResetNewPasswordPage extends StatelessWidget {
                     hint: 'Confirm New Password',
                     controller: confirmPasswordController,
                     obscureText: true,
-                    suffixIcon: Icon(Icons.visibility),
+                    suffixIcon: Icon(
+                      Icons.visibility,
+                      color: app_colors.AppColors.muted,
+                    ),
                   ),
                   SizedBox(height: 24),
                   AppButtons(
                     text: 'Submit',
                     size: 48,
-                    textColor: Color(0xFF005440),
-                    backgroundColor: Colors.white,
-                    borderColor: Color(0xFF005440),
-                    icon: Icon(Icons.check, color: Color(0xFF005440)),
+                    textColor: app_colors.AppColors.primary,
+                    backgroundColor: app_colors.AppColors.white,
+                    borderColor: app_colors.AppColors.primary,
+                    icon: Icon(
+                      Icons.check,
+                      color: app_colors.AppColors.primary,
+                    ),
                     onPressed: () {
                       Navigator.push(
                         context,

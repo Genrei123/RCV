@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/app_buttons.dart';
 import 'package:rcv_firebase/auth/reset_new_password_page.dart';
+import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
 
 class OtpVerificationPage extends StatelessWidget {
   const OtpVerificationPage({super.key});
@@ -12,9 +13,12 @@ class OtpVerificationPage extends StatelessWidget {
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF00BA8E), Color(0xFF005440)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
+            colors: [
+              app_colors.AppColors.primaryLight,
+              app_colors.AppColors.primary,
+            ],
           ),
         ),
         child: SafeArea(
@@ -28,7 +32,7 @@ class OtpVerificationPage extends StatelessWidget {
                     'ENTER VERIFICATION CODE',
                     style: TextStyle(
                       fontSize: 22,
-                      color: Colors.white,
+                      color: app_colors.AppColors.white,
                       fontWeight: FontWeight.w500,
                       letterSpacing: 1.2,
                     ),
@@ -36,7 +40,9 @@ class OtpVerificationPage extends StatelessWidget {
                   SizedBox(height: 12),
                   Text(
                     "Enter your valid email address and we'll send you a one-time password (OTP).",
-                    style: TextStyle(color: Colors.white70),
+                    style: TextStyle(
+                      color: app_colors.AppColors.white.withOpacity(0.7),
+                    ),
                     textAlign: TextAlign.center,
                   ),
                   SizedBox(height: 32),
@@ -48,7 +54,7 @@ class OtpVerificationPage extends StatelessWidget {
                         height: 56,
                         margin: EdgeInsets.symmetric(horizontal: 6),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: app_colors.AppColors.white,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: TextField(
@@ -69,7 +75,9 @@ class OtpVerificationPage extends StatelessWidget {
                   Text.rich(
                     TextSpan(
                       text: "Didn't receive any OTP code? ",
-                      style: TextStyle(color: Colors.white70),
+                      style: TextStyle(
+                        color: app_colors.AppColors.white.withOpacity(0.7),
+                      ),
                       children: [
                         WidgetSpan(
                           child: GestureDetector(
@@ -84,7 +92,7 @@ class OtpVerificationPage extends StatelessWidget {
                             child: Text(
                               'Resend code',
                               style: TextStyle(
-                                color: Colors.white,
+                                color: app_colors.AppColors.white,
                                 decoration: TextDecoration.underline,
                               ),
                             ),
@@ -97,10 +105,13 @@ class OtpVerificationPage extends StatelessWidget {
                   AppButtons(
                     text: 'Submit',
                     size: 48,
-                    textColor: Color(0xFF005440),
-                    backgroundColor: Colors.white,
-                    borderColor: Color(0xFF005440),
-                    icon: Icon(Icons.check, color: Color(0xFF005440)),
+                    textColor: app_colors.AppColors.primary,
+                    backgroundColor: app_colors.AppColors.white,
+                    borderColor: app_colors.AppColors.primary,
+                    icon: Icon(
+                      Icons.check,
+                      color: app_colors.AppColors.primary,
+                    ),
                     onPressed: () {
                       Navigator.push(
                         context,

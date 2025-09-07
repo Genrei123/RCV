@@ -3,6 +3,14 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:rcv_firebase/auth/reset_password.dart';
 import '../widgets/app_buttons.dart';
 import '../widgets/animated_form_field.dart'; // Your stateless animated form field
+import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
+
+// Define AppColors if not already defined elsewhere
+class AppColors {
+  static const Color primary = Color(
+    0xFF00BA8E,
+  ); // Use your desired primary color
+}
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -15,9 +23,12 @@ class LoginPage extends StatelessWidget {
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF00BA8E), Color(0xFF005440)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
+            colors: [
+              app_colors.AppColors.primaryLight,
+              app_colors.AppColors.primary,
+            ],
           ),
         ),
         child: SafeArea(
@@ -73,10 +84,10 @@ class LoginPage extends StatelessWidget {
                     AppButtons(
                       text: 'Log In',
                       size: 48,
-                      textColor: Color(0xFF005440),
+                      textColor: app_colors.AppColors.text,
                       backgroundColor: Colors.white,
                       borderColor: Color(0xFF005440),
-                      icon: Icon(Icons.login, color: Color(0xFF005440)),
+                      icon: Icon(Icons.login, color: app_colors.AppColors.text),
                       onPressed: () {
                         // TODO: handle login
                       },

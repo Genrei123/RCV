@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:rcv_firebase/themes/app_colors.dart';
+import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:rcv_firebase/widgets/app_buttons.dart';
 import 'package:rcv_firebase/auth/login_page.dart';
@@ -25,11 +25,11 @@ class LandingPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFF00BA8E), AppColors.primary],
+            colors: [app_colors.AppColors.success,app_colors.AppColors.primary],
           ),
         ),
         child: SafeArea(
@@ -52,12 +52,12 @@ class LandingPage extends StatelessWidget {
                   child: AppButtons(
                     text: 'Continue',
                     size: 48,
-                    textColor: AppColors.primary,
-                    backgroundColor: Colors.white,
-                    borderColor: AppColors.primary,
+                    textColor: app_colors.AppColors.primary,
+                    backgroundColor: app_colors.AppColors.white,
+                    borderColor: app_colors.AppColors.primary,
                     icon: Icon(
                       LucideIcons.play,
-                      color: AppColors.primary,
+                      color: app_colors.AppColors.primary,
                       size: 28,
                     ),
                     onPressed: () {

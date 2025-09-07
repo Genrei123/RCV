@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
 
 class AnimatedFormField extends StatelessWidget {
   final String label;
@@ -34,7 +35,7 @@ class AnimatedFormField extends StatelessWidget {
                   label,
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.white,
+                    color: app_colors.AppColors.white,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -42,7 +43,7 @@ class AnimatedFormField extends StatelessWidget {
             ),
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: app_colors.AppColors.white,
                 borderRadius: BorderRadius.circular(24),
               ),
               child: TextField(
@@ -60,7 +61,7 @@ class AnimatedFormField extends StatelessWidget {
                     borderSide: BorderSide.none,
                   ),
                   filled: true,
-                  fillColor: Colors.white,
+                  fillColor: app_colors.AppColors.white,
                 ),
               ),
             ),
