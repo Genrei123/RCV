@@ -4,8 +4,6 @@ import {
 } from 'typeorm';
 import { ProductType } from '../../types/enums';
 
-
-
 @Entity()
 export class Product {
     @Column({ unique: true })

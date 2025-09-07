@@ -43,8 +43,6 @@ const setUpApp = async () => {
   // Custom Error handler placed after all other routes
   app.use(customErrorHandler);
 
-  
-
   // Connect to Database and on success, return the app instance
   await ConnectDatabase();
 
