@@ -15,6 +15,7 @@ import customErrorHandler from './middleware/customErrorHandler';
 import { rateLimit, validateToken } from './middleware/securityConfig';
 import ScanRouter from './routes/v1/scan';
 import AdminRouter from './routes/v1/admin';
+import { createMockUsers } from '.';
 
 // Instantiate the express app
 const setUpApp = async () => {
@@ -49,6 +50,8 @@ const setUpApp = async () => {
 
   // Connect to Database and on success, return the app instance
   await ConnectDatabase();
+
+  createMockUsers();
 
   // Start Server
   return app;

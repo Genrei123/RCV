@@ -7,6 +7,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
+import { Roles } from '../../types/enums';
 
 @Entity()
 export class User {
@@ -42,6 +43,12 @@ export class User {
   generateId() {
     this.id = uuidv4();
   }
+
+  @Column()
+  isActive!: boolean;
+
+  @Column()
+  role!: Roles;
 }
 
 // Learn more about Column types for Postgres

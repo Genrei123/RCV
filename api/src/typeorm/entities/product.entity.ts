@@ -1,12 +1,15 @@
 import {
   Entity,
   Column,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import { ProductType } from '../../types/enums';
+import { Admin } from './admin.entity';
 
 @Entity()
 export class Product {
-    @Column({ unique: true })
+    @Column({ primary: true, unique: true })
     LTONumber!: string;
 
     @Column({ unique: true })
@@ -30,4 +33,11 @@ export class Product {
 
     @Column()
     importerName!: string;
-}
+
+    @ManyToOne(() => Admin)
+    @JoinColumn({ name: 'addedByAdmin' })
+    addedByAdmin!: Admin;
+
+    @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+    addedAt!: Date;
+  }

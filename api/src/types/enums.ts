@@ -11,3 +11,8 @@ export enum ProductType {
     "Processed Product",
     "Packaged Product",
 }
+
+export enum Roles {
+    ADMIN = 'ADMIN',
+    AGENT = 'AGENT',
+}

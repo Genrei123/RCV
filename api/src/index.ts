@@ -3,6 +3,9 @@ import dotenv from 'dotenv';
 import { ProductBlockchain } from './typeorm/entities/productblockchain';
 import { ProductBlock } from './typeorm/entities/productblock';
 import { Product } from './typeorm/entities/product.entity';
+import { DB } from './typeorm/data-source';
+import { v4 as uuidv4 } from 'uuid';
+import bcrypt from 'bcryptjs';
 
 dotenv.config();
 const { PORT } = process.env;
