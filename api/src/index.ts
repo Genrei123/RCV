@@ -1,7 +1,8 @@
 import setUpApp from './setUpApp';
 import dotenv from 'dotenv';
-import { CryptoBlockChain } from './typeorm/entities/cryptoblockchain';
-import { CryptoBlock } from './typeorm/entities/cryptoblock';
+import { ProductBlockchain } from './typeorm/entities/productblockchain';
+import { ProductBlock } from './typeorm/entities/productblock';
+import { Product } from './typeorm/entities/product.entity';
 
 dotenv.config();
 const { PORT } = process.env;
@@ -13,10 +14,21 @@ const initializeApp = async () => {
     console.log('Server is running on port: ', PORT)
   );
 
-  let smashingCoin = new CryptoBlockChain();
-  smashingCoin.addNewBlock(new CryptoBlock(1, new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), {sender: "Iris Ljesnjanin", recipient: "Cosima Mielke", quantity: 50}));
-  smashingCoin.addNewBlock(new CryptoBlock(2, new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), {sender: "Vitaly Friedman", recipient: "Ricardo Gimenes", quantity: 100}) );
-  console.log(JSON.stringify(smashingCoin, null, 4));
+  // Uncomment to test the blockchain functionality. Very similar talaga siya sa linkedlist.
+  // let Product: Product = {
+  //   LTONumber: "1234567890",
+  //   CFPRNumber: "0987654321",
+  //   productName: "Sample Product",
+  //   productType: 0,
+  //   manufacturerName: "Sample Manufacturer",
+  //   distributorName: "Sample Distributor",
+  //   importerName: "Sample Importer"
+  // }
+
+  // let smashingCoin = new ProductBlockchain(Product);
+  // smashingCoin.addNewBlock(new ProductBlock(1, new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), Product));
+  // smashingCoin.addNewBlock(new ProductBlock(2, new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), Product));
+  // console.log(JSON.stringify(smashingCoin, null, 4));
 
 };
 

@@ -1,14 +1,15 @@
 import sha256 from 'crypto-js/sha256';
-export class CryptoBlock {
+import { Product } from './product.entity';
+export class ProductBlock {
     index: number;
     timestamp: Date
-    data: any;
+    data: Product;
     precedingHash: string;
     hash: string;
     nonce: number;
     difficulty: number;
 
-    constructor(index: number, timestamp: Date, data: any, precedingHash=" ") {
+    constructor(index: number, timestamp: Date, data: Product, precedingHash=" ") {
         this.index = index;
         this.timestamp = timestamp;
         this.data = data;
