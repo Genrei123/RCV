@@ -5,39 +5,40 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { ProductType } from '../../types/enums';
-import { Admin } from './admin.entity';
+import { User } from './user.entity';
 
 @Entity()
 export class Product {
-    @Column({ primary: true, unique: true })
+    @Column({ primary: true, unique: true, nullable: false })
     LTONumber!: string;
 
-    @Column({ unique: true })
+    @Column({ unique: true, nullable: false })
     CFPRNumber!: string;
 
-    @Column()
+    @Column({ nullable: false })
     productName!: string;
 
     @Column({
         type: "enum",
         enum: ProductType,
-        default: ProductType["Others"]
+        default: ProductType["Others"],
+        nullable: false
     })
     productType!: ProductType;
 
-    @Column()
+    @Column({ nullable: false })
     manufacturerName!: string;
 
-    @Column()
+    @Column({ nullable: false })
     distributorName!: string;
 
-    @Column()
+    @Column({ nullable: false })
     importerName!: string;
 
-    @ManyToOne(() => Admin)
-    @JoinColumn({ name: 'addedByAdmin' })
-    addedByAdmin!: Admin;
+    @ManyToOne(() => User)
+    @JoinColumn({ name: 'addedByUser' })
+    addedBy!: User;
 
-    @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+    @Column({ nullable: false, type: 'timestamp', default: () => 'CURRENT_TIMESTAMP',  })
     addedAt!: Date;
   }

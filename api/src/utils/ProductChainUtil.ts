@@ -1,4 +1,5 @@
 import { globalProductBlockchain } from "../controllers/scan/Scan"
+import { DB } from "../typeorm/data-source";
 
 export const searchProductInBlockchain = (searchTerm: string) => {
     // Blockchain must already be implemented

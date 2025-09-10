@@ -13,6 +13,6 @@ export enum ProductType {
 }
 
 export enum Roles {
-    ADMIN = 'ADMIN',
-    AGENT = 'AGENT',
+    "Admin",
+    "User",
 }

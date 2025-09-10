@@ -2,8 +2,6 @@ import { DataSourceOptions } from 'typeorm';
 import * as dotenv from 'dotenv';
 dotenv.config();
 import { User } from '../entities/user.entity';
-import { Agent } from '../entities/agent.entity';
-import { Admin } from '../entities/admin.entity';
 import { Product } from '../entities/product.entity';
 
 const { DEV_DATABASE_URI, MAIN_DATABASE_URI, DB_PORT, NODE_ENV } = process.env;
@@ -13,13 +11,13 @@ const config: DataSourceOptions = {
   type: 'mysql',
   url: NODE_ENV === 'development' ? DEV_DATABASE_URI : MAIN_DATABASE_URI,
   port: parseInt(DB_PORT!, 10),
-  entities: [User, Agent, Admin, Product], // Add yung models na ginagawa
+  entities: [User, Product], // Add yung models na ginagawa
   migrations: ['src/typeorm/migrations/*.ts'],
   subscribers: [],
   // logging: NODE_ENV === 'development' ? true : false,
   logging: false,
   poolSize: 5,
-  synchronize: false,
+  synchronize: true,
   // ssl: {
   //   rejectUnauthorized: false,
   // },
