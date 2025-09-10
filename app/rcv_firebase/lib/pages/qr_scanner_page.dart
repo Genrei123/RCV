@@ -358,7 +358,11 @@ class _QRScannerPageState extends State<QRScannerPage> {
           height: double.infinity,
           child: MobileScanner(
             controller: cameraController,
-            onDetect: isOCRMode ? null : _onDetect,
+            onDetect: (BarcodeCapture capture) {
+              if (!isOCRMode) {
+                _onDetect(capture);
+              }
+            },
           ),
         ),
         
@@ -472,7 +476,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
     );
   }
 
-  void _onDetect(capture) {
+  void _onDetect(BarcodeCapture capture) {
     developer.log('🔍 QR Scanner: _onDetect called', name: 'QRScanner');
     print('🔍 QR Scanner: Detection triggered at ${DateTime.now()}');
     

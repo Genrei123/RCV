@@ -3,20 +3,6 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:rcv_firebase/widgets/app_buttons.dart';
-import 'package:rcv_firebase/auth/login_page.dart';
-
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(home: const LandingPage());
-  }
-}
 
 class LandingPage extends StatelessWidget {
   const LandingPage({Key? key}) : super(key: key);
@@ -61,10 +47,7 @@ class LandingPage extends StatelessWidget {
                       size: 28,
                     ),
                     onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => LoginPage()),
-                      );
+                      Navigator.pushNamed(context, '/login');
                     },
                   ),
                 ),

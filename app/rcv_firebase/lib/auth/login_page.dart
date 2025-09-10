@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:rcv_firebase/auth/reset_password.dart';
 import '../widgets/app_buttons.dart';
 import '../widgets/animated_form_field.dart'; // Your stateless animated form field
 import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
@@ -89,18 +88,28 @@ class LoginPage extends StatelessWidget {
                       borderColor: Color(0xFF005440),
                       icon: Icon(Icons.login, color: app_colors.AppColors.text),
                       onPressed: () {
-                        // TODO: handle login
+                        // TODO: Implement proper authentication
+                        // For now, navigate to user home page
+                        Navigator.pushReplacementNamed(context, '/user-home');
+                      },
+                    ),
+                    SizedBox(height: 16),
+                    // Demo Admin Login Button
+                    AppButtons(
+                      text: 'Admin Demo',
+                      size: 48,
+                      textColor: Colors.white,
+                      backgroundColor: Colors.transparent,
+                      borderColor: Colors.white,
+                      icon: Icon(Icons.admin_panel_settings, color: Colors.white),
+                      onPressed: () {
+                        Navigator.pushReplacementNamed(context, '/admin-home');
                       },
                     ),
                     SizedBox(height: 24),
                     GestureDetector(
                       onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ResetPasswordPage(),
-                          ),
-                        );
+                        Navigator.pushNamed(context, '/reset-password');
                       },
                       child: Text(
                         'Forgot your Password?',
