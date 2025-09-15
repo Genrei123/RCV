@@ -1,6 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'package:lucide_icons/lucide_icons.dart';
+
+// Import all your pages
+import 'user_page/landingPage.dart';
+import 'auth/login_page.dart';
+import 'auth/otp_verification_page.dart';
+import 'auth/reset_password.dart';
+import 'auth/reset_new_password_page.dart';
+import 'user_page/homePage.dart';
+import 'admin_page/homePage.dart';
+import 'pages/qr_scanner_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -11,33 +22,32 @@ Future<void> main() async {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'RCV - Product Verification',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
+
         scaffoldBackgroundColor: Colors.white,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color.fromARGB(255, 221, 220, 223),
+          seedColor: const Color(0xFF005440),
         ),
+        primarySwatch: Colors.green,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      // Start with the landing page
+      initialRoute: '/',
+      routes: {
+        '/': (context) => const LandingPage(),
+        '/login': (context) => const LoginPage(),
+        '/otp-verification': (context) => const OtpVerificationPage(),
+        '/reset-password': (context) => ResetPasswordPage(),
+        '/reset-new-password': (context) => const ResetNewPasswordPage(),
+        '/user-home': (context) => const UserHomePage(),
+        '/admin-home': (context) => const HomePage(), // Admin HomePage
+        '/qr-scanner': (context) => const QRScannerPage(),
+        '/main-app': (context) => const MyHomePage(title: 'RCV Home'),
+      },
     );
   }
 }
@@ -62,6 +72,7 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   int _counter = 0;
+  int _selectedIndex = 0;
 
   void _incrementCounter() {
     setState(() {
@@ -118,6 +129,53 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
           ],
         ),
+      ),
+      //nav bar
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: Color(0xFF005440),
+        items: [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home, color: 0 == _selectedIndex ? Color(0xFF005440) : Colors.grey),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.history, color: 1 == _selectedIndex ? Color(0xFF005440) : Colors.grey),
+            label: 'History',
+          ),
+          BottomNavigationBarItem(
+            icon: Container(
+              width: 66,
+              height: 66,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: 2 == _selectedIndex ? Color(0xFF005440) : Colors.grey.shade300,
+              ),
+              padding: const EdgeInsets.all(12),
+              child: Icon(
+                LucideIcons.scan,
+                color: 2 == _selectedIndex ? Colors.white : Colors.grey,
+                size: 24,
+              ),
+            ),
+            label: '',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.add, color: 3 == _selectedIndex ? Color(0xFF005440) : Colors.grey),
+            label: 'Add',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person, color: 4 == _selectedIndex ? Color(0xFF005440) : Colors.grey),
+            label: 'Profile',
+          ),
+        ],
+        currentIndex: _selectedIndex,
+        onTap: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+          // Handle navigation tap here
+        },
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _incrementCounter,
