@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
+import '../widgets/gradient_header_app_bar.dart';
+import '../widgets/app_buttons.dart';
+import '../widgets/navigation_bar.dart';
 
 class UserHomePage extends StatefulWidget {
   const UserHomePage({Key? key}) : super(key: key);
@@ -23,23 +26,16 @@ class _UserHomePageState extends State<UserHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: app_colors.AppColors.primary,
-        title: const Text(
-          'RCV Home',
-          style: TextStyle(color: Colors.white),
-        ),
-        elevation: 0,
+      appBar: GradientHeaderAppBar(
+        greeting: 'Welcome back',
+        user: 'Agent user',
+        onBack: () => Navigator.of(context).maybePop(),
       ),
       body: _pages[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: app_colors.AppColors.primary,
-        unselectedItemColor: Colors.grey,
-        currentIndex: _selectedIndex,
+      bottomNavigationBar: CustomBottomNavBar(
+        selectedIndex: _selectedIndex,
         onTap: (index) {
           if (index == 2) {
-            // Navigate to QR Scanner page
             Navigator.pushNamed(context, '/qr-scanner');
           } else {
             setState(() {
@@ -47,40 +43,6 @@ class _UserHomePageState extends State<UserHomePage> {
             });
           }
         },
-        items: [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.history),
-            label: 'History',
-          ),
-          BottomNavigationBarItem(
-            icon: Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: app_colors.AppColors.primary,
-              ),
-              child: Icon(
-                LucideIcons.scan,
-                color: Colors.white,
-                size: 24,
-              ),
-            ),
-            label: 'Scan',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.add),
-            label: 'Add',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-        ],
       ),
     );
   }
@@ -97,14 +59,18 @@ class HomeContent extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Welcome Back',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
+          AppButtons.main(
+            text: 'My Location',
+            subTitle: 'Tag the location',
+            size: 56,
+            textColor: app_colors.AppColors.white,
+            color: app_colors.AppColors.primary,
+            icon: Icon(LucideIcons.mapPin, color: app_colors.AppColors.white),
+            onPressed: () {
+              // Navigate to location page
+            },
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Card(
             child: ListTile(
               leading: Icon(
@@ -119,13 +85,10 @@ class HomeContent extends StatelessWidget {
               },
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Card(
             child: ListTile(
-              leading: Icon(
-                Icons.history,
-                color: app_colors.AppColors.primary,
-              ),
+              leading: Icon(Icons.history, color: app_colors.AppColors.primary),
               title: const Text('Scan History'),
               subtitle: const Text('View your previous scans'),
               trailing: const Icon(Icons.arrow_forward_ios),
@@ -147,10 +110,7 @@ class HistoryPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Center(
-      child: Text(
-        'Scan History',
-        style: TextStyle(fontSize: 24),
-      ),
+      child: Text('Scan History', style: TextStyle(fontSize: 24)),
     );
   }
 }
@@ -161,10 +121,7 @@ class ScanPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Center(
-      child: Text(
-        'QR Scanner',
-        style: TextStyle(fontSize: 24),
-      ),
+      child: Text('QR Scanner', style: TextStyle(fontSize: 24)),
     );
   }
 }
@@ -175,10 +132,7 @@ class AddPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Center(
-      child: Text(
-        'Add Content',
-        style: TextStyle(fontSize: 24),
-      ),
+      child: Text('Add Content', style: TextStyle(fontSize: 24)),
     );
   }
 }
@@ -192,10 +146,7 @@ class ProfilePage extends StatelessWidget {
       padding: const EdgeInsets.all(16.0),
       child: Column(
         children: [
-          const CircleAvatar(
-            radius: 50,
-            child: Icon(Icons.person, size: 50),
-          ),
+          const CircleAvatar(radius: 50, child: Icon(Icons.person, size: 50)),
           const SizedBox(height: 16),
           const Text(
             'User Profile',
@@ -215,11 +166,7 @@ class ProfilePage extends StatelessWidget {
             title: const Text('Logout'),
             trailing: const Icon(Icons.arrow_forward_ios),
             onTap: () {
-              Navigator.pushNamedAndRemoveUntil(
-                context,
-                '/',
-                (route) => false,
-              );
+              Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
             },
           ),
         ],

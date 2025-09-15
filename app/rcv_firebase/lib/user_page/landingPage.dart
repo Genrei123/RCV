@@ -15,7 +15,7 @@ class LandingPage extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [app_colors.AppColors.success,app_colors.AppColors.primary],
+            colors: [Color(0xFF00A47D), app_colors.AppColors.primary],
           ),
         ),
         child: SafeArea(
