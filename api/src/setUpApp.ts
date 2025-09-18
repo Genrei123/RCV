@@ -15,6 +15,7 @@ import customErrorHandler from './middleware/customErrorHandler';
 import { rateLimit, validateToken } from './middleware/securityConfig';
 import ScanRouter from './routes/v1/scan';
 import AdminRouter from './routes/v1/admin';
+import BlockchainRouter from './routes/v1/blockchain';
 
 // Instantiate the express app
 const setUpApp = async () => {
@@ -36,6 +37,7 @@ const setUpApp = async () => {
   app.use('/api/v1/auth', AuthRouter);
   app.use('/api/v1/scan', ScanRouter);
   app.use('/api/v1/admin', AdminRouter);
+  app.use('/api/v1/blockchain', BlockchainRouter);
 
   // Root Health Check
   app.get('/', (req, res) => {
