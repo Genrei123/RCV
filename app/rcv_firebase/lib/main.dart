@@ -4,14 +4,22 @@ import 'firebase_options.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 // Import all your pages
-import 'user_page/landingPage.dart';
+import 'auth/landingPage.dart';
 import 'auth/login_page.dart';
+import 'widgets/navigation_bar.dart' as nav_bar;
 import 'auth/otp_verification_page.dart';
 import 'auth/reset_password.dart';
 import 'auth/reset_new_password_page.dart';
-import 'user_page/homePage.dart';
-import 'admin_page/homePage.dart';
+import 'auth/user_profile.dart';
 import 'pages/qr_scanner_page.dart';
+import 'user_page/home_page.dart';
+import 'user_page/agent_scanningPage.dart';
+import 'user_page/agent_auditTrail.dart';
+import 'user_page/user_Reports.dart';
+import 'admin_page/admin_scanningPage.dart';
+import 'admin_page/admin_auditTrail.dart';
+import 'admin_page/admin_reports.dart';
+import 'admin_page/admin_homePage.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,25 +36,36 @@ class MyApp extends StatelessWidget {
       title: 'RCV - Product Verification',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-
         scaffoldBackgroundColor: Colors.white,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF005440),
-        ),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF005440)),
         primarySwatch: Colors.green,
       ),
       // Start with the landing page
       initialRoute: '/',
       routes: {
+        //authentication
         '/': (context) => const LandingPage(),
         '/login': (context) => const LoginPage(),
         '/otp-verification': (context) => const OtpVerificationPage(),
         '/reset-password': (context) => ResetPasswordPage(),
         '/reset-new-password': (context) => const ResetNewPasswordPage(),
-        '/user-home': (context) => const UserHomePage(),
+        '/user-profile': (context) => UserProfilePage(
+          role: (appRole as nav_bar.NavBarRole?) ?? nav_bar.NavBarRole.user,
+        ),
+        //Admin Pages
         '/admin-home': (context) => const HomePage(), // Admin HomePage
+        '/admin-scanning': (context) => const AdminScanningPage(),
+        '/admin-audit-trail': (context) => const AdminAuditTrail(),
+        '/admin-reports': (context) => const AdminReportsPage(),
+        //Agent Pages
+        '/user-home': (context) => const UserHomePage(),
         '/qr-scanner': (context) => const QRScannerPage(),
         '/main-app': (context) => const MyHomePage(title: 'RCV Home'),
+        '/user-scanning': (context) => const AgentScanningPage(),
+        '/user-audit-trail': (context) => const AuditTrailPage(),
+        '/user-reports': (context) => const UserReportsPage(),
+
+        //Agent Web Pages
       },
     );
   }
@@ -136,11 +155,17 @@ class _MyHomePageState extends State<MyHomePage> {
         selectedItemColor: Color(0xFF005440),
         items: [
           BottomNavigationBarItem(
-            icon: Icon(Icons.home, color: 0 == _selectedIndex ? Color(0xFF005440) : Colors.grey),
+            icon: Icon(
+              Icons.home,
+              color: 0 == _selectedIndex ? Color(0xFF005440) : Colors.grey,
+            ),
             label: 'Home',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.history, color: 1 == _selectedIndex ? Color(0xFF005440) : Colors.grey),
+            icon: Icon(
+              Icons.history,
+              color: 1 == _selectedIndex ? Color(0xFF005440) : Colors.grey,
+            ),
             label: 'History',
           ),
           BottomNavigationBarItem(
@@ -149,7 +174,9 @@ class _MyHomePageState extends State<MyHomePage> {
               height: 66,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: 2 == _selectedIndex ? Color(0xFF005440) : Colors.grey.shade300,
+                color: 2 == _selectedIndex
+                    ? Color(0xFF005440)
+                    : Colors.grey.shade300,
               ),
               padding: const EdgeInsets.all(12),
               child: Icon(
@@ -161,11 +188,17 @@ class _MyHomePageState extends State<MyHomePage> {
             label: '',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.add, color: 3 == _selectedIndex ? Color(0xFF005440) : Colors.grey),
+            icon: Icon(
+              Icons.add,
+              color: 3 == _selectedIndex ? Color(0xFF005440) : Colors.grey,
+            ),
             label: 'Add',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person, color: 4 == _selectedIndex ? Color(0xFF005440) : Colors.grey),
+            icon: Icon(
+              Icons.person,
+              color: 4 == _selectedIndex ? Color(0xFF005440) : Colors.grey,
+            ),
             label: 'Profile',
           ),
         ],

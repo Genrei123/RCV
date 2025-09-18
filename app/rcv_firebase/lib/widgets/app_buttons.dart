@@ -89,28 +89,23 @@ class AppButtons extends StatelessWidget {
             children: [
               icon,
               const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(text, style: TextStyle(color: textColor, fontSize: 16)),
+                  if (subTitle != null)
                     Text(
-                      text,
-                      style: TextStyle(color: textColor, fontSize: 16),
-                    ),
-                    if (subTitle != null)
-                      Text(
-                        subTitle!,
-                        style: TextStyle(
-                          color: textColor.withOpacity(0.8),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w400,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      subTitle!,
+                      style: TextStyle(
+                        color: textColor.withOpacity(0.8),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
                       ),
-                  ],
-                ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                ],
               ),
             ],
           ),

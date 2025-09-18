@@ -3,6 +3,10 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../widgets/app_buttons.dart';
 import '../widgets/animated_form_field.dart'; // Your stateless animated form field
 import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
+import '../widgets/navigation_bar.dart';
+
+// Add a global role variable
+NavBarRole? appRole;
 
 // Define AppColors if not already defined elsewhere
 class AppColors {
@@ -88,8 +92,7 @@ class LoginPage extends StatelessWidget {
                       borderColor: Color(0xFF005440),
                       icon: Icon(Icons.login, color: app_colors.AppColors.text),
                       onPressed: () {
-                        // TODO: Implement proper authentication
-                        // For now, navigate to user home page
+                        appRole = NavBarRole.user;
                         Navigator.pushReplacementNamed(context, '/user-home');
                       },
                     ),
@@ -101,8 +104,12 @@ class LoginPage extends StatelessWidget {
                       textColor: Colors.white,
                       backgroundColor: Colors.transparent,
                       borderColor: Colors.white,
-                      icon: Icon(Icons.admin_panel_settings, color: Colors.white),
+                      icon: Icon(
+                        Icons.admin_panel_settings,
+                        color: Colors.white,
+                      ),
                       onPressed: () {
+                        appRole = NavBarRole.admin;
                         Navigator.pushReplacementNamed(context, '/admin-home');
                       },
                     ),

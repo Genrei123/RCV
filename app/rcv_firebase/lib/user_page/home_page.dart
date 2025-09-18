@@ -15,13 +15,7 @@ class UserHomePage extends StatefulWidget {
 class _UserHomePageState extends State<UserHomePage> {
   int _selectedIndex = 0;
 
-  final List<Widget> _pages = [
-    const HomeContent(),
-    const HistoryPage(),
-    const ScanPage(),
-    const AddPage(),
-    const ProfilePage(),
-  ];
+  final List<Widget> _pages = [const HomeContent()];
 
   @override
   Widget build(BuildContext context) {
@@ -32,17 +26,9 @@ class _UserHomePageState extends State<UserHomePage> {
         onBack: () => Navigator.of(context).maybePop(),
       ),
       body: _pages[_selectedIndex],
-      bottomNavigationBar: CustomBottomNavBar(
+      bottomNavigationBar: AppBottomNavBar(
         selectedIndex: _selectedIndex,
-        onTap: (index) {
-          if (index == 2) {
-            Navigator.pushNamed(context, '/qr-scanner');
-          } else {
-            setState(() {
-              _selectedIndex = index;
-            });
-          }
-        },
+        role: NavBarRole.user,
       ),
     );
   }
@@ -62,7 +48,7 @@ class HomeContent extends StatelessWidget {
           AppButtons.main(
             text: 'My Location',
             subTitle: 'Tag the location',
-            size: 56,
+            size: 80,
             textColor: app_colors.AppColors.white,
             color: app_colors.AppColors.primary,
             icon: Icon(LucideIcons.mapPin, color: app_colors.AppColors.white),
@@ -96,78 +82,6 @@ class HomeContent extends StatelessWidget {
                 // Navigate to history
               },
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// Placeholder pages for navigation
-class HistoryPage extends StatelessWidget {
-  const HistoryPage({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Text('Scan History', style: TextStyle(fontSize: 24)),
-    );
-  }
-}
-
-class ScanPage extends StatelessWidget {
-  const ScanPage({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Text('QR Scanner', style: TextStyle(fontSize: 24)),
-    );
-  }
-}
-
-class AddPage extends StatelessWidget {
-  const AddPage({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Text('Add Content', style: TextStyle(fontSize: 24)),
-    );
-  }
-}
-
-class ProfilePage extends StatelessWidget {
-  const ProfilePage({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        children: [
-          const CircleAvatar(radius: 50, child: Icon(Icons.person, size: 50)),
-          const SizedBox(height: 16),
-          const Text(
-            'User Profile',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 32),
-          ListTile(
-            leading: const Icon(Icons.settings),
-            title: const Text('Settings'),
-            trailing: const Icon(Icons.arrow_forward_ios),
-            onTap: () {
-              // Navigate to settings
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.logout),
-            title: const Text('Logout'),
-            trailing: const Icon(Icons.arrow_forward_ios),
-            onTap: () {
-              Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
-            },
           ),
         ],
       ),
