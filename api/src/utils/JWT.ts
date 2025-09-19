@@ -5,7 +5,7 @@ dotenv.config();
 
 interface UserPayload {
     id: string;
-    role: Roles;
+    role: boolean;
     iat: number;
 }
 
@@ -19,14 +19,16 @@ const JWT_ALGORITHM = process.env.JWT_ALGORITHM as any;
 export function createToken(User: UserPayload): string {
     return jwt.sign(User, JWT_SECRET, {
         algorithm: JWT_ALGORITHM,
-        expiresIn: JWT_EXPIRES_IN,
+        expiresIn: JWT_EXPIRES_IN,  
     });
 }
 
-// TO DO
-// export function verifyToken(token: string): claims | null {
-//     return jwt.verify(token, JWT_SECRET, { algorithms: [JWT_ALGORITHM] }) as claims;
-// }
+export function verifyToken(token: string) {
+    const decoded = jwt.verify(token, JWT_SECRET, { algorithms: [JWT_ALGORITHM] });
+    console.log('Decoded Token: ', decoded);
+    return decoded;
+    
+}
 
 // export function decodeToken(token: string): Jwt | null {
 //     return jwt.decode(token, { complete: true });

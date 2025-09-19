@@ -3,7 +3,7 @@ import CustomError from '../../utils/CustomError';
 import { UserRepo } from '../../typeorm/data-source';
 import validateSignInForm from '../../utils/validateSignIn';
 import type { NextFunction, Request, Response } from 'express';
-import { createToken } from '../../utils/jwtToken';
+import { createToken } from '../../utils/JWT';
 
 /**
  * UserSignIn - Controller for Signing In a User
@@ -13,7 +13,6 @@ import { createToken } from '../../utils/jwtToken';
  */
 const UserSignIn = async (req: Request, res: Response, next: NextFunction) => {
   const data = validateSignInForm(req);
-
   // If an error occurs in validation
   if (data.error || !data.form) {
     const error = new CustomError(400, data.error, {
@@ -26,7 +25,6 @@ const UserSignIn = async (req: Request, res: Response, next: NextFunction) => {
 
   try {
     const { email, password } = data.form;
-    console.log('LOGIN: ', data.form);
 
     // Find the user by email
     const user = await UserRepo.findOne({
@@ -56,7 +54,7 @@ const UserSignIn = async (req: Request, res: Response, next: NextFunction) => {
 
     const userPayload = {
       id: user.id,
-      role: user.role,
+      role: user.role === 0 ? true : false,
       iat: Date.now()
     }
 
@@ -66,7 +64,7 @@ const UserSignIn = async (req: Request, res: Response, next: NextFunction) => {
       success: true,
       message: 'User signed in successfully',
       token,
-      user: { fullName: user.fullName, email: user.email },
+      user: { fullName: user.fullName, email: user.email, isAdmin: user.role === 0 ? true : false },
     });
   } catch (error: any) {
     return res.status(500).json({
