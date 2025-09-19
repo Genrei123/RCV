@@ -22,7 +22,7 @@ router.get('/block/:blockIndex/validate', validateSpecificBlock);
 router.get('/stats', getBlockchainStats);
 
 // Testing Routes
-// Blockchain Modification Routes wag niyo po sirain yung blockchian guiz
+// Blockchain tampering Routes wag niyo po sirain yung blockchian guiz
 router.put('/test/block/:blockIndex/modify-data', modifyBlockData);
 router.put('/test/block/:blockIndex/modify-hash', modifyBlockHash);
 router.put('/test/block/:blockIndex/modify-preceding-hash', modifyBlockPrecedingHash);

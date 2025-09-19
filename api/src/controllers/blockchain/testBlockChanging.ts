@@ -2,58 +2,55 @@ import type { NextFunction, Request, Response } from 'express';
 import CustomError from '../../utils/CustomError';
 import { globalProductBlockchain } from '../scan/Scan';
 
+const ensureBlockchainInitialized = () => {
+    if (!globalProductBlockchain) {
+        throw new CustomError(404, 'Blockchain not initialized', { 
+            success: false,
+            message: 'No blockchain found.' 
+        });
+    }
+};
+
+const validateBlockIndex = (index: number, allowGenesis = true) => {
+    const blocks = globalProductBlockchain.blockhain;
+    const minIndex = allowGenesis ? 0 : 1;
+    
+    if (isNaN(index) || index < minIndex || index >= blocks.length) {
+        const message = allowGenesis 
+            ? `Block index must be between 0 and ${blocks.length - 1}`
+            : `Block index must be between 1 and ${blocks.length - 1} (cannot modify genesis block)`;
+        
+        throw new CustomError(400, 'Invalid block index', { 
+            success: false,
+            message 
+        });
+    }
+};
+
 export const modifyBlockData = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { blockIndex } = req.params;
+        ensureBlockchainInitialized();
+        
+        const index = parseInt(req.params.blockIndex);
+        validateBlockIndex(index);
+
         const { productName, manufacturerName, distributorName, importerName } = req.body;
-        const index = parseInt(blockIndex);
-
-        if (!globalProductBlockchain) {
-            throw new CustomError(404, 'Blockchain not initialized', { 
-                success: false,
-                message: 'No genesis block located.'  
-            });
-        }
-
-        if (isNaN(index) || index < 0 || index >= globalProductBlockchain.blockhain.length) {
-            throw new CustomError(400, 'Invalid block index', { 
-                success: false,
-                message: `Block index must be between 0 and ${globalProductBlockchain.blockhain.length - 1}` 
-            });
-        }
-
         const block = globalProductBlockchain.blockhain[index];
-        const originalData = { ...block.data };
-        const originalHash = block.hash;
+        const originalProductName = block.data.productName;
 
         if (productName) block.data.productName = productName;
         if (manufacturerName) block.data.manufacturerName = manufacturerName;
         if (distributorName) block.data.distributorName = distributorName;
         if (importerName) block.data.importerName = importerName;
 
-        // Note: We're NOT recalculating the hash, which makes this fraudulent
-        
         res.status(200).json({
             success: true,
-            message: `Block ${index} data modified successfully (fraudulent modification)`,
-            warning: 'This modification corrupts blockchain integrity - use for testing only',
-            modification: {
+            message: `Block ${index} data modified (FRAUDULENT)`,
+            warning: 'Blockchain integrity compromised - for testing only!',
+            changes: {
                 blockIndex: index,
-                originalData: {
-                    productName: originalData.productName,
-                    manufacturerName: originalData.manufacturerName,
-                    distributorName: originalData.distributorName,
-                    importerName: originalData.importerName
-                },
-                newData: {
-                    productName: block.data.productName,
-                    manufacturerName: block.data.manufacturerName,
-                    distributorName: block.data.distributorName,
-                    importerName: block.data.importerName
-                },
-                originalHash,
-                currentHash: block.hash,
-                hashesMatch: originalHash === block.hash
+                originalProductName,
+                newProductName: block.data.productName
             }
         });
     } catch (error) {
@@ -63,26 +60,12 @@ export const modifyBlockData = async (req: Request, res: Response, next: NextFun
 
 export const modifyBlockHash = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { blockIndex } = req.params;
+        ensureBlockchainInitialized();
+        
+        const index = parseInt(req.params.blockIndex);
+        validateBlockIndex(index);
+
         const { newHash } = req.body;
-        const index = parseInt(blockIndex);
-
-        // Check if blockchain is initialized
-        if (!globalProductBlockchain) {
-            throw new CustomError(404, 'Blockchain not initialized', { 
-                success: false,
-                message: 'No genesis block located.' 
-            });
-        }
-
-        // Validate block index
-        if (isNaN(index) || index < 0 || index >= globalProductBlockchain.blockhain.length) {
-            throw new CustomError(400, 'Invalid block index', { 
-                success: false,
-                message: `Block index must be between 0 and ${globalProductBlockchain.blockhain.length - 1}` 
-            });
-        }
-
         if (!newHash || typeof newHash !== 'string') {
             throw new CustomError(400, 'Invalid hash', { 
                 success: false,
@@ -92,22 +75,18 @@ export const modifyBlockHash = async (req: Request, res: Response, next: NextFun
 
         const block = globalProductBlockchain.blockhain[index];
         const originalHash = block.hash;
-        const computedHash = block.computeHash();
-
-        // Modify the hash (fraudulent modification)
+        
         block.hash = newHash;
 
         res.status(200).json({
             success: true,
-            message: `Block ${index} hash modified successfully (fraudulent modification)`,
-            warning: 'This modification corrupts blockchain integrity - use for testing only',
-            modification: {
+            message: `Block ${index} hash modified (HANKER!!)`,
+            warning: 'Blockchain integrity compromised',
+            changes: {
                 blockIndex: index,
                 originalHash,
                 newHash: block.hash,
-                computedHash,
-                wasValidBefore: originalHash === computedHash,
-                isValidNow: block.hash === computedHash
+                computedHash: block.computeHash()
             }
         });
     } catch (error) {
@@ -117,26 +96,12 @@ export const modifyBlockHash = async (req: Request, res: Response, next: NextFun
 
 export const modifyBlockPrecedingHash = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { blockIndex } = req.params;
+        ensureBlockchainInitialized();
+        
+        const index = parseInt(req.params.blockIndex);
+        validateBlockIndex(index, false);
+
         const { newPrecedingHash } = req.body;
-        const index = parseInt(blockIndex);
-
-        // Check if blockchain is initialized
-        if (!globalProductBlockchain) {
-            throw new CustomError(404, 'Blockchain not initialized', { 
-                success: false,
-                message: 'No genesis block located.' 
-            });
-        }
-
-        // Validate block index (cannot modify genesis block's preceding hash)
-        if (isNaN(index) || index <= 0 || index >= globalProductBlockchain.blockhain.length) {
-            throw new CustomError(400, 'Invalid block index', { 
-                success: false,
-                message: `Block index must be between 1 and ${globalProductBlockchain.blockhain.length - 1} (cannot modify genesis block)` 
-            });
-        }
-
         if (!newPrecedingHash || typeof newPrecedingHash !== 'string') {
             throw new CustomError(400, 'Invalid preceding hash', { 
                 success: false,
@@ -145,22 +110,18 @@ export const modifyBlockPrecedingHash = async (req: Request, res: Response, next
         }
 
         const block = globalProductBlockchain.blockhain[index];
-        const precedingBlock = globalProductBlockchain.blockhain[index - 1];
         const originalPrecedingHash = block.precedingHash;
-
+        
         block.precedingHash = newPrecedingHash;
 
         res.status(200).json({
             success: true,
-            message: `Block ${index} preceding hash modified successfully (fraudulent modification)`,
-            warning: 'This modification corrupts blockchain integrity - use for testing only',
-            modification: {
+            message: `Block ${index} preceding hash modified (HANKER!!)`,
+            warning: 'Blockchain integrity compromised',
+            changes: {
                 blockIndex: index,
                 originalPrecedingHash,
-                newPrecedingHash: block.precedingHash,
-                actualPrecedingBlockHash: precedingBlock.hash,
-                wasValidBefore: originalPrecedingHash === precedingBlock.hash,
-                isValidNow: block.precedingHash === precedingBlock.hash
+                newPrecedingHash: block.precedingHash
             }
         });
     } catch (error) {
@@ -170,46 +131,28 @@ export const modifyBlockPrecedingHash = async (req: Request, res: Response, next
 
 export const restoreBlockIntegrity = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { blockIndex } = req.params;
-        const index = parseInt(blockIndex);
-
-        // Check if blockchain is initialized
-        if (!globalProductBlockchain) {
-            throw new CustomError(404, 'Blockchain not initialized', { 
-                success: false,
-                message: 'No genesis block located.' 
-            });
-        }
-
-        // Validate block index
-        if (isNaN(index) || index < 0 || index >= globalProductBlockchain.blockhain.length) {
-            throw new CustomError(400, 'Invalid block index', { 
-                success: false,
-                message: `Block index must be between 0 and ${globalProductBlockchain.blockhain.length - 1}` 
-            });
-        }
+        ensureBlockchainInitialized();
+        
+        const index = parseInt(req.params.blockIndex);
+        validateBlockIndex(index);
 
         const block = globalProductBlockchain.blockhain[index];
         const oldHash = block.hash;
         
-        // Restore preceding hash if it's not the genesis block
         if (index > 0) {
             const precedingBlock = globalProductBlockchain.blockhain[index - 1];
             block.precedingHash = precedingBlock.hash;
         }
 
-        // Recalculate and restore the correct hash
-        const newHash = block.computeHash();
-        block.hash = newHash;
+        block.hash = block.computeHash();
 
         res.status(200).json({
             success: true,
-            message: `Block ${index} integrity restored successfully`,
+            message: `Block ${index} integrity restored`,
             restoration: {
                 blockIndex: index,
                 oldHash,
-                newHash,
-                precedingHash: block.precedingHash,
+                newHash: block.hash,
                 isNowValid: block.hash === block.computeHash()
             }
         });
@@ -220,47 +163,34 @@ export const restoreBlockIntegrity = async (req: Request, res: Response, next: N
 
 export const getCorruptedBlocksSummary = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        if (!globalProductBlockchain) {
-            throw new CustomError(404, 'Blockchain not initialized', { 
-                success: false,
-                message: 'No genesis block located.' 
-            });
-        }
+        ensureBlockchainInitialized();
 
         const blocks = globalProductBlockchain.blockhain;
+        const isChainValid = globalProductBlockchain.checkChainValidity();
         const corruptedBlocks = [];
 
         for (let i = 0; i < blocks.length; i++) {
             const block = blocks[i];
             const isHashValid = block.hash === block.computeHash();
-            let isPrecedingHashValid = true;
-            
-            if (i > 0) {
-                const precedingBlock = blocks[i - 1];
-                isPrecedingHashValid = block.precedingHash === precedingBlock.hash;
-            }
+            const isPrecedingHashValid = i === 0 || block.precedingHash === blocks[i - 1].hash;
             
             if (!isHashValid || !isPrecedingHashValid) {
                 corruptedBlocks.push({
                     index: i,
+                    productName: block.data.productName,
                     isHashValid,
-                    isPrecedingHashValid,
-                    currentHash: block.hash,
-                    computedHash: block.computeHash(),
-                    currentPrecedingHash: block.precedingHash,
-                    expectedPrecedingHash: i > 0 ? blocks[i - 1].hash : 'N/A (Genesis)',
-                    productName: block.data.productName
+                    isPrecedingHashValid
                 });
             }
         }
 
         res.status(200).json({
             success: true,
-            message: 'Corrupted blocks summary retrieved successfully',
+            message: 'Blockchain corruption summary',
             summary: {
+                isChainValid,
                 totalBlocks: blocks.length,
-                corruptedBlocksCount: corruptedBlocks.length,
-                blockchainIsValid: corruptedBlocks.length === 0,
+                corruptedCount: corruptedBlocks.length,
                 corruptedBlocks
             }
         });
