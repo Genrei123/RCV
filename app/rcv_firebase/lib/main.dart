@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
 
 // Import all your pages
 import 'auth/landingPage.dart';
@@ -152,19 +153,24 @@ class _MyHomePageState extends State<MyHomePage> {
       //nav bar
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: Color(0xFF005440),
+        selectedItemColor: app_colors.AppColors.primary,
+        unselectedItemColor: app_colors.AppColors.muted,
         items: [
           BottomNavigationBarItem(
             icon: Icon(
               Icons.home,
-              color: 0 == _selectedIndex ? Color(0xFF005440) : Colors.grey,
+              color: 0 == _selectedIndex
+                  ? app_colors.AppColors.primary
+                  : app_colors.AppColors.muted,
             ),
             label: 'Home',
           ),
           BottomNavigationBarItem(
             icon: Icon(
               Icons.history,
-              color: 1 == _selectedIndex ? Color(0xFF005440) : Colors.grey,
+              color: 1 == _selectedIndex
+                  ? app_colors.AppColors.primary
+                  : app_colors.AppColors.muted,
             ),
             label: 'History',
           ),
@@ -175,13 +181,15 @@ class _MyHomePageState extends State<MyHomePage> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: 2 == _selectedIndex
-                    ? Color(0xFF005440)
-                    : Colors.grey.shade300,
+                    ? app_colors.AppColors.primary
+                    : app_colors.AppColors.muted,
               ),
               padding: const EdgeInsets.all(12),
               child: Icon(
                 LucideIcons.scan,
-                color: 2 == _selectedIndex ? Colors.white : Colors.grey,
+                color: 2 == _selectedIndex
+                    ? Colors.white
+                    : app_colors.AppColors.muted,
                 size: 24,
               ),
             ),
@@ -190,14 +198,18 @@ class _MyHomePageState extends State<MyHomePage> {
           BottomNavigationBarItem(
             icon: Icon(
               Icons.add,
-              color: 3 == _selectedIndex ? Color(0xFF005440) : Colors.grey,
+              color: 3 == _selectedIndex
+                  ? app_colors.AppColors.primary
+                  : app_colors.AppColors.muted,
             ),
             label: 'Add',
           ),
           BottomNavigationBarItem(
             icon: Icon(
               Icons.person,
-              color: 4 == _selectedIndex ? Color(0xFF005440) : Colors.grey,
+              color: 4 == _selectedIndex
+                  ? app_colors.AppColors.primary
+                  : app_colors.AppColors.muted,
             ),
             label: 'Profile',
           ),

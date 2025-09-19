@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/gradient_header_app_bar.dart';
-import '../widgets/admin_bottom_nav_bar.dart';
+import '../widgets/navigation_bar.dart';
 
 class AdminReportsPage extends StatefulWidget {
   const AdminReportsPage({Key? key}) : super(key: key);
@@ -19,7 +19,10 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
         onBack: () => Navigator.of(context).maybePop(),
       ),
       body: const Center(child: Text('Admin Reports Page')),
-      bottomNavigationBar: AdminBottomNavBar(selectedIndex: 3),
+      bottomNavigationBar: AppBottomNavBar(
+        selectedIndex: 3,
+        role: NavBarRole.admin,
+      ),
     );
   }
 }

@@ -1,22 +1,70 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../widgets/app_buttons.dart';
-import '../widgets/animated_form_field.dart'; // Your stateless animated form field
+import '../widgets/animated_form_field.dart';
 import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
 import '../widgets/navigation_bar.dart';
+import 'dart:convert';
+import 'package:flutter/services.dart' show rootBundle;
 
-// Add a global role variable
+// Define a global variable for appRole
 NavBarRole? appRole;
 
 // Define AppColors if not already defined elsewhere
 class AppColors {
-  static const Color primary = Color(
-    0xFF00BA8E,
-  ); // Use your desired primary color
+  static const Color primary = Color(0xFF00BA8E);
+}
+
+// Define the User class to hold account data
+class User {
+  final String email;
+  final String password;
+  final NavBarRole role;
+
+  User({required this.email, required this.password, required this.role});
+
+  factory User.fromJson(Map<String, dynamic> json) {
+    return User(
+      email: json['email'],
+      password: json['password'],
+      role: json['role'] == 'admin' ? NavBarRole.admin : NavBarRole.user,
+    );
+  }
 }
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
+
+  // Function to load and parse the JSON file
+  Future<List<User>> loadUsers() async {
+    final String response = await rootBundle.loadString('assets/users.json');
+    final List<dynamic> data = jsonDecode(response);
+    return data.map((json) => User.fromJson(json)).toList();
+  }
+
+  // Function to validate login credentials
+  Future<bool> validateLogin(
+    String email,
+    String password,
+    BuildContext context,
+  ) async {
+    final users = await loadUsers();
+    for (var user in users) {
+      if (user.email == email && user.password == password) {
+        appRole = user.role;
+        Navigator.pushReplacementNamed(
+          context,
+          user.role == NavBarRole.admin ? '/admin-home' : '/user-home',
+        );
+        return true;
+      }
+    }
+    // Show error if credentials are invalid
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Invalid email or password')));
+    return false;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -92,25 +140,11 @@ class LoginPage extends StatelessWidget {
                       borderColor: Color(0xFF005440),
                       icon: Icon(Icons.login, color: app_colors.AppColors.text),
                       onPressed: () {
-                        appRole = NavBarRole.user;
-                        Navigator.pushReplacementNamed(context, '/user-home');
-                      },
-                    ),
-                    SizedBox(height: 16),
-                    // Demo Admin Login Button
-                    AppButtons(
-                      text: 'Admin Demo',
-                      size: 48,
-                      textColor: Colors.white,
-                      backgroundColor: Colors.transparent,
-                      borderColor: Colors.white,
-                      icon: Icon(
-                        Icons.admin_panel_settings,
-                        color: Colors.white,
-                      ),
-                      onPressed: () {
-                        appRole = NavBarRole.admin;
-                        Navigator.pushReplacementNamed(context, '/admin-home');
+                        validateLogin(
+                          emailController.text,
+                          passwordController.text,
+                          context,
+                        );
                       },
                     ),
                     SizedBox(height: 24),

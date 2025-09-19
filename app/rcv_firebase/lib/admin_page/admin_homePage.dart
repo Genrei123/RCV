@@ -4,6 +4,7 @@ import '../widgets/admin_bottom_nav_bar.dart';
 import '../widgets/app_bar.dart';
 import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
 import '../widgets/gradient_header_app_bar.dart';
+import '../widgets/navigation_bar.dart';
 
 void main() {
   runApp(const MyApp());
@@ -56,7 +57,10 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
       //nav bar
-      bottomNavigationBar: AdminBottomNavBar(selectedIndex: _selectedIndex),
+      bottomNavigationBar: AppBottomNavBar(
+        selectedIndex: 0,
+        role: NavBarRole.admin,
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: _incrementCounter,
         tooltip: 'Increment',

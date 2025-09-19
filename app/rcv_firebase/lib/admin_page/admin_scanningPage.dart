@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/gradient_header_app_bar.dart';
 import '../widgets/admin_bottom_nav_bar.dart';
+import '../widgets/navigation_bar.dart';
 
 class AdminScanningPage extends StatefulWidget {
   const AdminScanningPage({Key? key}) : super(key: key);
@@ -19,7 +20,10 @@ class _AdminScanningPageState extends State<AdminScanningPage> {
         onBack: () => Navigator.of(context).maybePop(),
       ),
       body: const Center(child: Text('Welcome to the Admin Scanning Page')),
-      bottomNavigationBar: AdminBottomNavBar(selectedIndex: 2),
+      bottomNavigationBar: AppBottomNavBar(
+        selectedIndex: 2,
+        role: NavBarRole.admin,
+      ),
     );
   }
 }

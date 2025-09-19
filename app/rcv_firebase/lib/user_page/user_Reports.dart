@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/gradient_header_app_bar.dart';
+import 'package:rcv_firebase/themes/app_fonts.dart';
 import '../widgets/navigation_bar.dart';
 
 class UserReportsPage extends StatefulWidget {
@@ -18,7 +19,12 @@ class _UserReportsPageState extends State<UserReportsPage> {
         user: 'Agent user',
         onBack: () => Navigator.of(context).maybePop(),
       ),
-      body: const Center(child: Text('This is the User Reports page.')),
+      body: Center(
+        child: Text(
+          'This is the User Reports page.',
+          style: AppFonts.titleStyle,
+        ),
+      ),
       bottomNavigationBar: AppBottomNavBar(
         selectedIndex: 3,
         role: NavBarRole.user,

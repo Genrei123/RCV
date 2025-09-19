@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/gradient_header_app_bar.dart';
+import 'package:rcv_firebase/themes/app_fonts.dart';
 import '../widgets/navigation_bar.dart';
 
 class AuditTrailPage extends StatefulWidget {
@@ -19,10 +20,7 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
         onBack: () => Navigator.of(context).maybePop(),
       ),
       body: Center(
-        child: Text(
-          'Home Content Placeholder',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
+        child: Text('Home Content Placeholder', style: AppFonts.titleStyle),
       ),
       bottomNavigationBar: AppBottomNavBar(
         selectedIndex: 1,

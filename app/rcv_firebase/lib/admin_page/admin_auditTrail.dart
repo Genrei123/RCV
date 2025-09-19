@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/gradient_header_app_bar.dart';
-import '../widgets/admin_bottom_nav_bar.dart'; // Import AdminBottomNavBar
+import '../widgets/navigation_bar.dart'; // Import AdminBottomNavBar
 
 class AdminAuditTrail extends StatefulWidget {
   const AdminAuditTrail({Key? key}) : super(key: key);
@@ -19,9 +19,11 @@ class _AdminAuditTrailState extends State<AdminAuditTrail> {
         onBack: () => Navigator.of(context).maybePop(),
       ),
       body: const Center(child: Text('Audit Trail Content Goes Here')),
-      bottomNavigationBar: AdminBottomNavBar(
+      bottomNavigationBar: AppBottomNavBar(
         selectedIndex: 1,
-      ), // Add AdminBottomNavBar
+        role: NavBarRole.admin,
+      ),
+      // Add AdminBottomNavBar
     );
   }
 }

@@ -14,6 +14,8 @@ class AppButtons extends StatelessWidget {
 
   // Main button: filled, no border
   final String? subTitle;
+  final TextStyle? textStyle;
+  final TextStyle? subTitleStyle;
 
   const AppButtons.main({
     Key? key,
@@ -26,6 +28,8 @@ class AppButtons extends StatelessWidget {
     this.onPressed,
     this.margin,
     this.contentAlignment = MainAxisAlignment.start,
+    this.textStyle,
+    this.subTitleStyle,
   }) : backgroundColor = color,
        borderColor = Colors.transparent,
        super(key: key);
@@ -42,6 +46,8 @@ class AppButtons extends StatelessWidget {
     this.margin,
     this.contentAlignment = MainAxisAlignment.start,
     this.subTitle,
+    this.textStyle,
+    this.subTitleStyle,
   }) : backgroundColor = Colors.transparent,
        borderColor = outlineColor,
        super(key: key);
@@ -59,6 +65,8 @@ class AppButtons extends StatelessWidget {
     this.onPressed,
     this.margin,
     this.contentAlignment = MainAxisAlignment.center,
+    this.textStyle,
+    this.subTitleStyle,
   }) : super(key: key);
 
   @override
@@ -90,18 +98,24 @@ class AppButtons extends StatelessWidget {
               icon,
               const SizedBox(width: 8),
               Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(text, style: TextStyle(color: textColor, fontSize: 16)),
+                  Text(
+                    text,
+                    style:
+                        textStyle ?? TextStyle(color: textColor, fontSize: 16),
+                  ),
                   if (subTitle != null)
                     Text(
                       subTitle!,
-                      style: TextStyle(
-                        color: textColor.withOpacity(0.8),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w400,
-                      ),
+                      style:
+                          subTitleStyle ??
+                          TextStyle(
+                            color: textColor.withOpacity(0.8),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
+                          ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),

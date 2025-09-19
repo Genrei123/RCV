@@ -5,6 +5,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:rcv_firebase/services/api_service.dart';
+import 'package:rcv_firebase/themes/app_fonts.dart';
 
 class QRScannerPage extends StatefulWidget {
   const QRScannerPage({Key? key}) : super(key: key);
@@ -32,7 +33,9 @@ class _QRScannerPageState extends State<QRScannerPage> {
     final status = await Permission.camera.request();
     if (status.isDenied) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Camera permission is required for scanning')),
+        const SnackBar(
+          content: Text('Camera permission is required for scanning'),
+        ),
       );
     }
   }
@@ -44,10 +47,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
       appBar: AppBar(
         title: Text(
           isOCRMode ? 'OCR Scanner' : 'QR Reader',
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
+          style: AppFonts.titleStyle,
         ),
         backgroundColor: const Color(0xFF005440),
         foregroundColor: Colors.white,
@@ -96,7 +96,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
               ),
             ),
           ),
-          
+
           // Controls Section
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -122,7 +122,9 @@ class _QRScannerPageState extends State<QRScannerPage> {
                             height: 46,
                             margin: const EdgeInsets.all(2),
                             decoration: BoxDecoration(
-                              color: !isOCRMode ? const Color(0xFF005440) : Colors.transparent,
+                              color: !isOCRMode
+                                  ? const Color(0xFF005440)
+                                  : Colors.transparent,
                               borderRadius: BorderRadius.circular(23),
                             ),
                             child: Center(
@@ -131,14 +133,18 @@ class _QRScannerPageState extends State<QRScannerPage> {
                                 children: [
                                   Icon(
                                     Icons.qr_code_scanner,
-                                    color: !isOCRMode ? Colors.white : Colors.grey[600],
+                                    color: !isOCRMode
+                                        ? Colors.white
+                                        : Colors.grey[600],
                                     size: 20,
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
                                     'QR Scanner',
                                     style: TextStyle(
-                                      color: !isOCRMode ? Colors.white : Colors.grey[600],
+                                      color: !isOCRMode
+                                          ? Colors.white
+                                          : Colors.grey[600],
                                       fontWeight: FontWeight.w500,
                                       fontSize: 14,
                                     ),
@@ -159,7 +165,9 @@ class _QRScannerPageState extends State<QRScannerPage> {
                             height: 46,
                             margin: const EdgeInsets.all(2),
                             decoration: BoxDecoration(
-                              color: isOCRMode ? const Color(0xFF005440) : Colors.transparent,
+                              color: isOCRMode
+                                  ? const Color(0xFF005440)
+                                  : Colors.transparent,
                               borderRadius: BorderRadius.circular(23),
                             ),
                             child: Center(
@@ -168,14 +176,18 @@ class _QRScannerPageState extends State<QRScannerPage> {
                                 children: [
                                   Icon(
                                     Icons.text_fields,
-                                    color: isOCRMode ? Colors.white : Colors.grey[600],
+                                    color: isOCRMode
+                                        ? Colors.white
+                                        : Colors.grey[600],
                                     size: 20,
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
                                     'OCR Mode',
                                     style: TextStyle(
-                                      color: isOCRMode ? Colors.white : Colors.grey[600],
+                                      color: isOCRMode
+                                          ? Colors.white
+                                          : Colors.grey[600],
                                       fontWeight: FontWeight.w500,
                                       fontSize: 14,
                                     ),
@@ -189,9 +201,9 @@ class _QRScannerPageState extends State<QRScannerPage> {
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(height: 20),
-                
+
                 // Action Buttons Row
                 Row(
                   children: [
@@ -202,7 +214,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
                       isActive: isFlashOn,
                     ),
                     const SizedBox(width: 12),
-                    
+
                     // Gallery Button (for OCR)
                     _buildActionButton(
                       icon: Icons.photo_library,
@@ -210,7 +222,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
                       isActive: false,
                     ),
                     const SizedBox(width: 12),
-                    
+
                     // Pause/Resume Button
                     _buildActionButton(
                       icon: isScanning ? Icons.pause : Icons.play_arrow,
@@ -218,20 +230,30 @@ class _QRScannerPageState extends State<QRScannerPage> {
                       isActive: !isScanning,
                     ),
                     const SizedBox(width: 12),
-                    
+
                     // Test Button
                     _buildActionButton(
                       icon: Icons.bug_report,
                       onTap: () {
-                        _printToTerminal('Test scan data - ${DateTime.now()}', 'Test');
-                        _showScanFeedback('Test scan data - Button pressed successfully!', 'Test');
+                        _printToTerminal(
+                          'Test scan data - ${DateTime.now()}',
+                          'Test',
+                        );
+                        _showScanFeedback(
+                          'Test scan data - Button pressed successfully!',
+                          'Test',
+                        );
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: const Text('Test button pressed! Check terminal for output.'),
+                            content: const Text(
+                              'Test button pressed! Check terminal for output.',
+                            ),
                             backgroundColor: const Color(0xFF005440),
                             behavior: SnackBarBehavior.floating,
                             margin: const EdgeInsets.all(16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                         );
                       },
@@ -240,9 +262,9 @@ class _QRScannerPageState extends State<QRScannerPage> {
                     ),
                   ],
                 ),
-                
+
                 const SizedBox(height: 20),
-                
+
                 // Upload QR Button (matching the design from screenshots)
                 if (!isOCRMode)
                   Container(
@@ -268,9 +290,9 @@ class _QRScannerPageState extends State<QRScannerPage> {
                       ),
                     ),
                   ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Reset Button
                 Container(
                   width: double.infinity,
@@ -287,7 +309,10 @@ class _QRScannerPageState extends State<QRScannerPage> {
                     ),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: const Color(0xFF005440),
-                      side: const BorderSide(color: Color(0xFF005440), width: 1.5),
+                      side: const BorderSide(
+                        color: Color(0xFF005440),
+                        width: 1.5,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -297,7 +322,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
               ],
             ),
           ),
-          
+
           // Result Display
           if (result.isNotEmpty)
             Container(
@@ -365,17 +390,15 @@ class _QRScannerPageState extends State<QRScannerPage> {
             },
           ),
         ),
-        
+
         // Scanning Frame Overlay
         if (!isOCRMode)
           Container(
             width: double.infinity,
             height: double.infinity,
-            child: CustomPaint(
-              painter: ScannerOverlayPainter(),
-            ),
+            child: CustomPaint(painter: ScannerOverlayPainter()),
           ),
-        
+
         // OCR Mode Overlay
         if (isOCRMode)
           Container(
@@ -434,7 +457,10 @@ class _QRScannerPageState extends State<QRScannerPage> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF005440),
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 12,
+                            ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -447,7 +473,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
               ),
             ),
           ),
-        
+
         // Scanning Instructions
         if (!isOCRMode)
           Positioned(
@@ -479,27 +505,27 @@ class _QRScannerPageState extends State<QRScannerPage> {
   void _onDetect(BarcodeCapture capture) {
     developer.log('🔍 QR Scanner: _onDetect called', name: 'QRScanner');
     print('🔍 QR Scanner: Detection triggered at ${DateTime.now()}');
-    
+
     final List<Barcode> barcodes = capture.barcodes;
     print('🔍 QR Scanner: Found ${barcodes.length} barcodes');
-    
+
     for (final barcode in barcodes) {
       if (barcode.rawValue != null && barcode.rawValue!.isNotEmpty) {
         String scannedData = barcode.rawValue!;
         print('🔍 QR Scanner: Processing data: $scannedData');
-        
+
         // Only update if it's different from the last result to prevent spam
         if (result != scannedData) {
           setState(() {
             result = scannedData;
           });
-          
+
           // Print to console/terminal with enhanced details
           _printToTerminal(scannedData, 'QR Code');
-          
+
           // Send to API
           _sendScanToAPI(scannedData);
-          
+
           // Show detailed feedback dialog
           _showScanFeedback(scannedData, 'QR Code');
         }
@@ -527,12 +553,12 @@ class _QRScannerPageState extends State<QRScannerPage> {
         child: Container(
           height: 50,
           decoration: BoxDecoration(
-            color: isActive 
+            color: isActive
                 ? (color ?? const Color(0xFF005440))
                 : Colors.grey[100],
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isActive 
+              color: isActive
                   ? (color ?? const Color(0xFF005440))
                   : Colors.grey[300]!,
               width: 1,
@@ -540,9 +566,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
           ),
           child: Icon(
             icon,
-            color: isActive 
-                ? Colors.white 
-                : (color ?? Colors.grey[600]),
+            color: isActive ? Colors.white : (color ?? Colors.grey[600]),
             size: 22,
           ),
         ),
@@ -555,7 +579,9 @@ class _QRScannerPageState extends State<QRScannerPage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: Row(
             children: [
               Icon(Icons.info, color: const Color(0xFF005440)),
@@ -574,10 +600,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
               Text('• Point camera at QR codes or barcodes'),
               Text('• Automatic detection and scanning'),
               SizedBox(height: 12),
-              Text(
-                'OCR Mode:',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
+              Text('OCR Mode:', style: TextStyle(fontWeight: FontWeight.bold)),
               Text('• Upload images to extract text'),
               Text('• Supports various text formats'),
             ],
@@ -625,9 +648,9 @@ class _QRScannerPageState extends State<QRScannerPage> {
       }
     } catch (e) {
       print('❌ Error picking image: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error picking image: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error picking image: $e')));
     }
   }
 
@@ -635,26 +658,30 @@ class _QRScannerPageState extends State<QRScannerPage> {
     try {
       print('🔤 Starting OCR processing...');
       final inputImage = InputImage.fromFilePath(imagePath);
-      final RecognizedText recognizedText = await _textRecognizer.processImage(inputImage);
-      
+      final RecognizedText recognizedText = await _textRecognizer.processImage(
+        inputImage,
+      );
+
       String extractedText = recognizedText.text;
-      
+
       if (extractedText.isNotEmpty) {
         setState(() {
           result = extractedText;
         });
-        
+
         // Print to console/terminal
         _printToTerminal(extractedText, 'OCR');
-        
+
         // Send to API
         _sendScanToAPI(extractedText);
-        
+
         // Show detailed feedback dialog
         _showScanFeedback(extractedText, 'OCR');
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Text extracted from image successfully!')),
+          const SnackBar(
+            content: Text('Text extracted from image successfully!'),
+          ),
         );
       } else {
         print('🔤 No text found in the image');
@@ -664,9 +691,9 @@ class _QRScannerPageState extends State<QRScannerPage> {
       }
     } catch (e) {
       print('❌ OCR Error: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('OCR Error: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('OCR Error: $e')));
     }
   }
 
@@ -680,10 +707,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
       }
 
       print('🌐 Sending scan data to API...');
-      final result = await ApiService.sendScanData(
-        data: scanData,
-        type: type,
-      );
+      final result = await ApiService.sendScanData(data: scanData, type: type);
 
       if (result['success']) {
         print('✅ API Response: ${result['message']}');
@@ -711,7 +735,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
     }
     print('🎯 ===============================================');
     print('');
-    
+
     // Also log using developer.log for better debugging
     developer.log('$scanType Scan: $data', name: 'Scanner');
   }
@@ -724,9 +748,14 @@ class _QRScannerPageState extends State<QRScannerPage> {
           title: Row(
             children: [
               Icon(
-                scanType == 'QR Code' ? Icons.qr_code : 
-                scanType == 'OCR' ? Icons.text_fields : Icons.bug_report,
-                color: scanType == 'Test' ? Colors.purple : const Color(0xFF005440),
+                scanType == 'QR Code'
+                    ? Icons.qr_code
+                    : scanType == 'OCR'
+                    ? Icons.text_fields
+                    : Icons.bug_report,
+                color: scanType == 'Test'
+                    ? Colors.purple
+                    : const Color(0xFF005440),
               ),
               const SizedBox(width: 8),
               Text('$scanType Detected'),
@@ -736,7 +765,10 @@ class _QRScannerPageState extends State<QRScannerPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Content:', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text(
+                'Content:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.all(12),
@@ -774,7 +806,10 @@ class _QRScannerPageState extends State<QRScannerPage> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF005440),
                 ),
-                child: const Text('Scan Again', style: TextStyle(color: Colors.white)),
+                child: const Text(
+                  'Scan Again',
+                  style: TextStyle(color: Colors.white),
+                ),
               ),
           ],
         );

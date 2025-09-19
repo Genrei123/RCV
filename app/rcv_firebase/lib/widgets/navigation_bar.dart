@@ -67,9 +67,7 @@ class AppBottomNavBar extends StatelessWidget {
                 height: 66,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: selectedIndex == 2
-                      ? app_colors.AppColors.primary
-                      : app_colors.AppColors.primary,
+                  color: app_colors.AppColors.primary,
                 ),
                 padding: const EdgeInsets.all(12),
                 child: Icon(LucideIcons.scan, color: Colors.white, size: 24),
@@ -120,9 +118,7 @@ class AppBottomNavBar extends StatelessWidget {
                 height: 66,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: selectedIndex == 2
-                      ? app_colors.AppColors.primary
-                      : app_colors.AppColors.primary,
+                  color: app_colors.AppColors.primary,
                 ),
                 padding: const EdgeInsets.all(12),
                 child: Icon(LucideIcons.scan, color: Colors.white, size: 24),

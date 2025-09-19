@@ -10,7 +10,7 @@ class GradientHeaderAppBar extends StatelessWidget
   const GradientHeaderAppBar({
     Key? key,
     this.greeting = 'Welcome back',
-    this.user = 'Agent user',
+    this.user = 'user',
     this.onBack,
   }) : super(key: key);
 

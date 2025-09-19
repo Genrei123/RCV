@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
 import '../widgets/gradient_header_app_bar.dart';
+import 'package:rcv_firebase/themes/app_fonts.dart';
 import '../widgets/app_buttons.dart';
 import '../widgets/navigation_bar.dart';
 
@@ -55,6 +56,14 @@ class HomeContent extends StatelessWidget {
             onPressed: () {
               // Navigate to location page
             },
+            textStyle: AppFonts.titleStyle.copyWith(
+              color: app_colors.AppColors.white,
+              fontSize: 17,
+            ),
+            subTitleStyle: AppFonts.contentStyle.copyWith(
+              color: app_colors.AppColors.white,
+              fontSize: 14,
+            ),
           ),
           const SizedBox(height: 12),
           Card(

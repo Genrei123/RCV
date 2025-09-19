@@ -11,31 +11,7 @@ class UserProfilePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const GradientHeaderAppBar(),
-      body: Column(
-        // children: [
-        //   const SizedBox(height: 24),
-        //   AppButtons(
-        //     text: 'Edit Profile',
-        //     size: 48,
-        //     textColor: Colors.white,
-        //     backgroundColor: Color(0xFF00A47D),
-        //     borderColor: Color(0xFF00A47D),
-        //     icon: Icon(Icons.edit, color: Colors.white, size: 24),
-        //     onPressed: () {},
-        //   ),
-        //   const Spacer(),
-        //   AppButtons(
-        //     text: 'Log Out',
-        //     size: 48,
-        //     textColor: Colors.white,
-        //     backgroundColor: Color(0xFFD9534F),
-        //     borderColor: Color(0xFFD9534F),
-        //     icon: Icon(Icons.logout, color: Colors.white, size: 24),
-        //     onPressed: () {},
-        //   ),
-        //   const SizedBox(height: 24),
-        // ],
-      ),
+      body: Column(),
       bottomNavigationBar: AppBottomNavBar(
         selectedIndex: 4, // Profile tab
         role: role,

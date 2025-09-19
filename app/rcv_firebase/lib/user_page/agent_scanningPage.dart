@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/gradient_header_app_bar.dart';
+import 'package:rcv_firebase/themes/app_fonts.dart';
 import '../widgets/navigation_bar.dart';
 
 class AgentScanningPage extends StatefulWidget {
@@ -18,7 +19,12 @@ class _AgentScanningPageState extends State<AgentScanningPage> {
         user: 'Agent user',
         onBack: () => Navigator.of(context).maybePop(),
       ),
-      body: const Center(child: Text('Welcome to Agent Scanning Page')),
+      body: Center(
+        child: Text(
+          'Welcome to Agent Scanning Page',
+          style: AppFonts.titleStyle,
+        ),
+      ),
       bottomNavigationBar: AppBottomNavBar(
         selectedIndex: 2,
         role: NavBarRole.user,
