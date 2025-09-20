@@ -1,7 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { Product } from "../../typeorm/entities/product.entity";
 import CustomError from "../../utils/CustomError";
-import * as z from "zod";
 import { globalProductBlockchain, initializeProductBlockchain } from "../scan/Scan";
 import { ProductBlock } from "../../typeorm/entities/productblock";
 
@@ -9,8 +8,8 @@ export const addProductRecord = async (req: Request, res: Response, next: NextFu
     try {
         const newProduct = req.body as Product;
 
-        const ProductSchema = z.object({ Product });
-        const parsed = ProductSchema.safeParse(newProduct);
+        // const ProductSchema = z.object({ Product });
+        // const parsed = ProductSchema.safeParse(newProduct);
 
         if (!globalProductBlockchain) {
             initializeProductBlockchain();
