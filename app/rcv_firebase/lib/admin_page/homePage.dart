@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons/lucide_icons.dart';
 import '../widgets/navigation_bar.dart';
-import '../widgets/app_bar.dart';
-import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
+import '../widgets/gradient_header_app_bar.dart';
 
 void main() {
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -18,7 +16,7 @@ class MyApp extends StatelessWidget {
 }
 
 class HomePage extends StatefulWidget {
-  const HomePage({Key? key}) : super(key: key);
+  const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -37,25 +35,10 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomAppBar(
+      appBar: GradientHeaderAppBar(
         greeting: 'Welcome back',
-        userRole: 'Admin user',
-        trailing: Align(
-          alignment: Alignment.centerRight,
-          child: Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: app_colors.AppColors.muted,
-            ),
-            child: Icon(
-              LucideIcons.user,
-              color: Colors.grey.shade600,
-              size: 22,
-            ),
-          ),
-        ),
+        user: 'Admin',
+        onBack: () => Navigator.of(context).maybePop(),
       ),
       body: Center(
         child: Column(
@@ -70,14 +53,9 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
       //nav bar
-      bottomNavigationBar: CustomBottomNavBar(
+      bottomNavigationBar: AppBottomNavBar(
         selectedIndex: _selectedIndex,
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-          // Handle navigation tap here
-        },
+        role: NavBarRole.admin,
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _incrementCounter,
