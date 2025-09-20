@@ -71,6 +71,7 @@ class LoginPage extends StatelessWidget {
     final emailController = TextEditingController();
     final passwordController = TextEditingController();
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -83,88 +84,102 @@ class LoginPage extends StatelessWidget {
           ),
         ),
         child: SafeArea(
-          child: Column(
-            children: [
-              Container(
-                margin: EdgeInsets.only(
-                  top: MediaQuery.of(context).size.height * 0.2,
-                ),
-                alignment: Alignment.topCenter,
-                child: SvgPicture.asset(
-                  'assets/landinglogo.svg',
-                  width: 190,
-                  height: 190,
-                ),
+          child: SingleChildScrollView(
+            padding: EdgeInsets.symmetric(horizontal: 32),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: MediaQuery.of(context).size.height - MediaQuery.of(context).padding.top,
               ),
-              SizedBox(height: 30),
-              Text(
-                'LOG IN',
-                style: TextStyle(
-                  fontSize: 22,
-                  color: Colors.white,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 1.2,
-                ),
-              ),
-              SizedBox(height: 24),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: IntrinsicHeight(
                 child: Column(
                   children: [
-                    AnimatedFormField(
-                      label: 'Email',
-                      hint: 'Email',
-                      controller: emailController,
-                    ),
-                    SizedBox(height: 16),
-                    AnimatedFormField(
-                      label: 'Password',
-                      hint: 'Password',
-                      controller: passwordController,
-                      obscureText: true,
-                      suffixIcon: ValueListenableBuilder<TextEditingValue>(
-                        valueListenable: passwordController,
-                        builder: (context, value, child) {
-                          return value.text.isNotEmpty
-                              ? Icon(Icons.visibility)
-                              : SizedBox.shrink();
-                        },
-                      ),
-                    ),
-                    SizedBox(height: 24),
-                    AppButtons(
-                      text: 'Log In',
-                      size: 48,
-                      textColor: app_colors.AppColors.text,
-                      backgroundColor: Colors.white,
-                      borderColor: Color(0xFF005440),
-                      icon: Icon(Icons.login, color: app_colors.AppColors.text),
-                      onPressed: () {
-                        validateLogin(
-                          emailController.text,
-                          passwordController.text,
-                          context,
-                        );
-                      },
-                    ),
-                    SizedBox(height: 24),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.pushNamed(context, '/reset-password');
-                      },
-                      child: Text(
-                        'Forgot your Password?',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontStyle: FontStyle.italic,
-                          decoration: TextDecoration.underline,
+                    // Flexible spacing for logo
+                    Flexible(
+                      flex: 2,
+                      child: Container(
+                        alignment: Alignment.center,
+                        child: SvgPicture.asset(
+                          'assets/landinglogo.svg',
+                          width: 150,
+                          height: 150,
                         ),
                       ),
                     ),
+                    SizedBox(height: 20),
+                    Text(
+                      'LOG IN',
+                      style: TextStyle(
+                        fontSize: 22,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    SizedBox(height: 20),
+                    // Form section
+                    Flexible(
+                      flex: 3,
+                      child: Column(
+                        children: [
+                          AnimatedFormField(
+                            label: 'Email',
+                            hint: 'Email',
+                            controller: emailController,
+                          ),
+                          SizedBox(height: 16),
+                          AnimatedFormField(
+                            label: 'Password',
+                            hint: 'Password',
+                            controller: passwordController,
+                            obscureText: true,
+                            suffixIcon: ValueListenableBuilder<TextEditingValue>(
+                              valueListenable: passwordController,
+                              builder: (context, value, child) {
+                                return value.text.isNotEmpty
+                                    ? Icon(Icons.visibility)
+                                    : SizedBox.shrink();
+                              },
+                            ),
+                          ),
+                          SizedBox(height: 24),
+                          AppButtons(
+                            text: 'Log In',
+                            size: 48,
+                            textColor: app_colors.AppColors.text,
+                            backgroundColor: Colors.white,
+                            borderColor: Color(0xFF005440),
+                            icon: Icon(Icons.login, color: app_colors.AppColors.text),
+                            onPressed: () {
+                              validateLogin(
+                                emailController.text,
+                                passwordController.text,
+                                context,
+                              );
+                            },
+                          ),
+                          SizedBox(height: 16),
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.pushNamed(context, '/reset-password');
+                            },
+                            child: Text(
+                              'Forgot your Password?',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontStyle: FontStyle.italic,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Bottom spacing
+                    SizedBox(height: 20),
                   ],
                 ),
               ),
-            ],
+            ),
           ),
         ),
       ),

@@ -7,11 +7,10 @@ import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
 // Import all your pages
 import 'auth/landingPage.dart';
 import 'auth/login_page.dart';
-import 'widgets/navigation_bar.dart' as nav_bar;
 import 'auth/otp_verification_page.dart';
 import 'auth/reset_password.dart';
 import 'auth/reset_new_password_page.dart';
-import 'auth/user_profile.dart';
+import 'user_page/profilePage.dart';
 import 'pages/qr_scanner_page.dart';
 import 'user_page/home_page.dart';
 import 'user_page/agent_scanningPage.dart';
@@ -21,6 +20,7 @@ import 'admin_page/admin_scanningPage.dart';
 import 'admin_page/admin_auditTrail.dart';
 import 'admin_page/admin_reports.dart';
 import 'admin_page/admin_homePage.dart';
+import 'admin_page/admin-profile.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -50,9 +50,8 @@ class MyApp extends StatelessWidget {
         '/otp-verification': (context) => const OtpVerificationPage(),
         '/reset-password': (context) => ResetPasswordPage(),
         '/reset-new-password': (context) => const ResetNewPasswordPage(),
-        '/user-profile': (context) => UserProfilePage(
-          role: (appRole as nav_bar.NavBarRole?) ?? nav_bar.NavBarRole.user,
-        ),
+        '/user-profile': (context) => const ProfilePage(),
+        '/admin-profile': (context) => const AdminProfilePage(),
         //Admin Pages
         '/admin-home': (context) => const HomePage(), // Admin HomePage
         '/admin-scanning': (context) => const AdminScanningPage(),

@@ -2,19 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
 import '../widgets/gradient_header_app_bar.dart';
-import 'package:rcv_firebase/themes/app_fonts.dart';
 import '../widgets/app_buttons.dart';
 import '../widgets/navigation_bar.dart';
+import 'package:rcv_firebase/pages/qr_scanner_page.dart';
 
 class UserHomePage extends StatefulWidget {
-  const UserHomePage({Key? key}) : super(key: key);
+  const UserHomePage({super.key});
 
   @override
   State<UserHomePage> createState() => _UserHomePageState();
 }
 
 class _UserHomePageState extends State<UserHomePage> {
-  int _selectedIndex = 0;
+  final int _selectedIndex = 0;
 
   final List<Widget> _pages = [const HomeContent()];
 
@@ -37,7 +37,7 @@ class _UserHomePageState extends State<UserHomePage> {
 
 // Home Content Widget
 class HomeContent extends StatelessWidget {
-  const HomeContent({Key? key}) : super(key: key);
+  const HomeContent({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -56,14 +56,6 @@ class HomeContent extends StatelessWidget {
             onPressed: () {
               // Navigate to location page
             },
-            textStyle: AppFonts.titleStyle.copyWith(
-              color: app_colors.AppColors.white,
-              fontSize: 17,
-            ),
-            subTitleStyle: AppFonts.contentStyle.copyWith(
-              color: app_colors.AppColors.white,
-              fontSize: 14,
-            ),
           ),
           const SizedBox(height: 12),
           Card(
@@ -76,7 +68,7 @@ class HomeContent extends StatelessWidget {
               subtitle: const Text('Verify product authenticity'),
               trailing: const Icon(Icons.arrow_forward_ios),
               onTap: () {
-                Navigator.pushNamed(context, '/qr-scanner');
+                Navigator.push(context, MaterialPageRoute(builder: (context) => QRScannerPage()));
               },
             ),
           ),
