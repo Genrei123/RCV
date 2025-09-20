@@ -53,7 +53,7 @@ const UserSignIn = async (req: Request, res: Response, next: NextFunction) => {
     }
 
     const userPayload = {
-      id: user.id,
+      id: user._id,
       role: user.role === 0 ? true : false,
       iat: Date.now()
     }

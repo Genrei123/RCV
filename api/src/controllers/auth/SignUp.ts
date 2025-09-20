@@ -3,6 +3,7 @@ import { UserRepo } from '../../typeorm/data-source';
 import CustomError from '../../utils/CustomError';
 import validateSignUpForm from '../../utils/validateSignUp';
 import type { NextFunction, Request, Response } from 'express';
+import { UserValidation } from '../../typeorm/entities/user.entity';
 
 /**
  * UserSignUp - Controller for creating a New User Account
@@ -17,6 +18,14 @@ const UserSignUp = async (req: Request, res: Response, next: NextFunction) => {
   // If An error occurs in validation
   if (data.error || !data.form) {
     const error = new CustomError(400, data.error, { success: false });
+    return next(error);
+  }
+
+  // Validate user with zod
+  if(UserValidation.safeParse(data.form)) {
+    console.log("User data is valid");
+  } else {
+    const error = new CustomError(400, "Invalid user data", { success: false });
     return next(error);
   }
 
@@ -35,6 +44,9 @@ const UserSignUp = async (req: Request, res: Response, next: NextFunction) => {
       });
       return next(error);
     }
+
+    
+
 
     // Create new user
     const newUser = UserRepo.create(form);

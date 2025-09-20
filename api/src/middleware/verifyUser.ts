@@ -41,7 +41,7 @@ export const verifyUser = async (
 
     // Verify the token
     const decoded = verifyToken(token) as jwt.JwtPayload;
-    const user = await UserRepo.findOne({ where: { id: decoded.userId } });
+    const user = await UserRepo.findOne({ where: { _id: decoded.userId } });
     if (!user) throw new CustomError(404, 'User not found', { success: false });
 
     // Add the user to the request object

@@ -39,9 +39,9 @@ export const modifyBlockData = async (req: Request, res: Response, next: NextFun
         const originalProductName = block.data.productName;
 
         if (productName) block.data.productName = productName;
-        if (manufacturerName) block.data.manufacturerName = manufacturerName;
-        if (distributorName) block.data.distributorName = distributorName;
-        if (importerName) block.data.importerName = importerName;
+        if (manufacturerName) block.data.company = manufacturerName;
+        // if (distributorName) block.data.distributorName = distributorName;
+        // if (importerName) block.data.importerName = importerName;
 
         res.status(200).json({
             success: true,

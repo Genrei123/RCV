@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { Product } from "../../typeorm/entities/product.entity";
 import CustomError from "../../utils/CustomError";
 import { globalProductBlockchain, initializeProductBlockchain } from "../scan/Scan";
-import { ProductBlock } from "../../typeorm/entities/productblock";
+import { ProductBlock } from "../../services/productblock";
 
 export const addProductRecord = async (req: Request, res: Response, next: NextFunction) => {
     try {

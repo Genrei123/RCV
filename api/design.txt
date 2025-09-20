@@ -1,0 +1,54 @@
+User {
+    _id: uuid;
+    firstName: string;
+    lastName: string;
+    middleName: string;
+    fullName: firstName + middleName + lastName;
+    dateOfBirth: date;
+    phoneNumber: string;
+    password: string;
+    isActive: boolean;
+    role: enum("Agent", "System_Administrator");
+}
+
+////////
+
+Product {
+    _id: uuid;
+    LTONumber: string;
+    CFPRNumber: string;
+    lotNumber: string;
+    brandName: string;
+    productName: string;
+    productClassification: enum("Feed Additive", "Special Nutrition Feed Preparataion Local" .....);
+    productSubClassification: enum("Gamecock Feeds", "Basaae Mixes" ......);
+    expirationDate: Date;
+    dateOfRegistration: string;
+
+    registeredBy: User;
+    registeredAt: date;
+}
+
+Company {
+    _id: uuid;
+    products: Product[];
+    name: string;
+    address: string;
+    licenseNo: string;
+
+    registeredBy: User;
+    registeredAt: date;
+}
+
+/////////
+
+Scan_History {
+    _id: uuid;
+    lat: string;
+    long: string;
+    product: Product;
+    user: User;
+    timestamp: DateTime;
+    scanResult: enum("Valid", "Invalid");
+    remarks: string;
+}

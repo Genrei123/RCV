@@ -1,5 +1,6 @@
 import sha256 from 'crypto-js/sha256';
-import { Product } from './product.entity';
+import { Product } from '../typeorm/entities/product.entity';
+
 export class ProductBlock {
     index: number;
     timestamp: Date

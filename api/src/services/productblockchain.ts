@@ -1,4 +1,4 @@
-import { Product } from "./product.entity";
+import { Product } from "../typeorm/entities/product.entity";
 import { ProductBlock } from "./productblock";
 
 export class ProductBlockchain {
