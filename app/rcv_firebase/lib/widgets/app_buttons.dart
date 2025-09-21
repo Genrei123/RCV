@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:rcv_firebase/themes/app_colors.dart';
 
 class AppButtons extends StatelessWidget {
   final Color textColor;
@@ -18,7 +17,7 @@ class AppButtons extends StatelessWidget {
   final TextStyle? subTitleStyle;
 
   const AppButtons.main({
-    Key? key,
+    super.key,
     required this.text,
     this.subTitle,
     required this.size,
@@ -31,12 +30,11 @@ class AppButtons extends StatelessWidget {
     this.textStyle,
     this.subTitleStyle,
   }) : backgroundColor = color,
-       borderColor = Colors.transparent,
-       super(key: key);
+       borderColor = Colors.transparent;
 
   // Outline button: transparent, colored border
   const AppButtons.outline({
-    Key? key,
+    super.key,
     required this.text,
     required this.size,
     required this.textColor,
@@ -49,12 +47,11 @@ class AppButtons extends StatelessWidget {
     this.textStyle,
     this.subTitleStyle,
   }) : backgroundColor = Colors.transparent,
-       borderColor = outlineColor,
-       super(key: key);
+       borderColor = outlineColor;
 
   // Default constructor (for custom use)
   const AppButtons({
-    Key? key,
+    super.key,
     required this.text,
     required this.size,
     required this.textColor,
@@ -67,7 +64,7 @@ class AppButtons extends StatelessWidget {
     this.contentAlignment = MainAxisAlignment.center,
     this.textStyle,
     this.subTitleStyle,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

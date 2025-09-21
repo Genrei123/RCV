@@ -3,7 +3,7 @@ import '../widgets/gradient_header_app_bar.dart';
 import '../widgets/navigation_bar.dart'; // Import AdminBottomNavBar
 
 class AdminAuditTrail extends StatefulWidget {
-  const AdminAuditTrail({Key? key}) : super(key: key);
+  const AdminAuditTrail({super.key});
 
   @override
   _AdminAuditTrailState createState() => _AdminAuditTrailState();

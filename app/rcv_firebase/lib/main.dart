@@ -1,3 +1,6 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
@@ -22,6 +25,13 @@ import 'admin_page/admin_reports.dart';
 import 'admin_page/admin_homePage.dart';
 import 'admin_page/admin-profile.dart';
 
+import 'package:rcv_firebase/constants.dart';
+import 'package:rcv_firebase/controllers/menu_app_controller.dart';
+import 'package:rcv_firebase/screens/web/main/main_screen.dart';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
@@ -37,13 +47,27 @@ class MyApp extends StatelessWidget {
       title: 'RCV - Product Verification',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        scaffoldBackgroundColor: Colors.white,
+        scaffoldBackgroundColor: kIsWeb ? bgColor : Colors.white,
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF005440)),
         primarySwatch: Colors.green,
+        textTheme: kIsWeb ? GoogleFonts.poppinsTextTheme(Theme.of(context).textTheme)
+            .apply(bodyColor: Colors.white) : null,
+        canvasColor: kIsWeb ? secondaryColor : null,
       ),
       // Start with the landing page
-      initialRoute: '/',
-      routes: {
+  initialRoute: '/',
+  routes: kIsWeb 
+    ? {
+        '/': (context) => MultiProvider(
+          providers: [
+            ChangeNotifierProvider(
+              create: (context) => MenuAppController(),
+            ),
+          ],
+          child: MainScreen(),
+        ),
+      }
+    : {
         //authentication
         '/': (context) => const LandingPage(),
         '/login': (context) => const LoginPage(),
@@ -66,6 +90,7 @@ class MyApp extends StatelessWidget {
         '/user-reports': (context) => const UserReportsPage(),
 
         //Agent Web Pages
+        
       },
     );
   }

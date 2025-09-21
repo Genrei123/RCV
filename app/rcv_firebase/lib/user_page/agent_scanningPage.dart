@@ -4,7 +4,7 @@ import 'package:rcv_firebase/themes/app_fonts.dart';
 import '../widgets/navigation_bar.dart';
 
 class AgentScanningPage extends StatefulWidget {
-  const AgentScanningPage({Key? key}) : super(key: key);
+  const AgentScanningPage({super.key});
 
   @override
   _AgentScanningPageState createState() => _AgentScanningPageState();

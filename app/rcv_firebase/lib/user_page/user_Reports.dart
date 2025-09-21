@@ -4,7 +4,7 @@ import 'package:rcv_firebase/themes/app_fonts.dart';
 import '../widgets/navigation_bar.dart';
 
 class UserReportsPage extends StatefulWidget {
-  const UserReportsPage({Key? key}) : super(key: key);
+  const UserReportsPage({super.key});
 
   @override
   _UserReportsPageState createState() => _UserReportsPageState();

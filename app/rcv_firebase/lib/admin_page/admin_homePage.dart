@@ -1,8 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons/lucide_icons.dart';
-import '../widgets/admin_bottom_nav_bar.dart';
-import '../widgets/app_bar.dart';
-import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
 import '../widgets/gradient_header_app_bar.dart';
 import '../widgets/navigation_bar.dart';
 
@@ -11,7 +7,7 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +16,7 @@ class MyApp extends StatelessWidget {
 }
 
 class HomePage extends StatefulWidget {
-  const HomePage({Key? key}) : super(key: key);
+  const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -28,7 +24,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _counter = 0;
-  int _selectedIndex = 0;
+  final int _selectedIndex = 0;
 
   void _incrementCounter() {
     setState(() {

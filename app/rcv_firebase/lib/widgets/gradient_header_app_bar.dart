@@ -9,12 +9,12 @@ class GradientHeaderAppBar extends StatelessWidget
   final bool showBackButton;
 
   const GradientHeaderAppBar({
-    Key? key,
+    super.key,
     this.greeting = 'Welcome back',
     this.user = 'user',
     this.onBack,
     this.showBackButton = true,
-  }) : super(key: key);
+  });
 
   @override
   Size get preferredSize => const Size.fromHeight(100);

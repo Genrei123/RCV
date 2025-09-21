@@ -4,7 +4,7 @@ import 'package:rcv_firebase/themes/app_fonts.dart';
 import '../widgets/navigation_bar.dart';
 
 class AuditTrailPage extends StatefulWidget {
-  const AuditTrailPage({Key? key}) : super(key: key);
+  const AuditTrailPage({super.key});
 
   @override
   State<AuditTrailPage> createState() => _AuditTrailPageState();

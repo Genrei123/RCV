@@ -8,7 +8,7 @@ import 'package:rcv_firebase/services/api_service.dart';
 import 'package:rcv_firebase/themes/app_fonts.dart';
 
 class QRScannerPage extends StatefulWidget {
-  const QRScannerPage({Key? key}) : super(key: key);
+  const QRScannerPage({super.key});
 
   @override
   State<QRScannerPage> createState() => _QRScannerPageState();
@@ -267,7 +267,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
 
                 // Upload QR Button (matching the design from screenshots)
                 if (!isOCRMode)
-                  Container(
+                  SizedBox(
                     width: double.infinity,
                     height: 50,
                     child: ElevatedButton.icon(
@@ -294,7 +294,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
                 const SizedBox(height: 16),
 
                 // Reset Button
-                Container(
+                SizedBox(
                   width: double.infinity,
                   height: 50,
                   child: OutlinedButton.icon(
@@ -378,7 +378,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
     return Stack(
       children: [
         // Camera Scanner
-        Container(
+        SizedBox(
           width: double.infinity,
           height: double.infinity,
           child: MobileScanner(
@@ -393,7 +393,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
 
         // Scanning Frame Overlay
         if (!isOCRMode)
-          Container(
+          SizedBox(
             width: double.infinity,
             height: double.infinity,
             child: CustomPaint(painter: ScannerOverlayPainter()),
