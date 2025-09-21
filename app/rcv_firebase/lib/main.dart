@@ -69,7 +69,7 @@ class MyApp extends StatelessWidget {
       }
     : {
         //authentication
-        '/': (context) => const LandingPa(),
+        '/': (context) => const LandingPage(),
         '/login': (context) => const LoginPage(),
         '/otp-verification': (context) => const OtpVerificationPage(),
         '/reset-password': (context) => ResetPasswordPage(),
