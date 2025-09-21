@@ -1,7 +1,36 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
+
+// Import all your pages
+import 'auth/landingPage.dart';
+import 'auth/login_page.dart';
+import 'auth/otp_verification_page.dart';
+import 'auth/reset_password.dart';
+import 'auth/reset_new_password_page.dart';
+import 'user_page/profilePage.dart';
+import 'pages/qr_scanner_page.dart';
+import 'user_page/home_page.dart';
+import 'user_page/agent_scanningPage.dart';
+import 'user_page/agent_auditTrail.dart';
+import 'user_page/user_Reports.dart';
+import 'admin_page/admin_scanningPage.dart';
+import 'admin_page/admin_auditTrail.dart';
+import 'admin_page/admin_reports.dart';
+import 'admin_page/admin_homePage.dart';
+import 'admin_page/admin-profile.dart';
+
+import 'package:rcv_firebase/constants.dart';
+import 'package:rcv_firebase/controllers/menu_app_controller.dart';
+import 'package:rcv_firebase/screens/web/main/main_screen.dart';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -12,33 +41,57 @@ Future<void> main() async {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'RCV - Product Verification',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        scaffoldBackgroundColor: Colors.white,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color.fromARGB(255, 221, 220, 223),
-        ),
+        scaffoldBackgroundColor: kIsWeb ? bgColor : Colors.white,
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF005440)),
+        primarySwatch: Colors.green,
+        textTheme: kIsWeb ? GoogleFonts.poppinsTextTheme(Theme.of(context).textTheme)
+            .apply(bodyColor: Colors.white) : null,
+        canvasColor: kIsWeb ? secondaryColor : null,
       ),
-      home: const MyHomePage(title: 'RCV Home'),
+      // Start with the landing page
+  initialRoute: '/',
+  routes: kIsWeb 
+    ? {
+        '/': (context) => MultiProvider(
+          providers: [
+            ChangeNotifierProvider(
+              create: (context) => MenuAppController(),
+            ),
+          ],
+          child: MainScreen(),
+        ),
+      }
+    : {
+        //authentication
+        '/': (context) => const LandingPa(),
+        '/login': (context) => const LoginPage(),
+        '/otp-verification': (context) => const OtpVerificationPage(),
+        '/reset-password': (context) => ResetPasswordPage(),
+        '/reset-new-password': (context) => const ResetNewPasswordPage(),
+        '/user-profile': (context) => const ProfilePage(),
+        '/admin-profile': (context) => const AdminProfilePage(),
+        //Admin Pages
+        '/admin-home': (context) => const HomePage(), // Admin HomePage
+        '/admin-scanning': (context) => const AdminScanningPage(),
+        '/admin-audit-trail': (context) => const AdminAuditTrail(),
+        '/admin-reports': (context) => const AdminReportsPage(),
+        //Agent Pages
+        '/user-home': (context) => const UserHomePage(),
+        '/qr-scanner': (context) => const QRScannerPage(),
+        '/main-app': (context) => const MyHomePage(title: 'RCV Home'),
+        '/user-scanning': (context) => const AgentScanningPage(),
+        '/user-audit-trail': (context) => const AuditTrailPage(),
+        '/user-reports': (context) => const UserReportsPage(),
+
+        //Agent Web Pages
+        
+      },
     );
   }
 }
@@ -124,14 +177,25 @@ class _MyHomePageState extends State<MyHomePage> {
       //nav bar
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: Color(0xFF005440),
+        selectedItemColor: app_colors.AppColors.primary,
+        unselectedItemColor: app_colors.AppColors.muted,
         items: [
           BottomNavigationBarItem(
-            icon: Icon(Icons.home, color: 0 == _selectedIndex ? Color(0xFF005440) : Colors.grey),
+            icon: Icon(
+              Icons.home,
+              color: 0 == _selectedIndex
+                  ? app_colors.AppColors.primary
+                  : app_colors.AppColors.muted,
+            ),
             label: 'Home',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.history, color: 1 == _selectedIndex ? Color(0xFF005440) : Colors.grey),
+            icon: Icon(
+              Icons.history,
+              color: 1 == _selectedIndex
+                  ? app_colors.AppColors.primary
+                  : app_colors.AppColors.muted,
+            ),
             label: 'History',
           ),
           BottomNavigationBarItem(
@@ -140,23 +204,37 @@ class _MyHomePageState extends State<MyHomePage> {
               height: 66,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: 2 == _selectedIndex ? Color(0xFF005440) : Colors.grey.shade300,
+                color: 2 == _selectedIndex
+                    ? app_colors.AppColors.primary
+                    : app_colors.AppColors.muted,
               ),
               padding: const EdgeInsets.all(12),
               child: Icon(
                 LucideIcons.scan,
-                color: 2 == _selectedIndex ? Colors.white : Colors.grey,
+                color: 2 == _selectedIndex
+                    ? Colors.white
+                    : app_colors.AppColors.muted,
                 size: 24,
               ),
             ),
             label: '',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.add, color: 3 == _selectedIndex ? Color(0xFF005440) : Colors.grey),
+            icon: Icon(
+              Icons.add,
+              color: 3 == _selectedIndex
+                  ? app_colors.AppColors.primary
+                  : app_colors.AppColors.muted,
+            ),
             label: 'Add',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person, color: 4 == _selectedIndex ? Color(0xFF005440) : Colors.grey),
+            icon: Icon(
+              Icons.person,
+              color: 4 == _selectedIndex
+                  ? app_colors.AppColors.primary
+                  : app_colors.AppColors.muted,
+            ),
             label: 'Profile',
           ),
         ],

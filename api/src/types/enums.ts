@@ -11,3 +11,21 @@ export enum ProductType {
     "Processed Product",
     "Packaged Product",
 }
+
+export enum ProductSubClassification {
+    "Gamecock Feeds",
+    "Layer Feeds",
+}
+
+export enum Roles {
+    "Unverified",
+    "Agent",
+    "System_Admin",
+}
+
+export enum ScanResult {
+    "Authentic",
+    "Tampered",
+    "Expired",
+    "Unregistered",
+}

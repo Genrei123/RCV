@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import jwt, { Jwt } from 'jsonwebtoken';
 import { UserRepo } from '../typeorm/data-source';
 import CustomError from '../utils/CustomError';
+import { verifyToken } from '../utils/JWT';
 
 /**
  * Middleware to verify user authentication using JWT.
@@ -36,17 +37,11 @@ export const verifyUser = async (
         { success: false }
       );
     }
-
     const token = authHeader.split(' ')[1];
 
     // Verify the token
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET as string
-    ) as jwt.JwtPayload;
-
-    const user = await UserRepo.findOne({ where: { id: decoded.userId } });
-
+    const decoded = verifyToken(token) as jwt.JwtPayload;
+    const user = await UserRepo.findOne({ where: { _id: decoded.userId } });
     if (!user) throw new CustomError(404, 'User not found', { success: false });
 
     // Add the user to the request object
@@ -78,3 +73,31 @@ export const verifyUser = async (
     );
   }
 };
+
+export const isAdmin = (req: Request, res: Response, next: NextFunction) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ success: false, message: 'No token provided' });
+  }
+
+  try {
+    const decoded = verifyToken(token) as jwt.JwtPayload;
+    if (decoded.role !== true) { // Assuming role 'true' indicates admin
+      return res.status(403).json({ success: false, message: 'Access denied. Admins only.' });
+    }
+    next();
+  } catch (error) {
+    return res.status(401).json({ success: false, message: 'Invalid token' });
+  }
+  
+}
+
+const extractRole = (role: number) => {
+  switch (role) {
+    case 0:
+      return 'Admin';
+    case 1:
+      return 'Agent';
+  }
+}
+

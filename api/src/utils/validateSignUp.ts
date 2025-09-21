@@ -19,6 +19,24 @@ const validateSignUpForm = (req: Request) => {
   if (!phoneNumber) return { error: 'Required field: phoneNumber', data: null };
   if (!password) return { error: 'Required field: password', data: null };
 
+  if (typeof fullName !== 'string' || fullName.trim().length < 3 || fullName.trim().length > 100) {
+    return { error: 'Invalid fullName', data: null };
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (typeof email !== 'string' || !emailRegex.test(email)) {
+    return { error: 'Invalid email address', data: null };
+  }
+
+  if (typeof phoneNumber !== 'string' || phoneNumber.trim().length < 10 || phoneNumber.trim().length > 15) {
+    return { error: 'Invalid phoneNumber', data: null };
+  }
+
+  if (typeof password !== 'string' || password.length < 6) {
+    return { error: 'Password must be at least 6 characters long', data: null };
+  }
+
+
   return {
     error: null,
     form: { fullName, email, dateOfBirth, phoneNumber, password },

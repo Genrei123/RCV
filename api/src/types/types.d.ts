@@ -14,7 +14,7 @@ export type TSigninForm = {
 };
 
 export type TUser = {
-  id: string;
+  _id: string;
   fullName: string;
   email: string;
   dateOfBirth: Date;

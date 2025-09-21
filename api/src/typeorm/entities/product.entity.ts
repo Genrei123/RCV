@@ -1,35 +1,58 @@
 import {
   Entity,
   Column,
+  ManyToOne,
+  JoinColumn,
+  PrimaryColumn,
+  OneToMany,
+  PrimaryGeneratedColumn,
 } from 'typeorm';
-import { ProductType } from '../../types/enums';
+import { ProductSubClassification, ProductType } from '../../types/enums';
+import { User } from './user.entity';
+import { Company } from './company.entity';
 
+export const ProductValidation = {
 
+}
 
 @Entity()
 export class Product {
-    @Column({ unique: true })
-    LTONumber!: string;
+  @PrimaryGeneratedColumn('uuid')
+  _id!: string;
 
-    @Column({ unique: true })
-    CFPRNumber!: string;
+  @Column()
+  LTONumber!: string;
 
-    @Column()
-    productName!: string;
+  @Column()
+  CFPRNumber!: string;
 
-    @Column({
-        type: "enum",
-        enum: ProductType,
-        default: ProductType["Others"]
-    })
-    productType!: ProductType;
+  @Column()
+  lotNumber!: string;
 
-    @Column()
-    manufacturerName!: string;
+  @Column()
+  brandName!: string;
 
-    @Column()
-    distributorName!: string;
+  @Column()
+  productName!: string;
 
-    @Column()
-    importerName!: string;
+  @Column({ type: 'enum', enum: ProductType })
+  productClassification!: ProductType;
+
+  @Column({ type: 'enum', enum: ProductSubClassification })
+  productSubClassification!: ProductSubClassification;
+
+  @Column()
+  expirationDate!: Date;
+
+  @Column()
+  dateOfRegistration!: Date;
+
+  @ManyToOne(() => User, user => user._id)
+  registeredBy!: User;
+
+  @Column()
+  registeredAt!: Date;
+
+  @ManyToOne(() => Company, company => company.products)
+  company!: Company;
 }

@@ -1,25 +1,70 @@
 import 'package:flutter/material.dart';
-import 'package:rcv_firebase/themes/app_colors.dart';
 
 class AppButtons extends StatelessWidget {
   final Color textColor;
   final Color backgroundColor;
   final Color borderColor;
   final String text;
-  final Icon icon; // Icon type is correct
+  final Icon icon;
   final double size;
   final VoidCallback? onPressed;
+  final EdgeInsetsGeometry? margin;
+  final MainAxisAlignment contentAlignment;
 
+  // Main button: filled, no border
+  final String? subTitle;
+  final TextStyle? textStyle;
+  final TextStyle? subTitleStyle;
+
+  const AppButtons.main({
+    super.key,
+    required this.text,
+    this.subTitle,
+    required this.size,
+    required this.textColor,
+    required Color color,
+    required this.icon,
+    this.onPressed,
+    this.margin,
+    this.contentAlignment = MainAxisAlignment.start,
+    this.textStyle,
+    this.subTitleStyle,
+  }) : backgroundColor = color,
+       borderColor = Colors.transparent;
+
+  // Outline button: transparent, colored border
+  const AppButtons.outline({
+    super.key,
+    required this.text,
+    required this.size,
+    required this.textColor,
+    required Color outlineColor,
+    required this.icon,
+    this.onPressed,
+    this.margin,
+    this.contentAlignment = MainAxisAlignment.start,
+    this.subTitle,
+    this.textStyle,
+    this.subTitleStyle,
+  }) : backgroundColor = Colors.transparent,
+       borderColor = outlineColor;
+
+  // Default constructor (for custom use)
   const AppButtons({
-    Key? key,
+    super.key,
     required this.text,
     required this.size,
     required this.textColor,
     required this.backgroundColor,
     required this.borderColor,
     required this.icon,
+    this.subTitle,
     this.onPressed,
-  }) : super(key: key);
+    this.margin,
+    this.contentAlignment = MainAxisAlignment.center,
+    this.textStyle,
+    this.subTitleStyle,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -33,19 +78,48 @@ class AppButtons extends StatelessWidget {
           borderRadius: BorderRadius.circular(15),
           border: Border.all(color: borderColor, width: 1.0),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            icon, // Include the icon
-            const SizedBox(width: 8), // Space between icon and text
-            Text(
-              text,
-              style: TextStyle(
-                color: textColor,
-                fontSize: 16, // Adjust font size as needed
+        child: Container(
+          width: double.infinity,
+          height: size,
+          margin: margin,
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: borderColor, width: 1.0),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            mainAxisAlignment: contentAlignment,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              icon,
+              const SizedBox(width: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    text,
+                    style:
+                        textStyle ?? TextStyle(color: textColor, fontSize: 16),
+                  ),
+                  if (subTitle != null)
+                    Text(
+                      subTitle!,
+                      style:
+                          subTitleStyle ??
+                          TextStyle(
+                            color: textColor.withOpacity(0.8),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
+                          ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                ],
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

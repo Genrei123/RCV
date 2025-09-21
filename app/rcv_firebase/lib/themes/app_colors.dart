@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 class AppColors {
   // 🌿 Light Theme Colors (Department of Agriculture)
   static const Color primary = Color(0xFF005440);   // Headers, buttons, highlights
+  static const Color primaryLight = Color(0xFF00BA8E);   // Headers, buttons, highlights
+
   static const Color accent = Color(0xFF002D72);      // Secondary buttons, footers, hover states
   static const Color secondary = Color(0xFFA5C9A1);   // Accent elements, icons, CTAs
   static const Color neutral = Color(0xFFF0F2F5);      // Secondary backgrounds, dividers
