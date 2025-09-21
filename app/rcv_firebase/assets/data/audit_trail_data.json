@@ -1,0 +1,76 @@
+{
+  "auditLog": [
+    {
+      "type": "Logged In",
+      "action": "User signed in",
+      "date": "2024-05-15",
+      "details": "User 'John Doe' logged in successfully from IP: 192.168.1.101 at 09:30 AM."
+    },
+    {
+      "type": "Logged Out",
+      "action": "User signed out",
+      "date": "2024-05-15",
+      "details": "User 'John Doe' logged out from the application at 11:45 AM."
+    },
+    {
+      "type": "Uploaded",
+      "action": "Uploaded an image",
+      "date": "2024-05-14",
+      "details": "Image 'invoice_123.jpg' was uploaded to the 'Documents' folder."
+    },
+    {
+      "type": "Pinned",
+      "action": "Pinned Location",
+      "date": "2024-05-13",
+      "details": "Location 'Bagong Silang Caloocan City' was pinned by user."
+    },
+    {
+      "type": "Scanned",
+      "action": "Scanned a product detail",
+      "date": "2024-05-13",
+      "details": "Product 'SKU: 987654' scanned at warehouse A. Status: In Stock."
+    },
+    {
+      "type": "Logged In",
+      "action": "User signed in",
+      "date": "2024-05-12",
+      "details": "User 'Jane Smith' logged in from a new device (iPhone) at 08:00 AM."
+    },
+    {
+      "type": "Logged Out",
+      "action": "User signed out",
+      "date": "2024-05-12",
+      "details": "User 'Jane Smith' logged out after 3 hours of activity."
+    },
+    {
+      "type": "Uploaded",
+      "action": "Uploaded a product detail",
+      "date": "2024-05-11",
+      "details": "Product details for 'Product X' uploaded via batch process."
+    },
+    {
+      "type": "Pinned",
+      "action": "Pinned Location",
+      "date": "2024-05-10",
+      "details": "Location 'Main Office' was pinned."
+    },
+    {
+      "type": "Scanned",
+      "action": "Scanned a product detail",
+      "date": "2024-05-10",
+      "details": "Product 'SKU: 112233' scanned. Details updated."
+    },
+    {
+      "type": "Logged In",
+      "action": "User signed in",
+      "date": "2024-05-09",
+      "details": "User 'Admin' logged in with elevated privileges."
+    },
+    {
+      "type": "Logged Out",
+      "action": "User signed out",
+      "date": "2024-05-09",
+      "details": "Session for user 'Admin' terminated."
+    }
+  ]
+}

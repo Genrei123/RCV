@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:flutter_svg/flutter_svg.dart'; // ✅ import for SVG support
 import 'package:rcv_firebase/themes/app_colors.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:rcv_firebase/widgets/app_buttons.dart'; // Import your AppButtons widget
 
 void main() {
   runApp(const MyApp());
@@ -13,60 +11,68 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(home: const LandingPage());
-  }
-}
-
-class LandingPage extends StatelessWidget {
-  const LandingPage({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF00BA8E), AppColors.primary],
+    return MaterialApp(
+      home: Scaffold(
+        appBar: AppBar(
+          title: const Text(
+            "Profile Page",
+            style: TextStyle(
+              color: Colors.white,
+            ),
           ),
+          backgroundColor: AppColors.primary,
+          iconTheme: const IconThemeData(color: Colors.white),
         ),
-        child: SafeArea(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Spacer(),
-              Center(
-                child: SvgPicture.asset(
-                  "assets/landinglogo.svg",
-                  width: 270,
-                  height: 270,
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(top: 24.0),
-                child: Container(
-                  width: MediaQuery.of(context).size.width * 0.5,
-                  height: 48,
-                  child: AppButtons(
-                    text: 'Continue',
-                    size: 48,
-                    textColor: AppColors.primary,
-                    backgroundColor: Colors.white,
-                    borderColor: AppColors.primary,
-                    icon: Icon(
-                      LucideIcons.play,
-                      color: AppColors.primary,
-                      size: 28,
+        body: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Align(
+            alignment: Alignment.topLeft,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start, // ✅ left aligned
+              children: [
+                // Avatar with border
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    ClipOval(
+                      child: SvgPicture.asset(
+                        "assets/landinglogo.svg",
+                        width: 128,
+                        height: 128,
+                        fit: BoxFit.cover,
+                      ),
                     ),
-                    onPressed: () {
-                      // TODO: Add button action
-                    },
+                    Container(
+                      width: 128,
+                      height: 128,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppColors.primary,
+                          width: 4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12), // spacing under avatar
+                const Text(
+                  "John B. Doe",
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold, // ✅ bold
                   ),
                 ),
-              ),
-              const Spacer(),
-            ],
+                const Text(
+                  "User",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.normal, // ✅ regular
+                    color: Colors.black54, // lighter gray look
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
