@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import '../widgets/gradient_header_app_bar.dart';
-import '../widgets/admin_bottom_nav_bar.dart';
 import '../widgets/navigation_bar.dart';
 
 class AdminScanningPage extends StatefulWidget {
-  const AdminScanningPage({Key? key}) : super(key: key);
+  const AdminScanningPage({super.key});
 
   @override
   _AdminScanningPageState createState() => _AdminScanningPageState();

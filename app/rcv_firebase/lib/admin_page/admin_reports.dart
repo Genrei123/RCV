@@ -3,7 +3,7 @@ import '../widgets/gradient_header_app_bar.dart';
 import '../widgets/navigation_bar.dart';
 
 class AdminReportsPage extends StatefulWidget {
-  const AdminReportsPage({Key? key}) : super(key: key);
+  const AdminReportsPage({super.key});
 
   @override
   _AdminReportsPageState createState() => _AdminReportsPageState();

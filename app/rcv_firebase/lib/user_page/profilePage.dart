@@ -7,7 +7,7 @@ import '../widgets/navigation_bar.dart';
 import '../services/profile_service.dart';
 
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({Key? key}) : super(key: key);
+  const ProfilePage({super.key});
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
