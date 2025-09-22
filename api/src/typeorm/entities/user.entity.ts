@@ -12,8 +12,7 @@ import {
 } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { Roles } from '../../types/enums';
-import { email, z } from 'zod';
-import { get } from 'http';
+import { z } from 'zod';
 
 export const UserValidation = z.object({
   id: z.uuidv4(),

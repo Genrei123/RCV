@@ -10,7 +10,8 @@ export const DB = new DataSource(config);
 // https://typeorm.io/working-with-repository
 const UserRepo = DB.getRepository(User);
 const ProductRepo = DB.getRepository(Product);
+const CompanyRepo = DB.getRepository(Product);
 
 
 
-export { UserRepo };
+export { UserRepo, ProductRepo, CompanyRepo };

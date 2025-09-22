@@ -2,6 +2,18 @@ import { Column, Entity, ManyToOne, PrimaryColumn, PrimaryGeneratedColumn } from
 import { Product } from "./product.entity";
 import { User } from "./user.entity";
 import { ScanResult } from "../../types/enums";
+import { z } from "zod";
+
+export const ScanHistoryValidation = z.object({
+    id: z.uuidv4(),
+    lat: z.string().min(2).max(50),
+    long: z.string().min(2).max(50),
+    product: z.instanceof(Product),
+    scannedBy: z.instanceof(User),
+    scannedAt: z.date(),
+    scanResult: z.enum(ScanResult),
+    remarks: z.string().min(2).max(255),
+})
 
 @Entity()
 export class ScanHistory {
