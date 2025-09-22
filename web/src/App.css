@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+/* Custom responsive layout adjustments */
+@media (max-width: 768px) {
+  .app-grid {
+    grid-template-columns: 1fr !important;
+    grid-template-areas: 
+      "main"
+      "footer" !important;
+  }
+  
+  .sidebar-mobile {
+    display: none;
+  }
+}
