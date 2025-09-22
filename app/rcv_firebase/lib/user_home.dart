@@ -202,3 +202,11 @@ class _UserHomePageState extends State<UserHomePage> {
     );
   }
 }
+
+// ✅ Preview (can be removed if you already run from main.dart)
+void main() {
+  runApp(const MaterialApp(
+    debugShowCheckedModeBanner: false,
+    home: UserHomePage(),
+  ));
+}
