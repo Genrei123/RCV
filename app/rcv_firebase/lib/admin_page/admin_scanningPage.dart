@@ -19,6 +19,7 @@ class _AdminScanningPageState extends State<AdminScanningPage> {
         onBack: () => Navigator.of(context).maybePop(),
       ),
       body: const Center(child: Text('Welcome to the Admin Scanning Page')),
+
       bottomNavigationBar: AppBottomNavBar(
         selectedIndex: 2,
         role: NavBarRole.admin,

@@ -52,8 +52,6 @@ dependencies:
   google_fonts: ^6.3.1
   footer:
 
-
-
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -81,7 +79,6 @@ flutter:
     - assets/data/ # <-- THIS IS THE CRUCIAL LINE I ADDED FOR YOUR JSON
     # for users.json
     - assets/users.json
-
 
   # To add assets to your application, add an assets section, like this:
   # assets:

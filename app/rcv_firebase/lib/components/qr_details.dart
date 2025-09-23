@@ -6,6 +6,7 @@ import 'package:rcv_firebase/themes/app_colors.dart';
 // =========================================================================
 // SCANNED ITEM DATA MODEL
 // =========================================================================
+
 class ScannedItem {
   final String companyName;
   final String productName;

@@ -1,6 +1,3 @@
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
-
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
@@ -10,27 +7,20 @@ import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
 // Import all your pages
 import 'auth/landingPage.dart';
 import 'auth/login_page.dart';
+import 'widgets/navigation_bar.dart' as nav_bar;
 import 'auth/otp_verification_page.dart';
 import 'auth/reset_password.dart';
 import 'auth/reset_new_password_page.dart';
-import 'user_page/profilePage.dart';
-import 'pages/qr_scanner_page.dart';
-import 'user_page/home_page.dart';
-import 'user_page/agent_scanningPage.dart';
+import 'auth/user_profile.dart';
+import 'pages/qr_scanner_page.dart' as qr_page;
+import 'user_page/agent_homePage.dart';
+import 'user_page/scanning_Page.dart';
 import 'user_page/agent_auditTrail.dart';
-import 'user_page/user_Reports.dart';
+import 'user_page/agent_Reports.dart';
 import 'admin_page/admin_scanningPage.dart';
 import 'admin_page/admin_auditTrail.dart';
 import 'admin_page/admin_reports.dart';
 import 'admin_page/admin_homePage.dart';
-import 'admin_page/admin-profile.dart';
-
-import 'package:rcv_firebase/constants.dart';
-import 'package:rcv_firebase/controllers/menu_app_controller.dart';
-import 'package:rcv_firebase/screens/web/main/main_screen.dart';
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -47,50 +37,36 @@ class MyApp extends StatelessWidget {
       title: 'RCV - Product Verification',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        scaffoldBackgroundColor: kIsWeb ? bgColor : Colors.white,
+        scaffoldBackgroundColor: Colors.white,
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF005440)),
         primarySwatch: Colors.green,
-        textTheme: kIsWeb ? GoogleFonts.poppinsTextTheme(Theme.of(context).textTheme)
-            .apply(bodyColor: Colors.white) : null,
-        canvasColor: kIsWeb ? secondaryColor : null,
       ),
       // Start with the landing page
-  initialRoute: '/',
-  routes: kIsWeb 
-    ? {
-        '/': (context) => MultiProvider(
-          providers: [
-            ChangeNotifierProvider(
-              create: (context) => MenuAppController(),
-            ),
-          ],
-          child: MainScreen(),
-        ),
-      }
-    : {
+      initialRoute: '/',
+      routes: {
         //authentication
         '/': (context) => const LandingPage(),
         '/login': (context) => const LoginPage(),
         '/otp-verification': (context) => const OtpVerificationPage(),
         '/reset-password': (context) => ResetPasswordPage(),
         '/reset-new-password': (context) => const ResetNewPasswordPage(),
-        '/user-profile': (context) => const ProfilePage(),
-        '/admin-profile': (context) => const AdminProfilePage(),
+        '/user-profile': (context) => UserProfilePage(
+          role: (appRole ?? nav_bar.NavBarRole.user).toString(),
+        ),
         //Admin Pages
         '/admin-home': (context) => const HomePage(), // Admin HomePage
-        '/admin-scanning': (context) => const AdminScanningPage(),
         '/admin-audit-trail': (context) => const AdminAuditTrail(),
         '/admin-reports': (context) => const AdminReportsPage(),
         //Agent Pages
         '/user-home': (context) => const UserHomePage(),
-        '/qr-scanner': (context) => const QRScannerPage(),
         '/main-app': (context) => const MyHomePage(title: 'RCV Home'),
-        '/user-scanning': (context) => const AgentScanningPage(),
         '/user-audit-trail': (context) => const AuditTrailPage(),
         '/user-reports': (context) => const UserReportsPage(),
 
         //Agent Web Pages
-        
+
+        //Scanning Page
+        '/scanning': (context) => const QRScannerPage(),
       },
     );
   }

@@ -5,6 +5,7 @@ import '../widgets/gradient_header_app_bar.dart';
 import '../widgets/app_buttons.dart';
 import '../widgets/navigation_bar.dart';
 import 'package:rcv_firebase/pages/qr_scanner_page.dart';
+import 'scanning_Page.dart';
 
 class UserHomePage extends StatefulWidget {
   const UserHomePage({super.key});
@@ -68,7 +69,10 @@ class HomeContent extends StatelessWidget {
               subtitle: const Text('Verify product authenticity'),
               trailing: const Icon(Icons.arrow_forward_ios),
               onTap: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => QRScannerPage()));
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => QRScannerPage()),
+                );
               },
             ),
           ),
