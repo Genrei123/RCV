@@ -7,12 +7,14 @@ class AnimatedFormField extends StatelessWidget {
   final bool obscureText;
   final TextEditingController controller;
   final Widget? suffixIcon;
+  final FocusNode focusNode;
 
   const AnimatedFormField({
     super.key,
     required this.label,
     required this.hint,
     required this.controller,
+    required this.focusNode,
     this.obscureText = false,
     this.suffixIcon,
   });
@@ -20,14 +22,15 @@ class AnimatedFormField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: controller,
+      animation: Listenable.merge([controller, focusNode]),
       builder: (context, child) {
         final hasText = controller.text.isNotEmpty;
+        final isFocused = focusNode.hasFocus;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             AnimatedOpacity(
-              opacity: hasText ? 1 : 0,
+              opacity: (isFocused || hasText) ? 1 : 0,
               duration: Duration(milliseconds: 200),
               child: Container(
                 margin: EdgeInsets.only(left: 20),
@@ -48,9 +51,10 @@ class AnimatedFormField extends StatelessWidget {
               ),
               child: TextField(
                 controller: controller,
+                focusNode: focusNode,
                 obscureText: obscureText,
                 decoration: InputDecoration(
-                  hintText: hasText ? '' : hint,
+                  hintText: (!isFocused && !hasText) ? hint : '',
                   suffixIcon: suffixIcon,
                   contentPadding: EdgeInsets.symmetric(
                     horizontal: 20,
@@ -58,10 +62,17 @@ class AnimatedFormField extends StatelessWidget {
                   ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide.none,
                   ),
-                  filled: true,
-                  fillColor: app_colors.AppColors.white,
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(24),
+                    borderSide: BorderSide(
+                      color: app_colors.AppColors.primaryLight,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(24),
+                    borderSide: BorderSide(color: app_colors.AppColors.primary),
+                  ),
                 ),
               ),
             ),

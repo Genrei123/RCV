@@ -2,11 +2,23 @@
   {
     "email": "admin@example.com",
     "password": "admin123",
-    "role": "admin"
+    "role": "admin",
+    "avatarPath": "assets/avatar.png",
+    "name": "Karina Dela Cruz",
+    "id": "#123456-XYZ",
+    "location": "Caloocan City, Metro Manila",
+    "dob": "April 13, 2003",
+    "phone": "09497891653"
   },
   {
     "email": "user@example.com",
     "password": "user123",
-    "role": "user"
+    "role": "user",
+    "avatarPath": "assets/avatar.png",
+    "name": "Ningning Jose",
+    "id": "#654321-ABC",
+    "location": "Quezon City, Metro Manila",
+    "dob": "January 1, 2000",
+    "phone": "09123456789"
   }
 ]

@@ -1,4 +1,4 @@
-import 'package:rcv_firebase/constants.dart';
+
 import 'package:flutter/material.dart';
 
 class CloudStorageInfo {
@@ -22,7 +22,7 @@ List demoMyFiles = [
     numOfFiles: 1328,
     svgSrc: "assets/icons/Documents.svg",
     totalStorage: "1.9GB",
-    color: primaryColor,
+    color: Color(0xFF2697FF),
     percentage: 35,
   ),
   CloudStorageInfo(
