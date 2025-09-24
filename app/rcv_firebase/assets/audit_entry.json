@@ -1,0 +1,107 @@
+[
+  {
+    "type": "Logged In",
+    "action": "User logged in",
+    "date": "01/02/2023",
+    "details": "User successfully authenticated",
+    "userId": "#123456-XYZ"
+  },
+  {
+    "type": "Logged Out",
+    "action": "User logged out",
+    "date": "01/03/2023",
+    "details": "User session ended",
+    "userId": "#123456-XYZ"
+  },
+  {
+    "type": "Uploaded",
+    "action": "User uploaded an image",
+    "date": "01/07/2023",
+    "details": "Image file uploaded to server",
+    "userId": "#123456-XYZ"
+  },
+  {
+    "type": "Pinned",
+    "action": "User Pinned his location",
+    "date": "01/15/2023",
+    "details": "Location marked on map",
+    "userId": "#123456-XYZ"
+  },
+  {
+    "type": "Scanned",
+    "action": "User Scanned a product",
+    "date": "01/21/2023",
+    "details": "QR code scanned successfully",
+    "userId": "#123456-XYZ"
+  },
+  {
+    "type": "Logged In",
+    "action": "User logged in",
+    "date": "02/05/2023",
+    "details": "User successfully authenticated",
+    "userId": "#654321-ABC"
+  },
+  {
+    "type": "Logged Out",
+    "action": "User logged out",
+    "date": "02/06/2023",
+    "details": "User session ended",
+    "userId": "#654321-ABC"
+  },
+  {
+    "type": "Uploaded",
+    "action": "User uploaded an image",
+    "date": "02/10/2023",
+    "details": "Image file uploaded to server",
+    "userId": "#123456-XYZ"
+  },
+  {
+    "type": "Pinned",
+    "action": "User Pinned his location",
+    "date": "02/14/2023",
+    "details": "Location marked on map",
+    "userId": "#654321-ABC"
+  },
+  {
+    "type": "Scanned",
+    "action": "User Scanned a product",
+    "date": "02/18/2023",
+    "details": "QR code scanned successfully",
+    "userId": "#123456-XYZ"
+  },
+  {
+    "type": "Logged In",
+    "action": "User logged in",
+    "date": "03/01/2023",
+    "details": "User successfully authenticated",
+    "userId": "#123456-XYZ"
+  },
+  {
+    "type": "Logged Out",
+    "action": "User logged out",
+    "date": "03/04/2023",
+    "details": "User session ended",
+    "userId": "#654321-ABC"
+  },
+  {
+    "type": "Uploaded",
+    "action": "User uploaded an image",
+    "date": "03/11/2023",
+    "details": "Image file uploaded to server",
+    "userId": "#654321-ABC"
+  },
+  {
+    "type": "Pinned",
+    "action": "User Pinned his location",
+    "date": "03/15/2023",
+    "details": "Location marked on map",
+    "userId": "#123456-XYZ"
+  },
+  {
+    "type": "Scanned",
+    "action": "User Scanned a product",
+    "date": "03/20/2023",
+    "details": "QR code scanned successfully",
+    "userId": "#654321-ABC"
+  }
+]

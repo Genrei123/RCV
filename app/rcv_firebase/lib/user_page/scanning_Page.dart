@@ -8,6 +8,7 @@ import 'package:rcv_firebase/services/api_service.dart';
 import 'package:rcv_firebase/themes/app_fonts.dart';
 import '../widgets/gradient_header_app_bar.dart';
 import '../widgets/navigation_bar.dart';
+import '../auth/login_page.dart'; // Add this import to access appRole
 
 class QRScannerPage extends StatefulWidget {
   const QRScannerPage({super.key});
@@ -219,7 +220,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
   Widget build(BuildContext context) {
     // Example: Replace with your actual user role logic
     // You can get user role from provider, userData, or authentication state
-    final bool isAdmin = false; // TODO: Replace with actual check
+    final bool isAdmin = appRole == NavBarRole.admin;
 
     return Scaffold(
       appBar: GradientHeaderAppBar(

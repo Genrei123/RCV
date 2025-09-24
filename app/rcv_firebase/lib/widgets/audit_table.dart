@@ -91,37 +91,49 @@ class AuditTrailTable extends StatelessWidget {
               children: [
                 Expanded(
                   flex: 3,
-                  child: Text('Type',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          fontSize: 11)),
+                  child: Text(
+                    'Type',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      fontSize: 11,
+                    ),
+                  ),
                 ),
                 Expanded(
                   flex: 4,
-                  child: Text('Action',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          fontSize: 11)),
+                  child: Text(
+                    'Action',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      fontSize: 11,
+                    ),
+                  ),
                 ),
                 Expanded(
                   flex: 3,
-                  child: Text('Date',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          fontSize: 11)),
+                  child: Text(
+                    'Date',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      fontSize: 11,
+                    ),
+                  ),
                 ),
                 Expanded(
                   flex: 2,
                   child: Align(
                     alignment: Alignment.centerRight,
-                    child: Text('Details',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            fontSize: 11)),
+                    child: Text(
+                      'Details',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        fontSize: 11,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -132,7 +144,9 @@ class AuditTrailTable extends StatelessWidget {
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               decoration: BoxDecoration(
-                color: entries.indexOf(entry).isEven ? Colors.white : Colors.grey.shade50,
+                color: entries.indexOf(entry).isEven
+                    ? Colors.white
+                    : Colors.grey.shade50,
                 border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
               ),
               child: Row(
@@ -141,14 +155,20 @@ class AuditTrailTable extends StatelessWidget {
                   Expanded(
                     flex: 3,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: entry.getTypeColor(),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         entry.type,
-                        style: const TextStyle(color: Colors.white, fontSize: 9),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -157,16 +177,20 @@ class AuditTrailTable extends StatelessWidget {
                     flex: 4,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                      child: Text(entry.action,
-                          style: const TextStyle(fontSize: 10)),
+                      child: Text(
+                        entry.action,
+                        style: const TextStyle(fontSize: 10),
+                      ),
                     ),
                   ),
                   Expanded(
                     flex: 3,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                      child: Text(entry.date,
-                          style: const TextStyle(fontSize: 10)),
+                      child: Text(
+                        entry.date,
+                        style: const TextStyle(fontSize: 10),
+                      ),
                     ),
                   ),
                   Expanded(
@@ -174,8 +198,11 @@ class AuditTrailTable extends StatelessWidget {
                     child: Align(
                       alignment: Alignment.centerRight,
                       child: IconButton(
-                        icon: Icon(Icons.arrow_forward_ios,
-                            size: 12, color: Colors.grey.shade600),
+                        icon: Icon(
+                          Icons.arrow_forward_ios,
+                          size: 12,
+                          color: Colors.grey.shade600,
+                        ),
                         onPressed: () => onDetailsPressed(entry),
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
@@ -270,9 +297,10 @@ class AuditTrailPagination extends StatelessWidget {
                 child: Text(
                   '$currentPage',
                   style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 10),
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 10,
+                  ),
                 ),
               ),
               IconButton(
