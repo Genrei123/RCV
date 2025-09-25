@@ -7,15 +7,12 @@ import '../widgets/navigation_bar.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
 
-// Define a global variable for appRole
 NavBarRole? appRole;
 
-// Define AppColors if not already defined elsewhere
 class AppColors {
   static const Color primary = Color(0xFF00BA8E);
 }
 
-// Define the User class to hold account data
 class User {
   final String email;
   final String password;
@@ -45,35 +42,101 @@ class _LoginPageState extends State<LoginPage> {
   final emailFocusNode = FocusNode();
   final passwordFocusNode = FocusNode();
 
-  // Function to load and parse the JSON file
+  String? emailError;
+  String? passwordError;
+  bool hasEmailError = false;
+  bool hasPasswordError = false;
+
+  bool obscureText = true;
+
   Future<List<User>> loadUsers() async {
     final String response = await rootBundle.loadString('assets/users.json');
     final List<dynamic> data = jsonDecode(response);
     return data.map((json) => User.fromJson(json)).toList();
   }
 
-  // Function to validate login credentials
   Future<bool> validateLogin(
     String email,
     String password,
     BuildContext context,
   ) async {
+    setState(() {
+      emailError = null;
+      passwordError = null;
+      hasEmailError = false;
+      hasPasswordError = false;
+    });
+
+    bool hasErrors = false;
+    if (email.trim().isEmpty) {
+      setState(() {
+        emailError = 'Email is required';
+        hasEmailError = true;
+      });
+      hasErrors = true;
+    } else if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
+      setState(() {
+        emailError = 'Please enter a valid email';
+        hasEmailError = true;
+      });
+      hasErrors = true;
+    }
+
+    if (password.trim().isEmpty) {
+      setState(() {
+        passwordError = 'Password is required';
+        hasPasswordError = true;
+      });
+      hasErrors = true;
+    }
+
+    if (hasErrors) {
+      return false;
+    }
+
     final users = await loadUsers();
     for (var user in users) {
       if (user.email == email && user.password == password) {
         appRole = user.role;
-        Navigator.pushReplacementNamed(
-          context,
-          user.role == NavBarRole.admin ? '/admin-home' : '/user-home',
-        );
+        if (context.mounted) {
+          Navigator.pushReplacementNamed(
+            context,
+            user.role == NavBarRole.admin ? '/admin-home' : '/user-home',
+          );
+        }
         return true;
       }
     }
-    // Show error if credentials are invalid
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Invalid email or password')));
+
+    setState(() {
+      emailError = 'email not found';
+      passwordError = 'Invalid password';
+      hasEmailError = true;
+      hasPasswordError = true;
+    });
+
     return false;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    emailController.addListener(() {
+      if (hasEmailError) {
+        setState(() {
+          emailError = null;
+          hasEmailError = false;
+        });
+      }
+    });
+    passwordController.addListener(() {
+      if (hasPasswordError) {
+        setState(() {
+          passwordError = null;
+          hasPasswordError = false;
+        });
+      }
+    });
   }
 
   @override
@@ -89,6 +152,8 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
+        width: double.infinity,
+        height: double.infinity,
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
@@ -100,90 +165,116 @@ class _LoginPageState extends State<LoginPage> {
           ),
         ),
         child: SafeArea(
-          child: Column(
-            children: [
-              Container(
-                margin: EdgeInsets.only(
-                  top: MediaQuery.of(context).size.height * 0.2,
-                ),
-                alignment: Alignment.topCenter,
-                child: SvgPicture.asset(
-                  'assets/landinglogo.svg',
-                  width: 190,
-                  height: 190,
-                ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.only(bottom: 24.0),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight:
+                    MediaQuery.of(context).size.height -
+                    MediaQuery.of(context).padding.top -
+                    MediaQuery.of(context).padding.bottom -
+                    48,
               ),
-              SizedBox(height: 30),
-              Text(
-                'LOG IN',
-                style: TextStyle(
-                  fontSize: 22,
-                  color: Colors.white,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 1.2,
-                ),
-              ),
-              SizedBox(height: 24),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 32),
-                child: Column(
-                  children: [
-                    AnimatedFormField(
-                      label: 'Email',
-                      hint: 'Email',
-                      controller: emailController,
-                      focusNode: emailFocusNode,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    margin: EdgeInsets.only(
+                      top: MediaQuery.of(context).size.height * 0.1,
                     ),
-                    SizedBox(height: 16),
-                    AnimatedFormField(
-                      label: 'Password',
-                      hint: 'Password',
-                      controller: passwordController,
-                      focusNode: passwordFocusNode,
-                      obscureText: true,
-                      suffixIcon: ValueListenableBuilder<TextEditingValue>(
-                        valueListenable: passwordController,
-                        builder: (context, value, child) {
-                          return value.text.isNotEmpty
-                              ? Icon(Icons.visibility)
-                              : SizedBox.shrink();
-                        },
-                      ),
+                    alignment: Alignment.topCenter,
+                    child: SvgPicture.asset(
+                      'assets/landinglogo.svg',
+                      width: 190,
+                      height: 190,
                     ),
-                    SizedBox(height: 24),
-                    AppButtons(
-                      text: 'Log In',
-                      size: 48,
-                      textColor: app_colors.AppColors.text,
-                      backgroundColor: Colors.white,
-                      borderColor: Color(0xFF005440),
-                      icon: Icon(Icons.login, color: app_colors.AppColors.text),
-                      onPressed: () {
-                        validateLogin(
-                          emailController.text,
-                          passwordController.text,
-                          context,
-                        );
-                      },
+                  ),
+                  SizedBox(height: 30),
+                  Text(
+                    'LOG IN',
+                    style: TextStyle(
+                      fontSize: 22,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 1.2,
                     ),
-                    SizedBox(height: 24),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.pushNamed(context, '/reset-password');
-                      },
-                      child: Text(
-                        'Forgot your Password?',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontStyle: FontStyle.italic,
-                          decoration: TextDecoration.underline,
+                  ),
+                  SizedBox(height: 24),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: Column(
+                      children: [
+                        AnimatedFormField(
+                          label: 'Email',
+                          hint: 'Email',
+                          controller: emailController,
+                          focusNode: emailFocusNode,
+                          hasError: hasEmailError,
+                          errorText: emailError,
+                          errorTextColor: Colors.white,
                         ),
-                      ),
+                        SizedBox(height: 16),
+                        AnimatedFormField(
+                          label: 'Password',
+                          hint: 'Password',
+                          controller: passwordController,
+                          focusNode: passwordFocusNode,
+                          obscureText: obscureText,
+                          hasError: hasPasswordError,
+                          errorText: passwordError,
+                          errorTextColor: Colors.white,
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              obscureText
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                obscureText = !obscureText;
+                              });
+                            },
+                          ),
+                        ),
+                        SizedBox(height: 24),
+                        AppButtons(
+                          text: 'Log In',
+                          size: 48,
+                          textColor: app_colors.AppColors.text,
+                          backgroundColor: Colors.white,
+                          borderColor: Color(0xFF005440),
+                          icon: Icon(
+                            Icons.login,
+                            color: app_colors.AppColors.text,
+                          ),
+                          onPressed: () {
+                            validateLogin(
+                              emailController.text,
+                              passwordController.text,
+                              context,
+                            );
+                          },
+                        ),
+                        SizedBox(height: 24),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.pushNamed(context, '/reset-password');
+                          },
+                          child: Text(
+                            'Forgot your Password?',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontStyle: FontStyle.italic,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),

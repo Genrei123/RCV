@@ -2,75 +2,157 @@
   "auditLog": [
     {
       "type": "Logged In",
+      "action": "User logged in",
+      "date": "01/02/2023",
+      "details": "User successfully authenticated",
+      "userId": "#123456-XYZ"
+    },
+    {
+      "type": "Uploaded",
+      "action": "User uploaded an image",
+      "date": "01/07/2023",
+      "details": "Image file uploaded to server",
+      "userId": "#123456-XYZ"
+    },
+    {
+      "type": "Scanned",
+      "action": "User Scanned a product",
+      "date": "01/21/2023",
+      "details": "QR code scanned successfully",
+      "userId": "#123456-XYZ"
+    },
+    {
+      "type": "Logged Out",
+      "action": "User logged out",
+      "date": "01/03/2023",
+      "details": "User session ended",
+      "userId": "#654321-ABC"
+    },
+    {
+      "type": "Pinned",
+      "action": "User Pinned his location",
+      "date": "01/15/2023",
+      "details": "Location marked on map",
+      "userId": "#789012-DEF"
+    },
+    {
+      "type": "Logged In",
+      "action": "User logged in",
+      "date": "02/05/2023",
+      "details": "User successfully authenticated",
+      "userId": "#654321-ABC"
+    },
+    {
+      "type": "Logged Out",
+      "action": "User logged out",
+      "date": "02/06/2023",
+      "details": "User session ended",
+      "userId": "#345678-GHI"
+    },
+    {
+      "type": "Uploaded",
+      "action": "User uploaded an image",
+      "date": "02/10/2023",
+      "details": "Image file uploaded to server",
+      "userId": "#901234-JKL"
+    },
+    {
+      "type": "Pinned",
+      "action": "User Pinned his location",
+      "date": "02/14/2023",
+      "details": "Location marked on map",
+      "userId": "#654321-ABC"
+    },
+    {
+      "type": "Scanned",
+      "action": "User Scanned a product",
+      "date": "02/18/2023",
+      "details": "QR code scanned successfully",
+      "userId": "#567890-MNO"
+    },
+    {
+      "type": "Logged In",
       "action": "User signed in",
       "date": "2024-05-15",
-      "details": "User 'John Doe' logged in successfully from IP: 192.168.1.101 at 09:30 AM."
+      "details": "User 'John Doe' logged in successfully from IP: 192.168.1.101 at 09:30 AM.",
+      "userId": "#234567-PQR"
     },
     {
       "type": "Logged Out",
       "action": "User signed out",
       "date": "2024-05-15",
-      "details": "User 'John Doe' logged out from the application at 11:45 AM."
+      "details": "User 'John Doe' logged out from the application at 11:45 AM.",
+      "userId": "#234567-PQR"
     },
     {
       "type": "Uploaded",
       "action": "Uploaded an image",
       "date": "2024-05-14",
-      "details": "Image 'invoice_123.jpg' was uploaded to the 'Documents' folder."
+      "details": "Image 'invoice_123.jpg' was uploaded to the 'Documents' folder.",
+      "userId": "#890123-STU"
     },
     {
       "type": "Pinned",
       "action": "Pinned Location",
       "date": "2024-05-13",
-      "details": "Location 'Bagong Silang Caloocan City' was pinned by user."
+      "details": "Location 'Bagong Silang Caloocan City' was pinned by user.",
+      "userId": "#456789-VWX"
     },
     {
       "type": "Scanned",
       "action": "Scanned a product detail",
       "date": "2024-05-13",
-      "details": "Product 'SKU: 987654' scanned at warehouse A. Status: In Stock."
+      "details": "Product 'SKU: 987654' scanned at warehouse A. Status: In Stock.",
+      "userId": "#123890-YZA"
     },
     {
       "type": "Logged In",
       "action": "User signed in",
       "date": "2024-05-12",
-      "details": "User 'Jane Smith' logged in from a new device (iPhone) at 08:00 AM."
+      "details": "User 'Jane Smith' logged in from a new device (iPhone) at 08:00 AM.",
+      "userId": "#567123-BCD"
     },
     {
       "type": "Logged Out",
       "action": "User signed out",
       "date": "2024-05-12",
-      "details": "User 'Jane Smith' logged out after 3 hours of activity."
+      "details": "User 'Jane Smith' logged out after 3 hours of activity.",
+      "userId": "#567123-BCD"
     },
     {
       "type": "Uploaded",
       "action": "Uploaded a product detail",
       "date": "2024-05-11",
-      "details": "Product details for 'Product X' uploaded via batch process."
+      "details": "Product details for 'Product X' uploaded via batch process.",
+      "userId": "#901567-EFG"
     },
     {
       "type": "Pinned",
       "action": "Pinned Location",
       "date": "2024-05-10",
-      "details": "Location 'Main Office' was pinned."
+      "details": "Location 'Main Office' was pinned.",
+      "userId": "#345901-HIJ"
     },
     {
       "type": "Scanned",
       "action": "Scanned a product detail",
       "date": "2024-05-10",
-      "details": "Product 'SKU: 112233' scanned. Details updated."
+      "details": "Product 'SKU: 112233' scanned. Details updated.",
+      "userId": "#789345-KLM"
     },
     {
       "type": "Logged In",
       "action": "User signed in",
       "date": "2024-05-09",
-      "details": "User 'Admin' logged in with elevated privileges."
+      "details": "User 'Admin' logged in with elevated privileges.",
+      "userId": "#123789-NOP"
     },
     {
       "type": "Logged Out",
       "action": "User signed out",
       "date": "2024-05-09",
-      "details": "Session for user 'Admin' terminated."
+      "details": "Session for user 'Admin' terminated.",
+      "userId": "#123789-NOP"
     }
   ]
 }
