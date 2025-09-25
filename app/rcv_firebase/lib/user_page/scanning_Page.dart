@@ -1,11 +1,8 @@
-import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:rcv_firebase/services/api_service.dart';
-import 'package:rcv_firebase/themes/app_fonts.dart';
 import '../widgets/gradient_header_app_bar.dart';
 import '../widgets/navigation_bar.dart';
 import '../auth/login_page.dart'; // Add this import to access appRole
