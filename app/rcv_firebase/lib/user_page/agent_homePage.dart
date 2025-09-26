@@ -56,6 +56,7 @@ class HomeContent extends StatelessWidget {
             icon: Icon(LucideIcons.mapPin, color: app_colors.AppColors.white),
             onPressed: () {
               // Navigate to location page
+              Navigator.pushNamed(context, '/user-location');
             },
           ),
           const SizedBox(height: 12),

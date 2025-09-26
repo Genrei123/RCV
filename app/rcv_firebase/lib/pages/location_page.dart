@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:location/location.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../services/gps_service.dart';
 import '../themes/app_colors.dart' as app_colors;
 import '../widgets/app_buttons.dart';
@@ -15,6 +16,7 @@ class LocationPage extends StatefulWidget {
 
 class _LocationPageState extends State<LocationPage> {
   final GpsService _gpsService = GpsService();
+  GoogleMapController? _mapController;
   
   // Location state
   LocationData? _currentLocation;
@@ -68,6 +70,18 @@ class _LocationPageState extends State<LocationPage> {
           _locationStatus = 'Location updated successfully!';
           _isLoading = false;
         });
+        
+        // Move map to current location
+        if (_mapController != null && location.latitude != null && location.longitude != null) {
+          _mapController!.animateCamera(
+            CameraUpdate.newCameraPosition(
+              CameraPosition(
+                target: LatLng(location.latitude!, location.longitude!),
+                zoom: 15.0,
+              ),
+            ),
+          );
+        }
       } else {
         setState(() {
           _locationStatus = 'Failed to get location. Check permissions and GPS.';
@@ -105,6 +119,15 @@ class _LocationPageState extends State<LocationPage> {
         _currentLocation = location;
         _locationStatus = 'Location tracking active';
       });
+      
+      // Update map camera when we get new location
+      if (_mapController != null && location.latitude != null && location.longitude != null) {
+        _mapController!.animateCamera(
+          CameraUpdate.newLatLng(
+            LatLng(location.latitude!, location.longitude!),
+          ),
+        );
+      }
     });
   }
 
@@ -125,10 +148,10 @@ class _LocationPageState extends State<LocationPage> {
     return Scaffold(
       appBar: GradientHeaderAppBar(
         greeting: 'My Location',
-        user: 'GPS Service',
+        user: 'Location',
         onBack: () => Navigator.of(context).pop(),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -170,6 +193,80 @@ class _LocationPageState extends State<LocationPage> {
               ),
             ),
             
+            const SizedBox(height: 20),
+
+            // Google Maps Widget
+            Card(
+              elevation: 3,
+              child: Container(
+                height: 250,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: GoogleMap(
+                    initialCameraPosition: CameraPosition(
+                      target: LatLng(14.5995, 120.9842), // Default to Philippines center
+                      zoom: 6.0,
+                    ),
+                    onMapCreated: (GoogleMapController controller) {
+                      _mapController = controller;
+                      
+                      // If we already have location when map is created, move to it
+                      if (_currentLocation != null && 
+                          _currentLocation!.latitude != null && 
+                          _currentLocation!.longitude != null) {
+                        Future.delayed(Duration(milliseconds: 500), () {
+                          controller.animateCamera(
+                            CameraUpdate.newCameraPosition(
+                              CameraPosition(
+                                target: LatLng(
+                                  _currentLocation!.latitude!,
+                                  _currentLocation!.longitude!,
+                                ),
+                                zoom: 15.0,
+                              ),
+                            ),
+                          );
+                        });
+                      }
+                    },
+                    markers: _currentLocation != null &&
+                        _currentLocation!.latitude != null &&
+                        _currentLocation!.longitude != null
+                        ? {
+                            Marker(
+                              markerId: const MarkerId('current_location'),
+                              position: LatLng(
+                                _currentLocation!.latitude!,
+                                _currentLocation!.longitude!,
+                              ),
+                              infoWindow: InfoWindow(
+                                title: 'Current Location',
+                                snippet: 'Lat: ${_currentLocation!.latitude?.toStringAsFixed(6)}, Lng: ${_currentLocation!.longitude?.toStringAsFixed(6)}',
+                              ),
+                              icon: BitmapDescriptor.defaultMarkerWithHue(
+                                BitmapDescriptor.hueRed,
+                              ),
+                            ),
+                          }
+                        : {},
+                    myLocationEnabled: false, // Disable to avoid conflicts
+                    myLocationButtonEnabled: false, // We'll use our own buttons
+                    zoomControlsEnabled: true,
+                    mapType: MapType.normal,
+                    compassEnabled: true,
+                    tiltGesturesEnabled: true,
+                    scrollGesturesEnabled: true,
+                    zoomGesturesEnabled: true,
+                    rotateGesturesEnabled: true,
+                  ),
+                ),
+              ),
+            ),
+
             const SizedBox(height: 20),
 
             // Location Details Card
@@ -259,7 +356,7 @@ class _LocationPageState extends State<LocationPage> {
               onPressed: _toggleLocationTracking,
             ),
 
-            const Spacer(),
+            const SizedBox(height: 40),
 
             // Info Card
             Card(
