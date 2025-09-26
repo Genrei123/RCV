@@ -20,6 +20,7 @@ import 'user_page/agent_Reports.dart';
 import 'admin_page/admin_auditTrail.dart';
 import 'admin_page/admin_reports.dart';
 import 'admin_page/admin_homePage.dart';
+import 'pages/location_page.dart';
 import 'admin_page/home_table/home_accounts.dart';
 import 'admin_page/home_table/home_pending.dart';
 import 'admin_page/home_table/home_archive.dart';
@@ -44,6 +45,23 @@ class MyApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF005440)),
           primarySwatch: Colors.green,
         ),
+        //Admin Pages
+        '/admin-home': (context) => const HomePage(), // Admin HomePage
+        '/admin-audit-trail': (context) => const AdminAuditTrail(),
+        '/admin-reports': (context) => const AdminReportsPage(),
+        '/admin-location': (context) => const LocationPage(),
+        //Agent Pages
+        '/user-home': (context) => const UserHomePage(),
+        '/main-app': (context) => const MyHomePage(title: 'RCV Home'),
+        '/user-audit-trail': (context) => const AuditTrailPage(),
+        '/user-reports': (context) => const UserReportsPage(),
+        '/user-location': (context) => const LocationPage(),
+
+        //Agent Web Pages
+
+        //Scanning Page
+        '/scanning': (context) => const QRScannerPage(),
+      },
         // Start with the landing page
         initialRoute: '/',
         routes: {

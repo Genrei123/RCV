@@ -51,6 +51,7 @@ dependencies:
   provider: ^6.1.5+1
   google_fonts: ^6.3.1
   footer:
+  location: ^8.0.1
 
 dev_dependencies:
   flutter_test:
