@@ -19,6 +19,9 @@ import 'user_page/agent_Reports.dart';
 import 'admin_page/admin_auditTrail.dart';
 import 'admin_page/admin_reports.dart';
 import 'admin_page/admin_homePage.dart';
+import 'admin_page/home_table/home_accounts.dart';
+import 'admin_page/home_table/home_pending.dart';
+import 'admin_page/home_table/home_archive.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -55,6 +58,9 @@ class MyApp extends StatelessWidget {
         '/admin-home': (context) => const HomePage(), // Admin HomePage
         '/admin-audit-trail': (context) => const AdminAuditTrail(),
         '/admin-reports': (context) => const AdminReportsPage(),
+        '/home-accounts': (context) => const HomeArchivePage(),
+        '/home-archive': (context) => const HomeArchivedPage(),
+        '/home-pending': (context) => const HomePendingPage(),
         //Agent Pages
         '/user-home': (context) => const UserHomePage(),
         '/main-app': (context) => const MyHomePage(title: 'RCV Home'),

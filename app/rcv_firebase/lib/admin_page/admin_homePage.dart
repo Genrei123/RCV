@@ -103,7 +103,7 @@ class _HomePageState extends State<HomePage> {
                   color: app_colors.AppColors.primary,
                   icon: Icon(Icons.person, color: app_colors.AppColors.white),
                   onPressed: () {
-                    // Navigate to location page
+                    Navigator.pushNamed(context, '/home-accounts');
                   },
                 ),
               ),
