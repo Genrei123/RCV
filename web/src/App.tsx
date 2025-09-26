@@ -19,10 +19,10 @@ function App() {
         <main className="p-4 md:p-8 overflow-y-auto bg-white m-2 md:m-4 rounded-lg shadow-sm">
           <Routes>
             <Route path="/" element={<Dashboard />} />
-            <Route path="/products" element={<Products />} />
-            <Route path="/blockchain" element={<Blockchain />} />
-            <Route path="/scan" element={<ScanHistory />} />
-            <Route path="/users" element={<UsersPage />} />
+            <Route path="/users" element={<Products />} />
+            <Route path="/location" element={<Blockchain />} />
+            <Route path="/profile" element={<ScanHistory />} />
+            <Route path="/logout" element={<UsersPage />} />
           </Routes>
         </main>
         

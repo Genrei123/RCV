@@ -12,10 +12,10 @@ export function Sidebar() {
   
   const menuItems = [
     { path: '/', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/products', label: 'Users', icon: Users2 },
-    { path: '/blockchain', label: 'Location', icon: LocateIcon },
-    { path: '/scan', label: 'Profile', icon: Profile },
-    { path: '/users', label: 'Log Out', icon: PowerIcon },
+    { path: '/users', label: 'Users', icon: Users2 },
+    { path: '/location', label: 'Location', icon: LocateIcon },
+    { path: '/profile', label: 'Profile', icon: Profile },
+    { path: '/logout', label: 'Log Out', icon: PowerIcon },
   ];
 
   return (

@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
+import 'graphql/graphql_client.dart'; // Import GraphQL configuration
 
 // Import all your pages
 import 'auth/landingPage.dart';
@@ -20,6 +21,9 @@ import 'admin_page/admin_auditTrail.dart';
 import 'admin_page/admin_reports.dart';
 import 'admin_page/admin_homePage.dart';
 import 'pages/location_page.dart';
+import 'admin_page/home_table/home_accounts.dart';
+import 'admin_page/home_table/home_pending.dart';
+import 'admin_page/home_table/home_archive.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,25 +36,14 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'RCV - Product Verification',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        scaffoldBackgroundColor: Colors.white,
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF005440)),
-        primarySwatch: Colors.green,
-      ),
-      // Start with the landing page
-      initialRoute: '/',
-      routes: {
-        //authentication
-        '/': (context) => const LandingPage(),
-        '/login': (context) => const LoginPage(),
-        '/otp-verification': (context) => const OtpVerificationPage(),
-        '/reset-password': (context) => ResetPasswordPage(),
-        '/reset-new-password': (context) => const ResetNewPasswordPage(),
-        '/user-profile': (context) => UserProfilePage(
-          role: (appRole ?? nav_bar.NavBarRole.user).toString(),
+    return GraphQLWrapper(
+      child: MaterialApp(
+        title: 'RCV - Product Verification',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          scaffoldBackgroundColor: Colors.white,
+          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF005440)),
+          primarySwatch: Colors.green,
         ),
         //Admin Pages
         '/admin-home': (context) => const HomePage(), // Admin HomePage
@@ -69,6 +62,34 @@ class MyApp extends StatelessWidget {
         //Scanning Page
         '/scanning': (context) => const QRScannerPage(),
       },
+        // Start with the landing page
+        initialRoute: '/',
+        routes: {
+          //authentication
+          '/': (context) => const LandingPage(),
+          '/login': (context) => const LoginPage(),
+          '/otp-verification': (context) => const OtpVerificationPage(),
+          '/reset-password': (context) => ResetPasswordPage(),
+          '/reset-new-password': (context) => const ResetNewPasswordPage(),
+          '/user-profile': (context) => UserProfilePage(
+            role: (appRole ?? nav_bar.NavBarRole.user).toString(),
+          ),
+          //Admin Pages
+          '/admin-home': (context) => const HomePage(), // Admin HomePage
+          '/admin-audit-trail': (context) => const AdminAuditTrail(),
+          '/admin-reports': (context) => const AdminReportsPage(),
+          '/home-accounts': (context) => const HomeArchivePage(),
+          '/home-archive': (context) => const HomeArchivedPage(),
+          '/home-pending': (context) => const HomePendingPage(),
+          //Agent Pages
+          '/user-home': (context) => const UserHomePage(),
+          '/main-app': (context) => const MyHomePage(title: 'RCV Home'),
+          '/user-audit-trail': (context) => const AuditTrailPage(),
+          '/user-reports': (context) => const UserReportsPage(),
+          //Scanning Page
+          '/scanning': (context) => const QRScannerPage(),
+        },
+      ),
     );
   }
 }
