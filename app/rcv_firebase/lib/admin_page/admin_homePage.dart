@@ -4,7 +4,8 @@ import '../widgets/navigation_bar.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
 import '../widgets/app_buttons.dart';
-import '../widgets/audit_table.dart'; // Import centralized audit widget
+import '../widgets/graphql_audit_widget.dart'; // Import GraphQL audit widget
+import '../graphql/graphql_client.dart'; // Import GraphQL configuration
 import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
 
 void main() {
@@ -52,113 +53,116 @@ class _HomePageState extends State<HomePage> {
     if (userData == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    return Scaffold(
-      appBar: GradientHeaderAppBar(
-        greeting: 'Welcome back',
-        user: (userData!['name'] ?? '').toString().split(' ').first,
-        onBack: () => Navigator.of(context).maybePop(),
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            16.0,
-            16.0,
-            16.0,
-            24.0,
-          ), // Extra bottom padding
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(bottom: 24.0),
-                child: Text(
-                  'Home',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Montserrat', // Use your app font here
+    return GraphQLWrapper(
+      child: Scaffold(
+        appBar: GradientHeaderAppBar(
+          greeting: 'Welcome back',
+          user: (userData!['name'] ?? '').toString().split(' ').first,
+          onBack: () => Navigator.of(context).maybePop(),
+        ),
+        body: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              16.0,
+              16.0,
+              16.0,
+              24.0,
+            ), // Extra bottom padding
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 24.0),
+                  child: Text(
+                    'Home',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Montserrat', // Use your app font here
+                    ),
                   ),
                 ),
-              ),
-              AppButtons.main(
-                text: 'Locations',
-                subTitle: 'Tag the location',
-                size: 80,
-                textColor: app_colors.AppColors.white,
-                color: app_colors.AppColors.primary,
-                icon: Icon(
-                  Icons.location_on,
-                  color: app_colors.AppColors.white,
-                ),
-                onPressed: () {
-                  // Navigate to location page
-                },
-              ),
-              Padding(
-                padding: const EdgeInsets.only(top: 16.0, bottom: 16.0),
-                child: AppButtons.main(
-                  text: 'Accounts',
-                  subTitle: 'Manage User Accounts',
+                AppButtons.main(
+                  text: 'Locations',
+                  subTitle: 'Tag the location',
                   size: 80,
                   textColor: app_colors.AppColors.white,
                   color: app_colors.AppColors.primary,
-                  icon: Icon(Icons.person, color: app_colors.AppColors.white),
+                  icon: Icon(
+                    Icons.location_on,
+                    color: app_colors.AppColors.white,
+                  ),
                   onPressed: () {
                     // Navigate to location page
                   },
                 ),
-              ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 16.0, bottom: 16.0),
+                  child: AppButtons.main(
+                    text: 'Accounts',
+                    subTitle: 'Manage User Accounts',
+                    size: 80,
+                    textColor: app_colors.AppColors.white,
+                    color: app_colors.AppColors.primary,
+                    icon: Icon(Icons.person, color: app_colors.AppColors.white),
+                    onPressed: () {
+                      // Navigate to location page
+                    },
+                  ),
+                ),
 
-              // Your Recent Audits Section
-              Padding(
-                padding: const EdgeInsets.only(top: 16.0, bottom: 16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header with lines on both sides
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Container(height: 1, color: Colors.black),
-                        ),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 8.0),
-                          child: Text(
-                            'Your Recent Audits',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
+                // Your Recent Audits Section with GraphQL
+                Padding(
+                  padding: const EdgeInsets.only(top: 16.0, bottom: 16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header with lines on both sides
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(height: 1, color: Colors.black),
+                          ),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 8.0),
+                            child: Text(
+                              'Your Recent Audits',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
                             ),
                           ),
-                        ),
-                        Expanded(
-                          child: Container(height: 1, color: Colors.black),
-                        ),
-                      ],
-                    ),
+                          Expanded(
+                            child: Container(height: 1, color: Colors.black),
+                          ),
+                        ],
+                      ),
 
-                    const SizedBox(height: 16),
+                      const SizedBox(height: 16),
 
-                    // Use the centralized CompleteAuditWidget for user-specific recent audits
-                    CompleteAuditWidget(
-                      filterByUserId:
-                          userData?['id']
-                              as String?, // Filter by current user ID
-                      showRecentOnly: true, // Show only recent audits (first 5)
-                      showPagination:
-                          false, // No pagination for homepage recent audits
-                    ),
-                  ],
+                      // Use GraphQL-powered audit widget for recent audits
+                      GraphQLAuditWidget(
+                        userId:
+                            userData?['id']
+                                as String?, // Filter by current user
+                        showRecentOnly:
+                            true, // Show only recent audits (first 5)
+                        showPagination: false, // No pagination for homepage
+                        entriesPerPage: 5, // Limit to 5 recent entries
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
-      //nav bar
-      bottomNavigationBar: AppBottomNavBar(
-        selectedIndex: 0,
-        role: NavBarRole.admin,
+        //nav bar
+        bottomNavigationBar: AppBottomNavBar(
+          selectedIndex: 0,
+          role: NavBarRole.admin,
+        ),
       ),
     );
   }

@@ -1,0 +1,26 @@
+**File adjusted:**  
+`/c:/Users/user/Desktop/RCV/app/rcv_firebase/assets/explanation`
+
+**Summary of changes made:**
+- Added a complete explanation of how GraphQL was implemented in the RCV app.
+- Documented backend setup: listed new dependencies, described the new `AuditTrail` entity, GraphQL schema, and resolver logic.
+- Documented frontend setup: listed new Flutter dependencies, GraphQL client configuration, queries, and widget implementation.
+- Explained integration into admin and home pages, showing how the new GraphQL widgets replace or supplement old widgets.
+- Added details on error handling and fallback to local data if the GraphQL server is unavailable.
+- Compared benefits before and after GraphQL integration.
+- Provided example GraphQL queries and responses.
+- Listed current status (what works, what’s missing).
+- Outlined next steps to complete full GraphQL integration.
+
+**Files created or adjusted:**
+- Adjusted: `/c:/Users/user/Desktop/RCV/app/rcv_firebase/assets/explanation` (this markdown file)
+- Created/modified (as referenced in the explanation):
+    - `api/package.json` (added dependencies)
+    - `api/src/typeorm/entities/audit-trail.entity.ts` (new entity)
+    - `api/src/graphql/types.ts` (new GraphQL type)
+    - `api/src/graphql/resolvers.ts` (new resolver)
+    - `lib/services/graphql_client.dart` (new client config)
+    - `lib/graphql/queries.dart` (new queries)
+    - `lib/widgets/graphql_audit_widget.dart` (new widget)
+    - `lib/admin_page/admin_auditTrail.dart` (integration)
+    - `lib/admin_page/admin_homePage.dart` (integration)

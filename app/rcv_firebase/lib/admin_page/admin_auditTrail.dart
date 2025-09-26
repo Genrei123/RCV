@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../widgets/gradient_header_app_bar.dart';
 import '../widgets/navigation_bar.dart';
-import '../widgets/audit_table.dart'; // Import the centralized audit widget
+import '../widgets/graphql_audit_widget.dart'; // Import GraphQL audit widget
+import '../graphql/graphql_client.dart'; // Import GraphQL configuration
 import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
 
@@ -38,37 +39,44 @@ class _AdminAuditTrailState extends State<AdminAuditTrail> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    return Scaffold(
-      appBar: GradientHeaderAppBar(
-        greeting: 'Welcome back',
-        user: (userData!['name'] ?? '').toString().split(' ').first,
-        onBack: () => Navigator.of(context).maybePop(),
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            16.0,
-            16.0,
-            16.0,
-            24.0,
-          ), // Extra bottom padding - same as homepage
-          child: Column(
-            children: [
-              const Padding(
-                padding: EdgeInsets.only(bottom: 16.0),
-                child: Text(
-                  'Audit Trail',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+    return GraphQLWrapper(
+      child: Scaffold(
+        appBar: GradientHeaderAppBar(
+          greeting: 'Welcome back',
+          user: (userData!['name'] ?? '').toString().split(' ').first,
+          onBack: () => Navigator.of(context).maybePop(),
+        ),
+        body: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              16.0,
+              16.0,
+              16.0,
+              24.0,
+            ), // Extra bottom padding - same as homepage
+            child: Column(
+              children: [
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 16.0),
+                  child: Text(
+                    'Audit Trail',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
                 ),
-              ),
-              CompleteAuditWidget(showPagination: true, entriesPerPage: 10),
-            ],
+                // Use GraphQL-powered audit widget
+                GraphQLAuditWidget(
+                  showPagination: true,
+                  entriesPerPage: 10,
+                  userId: null, // Show all audit trails
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-      bottomNavigationBar: AppBottomNavBar(
-        selectedIndex: 1,
-        role: NavBarRole.admin,
+        bottomNavigationBar: AppBottomNavBar(
+          selectedIndex: 1,
+          role: NavBarRole.admin,
+        ),
       ),
     );
   }
