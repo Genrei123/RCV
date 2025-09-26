@@ -1,17 +1,20 @@
+import { PageContainer } from "@/components/PageContainer"
+
 export function UsersPage() {
     return (
-        <div className="max-w-6xl mx-auto">
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4">Users</h1>
-            <p className="text-gray-600 mb-6 md:mb-8">Manage system users and their permissions.</p>
+        <PageContainer 
+            title="Users" 
+            description="Manage system users and their permissions"
+            headerAction={
+                <button className="bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors">
+                    Add New User
+                </button>
+            }
+        >
 
             <div className="bg-white rounded-lg shadow border border-gray-200">
                 <div className="p-6 border-b border-gray-200">
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                        <h2 className="text-xl font-semibold text-gray-800">User Management</h2>
-                        <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                            Add New User
-                        </button>
-                    </div>
+                    <h2 className="text-xl font-semibold text-gray-800">User Management</h2>
                 </div>
 
                 <div className="p-6">
@@ -40,6 +43,6 @@ export function UsersPage() {
                     </div>
                 </div>
             </div>
-        </div>
+        </PageContainer>
     );
 }

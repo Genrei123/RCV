@@ -1,0 +1,110 @@
+import { MapComponent } from "@/components/MapComponent"
+import type { Inspector } from "@/components/MapComponent"
+import { PageContainer } from "@/components/PageContainer"
+
+export function Maps() {
+  // Sample inspectors data
+  const inspectors: Inspector[] = [
+    {
+      id: "1",
+      name: "Gizelle Fungo",
+      role: "Inspector",
+      status: "active",
+      location: {
+        lat: 14.5995,
+        lng: 120.9842,
+        address: "Makati Business District",
+        city: "Makati"
+      }
+    },
+    {
+      id: "2", 
+      name: "Winter Cruz",
+      role: "Inspector",
+      status: "active",
+      location: {
+        lat: 14.6091,
+        lng: 121.0223,
+        address: "Ortigas Center",
+        city: "Pasig"
+      }
+    },
+    {
+      id: "3",
+      name: "Karina Data Crud",
+      role: "Inspector", 
+      status: "active",
+      location: {
+        lat: 14.5794,
+        lng: 121.0359,
+        address: "BGC, Taguig",
+        city: "Taguig"
+      }
+    },
+    {
+      id: "4",
+      name: "Nitinging Torres",
+      role: "Inspector",
+      status: "active", 
+      location: {
+        lat: 14.6760,
+        lng: 121.0437,
+        address: "Quezon City Hall",
+        city: "Quezon City"
+      }
+    },
+    {
+      id: "5",
+      name: "John Doe",
+      role: "Inspector",
+      status: "inactive",
+      location: {
+        lat: 14.5547,
+        lng: 121.0244,
+        address: "Manila City Hall",
+        city: "Manila"
+      }
+    },
+    {
+      id: "6",
+      name: "Lorem Chon",
+      role: "Inspector",
+      status: "active",
+      location: {
+        lat: 14.5378,
+        lng: 121.0014,
+        address: "Malate District",
+        city: "Manila"
+      }
+    }
+  ];
+
+  const handleInspectorClick = (inspector: Inspector) => {
+    console.log('Inspector clicked:', inspector);
+    // Handle inspector selection - navigate to profile, show details, etc.
+  };
+
+  const handleSearch = (query: string) => {
+    console.log('Map search:', query);
+    // Handle map search - filter inspectors, search locations, etc.
+  };
+
+  return (
+    <PageContainer 
+      title="Inspector Locations" 
+      description="View and manage inspector locations across different areas"
+      maxWidth="full"
+    >
+      <div className="h-full flex flex-col">
+        <div className="flex-1 min-h-0">
+          <MapComponent
+            inspectors={inspectors}
+            onInspectorClick={handleInspectorClick}
+            onSearch={handleSearch}
+            loading={false}
+          />
+        </div>
+      </div>
+    </PageContainer>
+  );
+}

@@ -1,51 +1,162 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom'
+import { useState } from 'react'
 import { 
   LayoutDashboard, 
-  Users2,
-  LocateIcon,
-  User as Profile,
-  PowerIcon
-} from 'lucide-react';
+  Package,
+  MapPin,
+  Users,
+  User,
+  LogOut,
+  ChevronDown,
+  Settings,
+  Bell
+} from 'lucide-react'
+import { LogoutModal } from './LogoutModal'
 
 export function Sidebar() {
-  const location = useLocation();
+  const location = useLocation()
+  const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const [showLogoutModal, setShowLogoutModal] = useState(false)
   
   const menuItems = [
     { path: '/', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/users', label: 'Users', icon: Users2 },
-    { path: '/location', label: 'Location', icon: LocateIcon },
-    { path: '/profile', label: 'Profile', icon: Profile },
-    { path: '/logout', label: 'Log Out', icon: PowerIcon },
-  ];
+    { path: '/products', label: 'Products', icon: Package },
+    { path: '/maps', label: 'Maps', icon: MapPin },
+    { path: '/users', label: 'Users', icon: Users },
+  ]
+
+  const profileMenuItems = [
+    { path: '/profile', label: 'View Profile', icon: User },
+    { path: '/settings', label: 'Settings', icon: Settings },
+    { path: '/notifications', label: 'Notifications', icon: Bell },
+  ]
+
+  const handleLogout = () => {
+    setShowLogoutModal(false)
+    setShowProfileMenu(false)
+    // Handle logout logic here
+    console.log('User logged out')
+    // In real app: clear auth tokens, redirect to login, etc.
+  }
 
   return (
-    <div className="p-4">
-      <div className="mb-8">
-        <h2 className="text-xl font-bold text-white">RCV System</h2>
-        <p className="text-slate-300 text-sm">Product Verification</p>
-      </div>
-      
-      <nav className="space-y-2">
-        {menuItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = location.pathname === item.path;
-          
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                isActive
-                  ? 'bg-blue-600 text-white'
-                  : 'text-slate-300 hover:bg-slate-700 hover:text-white'
+    <>
+      <div className="flex flex-col h-full">
+        {/* Header */}
+        <div className="p-6 border-b border-slate-700">
+          <div className="mb-1">
+            <h2 className="text-xl font-bold text-white">RCV System</h2>
+            <p className="text-slate-400 text-sm font-medium">Product Verification</p>
+          </div>
+        </div>
+        
+        {/* Main Navigation */}
+        <nav className="flex-1 px-4 py-6">
+          <div className="space-y-1">
+            {menuItems.map((item) => {
+              const Icon = item.icon
+              const isActive = location.pathname === item.path
+              
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${
+                    isActive
+                      ? 'bg-teal-600 text-white shadow-lg shadow-teal-600/25'
+                      : 'text-slate-300 hover:bg-slate-700/50 hover:text-white'
+                  }`}
+                >
+                  <Icon 
+                    size={20} 
+                    className={`transition-colors ${
+                      isActive ? 'text-white' : 'text-slate-400 group-hover:text-white'
+                    }`}
+                  />
+                  <span className="font-medium">{item.label}</span>
+                </Link>
+              )
+            })}
+          </div>
+        </nav>
+
+        {/* Profile Section */}
+        <div className="p-4 border-t border-slate-700">
+          <div className="relative">
+            <button
+              onClick={() => setShowProfileMenu(!showProfileMenu)}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                showProfileMenu
+                  ? 'bg-slate-700 text-white'
+                  : 'text-slate-300 hover:bg-slate-700/50 hover:text-white'
               }`}
             >
-              <Icon size={20} />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
-    </div>
-  );
-};
+              <div className="w-8 h-8 bg-teal-600 rounded-full flex items-center justify-center">
+                <User size={16} className="text-white" />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="font-medium text-sm">Karina Dela Cruz</p>
+                <p className="text-xs text-slate-400">Admin User</p>
+              </div>
+              <ChevronDown 
+                size={16} 
+                className={`transition-transform duration-200 ${
+                  showProfileMenu ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
+
+            {/* Profile Dropdown */}
+            {showProfileMenu && (
+              <div className="absolute bottom-full left-0 right-0 mb-2 bg-slate-800 border border-slate-700 rounded-xl shadow-lg overflow-hidden">
+                <div className="py-2">
+                  {profileMenuItems.map((item) => {
+                    const Icon = item.icon
+                    const isActive = location.pathname === item.path
+                    
+                    return (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        onClick={() => setShowProfileMenu(false)}
+                        className={`w-full flex items-center gap-3 px-4 py-2 transition-colors ${
+                          isActive
+                            ? 'bg-teal-600/10 text-teal-400'
+                            : 'text-slate-300 hover:bg-slate-700 hover:text-white'
+                        }`}
+                      >
+                        <Icon size={16} />
+                        <span className="text-sm font-medium">{item.label}</span>
+                      </Link>
+                    )
+                  })}
+                  
+                  <div className="border-t border-slate-700 mt-2 pt-2">
+                    <button
+                      onClick={() => {
+                        setShowProfileMenu(false)
+                        setShowLogoutModal(true)
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2 text-slate-300 hover:bg-red-600/10 hover:text-red-400 transition-colors"
+                    >
+                      <LogOut size={16} />
+                      <span className="text-sm font-medium">Sign Out</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Logout Modal */}
+      <LogoutModal
+        isOpen={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={handleLogout}
+        userName="Karina Dela Cruz"
+      />
+    </>
+  )
+}

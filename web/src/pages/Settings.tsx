@@ -1,8 +1,11 @@
+import { PageContainer } from "@/components/PageContainer"
+
 export function SettingsPage() {
     return (
-        <div className="max-w-6xl mx-auto">
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4">Settings</h1>
-            <p className="text-gray-600 mb-6 md:mb-8">Configure system settings and preferences.</p>
+        <PageContainer 
+            title="Settings" 
+            description="Configure system settings and preferences"
+        >
 
             <div className="grid gap-6">
                 <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
@@ -56,6 +59,6 @@ export function SettingsPage() {
                     </div>
                 </div>
             </div>
-        </div>
+        </PageContainer>
     );
 }

@@ -1,8 +1,11 @@
+import { PageContainer } from "@/components/PageContainer"
+
 export function ScanHistory() {
     return (
-        <div className="max-w-6xl mx-auto">
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4">Scan History</h1>
-            <p className="text-gray-600 mb-6 md:mb-8">View all product scans and verification results.</p>
+        <PageContainer 
+            title="Scan History" 
+            description="View all product scans and verification results"
+        >
 
             <div className="bg-white rounded-lg shadow border border-gray-200">
                 <div className="p-6 border-b border-gray-200">
@@ -30,6 +33,6 @@ export function ScanHistory() {
                     </div>
                 </div>
             </div>
-        </div>
+        </PageContainer>
     );
 }

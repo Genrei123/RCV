@@ -1,8 +1,11 @@
+import { PageContainer } from "@/components/PageContainer"
+
 export function Blockchain() {
     return (
-        <div className="max-w-6xl mx-auto">
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4">Blockchain</h1>
-            <p className="text-gray-600 mb-6 md:mb-8">View and manage blockchain records for product verification.</p>
+        <PageContainer 
+            title="Blockchain" 
+            description="View and manage blockchain records for product verification"
+        >
 
             <div className="grid gap-6">
                 <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
@@ -45,6 +48,6 @@ export function Blockchain() {
                     </div>
                 </div>
             </div>
-        </div>
+        </PageContainer>
     );
 }
