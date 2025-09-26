@@ -8,6 +8,7 @@ import 'package:footer/footer_view.dart';
 
 import 'components/side_menu.dart';
 
+
 class MainScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
