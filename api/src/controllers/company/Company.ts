@@ -1,8 +1,8 @@
 import CustomError from "../../utils/CustomError";
 import { Request, Response, NextFunction } from "express";
 import { CompanyValidation  } from "../../typeorm/entities/company.entity";
-import { CompanyRepo } from "../../typeorm/data-source";
 import { uuidv4 } from "zod";
+import { CompanyRepo } from "../../typeorm/data-source";
 
 export const getAllCompanies = async (req: Request, res: Response, next: NextFunction) => {
     try {

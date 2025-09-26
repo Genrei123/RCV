@@ -7,7 +7,7 @@ export const CompanyValidation = z.object({
     name: z.string().min(2).max(100),
     address: z.string().min(5).max(255),
     licenseNumber: z.string().min(2).max(50),
-    products: z.array(z.instanceof(Product)).optional(),
+    // products: z.array(z.instanceof(Product)).optional(),
 });
 
 @Entity()

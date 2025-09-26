@@ -1,15 +1,16 @@
 import type { NextFunction, Request, Response } from 'express';
 import { generateReport } from '../../utils/reportGeneration';
 import CustomError from '../../utils/CustomError';
-
 import { Product } from '../../typeorm/entities/product.entity';
-
 import { searchProductInBlockchain } from '../../utils/ProductChainUtil';
 import { User } from '../../typeorm/entities/user.entity';
 import bcrypt from 'bcryptjs';
 import { ProductBlockchain } from '../../services/productblockchain';
 import { Company } from '../../typeorm/entities/company.entity';
 import { ProductBlock } from '../../services/productblock';
+import { ScanHistory, ScanHistoryValidation } from '../../typeorm/entities/scanHistory';
+import { ScanRepo } from '../../typeorm/data-source';
+
 
 export const scanQR = async (req: Request, res: Response, next: NextFunction) => {
     // Generates Report
@@ -80,4 +81,33 @@ export const scanProduct = async (req: Request, res: Response, next: NextFunctio
         next(error);
     }
 }
+
+export const getScans = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const Scans = await ScanRepo.find();
+        res.status(200).json({ scans: Scans });
+    } catch (error) {
+        next(error);
+        return new CustomError(500, 'Failed to retrieve scans');
+    }
+}
+
+export const getScansByID = async (req: Request, res: Response, next: NextFunction) => {
+    if (!ScanHistoryValidation.parse({ id: req.params.id})) {
+        return new CustomError(400, "Invalid Scan ID");
+    }
+
+    try {
+        const scan = await ScanRepo.findOneBy({ _id: req.params.id });
+        if (!scan) {
+            return new CustomError(404, 'Scan not found');
+        }
+        res.status(200).json({ scan });
+    } catch (error) {
+        next(error);
+        return new CustomError(500, 'Failed to retrieve scan');
+    }
+}
+
+
 

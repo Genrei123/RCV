@@ -109,19 +109,11 @@ export const searchProduct = async (req: Request, res: Response, next: NextFunct
 };
 
 export const searchProductByCompany = async (req: Request, res: Response, next: NextFunction) => {
-    const { companyId, query } = req.query;
-    if (!companyId || typeof companyId !== 'string' || !query || typeof query !== 'string' || query.trim().length < 2) {
-        return new CustomError(400, 'Invalid company ID or search query');
-    }
-    return res.status(200).json({ message: `Search products for company ID ${companyId} with query "${query}"` });
+    // TO DO if requirements need it
 };
 
 export const sortProducType = async (req: Request, res: Response, next: NextFunction) => {
-    const { type } = req.params;
-    if (!type || (type !== 'asc' && type !== 'desc')) {
-        return new CustomError(400, 'Invalid sort type');
-    }
-    return res.status(200).json({ message: `Products sorted by type in ${type} order` });
+    // TO DO if requirements need it
 };
 
 

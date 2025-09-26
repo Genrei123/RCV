@@ -20,9 +20,7 @@ import BlockchainRouter from './routes/v1/blockchain';
 // Instantiate the express app
 const setUpApp = async () => {
   const app = express();
-
   
-
   // Register middlewares on the app
   app.use(cors({ origin: '*' }));
   app.use(cookieParser(COOKIE_SECRET!));

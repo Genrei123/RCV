@@ -3,6 +3,8 @@ import config from './config/config';
 import { User } from './entities/user.entity';
 import { Product } from './entities/product.entity';
 import { AuditTrail } from './entities/audit-trail.entity';
+import { Company } from './entities/company.entity';
+import { ScanHistory } from './entities/scanHistory';
 
 // Initialize the datasource/database connection
 export const DB = new DataSource(config);
@@ -12,5 +14,7 @@ export const DB = new DataSource(config);
 const UserRepo = DB.getRepository(User);
 const ProductRepo = DB.getRepository(Product);
 const AuditTrailRepo = DB.getRepository(AuditTrail);
+const CompanyRepo = DB.getRepository(Company);
+const ScanRepo = DB.getRepository(ScanHistory);
 
-export { UserRepo, ProductRepo, AuditTrailRepo };
+export { UserRepo, ProductRepo, AuditTrailRepo, CompanyRepo, ScanRepo };
