@@ -6,6 +6,7 @@ import { Profile } from './pages/Profile';
 import { Blockchain } from './pages/Blockchain';
 import { ScanHistory } from './pages/ScanHistory';
 import { UsersPage } from './pages/UsersPage';
+import { DebugProductPage } from './pages/DebugProductPage';
 import { Sidebar } from './components/Sidebar';
 import { Footer } from './components/Footer';
 
@@ -46,6 +47,7 @@ function App() {
                 } />
                 <Route path="/blockchain" element={<Blockchain />} />
                 <Route path="/scan-history" element={<ScanHistory />} />
+                <Route path="/debug" element={<DebugProductPage />} />
               </Routes>
             </div>
           </main>

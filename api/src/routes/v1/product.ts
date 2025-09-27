@@ -2,12 +2,12 @@ import { Router } from "express";
 import * as ProductController from "../../controllers/product/Product";
 
 const ProductRouter = Router();
-ProductRouter.get('/products', ProductController.getAllProducts);
-ProductRouter.get('/products/:id', ProductController.getProductById);
-ProductRouter.post('/products', ProductController.createProduct);
-ProductRouter.put('/products/:id', ProductController.updateProduct);
-ProductRouter.patch('/products/:id', ProductController.partialUpdateProduct);
-ProductRouter.delete('/products/:id', ProductController.deleteProduct);
+ProductRouter.get('/', ProductController.getAllProducts);
+ProductRouter.get('/:id', ProductController.getProductById);
+ProductRouter.post('/', ProductController.createProduct);
+ProductRouter.put('/:id', ProductController.updateProduct);
+ProductRouter.patch('/:id', ProductController.partialUpdateProduct);
+ProductRouter.delete('/:id', ProductController.deleteProduct);
 // ProductRouter.get('/products/search?query=', ProductController.searchProducts);
 // ProductRouter.get('/products/filter?type=&subtype=&company=');
 // ProductRouter.get('/products/sort?by=&order=');

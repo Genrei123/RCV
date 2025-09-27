@@ -16,6 +16,8 @@ import { rateLimit, validateToken } from './middleware/securityConfig';
 import ScanRouter from './routes/v1/scan';
 import AdminRouter from './routes/v1/admin';
 import BlockchainRouter from './routes/v1/blockchain';
+import ProductRouter from './routes/v1/product';
+import CompanyRouter from './routes/v1/company';
 
 // Instantiate the express app
 const setUpApp = async () => {
@@ -36,6 +38,8 @@ const setUpApp = async () => {
   app.use('/api/v1/scan', ScanRouter);
   app.use('/api/v1/admin', AdminRouter);
   app.use('/api/v1/blockchain', BlockchainRouter);
+  app.use('/api/v1/products', ProductRouter);
+  app.use('/api/v1/companies', CompanyRouter);
 
   // Root Health Check
   app.get('/', (req, res) => {

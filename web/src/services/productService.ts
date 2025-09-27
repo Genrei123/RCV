@@ -90,6 +90,40 @@ export class ProductService {
   }
 
   /**
+   * Create a new product using the backend API structure
+   * @param productData - Backend product creation data
+   * @returns Promise with backend product structure
+   */
+  static async createBackendProduct(productData: any): Promise<any> {
+    try {
+      console.log('ProductService sending data:', JSON.stringify(productData, null, 2));
+      const response = await ApiService.post(`${this.BASE_PATH}`, productData);
+      console.log('ProductService received response:', response);
+      return response;
+    } catch (error: any) {
+      console.error('ProductService error:', error);
+      console.error('Error response:', error.response?.data);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all companies for the product form
+   * @returns Promise with list of companies
+   */
+  static async getCompanies(): Promise<any> {
+    return ApiService.get('/companies');
+  }
+
+  /**
+   * Get all products using backend API structure
+   * @returns Promise with list of products
+   */
+  static async getBackendProducts(): Promise<any> {
+    return ApiService.get(`${this.BASE_PATH}`);
+  }
+
+  /**
    * Bulk create products
    * @param products - Array of product creation data
    * @returns Promise<ProductListResponse>

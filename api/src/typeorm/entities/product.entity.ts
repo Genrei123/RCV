@@ -9,20 +9,18 @@ import { User } from './user.entity';
 import { Company } from './company.entity';
 import { z } from 'zod';
 
+// Validation schema for data coming from frontend
 export const ProductValidation = z.object({
-  id: z.uuidv4(),
   LTONumber: z.string().min(2).max(50),
   CFPRNumber: z.string().min(2).max(50),
   lotNumber: z.string().min(2).max(50),
   brandName: z.string().min(2).max(100),
   productName: z.string().min(2).max(100),
-  productClassification: z.enum(ProductType),
-  productSubClassification: z.enum(ProductSubClassification),
-  expirationDate: z.date(),
-  dateOfRegistration: z.date(),
-  registeredBy: z.instanceof(User),
-  registeredAt: z.date(),
-  company: z.instanceof(Company),
+  productClassification: z.number().int().min(0).max(3), // Accept numeric values 0-3
+  productSubClassification: z.number().int().min(0).max(1), // Accept numeric values 0-1
+  expirationDate: z.string().transform((val) => new Date(val)), // Accept string, convert to Date
+  dateOfRegistration: z.string().transform((val) => new Date(val)), // Accept string, convert to Date
+  companyId: z.string().uuid(), // Accept company ID instead of full Company object
 });
 
 @Entity()

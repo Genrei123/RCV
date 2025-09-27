@@ -1,45 +1,96 @@
 import { Grid, List, Search, Filter, Plus } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { ProductCard, type Product } from "@/components/ProductCard"
 import { DataTable, type Column } from "@/components/DataTable"
 import { Pagination } from "@/components/Pagination"
 import { PageContainer } from "@/components/PageContainer"
+import { AddProductModal } from "@/components/AddProductModal"
+import { ProductService } from "@/services/productService"
 
-interface ProductsProps {
-  products?: Product[];
-  loading?: boolean;
-  onSearch?: (query: string) => void;
-  onSort?: (sortBy: string) => void;
-  onAddProduct?: () => void;
-  onProductClick?: (product: Product) => void;
-  currentPage?: number;
-  totalPages?: number;
-  totalItems?: number;
-  itemsPerPage?: number;
-  onPageChange?: (page: number) => void;
-  viewMode?: 'grid' | 'list';
-  onViewModeChange?: (mode: 'grid' | 'list') => void;
-}
-
-export function Products({
-  products,
-  loading = false,
-  onSearch,
-  onSort,
-  onAddProduct,
-  onProductClick,
-  currentPage = 1,
-  totalPages = 3,
-  totalItems = 15,
-  itemsPerPage = 12,
-  onPageChange,
-  viewMode = 'grid',
-  onViewModeChange
-}: ProductsProps) {
+export function Products() {
   const [searchQuery, setSearchQuery] = useState("")
-  const [currentViewMode, setCurrentViewMode] = useState<'grid' | 'list'>(viewMode)
+  const [currentViewMode, setCurrentViewMode] = useState<'grid' | 'list'>('grid')
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalItems, setTotalItems] = useState(0)
+  const itemsPerPage = 12
+
+  // Fetch products from backend
+  const fetchProducts = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      console.log('🔄 Fetching products from backend...')
+      
+      const response = await ProductService.getBackendProducts()
+      console.log('✅ Products fetched:', response)
+      
+      if (response && Array.isArray(response.products)) {
+        // Transform backend data to frontend format
+        const transformedProducts: Product[] = response.products.map((product: any) => ({
+          id: product._id || product.id,
+          name: product.productName,
+          type: getProductTypeLabel(product.productClassification),
+          status: 'active', // Default status since backend doesn't have this field
+          createdDate: product.dateOfRegistration ? new Date(product.dateOfRegistration).toISOString().split('T')[0] : '',
+          description: `${product.brandName} - LTO: ${product.LTONumber}`,
+          price: 0, // Backend doesn't have price field
+          category: getProductSubClassificationLabel(product.productSubClassification),
+          // Additional backend fields for reference
+          LTONumber: product.LTONumber,
+          CFPRNumber: product.CFPRNumber,
+          lotNumber: product.lotNumber,
+          brandName: product.brandName,
+          expirationDate: product.expirationDate,
+          company: product.company
+        }))
+        
+        setProducts(transformedProducts)
+        setTotalItems(transformedProducts.length)
+        setTotalPages(Math.ceil(transformedProducts.length / itemsPerPage))
+      } else {
+        setProducts([])
+        setTotalItems(0)
+        setTotalPages(1)
+      }
+    } catch (error: any) {
+      console.error('❌ Error fetching products:', error)
+      setError(error.message || 'Failed to fetch products')
+      setProducts([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Helper functions to transform enum values to labels
+  const getProductTypeLabel = (classification: number): string => {
+    const types = {
+      0: 'Feed',
+      1: 'Food', 
+      2: 'Veterinary Drug',
+      3: 'Veterinary Biologics'
+    }
+    return types[classification as keyof typeof types] || 'Unknown'
+  }
+
+  const getProductSubClassificationLabel = (subClassification: number): string => {
+    const subTypes = {
+      0: 'Dog',
+      1: 'Other Animals'
+    }
+    return subTypes[subClassification as keyof typeof subTypes] || 'Unknown'
+  }
+
+  // Load products on component mount
+  useEffect(() => {
+    fetchProducts()
+  }, [])
 
   // Default sample data
   const defaultProducts: Product[] = [
@@ -130,12 +181,34 @@ export function Products({
 
   const handleSearch = (value: string) => {
     setSearchQuery(value);
-    onSearch?.(value);
   };
 
   const handleViewModeChange = (mode: 'grid' | 'list') => {
     setCurrentViewMode(mode);
-    onViewModeChange?.(mode);
+  };
+
+  const handleAddProduct = () => {
+    setShowAddModal(true);
+  };
+
+  const handleProductCreated = (newProduct: any) => {
+    console.log('New product created:', newProduct);
+    // Refresh the products list after successful creation
+    fetchProducts();
+  };
+
+  const handleProductClick = (product: Product) => {
+    console.log('Product clicked:', product);
+    // Add navigation or modal logic here
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handleSort = (sortBy: string) => {
+    console.log('Sort by:', sortBy);
+    // Add sorting logic here
   };
 
   if (loading) {
@@ -154,13 +227,35 @@ export function Products({
     );
   }
 
+  // Error state
+  if (error) {
+    return (
+      <PageContainer 
+        maxWidth="6xl"
+        title="Products" 
+        description="Manage and view all registered products in the system."
+      >
+        <div className="text-center py-12">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Search className="h-8 w-8 text-red-400" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Failed to Load Products</h3>
+          <p className="text-gray-500 mb-4">{error}</p>
+          <Button onClick={fetchProducts}>
+            Try Again
+          </Button>
+        </div>
+      </PageContainer>
+    );
+  }
+
   return (
     <PageContainer 
       maxWidth="6xl"
       title="Products" 
       description="Manage and view all registered products in the system."
       headerAction={
-        <Button onClick={onAddProduct}>
+        <Button onClick={handleAddProduct}>
           <Plus className="h-4 w-4 mr-2" />
           Add Product
         </Button>
@@ -217,7 +312,7 @@ export function Products({
                 <ProductCard
                   key={product.id}
                   product={product}
-                  onClick={onProductClick}
+                  onClick={handleProductClick}
                 />
               ))}
             </div>
@@ -231,7 +326,7 @@ export function Products({
                 {searchQuery ? "Try adjusting your search query" : "Get started by adding your first product"}
               </p>
               {!searchQuery && (
-                <Button onClick={onAddProduct}>
+                <Button onClick={handleAddProduct}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Product
                 </Button>
@@ -247,8 +342,8 @@ export function Products({
             columns={productColumns}
             data={filteredProducts}
             searchPlaceholder="Search products..."
-            onSearch={onSearch}
-            onSort={onSort}
+            onSearch={handleSearch}
+            onSort={handleSort}
             loading={loading}
             emptyStateTitle="No Products Found"
             emptyStateDescription="Try adjusting your search or add a new product."
@@ -264,10 +359,17 @@ export function Products({
           totalPages={totalPages}
           totalItems={totalItems}
           itemsPerPage={itemsPerPage}
-          onPageChange={onPageChange}
+          onPageChange={handlePageChange}
           showingText={`Showing ${Math.min(filteredProducts.length, itemsPerPage)} out of ${totalItems} products`}
         />
       )}
+
+      {/* Add Product Modal */}
+      <AddProductModal
+        open={showAddModal}
+        onOpenChange={setShowAddModal}
+        onSuccess={handleProductCreated}
+      />
     </PageContainer>
   );
 }

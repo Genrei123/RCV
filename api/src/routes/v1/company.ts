@@ -2,11 +2,11 @@ import { Router } from "express";
 import * as CompanyController from "../../controllers/company/Company";
 
 const CompanyRouter = Router();
-CompanyRouter.get('/companies', CompanyController.getAllCompanies);
-CompanyRouter.get('/companies/:id', CompanyController.getCompanyById);
-CompanyRouter.post('/companies', CompanyController.createCompany);
-CompanyRouter.put('/companies/:id', CompanyController.updateCompany);
-CompanyRouter.patch('/companies/:id', CompanyController.partialUpdateCompany);
-CompanyRouter.delete('/companies/:id', CompanyController.deleteCompany);
+CompanyRouter.get('/', CompanyController.getAllCompanies);
+CompanyRouter.get('/:id', CompanyController.getCompanyById);
+CompanyRouter.post('/', CompanyController.createCompany);
+CompanyRouter.put('/:id', CompanyController.updateCompany);
+CompanyRouter.patch('/:id', CompanyController.partialUpdateCompany);
+CompanyRouter.delete('/:id', CompanyController.deleteCompany);
 
 export default CompanyRouter;
