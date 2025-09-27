@@ -2,9 +2,11 @@ import { User, Mail, MapPin, Calendar, Phone, Badge as BadgeIcon } from "lucide-
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
 import { DataTable, type Column } from "@/components/DataTable"
 import { Pagination } from "@/components/Pagination"
 import { PageContainer } from "@/components/PageContainer"
+import { useState } from "react"
 
 // Define activity data type
 export interface Activity {
@@ -51,18 +53,17 @@ export function Profile({
   itemsPerPage = 10,
   onPageChange
 }: ProfileProps) {
-  // Default user data
-  const defaultUser: ProfileUser = {
-    name: "Karina Dela Cruz",
-    role: "Admin User",
-    email: "Yuulmin04@gmail.com",
-    location: "Caloocan City, Metro Manila",
-    dateOfBirth: "January 1, 1990",
-    phoneNumber: "09-123-456789",
-    badgeId: "Caloocan City, Metro Manila"
-  };
+  // Edit mode state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: ''
+  });
 
-  // Default activities data
+
+    // Default activities data
   const defaultActivities: Activity[] = [
     {
       id: "1",
@@ -150,6 +151,68 @@ export function Profile({
     }
   ];
 
+  // Default user data
+  const defaultUser: ProfileUser = {
+    name: "Karina Dela Cruz",
+    role: "Admin User",
+    email: "Yuulmin04@gmail.com",
+    location: "Caloocan City, Metro Manila",
+    dateOfBirth: "January 1, 1990",
+    phoneNumber: "09-123-456789",
+    badgeId: "Caloocan City, Metro Manila"
+  };
+
+  const userData = user || defaultUser;
+  const activityData = defaultActivities;
+
+  // Initialize edit form when entering edit mode
+  const handleEditClick = () => {
+    setEditForm({
+      name: userData.name,
+      email: userData.email,
+      password: '',
+      confirmPassword: ''
+    });
+    setIsEditing(true);
+    onEdit?.();
+  };
+
+  // Handle form input changes
+  const handleInputChange = (field: keyof typeof editForm, value: string) => {
+    setEditForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // Handle cancel edit
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditForm({
+      name: '',
+      email: '',
+      password: '',
+      confirmPassword: ''
+    });
+  };
+
+  // Handle save changes
+  const handleSaveChanges = () => {
+    // Here you would typically call an API to save the changes
+    // For now, just exit edit mode
+    console.log('Saving changes:', editForm);
+    setIsEditing(false);
+    // You can add validation here before saving
+    if (editForm.password !== editForm.confirmPassword) {
+      alert('Passwords do not match!');
+      return;
+    }
+    // Call parent save handler if provided
+    // onSave?.(editForm);
+  };
+
+
+
   // Activity table columns
   const activityColumns: Column[] = [
     { key: 'action', label: 'Action' },
@@ -202,9 +265,6 @@ export function Profile({
     }
   ];
 
-  const userData = user || defaultUser;
-  const activityData = activities || defaultActivities;
-
   if (loading) {
     return (
       <div className="space-y-6">
@@ -220,24 +280,26 @@ export function Profile({
   }
 
   return (
-    <PageContainer title="Profile" description="Manage your personal account information and activity"
-      headerAction={
-        <Button 
-          onClick={onEdit}
-          className="bg-teal-600 hover:bg-teal-700 text-white"
-        >
-          Edit Profile
-        </Button>
-      }
-    >
+    <PageContainer title="Profile" description="Manage your personal account information and activity">
 
       <div className="grid lg:grid-cols-2 gap-8">
         {/* Profile Information */}
         <Card>
           <CardContent className="p-6">
-            <div className="mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-1">Profile Information</h2>
-              <p className="text-sm text-gray-600">Update your personal account</p>
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900 mb-1">Profile Information</h2>
+                <p className="text-sm text-gray-600">Update your personal account</p>
+              </div>
+              {!isEditing && (
+                <Button 
+                  onClick={handleEditClick}
+                  className="bg-teal-600 hover:bg-teal-700 text-white"
+                  size="sm"
+                >
+                  Edit Profile
+                </Button>
+              )}
             </div>
 
             {/* Avatar Section */}
@@ -254,53 +316,138 @@ export function Profile({
                     <User className="w-12 h-12 text-gray-500" />
                   )}
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900">{userData.name}</h3>
-                <p className="text-sm text-gray-600">{userData.role}</p>
+                {isEditing ? (
+                  <div className="space-y-2">
+                    <Input
+                      type="text"
+                      value={editForm.name}
+                      onChange={(e) => handleInputChange('name', e.target.value)}
+                      className="text-center text-lg font-semibold"
+                      placeholder="Full Name"
+                    />
+                    <p className="text-sm text-gray-600">{userData.role}</p>
+                  </div>
+                ) : (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">{userData.name}</h3>
+                    <p className="text-sm text-gray-600">{userData.role}</p>
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Profile Details */}
             <div className="space-y-4">
+              {/* Email Field - Editable */}
               <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
                 <Mail className="w-5 h-5 text-gray-500 mt-0.5" />
                 <div className="flex-1">
                   <p className="text-sm font-medium text-gray-900">Email</p>
-                  <p className="text-sm text-gray-600">{userData.email}</p>
+                  {isEditing ? (
+                    <Input
+                      type="email"
+                      value={editForm.email}
+                      onChange={(e) => handleInputChange('email', e.target.value)}
+                      className="mt-1"
+                      placeholder="Email address"
+                    />
+                  ) : (
+                    <p className="text-sm text-gray-600">{userData.email}</p>
+                  )}
                 </div>
               </div>
 
-              <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
-                <MapPin className="w-5 h-5 text-gray-500 mt-0.5" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900">Location</p>
-                  <p className="text-sm text-gray-600">{userData.location}</p>
-                </div>
-              </div>
+              {/* Password Fields - Only show when editing */}
+              {isEditing && (
+                <>
+                  <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
+                    <Mail className="w-5 h-5 text-gray-500 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">New Password</p>
+                      <Input
+                        type="password"
+                        value={editForm.password}
+                        onChange={(e) => handleInputChange('password', e.target.value)}
+                        className="mt-1"
+                        placeholder="Enter new password"
+                      />
+                    </div>
+                  </div>
 
-              <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
-                <Calendar className="w-5 h-5 text-gray-500 mt-0.5" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900">Date of Birth</p>
-                  <p className="text-sm text-gray-600">{userData.dateOfBirth}</p>
-                </div>
-              </div>
+                  <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
+                    <Mail className="w-5 h-5 text-gray-500 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">Confirm Password</p>
+                      <Input
+                        type="password"
+                        value={editForm.confirmPassword}
+                        onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                        className="mt-1"
+                        placeholder="Confirm new password"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
 
-              <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
-                <Phone className="w-5 h-5 text-gray-500 mt-0.5" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900">Phone Number</p>
-                  <p className="text-sm text-gray-600">{userData.phoneNumber}</p>
-                </div>
-              </div>
+              {/* Non-editable fields - hidden during editing */}
+              {!isEditing && (
+                <>
+                  <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
+                    <MapPin className="w-5 h-5 text-gray-500 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">Location</p>
+                      <p className="text-sm text-gray-600">{userData.location}</p>
+                    </div>
+                  </div>
 
-              <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
-                <BadgeIcon className="w-5 h-5 text-gray-500 mt-0.5" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900">Badge ID</p>
-                  <p className="text-sm text-gray-600">{userData.badgeId}</p>
-                </div>
-              </div>
+                  <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
+                    <Calendar className="w-5 h-5 text-gray-500 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">Date of Birth</p>
+                      <p className="text-sm text-gray-600">{userData.dateOfBirth}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
+                    <Phone className="w-5 h-5 text-gray-500 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">Phone Number</p>
+                      <p className="text-sm text-gray-600">{userData.phoneNumber}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
+                    <BadgeIcon className="w-5 h-5 text-gray-500 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900">Badge ID</p>
+                      <p className="text-sm text-gray-600">{userData.badgeId}</p>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
+
+            {/* Cancel and Save buttons - bottom right when editing */}
+            {isEditing && (
+              <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-red-200">
+                <Button 
+                  onClick={handleCancelEdit}
+                  variant="outline"
+                  size="sm"
+                  className="border-red-500 text-red-500 hover:bg-red-50 hover:border-red-600 hover:text-red-600"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleSaveChanges}
+                  className="bg-teal-600 hover:bg-teal-700 text-white"
+                  size="sm"
+                >
+                  Save
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 
