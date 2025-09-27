@@ -1,48 +1,90 @@
-import { PageContainer } from "@/components/PageContainer"
+import { useState } from "react";
+import { PageContainer } from "@/components/PageContainer";
+
+type User = {
+  id: number;
+  name: string;
+  email: string;
+  status: "Pending" | "Admin" | "Agent";
+  reason?: string; // kapag declined
+};
 
 export function UsersPage() {
-    return (
-        <PageContainer 
-            title="Users" 
-            description="Manage system users and their permissions"
-            headerAction={
-                <button className="bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors">
-                    Add New User
-                </button>
-            }
-        >
+  const [users, setUsers] = useState<User[]>([
+    { id: 1, name: "Juan Dela Cruz", email: "juan@example.com", status: "Pending" },
+    { id: 2, name: "Maria Santos", email: "maria@example.com", status: "Admin" },
+    { id: 3, name: "Pedro Reyes", email: "pedro@example.com", status: "Agent" },
+  ]);
 
-            <div className="bg-white rounded-lg shadow border border-gray-200">
-                <div className="p-6 border-b border-gray-200">
-                    <h2 className="text-xl font-semibold text-gray-800">User Management</h2>
-                </div>
-
-                <div className="p-6">
-                    <div className="grid gap-4">
-                        {[
-                            { name: 'John Admin', email: 'admin@rcv.com', role: 'Administrator', status: 'Active' },
-                            { name: 'Maria Inspector', email: 'maria@rcv.com', role: 'Inspector', status: 'Active' },
-                            { name: 'Carlos User', email: 'carlos@rcv.com', role: 'User', status: 'Inactive' },
-                        ].map((user, index) => (
-                            <div key={index} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
-                                        {user.name.charAt(0)}
-                                    </div>
-                                    <div>
-                                        <h3 className="font-semibold text-gray-800">{user.name}</h3>
-                                        <p className="text-sm text-gray-600">{user.email} • {user.role}</p>
-                                    </div>
-                                </div>
-                                <span className={`px-3 py-1 rounded-full text-xs font-medium ${user.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                                    }`}>
-                                    {user.status}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-        </PageContainer>
+  const handleAccept = (id: number) => {
+    setUsers((prev) =>
+      prev.map((u) =>
+        u.id === id ? { ...u, status: "Agent" } : u
+      )
     );
+  };
+
+  const handleDecline = (id: number, reason: string) => {
+    setUsers((prev) =>
+      prev.map((u) =>
+        u.id === id ? { ...u, status: "Pending", reason } : u
+      )
+    );
+  };
+
+  return (
+    <PageContainer
+      title="Users"
+      description="Manage system users and their permissions"
+      headerAction={
+        <button className="bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors">
+          Add New User
+        </button>
+      }
+    >
+      <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">User Management</h2>
+
+        <table className="w-full border-collapse border border-gray-300">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="border border-gray-300 px-4 py-2 text-left">Name</th>
+              <th className="border border-gray-300 px-4 py-2 text-left">Email</th>
+              <th className="border border-gray-300 px-4 py-2 text-left">Status</th>
+              <th className="border border-gray-300 px-4 py-2">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map((user) => (
+              <tr key={user.id} className="hover:bg-gray-50">
+                <td className="border border-gray-300 px-4 py-2">{user.name}</td>
+                <td className="border border-gray-300 px-4 py-2">{user.email}</td>
+                <td className="border border-gray-300 px-4 py-2">{user.status}</td>
+                <td className="border border-gray-300 px-4 py-2 text-center space-x-2">
+                  {user.status === "Pending" ? (
+                    <>
+                      <button
+                        onClick={() => handleAccept(user.id)}
+                        className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600"
+                      >
+                        Accept
+                      </button>
+                      <button
+                        onClick={() => handleDecline(user.id, "Incomplete requirements")}
+                        className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                      >
+                        Decline
+                      </button>
+                    </>
+                  ) : (
+                    <span className="text-gray-500">No action</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </PageContainer>
+  );
 }
