@@ -1,14 +1,13 @@
 import { MapComponent } from "@/components/MapComponent"
 import type { Inspector } from "@/components/MapComponent"
-import { PageContainer } from "@/components/PageContainer"
 
 export function Maps() {
-  // Sample inspectors data
+  // Updated inspectors data to match the mockup
   const inspectors: Inspector[] = [
     {
       id: "1",
       name: "Gizelle Fungo",
-      role: "Inspector",
+      role: "Food Inspector",
       status: "active",
       location: {
         lat: 14.5995,
@@ -20,7 +19,7 @@ export function Maps() {
     {
       id: "2", 
       name: "Winter Cruz",
-      role: "Inspector",
+      role: "Food Inspector",
       status: "active",
       location: {
         lat: 14.6091,
@@ -32,7 +31,7 @@ export function Maps() {
     {
       id: "3",
       name: "Karina Data Crud",
-      role: "Inspector", 
+      role: "Food Inspector", 
       status: "active",
       location: {
         lat: 14.5794,
@@ -44,7 +43,7 @@ export function Maps() {
     {
       id: "4",
       name: "Nitinging Torres",
-      role: "Inspector",
+      role: "Food Inspector",
       status: "active", 
       location: {
         lat: 14.6760,
@@ -56,7 +55,7 @@ export function Maps() {
     {
       id: "5",
       name: "John Doe",
-      role: "Inspector",
+      role: "Food Inspector",
       status: "inactive",
       location: {
         lat: 14.5547,
@@ -68,7 +67,7 @@ export function Maps() {
     {
       id: "6",
       name: "Lorem Chon",
-      role: "Inspector",
+      role: "Food Inspector",
       status: "active",
       location: {
         lat: 14.5378,
@@ -90,21 +89,13 @@ export function Maps() {
   };
 
   return (
-    <PageContainer 
-      title="Inspector Locations" 
-      description="View and manage inspector locations across different areas"
-      maxWidth="full"
-    >
-      <div className="h-full flex flex-col">
-        <div className="flex-1 min-h-0">
-          <MapComponent
-            inspectors={inspectors}
-            onInspectorClick={handleInspectorClick}
-            onSearch={handleSearch}
-            loading={false}
-          />
-        </div>
-      </div>
-    </PageContainer>
+    <div className="h-screen w-full">
+      <MapComponent
+        inspectors={inspectors}
+        onInspectorClick={handleInspectorClick}
+        onSearch={handleSearch}
+        loading={false}
+      />
+    </div>
   );
 }
