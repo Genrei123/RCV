@@ -1,6 +1,8 @@
-export interface activity {
+export interface Activity {
+    id: string;
     action: string;
-    timestamp: string;
-    type: string;
-    user_id: string;
+    date: string;
+    time: string;
+    type: 'Logged Out' | 'Removed' | 'Archived' | 'Logged In';
+    username: string;
 }

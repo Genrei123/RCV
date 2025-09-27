@@ -7,15 +7,8 @@ import { DataTable, type Column } from "@/components/DataTable"
 import { Pagination } from "@/components/Pagination"
 import { PageContainer } from "@/components/PageContainer"
 import { useState } from "react"
-
-// Define activity data type
-export interface Activity {
-  id: string;
-  action: string;
-  type: 'Logged Out' | 'Removed' | 'Archived' | 'Logged In';
-  date: string;
-  time: string;
-}
+import type { Activity } from "@/types/user_details"
+import { UserService } from "@/services/userService"
 
 export interface ProfileUser {
   name: string;
@@ -26,6 +19,7 @@ export interface ProfileUser {
   dateOfBirth: string;
   phoneNumber: string;
   badgeId: string;
+  id: string;
 }
 
 interface ProfileProps {
@@ -43,7 +37,6 @@ interface ProfileProps {
 
 export function Profile({
   user,
-  activities,
   loading = false,
   onEdit,
   onActivityView,
@@ -62,6 +55,21 @@ export function Profile({
     confirmPassword: ''
   });
 
+  const styles = {
+    fieldContainer: "flex items-start gap-3 p-3 border border-gray-200 rounded-lg",
+    fieldLabel: "text-sm font-medium text-gray-900",
+    fieldValue: "text-sm text-gray-600",
+    icon: "w-5 h-5 text-gray-500 mt-0.5",
+    avatarContainer: "w-24 h-24 bg-gray-300 rounded-full flex items-center justify-center mx-auto mb-4",
+    avatarImage: "w-24 h-24 rounded-full object-cover",
+    avatarIcon: "w-12 h-12 text-gray-500",
+    input: "w-full p-2 border border-gray-300 rounded-md text-sm",
+    sectionTitle: "text-xl font-semibold text-gray-900 mb-1",
+    sectionSubtitle: "text-sm text-gray-600",
+    primaryButton: "bg-teal-600 hover:bg-teal-700 text-white",
+    cancelButton: "border-red-500 text-red-500 hover:bg-red-50 hover:border-red-600 hover:text-red-600",
+    buttonContainer: "flex justify-end gap-2 mt-6 pt-4 border-t border-gray-200"
+  };
 
     // Default activities data
   const defaultActivities: Activity[] = [
@@ -70,84 +78,96 @@ export function Profile({
       action: "You has been Logged Out",
       type: "Logged Out",
       date: "2024-01-15",
-      time: "14:30"
+      time: "14:30",
+      username: "karina_dela_cruz"
     },
     {
       id: "2", 
       action: "You successfully removed UserID 18",
       type: "Removed",
       date: "2024-01-15",
-      time: "13:45"
+      time: "13:45",
+      username: "karina_dela_cruz"
     },
     {
       id: "3",
       action: "You archived UserID 18",
       type: "Archived", 
       date: "2024-01-15",
-      time: "13:30"
+      time: "13:30",
+      username: "karina_dela_cruz"
     },
     {
       id: "4",
       action: "You logged in",
       type: "Logged In",
       date: "2024-01-15",
-      time: "09:00"
+      time: "09:00",
+      username: "karina_dela_cruz"
     },
     {
       id: "5",
       action: "You successfully removed UserID 18",
       type: "Removed",
       date: "2024-01-14",
-      time: "16:20"
+      time: "16:20",
+      username: "karina_dela_cruz"
     },
     {
       id: "6",
       action: "You has been Logged Out",
       type: "Logged Out",
       date: "2024-01-14",
-      time: "18:00"
+      time: "18:00",
+      username: "karina_dela_cruz"
     },
     {
       id: "7",
       action: "You archived UserID 18",
       type: "Archived",
       date: "2024-01-14",
-      time: "15:45"
+      time: "15:45",
+      username: "karina_dela_cruz"
     },
     {
       id: "8",
       action: "You logged in",
       type: "Logged In",
       date: "2024-01-14",
-      time: "08:30"
+      time: "08:30",
+      username: "karina_dela_cruz"
     },
     {
       id: "9",
       action: "You successfully removed UserID 18",
       type: "Removed",
       date: "2024-01-13",
-      time: "14:15"
+      time: "14:15",
+      username: "karina_dela_cruz"
     },
     {
       id: "10",
       action: "You has been Logged Out", 
       type: "Logged Out",
       date: "2024-01-13",
-      time: "17:30"
+      time: "17:30",
+      username: "karina_dela_cruz"
     },
     {
       id: "11",
       action: "You archived UserID 18",
       type: "Archived",
       date: "2024-01-13", 
-      time: "12:00"
+      time: "12:00",
+      username: "karina_dela_cruz"
     },
     {
       id: "12",
       action: "You logged in",
       type: "Logged In",
       date: "2024-01-13",
-      time: "08:45"
+      time: "08:45",
+      username: "karina_dela_cruz"
     }
   ];
 
@@ -159,13 +179,13 @@ export function Profile({
     location: "Caloocan City, Metro Manila",
     dateOfBirth: "January 1, 1990",
     phoneNumber: "09-123-456789",
-    badgeId: "Caloocan City, Metro Manila"
+    badgeId: "Caloocan City, Metro Manila",
+    id: "1"
   };
 
   const userData = user || defaultUser;
   const activityData = defaultActivities;
 
-  // Initialize edit form when entering edit mode
   const handleEditClick = () => {
     setEditForm({
       name: userData.name,
@@ -177,7 +197,6 @@ export function Profile({
     onEdit?.();
   };
 
-  // Handle form input changes
   const handleInputChange = (field: keyof typeof editForm, value: string) => {
     setEditForm(prev => ({
       ...prev,
@@ -185,7 +204,6 @@ export function Profile({
     }));
   };
 
-  // Handle cancel edit
   const handleCancelEdit = () => {
     setIsEditing(false);
     setEditForm({
@@ -196,19 +214,62 @@ export function Profile({
     });
   };
 
-  // Handle save changes
-  const handleSaveChanges = () => {
-    // Here you would typically call an API to save the changes
-    // For now, just exit edit mode
-    console.log('Saving changes:', editForm);
-    setIsEditing(false);
-    // You can add validation here before saving
-    if (editForm.password !== editForm.confirmPassword) {
-      alert('Passwords do not match!');
+  const handleSaveChanges = async () => {
+    let hasErrors = false;
+    
+    // Email validation
+    if (editForm.email.trim() === '') {
+      alert('Email is required');
+      hasErrors = true;
+    } else if (!/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(editForm.email)) {
+      alert('Please enter a valid email');
+      hasErrors = true;
+    }
+    
+    if (editForm.name.trim() === '') {
+      alert('Name is required');
+      hasErrors = true;
+    }
+    
+    if (!editForm.password || !editForm.confirmPassword ) {
+      alert('Password fields cannot be empty');
+      hasErrors = true;
+    }
+
+    if (editForm.password || editForm.confirmPassword ) {
+      if (editForm.password.length < 6) {
+        alert('Password must be at least 6 characters long');
+        hasErrors = true;
+      } else if (editForm.password !== editForm.confirmPassword) {
+        alert('Passwords do not match!');
+        hasErrors = true;
+      }
+    }
+    
+    if (hasErrors) {
       return;
     }
-    // Call parent save handler if provided
-    // onSave?.(editForm);
+    
+    // API Call
+    try {
+      console.log('Saving changes for user ID:', userData.id);
+      console.log('Update data:', editForm);
+      
+      const updateData = {
+        firstName: editForm.name.split(' ')[0] || editForm.name,
+        lastName: editForm.name.split(' ').slice(1).join(' ') || '',
+        ...(editForm.password && { password: editForm.password })
+      };
+      
+      const result = await UserService.updateUser(userData.id, updateData);
+      
+      alert('Profile updated successfully!');
+      setIsEditing(false);
+      
+    } catch (error) {
+      console.error('Error updating user profile:', error);
+      alert('Failed to update profile. Please try again.');
+    }
   };
 
 
@@ -288,13 +349,13 @@ export function Profile({
           <CardContent className="p-6">
             <div className="mb-6 flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 mb-1">Profile Information</h2>
-                <p className="text-sm text-gray-600">Update your personal account</p>
+                <h2 className={styles.sectionTitle}>Profile Information</h2>
+                <p className={styles.sectionSubtitle}>Update your personal account</p>
               </div>
               {!isEditing && (
                 <Button 
                   onClick={handleEditClick}
-                  className="bg-teal-600 hover:bg-teal-700 text-white"
+                  className={styles.primaryButton}
                   size="sm"
                 >
                   Edit Profile
@@ -305,15 +366,15 @@ export function Profile({
             {/* Avatar Section */}
             <div className="text-center mb-8">
               <div className="relative inline-block">
-                <div className="w-24 h-24 bg-gray-300 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className={styles.avatarContainer}>
                   {userData.avatar ? (
                     <img 
                       src={userData.avatar} 
                       alt={userData.name}
-                      className="w-24 h-24 rounded-full object-cover"
+                      className={styles.avatarImage}
                     />
                   ) : (
-                    <User className="w-12 h-12 text-gray-500" />
+                    <User className={styles.avatarIcon} />
                   )}
                 </div>
                 {isEditing ? (
@@ -339,10 +400,10 @@ export function Profile({
             {/* Profile Details */}
             <div className="space-y-4">
               {/* Email Field - Editable */}
-              <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
-                <Mail className="w-5 h-5 text-gray-500 mt-0.5" />
+              <div className={styles.fieldContainer}>
+                <Mail className={styles.icon} />
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900">Email</p>
+                  <p className={styles.fieldLabel}>Email</p>
                   {isEditing ? (
                     <Input
                       type="email"
@@ -352,7 +413,7 @@ export function Profile({
                       placeholder="Email address"
                     />
                   ) : (
-                    <p className="text-sm text-gray-600">{userData.email}</p>
+                    <p className={styles.fieldValue}>{userData.email}</p>
                   )}
                 </div>
               </div>
@@ -360,10 +421,10 @@ export function Profile({
               {/* Password Fields - Only show when editing */}
               {isEditing && (
                 <>
-                  <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
-                    <Mail className="w-5 h-5 text-gray-500 mt-0.5" />
+                  <div className={styles.fieldContainer}>
+                    <Mail className={styles.icon} />
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">New Password</p>
+                      <p className={styles.fieldLabel}>New Password</p>
                       <Input
                         type="password"
                         value={editForm.password}
@@ -374,10 +435,10 @@ export function Profile({
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
-                    <Mail className="w-5 h-5 text-gray-500 mt-0.5" />
+                  <div className={styles.fieldContainer}>
+                    <Mail className={styles.icon} />
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">Confirm Password</p>
+                      <p className={styles.fieldLabel}>Confirm Password</p>
                       <Input
                         type="password"
                         value={editForm.confirmPassword}
@@ -393,35 +454,35 @@ export function Profile({
               {/* Non-editable fields - hidden during editing */}
               {!isEditing && (
                 <>
-                  <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
-                    <MapPin className="w-5 h-5 text-gray-500 mt-0.5" />
+                  <div className={styles.fieldContainer}>
+                    <MapPin className={styles.icon} />
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">Location</p>
-                      <p className="text-sm text-gray-600">{userData.location}</p>
+                      <p className={styles.fieldLabel}>Location</p>
+                      <p className={styles.fieldValue}>{userData.location}</p>
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
-                    <Calendar className="w-5 h-5 text-gray-500 mt-0.5" />
+                  <div className={styles.fieldContainer}>
+                    <Calendar className={styles.icon} />
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">Date of Birth</p>
-                      <p className="text-sm text-gray-600">{userData.dateOfBirth}</p>
+                      <p className={styles.fieldLabel}>Date of Birth</p>
+                      <p className={styles.fieldValue}>{userData.dateOfBirth}</p>
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
-                    <Phone className="w-5 h-5 text-gray-500 mt-0.5" />
+                  <div className={styles.fieldContainer}>
+                    <Phone className={styles.icon} />
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">Phone Number</p>
-                      <p className="text-sm text-gray-600">{userData.phoneNumber}</p>
+                      <p className={styles.fieldLabel}>Phone Number</p>
+                      <p className={styles.fieldValue}>{userData.phoneNumber}</p>
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
-                    <BadgeIcon className="w-5 h-5 text-gray-500 mt-0.5" />
+                  <div className={styles.fieldContainer}>
+                    <BadgeIcon className={styles.icon} />
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">Badge ID</p>
-                      <p className="text-sm text-gray-600">{userData.badgeId}</p>
+                      <p className={styles.fieldLabel}>Badge ID</p>
+                      <p className={styles.fieldValue}>{userData.badgeId}</p>
                     </div>
                   </div>
                 </>
@@ -430,18 +491,18 @@ export function Profile({
 
             {/* Cancel and Save buttons - bottom right when editing */}
             {isEditing && (
-              <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-red-200">
+              <div className={styles.buttonContainer}>
                 <Button 
                   onClick={handleCancelEdit}
                   variant="outline"
                   size="sm"
-                  className="border-red-500 text-red-500 hover:bg-red-50 hover:border-red-600 hover:text-red-600"
+                  className={styles.cancelButton}
                 >
                   Cancel
                 </Button>
                 <Button 
                   onClick={handleSaveChanges}
-                  className="bg-teal-600 hover:bg-teal-700 text-white"
+                  className={styles.primaryButton}
                   size="sm"
                 >
                   Save
@@ -455,7 +516,7 @@ export function Profile({
         <Card>
           <CardContent className="p-6">
             <div className="mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-1">Your Recent Activities</h2>
+              <h2 className={styles.sectionTitle}>Your Recent Activities</h2>
             </div>
 
             {/* Activities Table */}
