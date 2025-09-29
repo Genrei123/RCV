@@ -1,4 +1,6 @@
+import { UUID } from "crypto";
 import { SecurityCode } from "./enums";
+import { date } from "zod";
 
 export type TSignupForm = {
   fullName: string;
@@ -57,3 +59,58 @@ declare global {
     }
   }
 }
+
+
+//Finalize ==============================================================================================
+
+export interface User {
+  id: UUID; // tentative
+  role: 'AGENT' | 'ADMIN' | 'USER'; // tentative 
+  status: 'Archived' | 'Active' | 'Pending';
+  avatarUrl: string;
+  userName: string; // tanggal magiging  fullName
+  fName: string; // first name
+  mName?: string; // middle name, optional
+  lName: string; // last name
+  extName?: string; // extension name, optional
+  fullName: string; // full name
+  email: string;
+  location: string; // declared sa pag gawa ng account/ designated location / City 
+  currentLocation?: currentLocation
+  dateOfBirth: string;
+  phoneNumber: string; // 00-000-000000
+  password: string; // hashed password
+  createdAt: Date; 
+  updatedAt: Date;
+}
+
+export interface AuditLog {
+  id: UUID; //tentative
+  userId: UUID; // current id ng user na gumagamit
+  fullName: string; // current full name ng user na gumagamit
+  type: 'Logged In' | 'Scanned' | 'Logged Out' | 'Reported' | 'Archived' | 'Created' | 'Updated'; // Archived counts during deletion
+  action: string;
+  description: string;
+  productDetails: product
+  dateAndTime: Date;
+  currentLocation?: currentLocation
+}
+
+
+export interface product {
+  LTONumber: string;
+  CFPRNumber: string;
+  lotNumber: string;
+  brandName: string;
+  productName: string;
+  expiryrationDate: Date;
+  dateOfRegistration: Date;
+  registedBy: user
+  registeredAt?: currentLocation
+}
+
+export interface currentLocation {
+  latitude: string;
+  longitude: string;
+}
+
