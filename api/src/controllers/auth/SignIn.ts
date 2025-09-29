@@ -29,7 +29,7 @@ const UserSignIn = async (req: Request, res: Response, next: NextFunction) => {
     // Find the user by email
     const user = await UserRepo.findOne({
       where: { email },
-      select: ['email', 'fullName', 'password'],
+      select: ['email', 'firstName', 'password'],
     });
 
     if (!user) {
