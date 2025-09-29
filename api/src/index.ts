@@ -7,7 +7,7 @@ import bcrypt from 'bcryptjs';
 
 dotenv.config();
 const { PORT } = process.env;
-
+//c comment ng monggoloid
 const initializeApp = async () => {
   const app = await setUpApp();
 
