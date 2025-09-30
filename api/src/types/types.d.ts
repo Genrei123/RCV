@@ -63,12 +63,11 @@ declare global {
 
 //Finalize ==============================================================================================
 
-export interface User {
+export interface user {
   id: UUID; // tentative
   role: 'AGENT' | 'ADMIN' | 'USER'; // tentative 
   status: 'Archived' | 'Active' | 'Pending';
   avatarUrl: string;
-  userName: string; // tanggal magiging  fullName
   fName: string; // first name
   mName?: string; // middle name, optional
   lName: string; // last name
@@ -84,14 +83,14 @@ export interface User {
   updatedAt: Date;
 }
 
-export interface AuditLog {
+export interface auditLog {
   id: UUID; //tentative
   userId: UUID; // current id ng user na gumagamit
   fullName: string; // current full name ng user na gumagamit
   type: 'Logged In' | 'Scanned' | 'Logged Out' | 'Reported' | 'Archived' | 'Created' | 'Updated'; // Archived counts during deletion
   action: string;
   description: string;
-  productDetails: product
+  productDetails?: product
   dateAndTime: Date;
   currentLocation?: currentLocation
 }
@@ -105,7 +104,7 @@ export interface product {
   productName: string;
   expiryrationDate: Date;
   dateOfRegistration: Date;
-  registedBy: user
+  registedBy?: user
   registeredAt?: currentLocation
 }
 
@@ -114,3 +113,11 @@ export interface currentLocation {
   longitude: string;
 }
 
+export interface report {
+  userId: UUID;
+  user: user.fullName;
+  type: string;
+  dateAndTime: Date;
+  location: user.location; // Location ng account ng user
+  productDetails: product;
+}
