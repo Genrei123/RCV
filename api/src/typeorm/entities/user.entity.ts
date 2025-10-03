@@ -1,35 +1,66 @@
 import {
   Entity,
   Column,
-  PrimaryColumn,
-  BeforeInsert,
+  PrimaryGeneratedColumn,
   CreateDateColumn,
   UpdateDateColumn,
-  ViewColumn,
-  ViewEntity,
-  DataSource,
-  PrimaryGeneratedColumn,
+  BeforeInsert,
 } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { Roles } from '../../types/enums';
 import { z } from 'zod';
 
+// Helper to coerce date strings
+const coerceDate = (val: unknown) =>
+  typeof val === 'string' ? new Date(val) : val;
+
+// Helper to normalize role (accept string or numeric)
+const normalizeRole = (val: unknown) => {
+  if (typeof val === 'string') {
+    // Match either exact enum key or value
+    if ((Roles as any)[val] !== undefined) {
+      return (Roles as any)[val];
+    }
+    // Try case-insensitive match
+    const matched = Object.keys(Roles).find(
+      k => k.toLowerCase() === val.toLowerCase()
+    );
+    if (matched) return (Roles as any)[matched];
+  }
+  return val;
+};
+
 export const UserValidation = z.object({
-  id: z.uuidv4(),
+  id: z.string().uuid().optional(),
   firstName: z.string().min(2).max(50),
   lastName: z.string().min(2).max(50),
-  middleName: z.string().min(2).max(50).optional(),
+  middleName: z.string().min(2).max(50),
   fullName: z.string().min(3).max(100),
-  email: z.email().min(5).max(100),
-  dateOfBirth: z.date(),
+  email: z.string().email().min(5).max(100),
+  dateOfBirth: z.preprocess(coerceDate, z.date()),
   phoneNumber: z.string().min(10).max(15),
   password: z.string().min(6).max(100),
-  stationedAt: z.string().min(2).max(100),
-  createdAt: z.date(),
-  updatedAt: z.date(),
-  isActive: z.boolean(),
-  role: z.enum(Roles),
+  stationedAt: z.string().min(2).max(100).optional(),
+  createdAt: z.preprocess(
+    v => (v === undefined ? new Date() : coerceDate(v)),
+    z.date()
+  ).optional(),
+  updatedAt: z.preprocess(
+    v => (v === undefined ? new Date() : coerceDate(v)),
+    z.date()
+  ).optional(),
+  isActive: z.preprocess(v => (v === undefined ? true : v), z.boolean()).optional(),
+  role: z.preprocess(normalizeRole, z.nativeEnum(Roles)).optional()
 })
+.transform(data => ({
+  ...data,
+  id: data.id ?? uuidv4(),
+  fullName: data.fullName ?? `${data.firstName} ${data.lastName}`.trim(),
+  createdAt: data.createdAt ?? new Date(),
+  updatedAt: data.updatedAt ?? new Date(),
+  isActive: data.isActive ?? true,
+  role: data.role ?? Roles.Unverified,
+}));
 
 @Entity()
 export class User {
@@ -46,7 +77,7 @@ export class User {
     return `${this.firstName} ${this.lastName}`;
   }
 
-  @Column()
+  @Column({ nullable: true })
   middleName!: string;
 
   @Column({ unique: true })
@@ -71,11 +102,11 @@ export class User {
   updatedAt!: Date;
 
   @BeforeInsert()
-  generateId() {
-    this._id = uuidv4();
+  assignId() {
+    if (!this._id) this._id = uuidv4();
   }
 
-  @Column()
+  @Column({ default: true })
   isActive!: boolean;
 
   @Column({ type: 'enum', enum: Roles, default: Roles.Unverified })
