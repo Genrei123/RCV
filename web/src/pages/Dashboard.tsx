@@ -1,137 +1,103 @@
-import { Users, UserCheck, MonitorSpeaker } from "lucide-react"
-import { StatsGrid, type StatItem } from "@/components/StatsGrid"
+import { Badge } from "lucide-react"
 import { DataTable, type Column } from "@/components/DataTable"
-import { Pagination } from "@/components/Pagination"
 import { PageContainer } from "@/components/PageContainer"
+import { useState } from "react"
+import type { User } from "@/typeorm/entities/user.entity"
+import type { DashboardProps } from "@/props/Dashboard"
+import { Button } from "@/components/ui/button"
 
-// Define the audit data type
-interface AuditRecord {
-  location: string;
-  action: string;
-  date: string;
-  type: string;
-  status: string;
-}
-
-interface DashboardProps {
-  stats?: StatItem[];
-  auditData?: AuditRecord[];
-  loading?: boolean;
-  onSearch?: (query: string) => void;
-  onSort?: (sortBy: string) => void;
-  currentPage?: number;
-  totalPages?: number;
-  totalItems?: number;
-  itemsPerPage?: number;
-  onPageChange?: (page: number) => void;
-}
-
-export function Dashboard({
-  stats,
-  auditData,
-  loading = false,
-  onSearch,
-  onSort,
-  currentPage = 1,
-  totalPages = 3,
-  totalItems = 38,
-  itemsPerPage = 10,
-  onPageChange
-}: DashboardProps) {
-    // Default stats data
-    const defaultStats: StatItem[] = [
+export function Dashboard(props: DashboardProps) {
+    const [, setSearch] = useState<string>("");
+    const columns: Column[] = [
         {
-            icon: <Users className="h-6 w-6 text-teal-600" />,
-            label: "ADMIN USERS",
-            value: "5,423",
-            bgColor: "bg-teal-50"
+            key: "_id",
+            label: "User ID"
         },
         {
-            icon: <UserCheck className="h-6 w-6 text-teal-600" />,
-            label: "TOTAL USERS",
-            value: "1,893",
-            bgColor: "bg-teal-50"
+            key: "firstName",
+            label: "First Name"
         },
         {
-            icon: <MonitorSpeaker className="h-6 w-6 text-teal-600" />,
-            label: "ADMIN ACTIVE",
-            value: "189",
-            bgColor: "bg-teal-50"
+            key: "lastName",
+            label: "Last Name"
+        },
+        {
+            key: "email",
+            label: "Email"
+        },
+        {
+            key: "role",
+            label: "Role",
+            render: (value: number) => {
+                const roleMap: { [key: number]: { label: string; variant: "default" | "secondary" | "destructive" } } = {
+                    1: { label: "Agent", variant: "default" },
+                    2: { label: "Admin", variant: "secondary" },
+                    3: { label: "Super Admin", variant: "destructive" }
+                };
+                const role = roleMap[value] || { label: "Unknown", variant: "default" };
+                return <Badge>{role.label}</Badge>;
+            }
+        },
+        {
+            key: "createdAt",
+            label: "Created At",
+            render: (value: string) => {
+                return new Date(value).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                });
+            }
+        },
+        {
+            key: "actions",
+            label: "Actions",
+            render: (_, row: User) => (
+                <div className="flex gap-2">
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleApprove(row)}
+                    >
+                        Approve
+                    </Button>
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDeny(row)}
+                    >
+                        Deny
+                    </Button>
+                </div>
+            )
         }
     ];
 
-    // Default audit data - empty array to show "No data found" state
-    const defaultAuditData: AuditRecord[] = [
-        // Uncomment to show data:
-        // {
-        //     location: "Manila Office",
-        //     action: "Product Verified",
-        //     date: "2024-01-15",
-        //     type: "Verification",
-        //     status: "Success"
-        // },
-        // {
-        //     location: "Cebu Branch",
-        //     action: "User Login",
-        //     date: "2024-01-14",
-        //     type: "Authentication",
-        //     status: "Success"
-        // },
-        // {
-        //     location: "Davao Center",
-        //     action: "Product Added",
-        //     date: "2024-01-14",
-        //     type: "Creation",
-        //     status: "Pending"
-        // },
-        // {
-        //     location: "Quezon Office",
-        //     action: "Blockchain Sync",
-        //     date: "2024-01-13",
-        //     type: "System",
-        //     status: "Failed"
-        // }
-    ];
+    const handleApprove = (user: User) => {
+        // Implement approve logic here
+    }
 
-    // Define table columns
-    const auditColumns: Column[] = [
-        { key: 'location', label: 'Location' },
-        { key: 'action', label: 'Action' },
-        { key: 'date', label: 'Date' },
-        { key: 'type', label: 'Type' },
-        { key: 'status', label: 'Status' } // This will auto-render as badges
-    ];
+    const handleDeny = (user: User) => {
+        // Implement deny logic here
+    }
 
-    // Use provided data or defaults
-    const statsData = stats || defaultStats;
-    const tableData = auditData || defaultAuditData;
+    const onSearch = (query: string) => {
+        setSearch(query);
+    }
+
 
     return (
         <PageContainer title="Hello karina 👋">
-            {/* Stats Cards */}
-            <StatsGrid stats={statsData} loading={loading} />
-
-            {/* Audit Trail Section */}
             <DataTable
-                title="Audit Trail"
-                columns={auditColumns}
-                data={tableData}
-                searchPlaceholder="Search audit logs..."
-                onSearch={onSearch}
-                onSort={onSort}
-                loading={loading}
-                emptyStateTitle="No Audits Result"
+                title="Users"
+                columns={columns}
+                data={props.users || []}
+                searchPlaceholder="Search users..."
+                onSearch={(query) => onSearch(query)}
+                onSort={(sortKey) => console.log("Sort by:", sortKey)}
+                loading={false}
+                emptyStateTitle="No Users Found"
                 emptyStateDescription="You may try to input different keywords, check for typos, or adjust your filters."
-            />
-
-            {/* Pagination */}
-            <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalItems={totalItems}
-                itemsPerPage={itemsPerPage}
-                onPageChange={onPageChange}
-                showingText={`Showing ${Math.min(tableData.length, itemsPerPage)} out of ${totalItems} SKUs results`}
             />
         </PageContainer>
     );
