@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:rcv_firebase/themes/app_colors.dart';
+import 'pages/ocr_scanner_page.dart';
 import 'dart:math'; // THIS IS NOW CORRECTLY PLACED AT THE TOP
 
 // =========================================================================
@@ -253,6 +254,47 @@ class _QRScannerPageState extends State<QRScannerPage> {
                       style: TextStyle(color: AppColors.white)),
                 ),
               ],
+            ),
+            const SizedBox(height: 30),
+            
+            // ===================================================================
+            // OCR MODE BUTTON - TEXT EXTRACTION FROM IMAGES
+            // ===================================================================
+            const Divider(color: AppColors.white, thickness: 1),
+            const SizedBox(height: 20),
+            const Text(
+              'Or Extract Text from Images',
+              style: TextStyle(color: AppColors.white, fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 15),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const OcrScannerPage(),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.text_fields, color: AppColors.primary),
+              label: const Text(
+                'OCR Text Scanner',
+                style: TextStyle(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 40,
+                  vertical: 15,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
             ),
           ],
         ),
