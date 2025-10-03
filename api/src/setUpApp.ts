@@ -17,6 +17,7 @@ import ScanRouter from './routes/v1/scan';
 import AdminRouter from './routes/v1/admin';
 import BlockchainRouter from './routes/v1/blockchain';
 import UserRouter from './routes/v1/user';
+import ProductRouter from './routes/v1/product';
 
 // Instantiate the express app
 const setUpApp = async () => {
@@ -38,6 +39,7 @@ const setUpApp = async () => {
   app.use('/api/v1/admin', AdminRouter);
   app.use('/api/v1/blockchain', BlockchainRouter);
   app.use('/api/v1/user', UserRouter);
+  app.use('/api/v1/product', ProductRouter);
 
   // Root Health Check
   app.get('/', (req, res) => {

@@ -2,7 +2,7 @@ import type { User } from './user.entity';
 import type { Company } from './company.entity';
 
 export interface Product {
-  _id: string;
+  _id?: string;
   LTONumber: string;
   CFPRNumber: string;
   lotNumber: string;

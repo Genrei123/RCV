@@ -3,8 +3,12 @@ import { DataTable, type Column } from "@/components/DataTable"
 import { PageContainer } from "@/components/PageContainer"
 import { useState } from "react"
 import type { User } from "@/typeorm/entities/user.entity"
-import type { DashboardProps } from "@/props/Dashboard"
 import { Button } from "@/components/ui/button"
+
+export interface DashboardProps {
+    success?: boolean;
+    users?: User[];
+}
 
 export function Dashboard(props: DashboardProps) {
     const [, setSearch] = useState<string>("");

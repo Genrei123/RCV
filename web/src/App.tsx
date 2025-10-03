@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
-import { Dashboard } from './pages/Dashboard';
-import { Products } from './pages/Products';
+import { Dashboard, type DashboardProps } from './pages/Dashboard';
+import { Products, type ProductsProps } from './pages/Products';
 import { Maps } from './pages/Maps';
 import { Profile } from './pages/Profile';
 import { Blockchain } from './pages/Blockchain';
@@ -10,8 +10,8 @@ import { Sidebar } from './components/Sidebar';
 import { Footer } from './components/Footer';
 import { AuthService } from './services/authService';
 import { useEffect, useState, type ReactNode } from 'react';
-import type { DashboardProps } from './props/Dashboard';
 import { DashboardService } from './services/dashboardService';
+import { ProductService } from './services/productService';
 
 interface ProtectedRoutesProps {
   children: ReactNode;
@@ -41,11 +41,19 @@ const ProtectedRoutes = ({ children }: ProtectedRoutesProps) => {
 
 function App() {
   const [dashboardData, setDashboardData] = useState<DashboardProps>();
+  const [productsData, setProductsData] = useState<ProductsProps>();
+
   useEffect(() => {
     DashboardService.getAllUsers().then((data) => {
       setDashboardData(data);
     }).catch((error) => {
       console.error('Error fetching dashboard data:', error);
+    });
+
+    ProductService.getAllProducts().then((data) => {
+      setProductsData(data);
+    }).catch((error) => {
+      console.error('Error fetching products data:', error);
     });
   }, []);
 
@@ -60,7 +68,7 @@ function App() {
           <div className="flex-1 bg-white m-2 md:m-4 rounded-lg shadow-sm overflow-y-auto">
             <Routes>
               <Route path="/" element={<Dashboard {...dashboardData} />} />
-              <Route path="/products" element={<Products />} />
+              <Route path="/products" element={<Products {...productsData}/>} />
               <Route path="/maps" element={<Maps />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/users" element={<UsersPage />} />
