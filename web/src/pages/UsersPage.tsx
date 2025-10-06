@@ -1,6 +1,10 @@
 import { PageContainer } from "@/components/PageContainer"
 
-export function UsersPage() {
+interface UserPageProps {
+    
+}
+
+export function UsersPage(props: UserPageProps) {
     return (
         <PageContainer 
             title="Users" 

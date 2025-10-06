@@ -31,11 +31,10 @@ const normalizeRole = (val: unknown) => {
 };
 
 export const UserValidation = z.object({
-  id: z.string().uuid().optional(),
+  _id: z.string().optional(),
   firstName: z.string().min(2).max(50),
   lastName: z.string().min(2).max(50),
   middleName: z.string().min(2).max(50),
-  fullName: z.string().min(3).max(100),
   email: z.string().email().min(5).max(100),
   dateOfBirth: z.preprocess(coerceDate, z.date()),
   phoneNumber: z.string().min(10).max(15),
@@ -52,15 +51,6 @@ export const UserValidation = z.object({
   isActive: z.preprocess(v => (v === undefined ? true : v), z.boolean()).optional(),
   role: z.preprocess(normalizeRole, z.nativeEnum(Roles)).optional()
 })
-.transform(data => ({
-  ...data,
-  id: data.id ?? uuidv4(),
-  fullName: data.fullName ?? `${data.firstName} ${data.lastName}`.trim(),
-  createdAt: data.createdAt ?? new Date(),
-  updatedAt: data.updatedAt ?? new Date(),
-  isActive: data.isActive ?? true,
-  role: data.role ?? Roles.Unverified,
-}));
 
 @Entity()
 export class User {

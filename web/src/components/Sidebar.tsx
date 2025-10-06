@@ -22,7 +22,7 @@ export function Sidebar() {
     { path: '/', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/products', label: 'Products', icon: Package },
     { path: '/maps', label: 'Maps', icon: MapPin },
-    { path: '/users', label: 'Users', icon: Users },
+    // { path: '/users', label: 'Users', icon: Users },
   ]
 
   const profileMenuItems = [

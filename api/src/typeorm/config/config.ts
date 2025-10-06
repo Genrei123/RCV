@@ -8,8 +8,6 @@ import { ScanHistory } from '../entities/scanHistory';
 // import { AuditTrail } from '../entities/audit-trail.entity';
 
 const { DEV_DATABASE_URI, MAIN_DATABASE_URI, DB_PORT, NODE_ENV } = process.env;
-
-// https://typeorm.io/data-source-options#postgres--cockroachdb-data-source-options
 const config: DataSourceOptions = {
   type: 'mysql',
   url: NODE_ENV === 'development' ? DEV_DATABASE_URI : MAIN_DATABASE_URI,

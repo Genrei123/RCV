@@ -11,7 +11,7 @@ import { DB } from './data-source';
  */
 const ConnectDatabase = async (): Promise<void> => {
   try {
-    const status = await DB.initialize();
+    await DB.initialize();
     console.log('Data Source has been initialized!');
   } catch (error) {
     console.error('Error during Data Source initialization:', error);

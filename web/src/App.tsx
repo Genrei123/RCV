@@ -71,7 +71,7 @@ function App() {
               <Route path="/products" element={<Products {...productsData}/>} />
               <Route path="/maps" element={<Maps />} />
               <Route path="/profile" element={<Profile />} />
-              <Route path="/users" element={<UsersPage />} />
+              {/* <Route path="/users" element={<UsersPage />} /> */}
               <Route path="/settings" element={
                 <div className="min-h-[calc(100vh-12rem)] flex flex-col justify-center">
                   <div className="p-6">
