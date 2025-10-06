@@ -10,6 +10,11 @@ interface UserPayload {
     iat: number;
 }
 
+interface ForgotPasswordPayload {
+    email: string;
+    iat: number;
+}
+
 export const JWT_USERPAYLOAD = z.object({
     sub: z.string(),
     isAdmin: z.boolean(),
@@ -26,6 +31,13 @@ export function createToken(User: UserPayload): string {
     return jwt.sign(User, JWT_SECRET, {
         algorithm: JWT_ALGORITHM,
         expiresIn: JWT_EXPIRES_IN,
+    });
+}
+
+export function createForgotPasswordToken(UserEmail: ForgotPasswordPayload): string {
+    return jwt.sign(UserEmail, JWT_SECRET, {
+        algorithm: JWT_ALGORITHM,
+        expiresIn: JWT_EXPIRES_IN
     });
 }
 

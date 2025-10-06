@@ -1,0 +1,646 @@
+// =========================================================================
+// AUTH PAGE - LOGIN AND REGISTRATION
+// =========================================================================
+// This page provides both login and registration functionality with:
+// - Form validation
+// - Password strength indicator
+// - Error handling
+// - Integration with AuthService
+// =========================================================================
+
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
+import { Eye, EyeOff, Mail, Lock, User as UserIcon, Phone, MapPin, Calendar, BadgeCheck, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { AuthService } from '@/services/authService';
+import type { User } from '@/typeorm/entities/user.entity';
+
+interface LoginFormData {
+  email: string;
+  password: string;
+}
+
+interface RegisterFormData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  phoneNumber: string;
+  location: string;
+  dateOfBirth: string;
+  badgeId: string;
+}
+
+interface PasswordStrength {
+  score: number;
+  label: string;
+  color: string;
+}
+
+export function AuthPage() {
+  const navigate = useNavigate();
+  const [isLogin, setIsLogin] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
+
+  const [loginData, setLoginData] = useState<LoginFormData>({
+    email: '',
+    password: ''
+  });
+
+  const [registerData, setRegisterData] = useState<RegisterFormData>({
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    phoneNumber: '',
+    location: '',
+    dateOfBirth: '',
+    badgeId: ''
+  });
+
+  const [errors, setErrors] = useState<Partial<Record<keyof RegisterFormData, string>>>({});
+
+  // =========================================================================
+  // VALIDATION FUNCTIONS
+  // =========================================================================
+  
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const getPasswordStrength = (password: string): PasswordStrength => {
+    let score = 0;
+    
+    if (password.length >= 8) score++;
+    if (password.length >= 12) score++;
+    if (/[a-z]/.test(password)) score++;
+    if (/[A-Z]/.test(password)) score++;
+    if (/[0-9]/.test(password)) score++;
+    if (/[^A-Za-z0-9]/.test(password)) score++;
+
+    if (score <= 2) return { score, label: 'Weak', color: 'bg-red-500' };
+    if (score <= 4) return { score, label: 'Fair', color: 'bg-yellow-500' };
+    if (score <= 5) return { score, label: 'Good', color: 'bg-blue-500' };
+    return { score, label: 'Strong', color: 'bg-green-500' };
+  };
+
+  const validatePassword = (password: string): boolean => {
+    // At least 8 characters, 1 uppercase, 1 lowercase, 1 number
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+    return passwordRegex.test(password);
+  };
+
+  const validatePhoneNumber = (phone: string): boolean => {
+    const phoneRegex = /^[\d\s\-\+\(\)]+$/;
+    return phoneRegex.test(phone) && phone.replace(/\D/g, '').length >= 10;
+  };
+
+  const validateRegisterForm = (): boolean => {
+    const newErrors: Partial<Record<keyof RegisterFormData, string>> = {};
+
+    if (!registerData.firstName.trim()) {
+      newErrors.firstName = 'First name is required';
+    }
+
+    if (!registerData.lastName.trim()) {
+      newErrors.lastName = 'Last name is required';
+    }
+
+    if (!validateEmail(registerData.email)) {
+      newErrors.email = 'Please enter a valid email address';
+    }
+
+    if (!validatePassword(registerData.password)) {
+      newErrors.password = 'Password must be at least 8 characters with uppercase, lowercase, and number';
+    }
+
+    if (registerData.password !== registerData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
+
+    if (!validatePhoneNumber(registerData.phoneNumber)) {
+      newErrors.phoneNumber = 'Please enter a valid phone number';
+    }
+
+    if (!registerData.location.trim()) {
+      newErrors.location = 'Location is required';
+    }
+
+    if (!registerData.dateOfBirth) {
+      newErrors.dateOfBirth = 'Date of birth is required';
+    }
+
+    if (!registerData.badgeId.trim()) {
+      newErrors.badgeId = 'Badge ID is required';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // =========================================================================
+  // FORM HANDLERS
+  // =========================================================================
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (!validateEmail(loginData.email)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
+    if (!loginData.password) {
+      setError('Password is required');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await AuthService.login({
+        email: loginData.email,
+        password: loginData.password
+      });
+
+      if (response?.data.token) {
+        localStorage.setItem('token', response.data.token);
+        
+        if (rememberMe) {
+          localStorage.setItem('rememberMe', 'true');
+        }
+        
+        navigate('/dashboard');
+      } else {
+        setError('Login failed. Please check your credentials.');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Login failed. Please try again.');
+      console.error('Login error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (!validateRegisterForm()) {
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const userData: Partial<User> = {
+        firstName: registerData.firstName,
+        lastName: registerData.lastName,
+        fullName: `${registerData.firstName} ${registerData.lastName}`,
+        email: registerData.email,
+        password: registerData.password,
+        phoneNumber: registerData.phoneNumber,
+        stationedAt: registerData.location,
+        dateOfBirth: new Date(registerData.dateOfBirth),
+        role: 1, // Default role: Agent
+      };
+
+      const response = await AuthService.register(userData as User);
+
+      if (response?.data) {
+        // Auto login after registration
+        const loginResponse = await AuthService.login({
+          email: registerData.email,
+          password: registerData.password
+        });
+
+        if (loginResponse?.data.token) {
+          localStorage.setItem('token', loginResponse.data.token);
+          navigate('/dashboard');
+        } else {
+          // Registration successful but auto-login failed
+          setIsLogin(true);
+          setError('Account created successfully! Please log in.');
+        }
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+      console.error('Registration error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = () => {
+    navigate('/forgot-password');
+  };
+
+  const passwordStrength = getPasswordStrength(registerData.password);
+
+  // =========================================================================
+  // RENDER
+  // =========================================================================
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-8 items-center">
+        
+        {/* Left Side - Branding */}
+        <div className="hidden lg:block">
+          <div className="text-center space-y-6">
+            <div className="inline-block p-6 bg-white rounded-2xl shadow-lg">
+              <div className="w-24 h-24 bg-gradient-to-br from-[#005440] to-[#00B087] rounded-xl flex items-center justify-center">
+                <BadgeCheck className="w-16 h-16 text-white" />
+              </div>
+            </div>
+            <h1 className="text-4xl font-bold text-[#005440]">RCV System</h1>
+            <p className="text-xl text-gray-600">
+              Secure Product Verification & Management
+            </p>
+            <div className="grid grid-cols-2 gap-4 mt-8">
+              <div className="p-4 bg-white rounded-lg shadow-sm">
+                <div className="text-2xl font-bold text-[#00B087]">10K+</div>
+                <div className="text-sm text-gray-600">Products Verified</div>
+              </div>
+              <div className="p-4 bg-white rounded-lg shadow-sm">
+                <div className="text-2xl font-bold text-[#00B087]">500+</div>
+                <div className="text-sm text-gray-600">Active Users</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Side - Auth Forms */}
+        <Card className="p-8 shadow-2xl bg-white">
+          <div className="mb-8 text-center lg:hidden">
+            <div className="inline-block p-4 bg-gradient-to-br from-[#005440] to-[#00B087] rounded-xl mb-4">
+              <BadgeCheck className="w-12 h-12 text-white" />
+            </div>
+          </div>
+
+          <div className="mb-8 text-center">
+            <h2 className="text-3xl font-bold text-[#005440] mb-2">
+              {isLogin ? 'Welcome Back' : 'Create Account'}
+            </h2>
+            <p className="text-gray-600">
+              {isLogin ? 'Sign in to continue to RCV System' : 'Sign up to get started with RCV System'}
+            </p>
+          </div>
+
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <p className="text-red-600 text-sm flex-1">{error}</p>
+            </div>
+          )}
+
+          {/* Login Form */}
+          {isLogin ? (
+            <form onSubmit={handleLogin} className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <Input
+                    type="email"
+                    placeholder="Enter your email"
+                    className="pl-10 h-11"
+                    value={loginData.email}
+                    onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Password
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <Input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Enter your password"
+                    className="pl-10 pr-10 h-11"
+                    value={loginData.password}
+                    onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <label className="flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="mr-2 rounded border-gray-300 text-[#005440] focus:ring-[#005440]"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                  />
+                  <span className="text-sm text-gray-600">Remember me</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  className="text-sm text-[#005440] hover:text-[#00B087] font-medium"
+                >
+                  Forgot Password?
+                </button>
+              </div>
+
+              <Button
+                type="submit"
+                className="w-full h-11 bg-[#005440] hover:bg-[#00B087] text-white font-semibold"
+                disabled={loading}
+              >
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Signing in...
+                  </div>
+                ) : (
+                  'Sign In'
+                )}
+              </Button>
+            </form>
+          ) : (
+            /* Register Form */
+            <form onSubmit={handleRegister} className="space-y-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    First Name *
+                  </label>
+                  <div className="relative">
+                    <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <Input
+                      type="text"
+                      placeholder="John"
+                      className={`pl-10 h-11 ${errors.firstName ? 'border-red-500' : ''}`}
+                      value={registerData.firstName}
+                      onChange={(e) => setRegisterData({ ...registerData, firstName: e.target.value })}
+                      required
+                    />
+                  </div>
+                  {errors.firstName && <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Last Name *
+                  </label>
+                  <div className="relative">
+                    <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <Input
+                      type="text"
+                      placeholder="Doe"
+                      className={`pl-10 h-11 ${errors.lastName ? 'border-red-500' : ''}`}
+                      value={registerData.lastName}
+                      onChange={(e) => setRegisterData({ ...registerData, lastName: e.target.value })}
+                      required
+                    />
+                  </div>
+                  {errors.lastName && <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Email Address *
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <Input
+                    type="email"
+                    placeholder="john.doe@example.com"
+                    className={`pl-10 h-11 ${errors.email ? 'border-red-500' : ''}`}
+                    value={registerData.email}
+                    onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
+                    required
+                  />
+                </div>
+                {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Password *
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <Input
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Min 8 characters"
+                      className={`pl-10 pr-10 h-11 ${errors.password ? 'border-red-500' : ''}`}
+                      value={registerData.password}
+                      onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                  {registerData.password && (
+                    <div className="mt-2">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full transition-all ${passwordStrength.color}`}
+                            style={{ width: `${(passwordStrength.score / 6) * 100}%` }}
+                          />
+                        </div>
+                        <span className="text-xs font-medium text-gray-600">{passwordStrength.label}</span>
+                      </div>
+                    </div>
+                  )}
+                  {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Confirm Password *
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <Input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      placeholder="Confirm password"
+                      className={`pl-10 pr-10 h-11 ${errors.confirmPassword ? 'border-red-500' : ''}`}
+                      value={registerData.confirmPassword}
+                      onChange={(e) => setRegisterData({ ...registerData, confirmPassword: e.target.value })}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                  {registerData.confirmPassword && registerData.password === registerData.confirmPassword && (
+                    <div className="flex items-center gap-1 mt-1">
+                      <CheckCircle2 className="w-4 h-4 text-green-600" />
+                      <span className="text-xs text-green-600">Passwords match</span>
+                    </div>
+                  )}
+                  {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>}
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Phone Number *
+                  </label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <Input
+                      type="tel"
+                      placeholder="+1 (555) 123-4567"
+                      className={`pl-10 h-11 ${errors.phoneNumber ? 'border-red-500' : ''}`}
+                      value={registerData.phoneNumber}
+                      onChange={(e) => setRegisterData({ ...registerData, phoneNumber: e.target.value })}
+                      required
+                    />
+                  </div>
+                  {errors.phoneNumber && <p className="text-red-500 text-xs mt-1">{errors.phoneNumber}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Location *
+                  </label>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <Input
+                      type="text"
+                      placeholder="City, Country"
+                      className={`pl-10 h-11 ${errors.location ? 'border-red-500' : ''}`}
+                      value={registerData.location}
+                      onChange={(e) => setRegisterData({ ...registerData, location: e.target.value })}
+                      required
+                    />
+                  </div>
+                  {errors.location && <p className="text-red-500 text-xs mt-1">{errors.location}</p>}
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Date of Birth *
+                  </label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <Input
+                      type="date"
+                      className={`pl-10 h-11 ${errors.dateOfBirth ? 'border-red-500' : ''}`}
+                      value={registerData.dateOfBirth}
+                      onChange={(e) => setRegisterData({ ...registerData, dateOfBirth: e.target.value })}
+                      required
+                    />
+                  </div>
+                  {errors.dateOfBirth && <p className="text-red-500 text-xs mt-1">{errors.dateOfBirth}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Badge ID *
+                  </label>
+                  <div className="relative">
+                    <BadgeCheck className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <Input
+                      type="text"
+                      placeholder="BADGE-12345"
+                      className={`pl-10 h-11 ${errors.badgeId ? 'border-red-500' : ''}`}
+                      value={registerData.badgeId}
+                      onChange={(e) => setRegisterData({ ...registerData, badgeId: e.target.value })}
+                      required
+                    />
+                  </div>
+                  {errors.badgeId && <p className="text-red-500 text-xs mt-1">{errors.badgeId}</p>}
+                </div>
+              </div>
+
+              <div className="flex items-start">
+                <input
+                  type="checkbox"
+                  className="mt-1 mr-2 rounded border-gray-300 text-[#005440] focus:ring-[#005440]"
+                  required
+                />
+                <span className="text-sm text-gray-600">
+                  I agree to the{' '}
+                  <a href="#" className="text-[#005440] hover:text-[#00B087] font-medium">
+                    Terms of Service
+                  </a>{' '}
+                  and{' '}
+                  <a href="#" className="text-[#005440] hover:text-[#00B087] font-medium">
+                    Privacy Policy
+                  </a>
+                </span>
+              </div>
+
+              <Button
+                type="submit"
+                className="w-full h-11 bg-[#005440] hover:bg-[#00B087] text-white font-semibold"
+                disabled={loading}
+              >
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Creating Account...
+                  </div>
+                ) : (
+                  'Create Account'
+                )}
+              </Button>
+            </form>
+          )}
+
+          {/* Toggle Login/Register */}
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600">
+              {isLogin ? "Don't have an account?" : 'Already have an account?'}{' '}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsLogin(!isLogin);
+                  setError('');
+                  setErrors({});
+                }}
+                className="text-[#005440] hover:text-[#00B087] font-semibold"
+              >
+                {isLogin ? 'Sign Up' : 'Sign In'}
+              </button>
+            </p>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}

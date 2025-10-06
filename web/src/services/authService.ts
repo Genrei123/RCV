@@ -11,6 +11,26 @@ export interface LoginResponse {
     token: string;
 }
 
+export interface PasswordResetRequest {
+    email: string;
+}
+
+export interface PasswordResetResponse {
+    success: boolean;
+    message: string;
+}
+
+export interface VerifyResetCodeRequest {
+    email: string;
+    code: string;
+}
+
+export interface ResetPasswordRequest {
+    email: string;
+    code: string;
+    newPassword: string;
+}
+
 export class AuthService {
     
     static async initializeAuthenticaiton(): Promise<boolean> {
@@ -55,13 +75,50 @@ export class AuthService {
         }
     }
 
-    static async isTokenExpired(token: string): Promise<boolean> {
-        // TO DO
+    static async isTokenExpired(_token: string): Promise<boolean> {
+        // TODO: Implement token expiration check
         return true; 
     }
 
-    static async verifyToken(token: string): Promise<boolean> {
-        // TO DO
+    static async verifyToken(_token: string): Promise<boolean> {
+        // TODO: Implement token verification
         return false;
+    }
+
+    static async requestPasswordReset(email: string): Promise<PasswordResetResponse> {
+        try {
+            const response = await apiClient.post<PasswordResetResponse>('/auth/forgot-password', { email });
+            return response.data;
+        } catch (error: any) {
+            console.error('Request password reset error:', error);
+            throw error;
+        }
+    }
+
+    static async verifyResetCode(email: string, code: string): Promise<boolean> {
+        try {
+            const response = await apiClient.post<{ valid: boolean }>('/auth/verify-reset-code', { 
+                email, 
+                code 
+            });
+            return response.data.valid;
+        } catch (error: any) {
+            console.error('Verify reset code error:', error);
+            throw error;
+        }
+    }
+
+    static async resetPassword(email: string, code: string, newPassword: string): Promise<PasswordResetResponse> {
+        try {
+            const response = await apiClient.post<PasswordResetResponse>('/auth/reset-password', { 
+                email, 
+                code, 
+                newPassword 
+            });
+            return response.data;
+        } catch (error: any) {
+            console.error('Reset password error:', error);
+            throw error;
+        }
     }
 }

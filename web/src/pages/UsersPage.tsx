@@ -2,6 +2,7 @@ import { PageContainer } from "@/components/PageContainer"
 
 interface UserPageProps {
     
+    
 }
 
 export function UsersPage(props: UserPageProps) {
