@@ -4,12 +4,12 @@ import {
   LayoutDashboard, 
   Package,
   MapPin,
-  Users,
   User,
   LogOut,
   ChevronDown,
   Settings,
-  Bell
+  Bell,
+  Building2
 } from 'lucide-react'
 import { LogoutModal } from './LogoutModal'
 
@@ -21,6 +21,7 @@ export function Sidebar() {
   const menuItems = [
     { path: '/', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/products', label: 'Products', icon: Package },
+    { path: '/companies', label: 'Companies', icon: Building2 },
     { path: '/maps', label: 'Maps', icon: MapPin },
     // { path: '/users', label: 'Users', icon: Users },
   ]

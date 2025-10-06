@@ -27,16 +27,17 @@ export const getCompanyById = async (req: Request, res: Response, next: NextFunc
 }
 
 export const createCompany = async (req: Request, res: Response, next: NextFunction) => {
-    if (!CompanyValidation.parse(req.body)) {
-        return new CustomError(400, "Invalid Company Data");
+    const Company = CompanyValidation.safeParse(req.body);
+    if (Company.error) {
+        return next(new CustomError(400, "Invalid Company Data or missing parameters", { body: req.body }));
     }
-    try {
-        const newCompany = CompanyRepo.create(req.body);
-        await CompanyRepo.save(newCompany);
-        res.status(201).json({ company: newCompany });
-    } catch (error) {
-        return new CustomError(500, "Failed to create company");
+    
+    if (await CompanyRepo.findOneBy({ licenseNumber: Company.data.licenseNumber })) {
+        return next(new CustomError(400, "Company with license number already exists", { company: Company.data.licenseNumber }));
     }
+
+    CompanyRepo.save(Company.data);
+    return res.status(200).json({ message: "Company successfully registered", company: Company.data });
 };
 
 export const updateCompany = async (req: Request, res: Response, next: NextFunction) => {

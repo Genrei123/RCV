@@ -18,6 +18,7 @@ import AdminRouter from './routes/v1/admin';
 import BlockchainRouter from './routes/v1/blockchain';
 import UserRouter from './routes/v1/user';
 import ProductRouter from './routes/v1/product';
+import CompanyRouter from './routes/v1/company';
 
 // Instantiate the express app
 const setUpApp = async () => {
@@ -30,7 +31,7 @@ const setUpApp = async () => {
   app.use(express.urlencoded({ extended: true }));
 
   // Security Middlewares
-  app.use(rateLimit);
+  // app.use(rateLimit);
   // app.use(validateToken);
 
   // API VERSIONING - Version 1.0
@@ -40,6 +41,7 @@ const setUpApp = async () => {
   app.use('/api/v1/blockchain', BlockchainRouter);
   app.use('/api/v1/user', UserRouter);
   app.use('/api/v1/product', ProductRouter);
+  app.use('/api/v1/company', CompanyRouter);
 
   // Root Health Check
   app.get('/', (req, res) => {
