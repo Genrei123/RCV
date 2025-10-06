@@ -89,7 +89,7 @@ export const me = async (req: Request, res: Response, next: NextFunction) => {
   }
   const User = await UserRepo.findOne({
     where: { _id: decoded.data?.sub },
-    select: ['_id', 'firstName', 'middleName', 'lastName', 'email', 'phoneNumber']
+    select: ['_id', 'firstName', 'middleName', 'lastName', 'email', 'phoneNumber', 'stationedAt']
   });
   return res.send(User);
 }

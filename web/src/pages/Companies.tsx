@@ -11,6 +11,7 @@ export interface CompaniesProps {
   companies?: Company[];
   onCompanyClick?: (company: Company) => void;
   loading?: boolean;
+  onRefresh?: () => void;
 }
 
 export function Companies(props: CompaniesProps) {
@@ -41,7 +42,11 @@ export function Companies(props: CompaniesProps) {
 
   const handleAddSuccess = () => {
     // Refresh the companies list after adding a new company
-    fetchCompanies();
+    if (props.onRefresh) {
+      props.onRefresh();
+    } else {
+      fetchCompanies();
+    }
   };
 
   const columns: Column[] = [

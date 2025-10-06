@@ -1,14 +1,42 @@
 import { apiClient } from "./axiosConfig";
 
-interface UserPageApiResponse {
+export interface UserProfile {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    middleName?: string;
+    email: string;
+    phoneNumber?: string;
+    avatar?: string;
+    role?: number;
+    dateOfBirth?: string;
+    location?: string;
+    badgeId?: string;
+    stationedAt?: string;
+}
 
+export interface UserPageApiResponse {
+    profile?: UserProfile;
 }
 
 export class UserPageService {
-    static async getAllUsers() {
-        const response = apiClient.get('/user/users');
-        return response;
+    static async getProfile(): Promise<UserPageApiResponse> {
+        try {
+            const response = await apiClient.get<UserProfile>('/auth/me');
+            return { profile: response.data };
+        } catch (error) {
+            console.error('Error fetching profile:', error);
+            throw error;
+        }
+    }
 
-        // TO DO?
+    static async getUserById(UserId: string) {
+        try {
+            const response = await apiClient.get<UserProfile>(`/user/users/${UserId}`);
+            return { profile: response.data }
+        } catch (error) {
+            console.error('Error fetching the user: ', error);
+            throw error;
+        }
     }
 }

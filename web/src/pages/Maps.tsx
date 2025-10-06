@@ -1,6 +1,5 @@
 import { MapComponent } from "@/components/MapComponent"
 import type { Inspector } from "@/components/MapComponent"
-import { PageContainer } from "@/components/PageContainer"
 
 export function Maps() {
   // Sample inspectors data
@@ -90,21 +89,13 @@ export function Maps() {
   };
 
   return (
-    <PageContainer 
-      title="Inspector Locations" 
-      description="View and manage inspector locations across different areas"
-      maxWidth="full"
-    >
-      <div className="h-full flex flex-col">
-        <div className="flex-1 min-h-0">
-          <MapComponent
-            inspectors={inspectors}
-            onInspectorClick={handleInspectorClick}
-            onSearch={handleSearch}
-            loading={false}
-          />
-        </div>
-      </div>
-    </PageContainer>
+    <div className="h-full w-full">
+      <MapComponent
+        inspectors={inspectors}
+        onInspectorClick={handleInspectorClick}
+        onSearch={handleSearch}
+        loading={false}
+      />
+    </div>
   );
 }

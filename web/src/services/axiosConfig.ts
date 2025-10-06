@@ -9,8 +9,21 @@ export const apiClient: AxiosInstance = axios.create({
   baseURL: BASE_URL,
   timeout: 10000, // 10 seconds timeout
   headers: {
-    'Authorization': `Bearer ${localStorage.getItem('token')}`,
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   },
 });
+
+// Add request interceptor to dynamically add token to each request
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);

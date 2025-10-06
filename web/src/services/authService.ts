@@ -40,20 +40,43 @@ export class AuthService {
             return false;
         }
 
-        if (await this.isTokenExpired(token)) {
-            localStorage.removeItem('token');
-            return false;
-        }
-
+        // For now, just check if token exists
+        // TODO: Implement proper token expiration and verification with backend
         try {
-            if (await !this.verifyToken(token)) {
-                return false;
-            };
+            // Simple check - token exists
             return true;
         } catch (error) {
             console.error(error);
+            localStorage.removeItem('token');
+            return false;
         }
-        return false;
+    }
+
+    static async getCurrentUser() {
+        try {
+            const response = await apiClient.get('/auth/me');
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching current user:', error);
+            return null;
+        }
+    }
+
+    static async logout(): Promise<void> {
+        try {
+            // Clear local storage
+            localStorage.removeItem('token');
+            localStorage.removeItem('rememberMe');
+            
+            // Redirect to login
+            window.location.href = '/login';
+        } catch (error) {
+            console.error('Logout error:', error);
+            // Still clear token and redirect even if there's an error
+            localStorage.removeItem('token');
+            localStorage.removeItem('rememberMe');
+            window.location.href = '/login';
+        }
     }
 
     static async login(Credentials: LoginRequest) {

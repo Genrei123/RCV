@@ -16,6 +16,8 @@ import { Card } from '@/components/ui/card';
 import { Eye, EyeOff, Mail, Lock, User as UserIcon, Phone, MapPin, Calendar, BadgeCheck, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { AuthService } from '@/services/authService';
 import type { User } from '@/typeorm/entities/user.entity';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 interface LoginFormData {
   email: string;
@@ -156,12 +158,12 @@ export function AuthPage() {
     setError('');
 
     if (!validateEmail(loginData.email)) {
-      setError('Please enter a valid email address');
+      toast.error('Please enter a valid email address');
       return;
     }
 
     if (!loginData.password) {
-      setError('Password is required');
+      toast.error('Password is required');
       return;
     }
 
@@ -180,12 +182,19 @@ export function AuthPage() {
           localStorage.setItem('rememberMe', 'true');
         }
         
-        navigate('/dashboard');
+        toast.success('Login successful! Redirecting...');
+        
+        // Use setTimeout to ensure state updates before navigation
+        setTimeout(() => {
+          navigate('/dashboard', { replace: true });
+          window.location.reload(); // Force reload to update auth state
+        }, 500);
       } else {
-        setError('Login failed. Please check your credentials.');
+        toast.error('Login failed. Please check your credentials.');
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
+      const errorMessage = err.response?.data?.message || 'Login failed. Please try again.';
+      toast.error(errorMessage);
       console.error('Login error:', err);
     } finally {
       setLoading(false);
@@ -197,6 +206,7 @@ export function AuthPage() {
     setError('');
 
     if (!validateRegisterForm()) {
+      toast.error('Please fill in all required fields correctly');
       return;
     }
 
@@ -218,6 +228,8 @@ export function AuthPage() {
       const response = await AuthService.register(userData as User);
 
       if (response?.data) {
+        toast.success('Registration successful! Logging you in...');
+        
         // Auto login after registration
         const loginResponse = await AuthService.login({
           email: registerData.email,
@@ -226,15 +238,20 @@ export function AuthPage() {
 
         if (loginResponse?.data.token) {
           localStorage.setItem('token', loginResponse.data.token);
-          navigate('/dashboard');
+          
+          setTimeout(() => {
+            navigate('/dashboard', { replace: true });
+            window.location.reload();
+          }, 500);
         } else {
           // Registration successful but auto-login failed
           setIsLogin(true);
-          setError('Account created successfully! Please log in.');
+          toast.info('Account created successfully! Please log in.');
         }
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+      const errorMessage = err.response?.data?.message || 'Registration failed. Please try again.';
+      toast.error(errorMessage);
       console.error('Registration error:', err);
     } finally {
       setLoading(false);
@@ -253,6 +270,18 @@ export function AuthPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50 flex items-center justify-center p-4">
+      <ToastContainer 
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
       <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-8 items-center">
         
         {/* Left Side - Branding */}

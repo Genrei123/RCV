@@ -1,9 +1,10 @@
 import { Badge } from "lucide-react"
 import { DataTable, type Column } from "@/components/DataTable"
 import { PageContainer } from "@/components/PageContainer"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import type { User } from "@/typeorm/entities/user.entity"
 import { Button } from "@/components/ui/button"
+import { AuthService } from "@/services/authService"
 
 export interface DashboardProps {
     success?: boolean;
@@ -12,6 +13,28 @@ export interface DashboardProps {
 
 export function Dashboard(props: DashboardProps) {
     const [, setSearch] = useState<string>("");
+    const [currentUser, setCurrentUser] = useState<any>(null);
+
+    useEffect(() => {
+        fetchCurrentUser();
+    }, []);
+
+    const fetchCurrentUser = async () => {
+        try {
+            const user = await AuthService.getCurrentUser();
+            if (user) {
+                setCurrentUser(user);
+            }
+        } catch (error) {
+            console.error('Error fetching current user:', error);
+        }
+    };
+
+    const getGreeting = (): string => {
+        if (!currentUser) return "Hello 👋";
+        const firstName = currentUser.firstName || "User";
+        return `Hello ${firstName} 👋`;
+    };
     const columns: Column[] = [
         {
             key: "_id",
@@ -91,7 +114,7 @@ export function Dashboard(props: DashboardProps) {
 
 
     return (
-        <PageContainer title="Hello karina 👋">
+        <PageContainer title={getGreeting()}>
             <DataTable
                 title="Users"
                 columns={columns}

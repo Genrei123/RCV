@@ -5,17 +5,45 @@ import { Button } from '@/components/ui/button';
 import { DataTable, type Column } from '@/components/DataTable';
 import type { Product } from '@/typeorm/entities/product.entity';
 import { ProductCard } from '@/components/ProductCard';
+import { AddProductModal } from '@/components/AddProductModal';
+import { ProductDetailsModal } from '@/components/ProductDetailsModal';
+import type { Company } from '@/typeorm/entities/company.entity';
 
 export interface ProductsProps {
   products?: Product[];
+  companies?: Company[];
   onProductClick?: (product: Product) => void;
   onAddProduct?: () => void;
   loading?: boolean;
+  onRefresh?: () => void;
 }
 
 export function Products(props: ProductsProps) {
-  const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+
+  const handleProductClick = (product: Product) => {
+    setSelectedProduct(product);
+    setShowDetailsModal(true);
+    if (props.onProductClick) {
+      props.onProductClick(product);
+    }
+  };
+
+  const handleAddProduct = () => {
+    setShowAddModal(true);
+    if (props.onAddProduct) {
+      props.onAddProduct();
+    }
+  };
+
+  const handleAddSuccess = () => {
+    if (props.onRefresh) {
+      props.onRefresh();
+    }
+  };
 
   const columns: Column[] = [
     {
@@ -62,18 +90,14 @@ export function Products(props: ProductsProps) {
           <Button
             size="sm"
             variant="outline"
-            onClick={() => props.onProductClick?.(row)}
+            onClick={() => handleProductClick(row)}
           >
-            View
+            View Details
           </Button>
         </div>
       )
     }
   ];
-
-  const onSearch = (query: string) => {
-    setSearchQuery(query);
-  };
 
   return (
     <PageContainer
@@ -83,7 +107,7 @@ export function Products(props: ProductsProps) {
       {/* Header Actions */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
         <div className="flex items-center gap-2">
-          <Button onClick={props.onAddProduct}>
+          <Button onClick={handleAddProduct}>
             <Plus className="h-4 w-4 mr-2" />
             Add Product
           </Button>
@@ -116,7 +140,6 @@ export function Products(props: ProductsProps) {
           columns={columns}
           data={props.products || []}
           searchPlaceholder="Search products..."
-          onSearch={onSearch}
           onSort={(sortKey) => console.log('Sort by:', sortKey)}
           loading={props.loading || false}
           emptyStateTitle="No Products Found"
@@ -129,12 +152,27 @@ export function Products(props: ProductsProps) {
               <ProductCard
                 key={product._id}
                 product={product}
-                onClick={() => props.onProductClick?.(product)}
+                onClick={() => handleProductClick(product)}
               />
 
             )))}
         </div>
       )}
+
+      {/* Add Product Modal */}
+      <AddProductModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSuccess={handleAddSuccess}
+        companies={props.companies || []}
+      />
+
+      {/* Product Details Modal */}
+      <ProductDetailsModal
+        isOpen={showDetailsModal}
+        onClose={() => setShowDetailsModal(false)}
+        product={selectedProduct}
+      />
     </PageContainer>
   );
 }
