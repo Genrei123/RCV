@@ -1,8 +1,20 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    
+    <!-- Added Permissions -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    
     <application
         android:label="rcv_firebase"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        
+        <!-- Google Maps API Key -->
+        <meta-data android:name="com.google.android.geo.API_KEY"
+                   android:value="AIzaSyDn5gzcWfMJIRm2Mf8VJ6QD9K5DqnIiy_0"/>
+        
         <activity
             android:name=".MainActivity"
             android:exported="true"

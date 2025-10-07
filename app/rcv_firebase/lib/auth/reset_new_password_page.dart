@@ -11,6 +11,8 @@ class ResetNewPasswordPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final newPasswordController = TextEditingController();
     final confirmPasswordController = TextEditingController();
+    final newPasswordFocusNode = FocusNode();
+    final confirmPasswordFocusNode = FocusNode();
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -39,11 +41,12 @@ class ResetNewPasswordPage extends StatelessWidget {
                       letterSpacing: 1.2,
                     ),
                   ),
-                  SizedBox(height: 32),
+                  SizedBox(height: 24),
                   AnimatedFormField(
                     label: 'New Password',
                     hint: 'New Password',
                     controller: newPasswordController,
+                    focusNode: newPasswordFocusNode,
                     obscureText: true,
                     suffixIcon: Icon(
                       Icons.visibility,
@@ -55,6 +58,7 @@ class ResetNewPasswordPage extends StatelessWidget {
                     label: 'Confirm New Password',
                     hint: 'Confirm New Password',
                     controller: confirmPasswordController,
+                    focusNode: confirmPasswordFocusNode,
                     obscureText: true,
                     suffixIcon: Icon(
                       Icons.visibility,

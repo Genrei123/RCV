@@ -1,12 +1,16 @@
 import type { NextFunction, Request, Response } from 'express';
 import { generateReport } from '../../utils/reportGeneration';
 import CustomError from '../../utils/CustomError';
-import { ProductBlockchain } from '../../typeorm/entities/productblockchain';
 import { Product } from '../../typeorm/entities/product.entity';
-import { ProductBlock } from '../../typeorm/entities/productblock';
 import { searchProductInBlockchain } from '../../utils/ProductChainUtil';
 import { User } from '../../typeorm/entities/user.entity';
 import bcrypt from 'bcryptjs';
+import { ProductBlockchain } from '../../services/productblockchain';
+import { Company } from '../../typeorm/entities/company.entity';
+import { ProductBlock } from '../../services/productblock';
+import { ScanHistory, ScanHistoryValidation } from '../../typeorm/entities/scanHistory';
+import { ScanRepo } from '../../typeorm/data-source';
+
 
 export const scanQR = async (req: Request, res: Response, next: NextFunction) => {
     // Generates Report
@@ -18,42 +22,42 @@ export const scanQR = async (req: Request, res: Response, next: NextFunction) =>
 export let globalProductBlockchain: ProductBlockchain;
 
 export const initializeProductBlockchain = async () => {
-    const mockUser = new User();
-    mockUser.id = "123213";
-    mockUser.fullName = "John Doe";
-    mockUser.email = "john_doe";
-    mockUser.phoneNumber = "09123456789";
-    mockUser.role = 1; // Admin
-    const salt = await bcrypt.genSalt(10);
-    mockUser.password = await bcrypt.hash("adminpassword", salt);
-    const mockAdmin = mockUser;
+    // const mockUser = new User();
+    // mockUser._id = "123213";
+    // mockUser.firstName = "John";
+    // mockUser.lastName = "Doe";
+    // mockUser.email = "john_doe";
+    // mockUser.phoneNumber = "09123456789";
+    // mockUser.role = 1; // Admin
+    // const salt = await bcrypt.genSalt(10);
+    // mockUser.password = await bcrypt.hash("adminpassword", salt);
+    // const mockAdmin = mockUser;
+
+    // const mockCompany = new Company();
+    // mockCompany._id = "comp123";
+    // mockCompany.name = "Sample Manufacturer";
+    // mockCompany.address = "123 Sample St, Sample City";
 
 
-    const sampleProduct: Product = {
-        LTONumber: "1234567890",
-        CFPRNumber: "0987654321",
-        productName: "Sample Product",
-        productType: 0,
-        manufacturerName: "Sample Manufacturer",
-        distributorName: "Sample Distributor",
-        importerName: "Sample Importer",
-        addedAt: new Date(),
-        addedBy: mockAdmin,   
-    }
-    const sampleProduct2: Product = {
-        LTONumber: "2234567890",
-        CFPRNumber: "2987654321",
-        productName: "Another Product",
-        productType: 1,
-        manufacturerName: "Another Manufacturer",
-        distributorName: "Another Distributor",
-        importerName: "Another Importer",
-        addedAt: new Date(),
-        addedBy: mockAdmin,
-    }
-    globalProductBlockchain = new ProductBlockchain(sampleProduct);
-    globalProductBlockchain.addNewBlock(new ProductBlock(1, new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), sampleProduct));
-    globalProductBlockchain.addNewBlock(new ProductBlock(2, new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), sampleProduct2));
+
+    // const sampleProduct: Product = {
+    //     _id: "prod123",
+    //     LTONumber: "1234567890",
+    //     CFPRNumber: "0987654321",
+    //     lotNumber: "LOT123456",
+    //     brandName: "Sample Brand",
+    //     productName: "Sample Product",
+    //     productClassification: 0,
+    //     productSubClassification: 0,
+    //     expirationDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
+    //     dateOfRegistration: new Date(),
+    //     registeredAt: new Date(),
+    //     registeredBy: mockAdmin,
+    //     company: mockCompany,   
+    // }
+    // globalProductBlockchain = new ProductBlockchain(sampleProduct);
+    // globalProductBlockchain.addNewBlock(new ProductBlock(1, new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), sampleProduct));
+    
 }
 
 export const scanProduct = async (req: Request, res: Response, next: NextFunction) => {
@@ -77,4 +81,33 @@ export const scanProduct = async (req: Request, res: Response, next: NextFunctio
         next(error);
     }
 }
+
+export const getScans = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const Scans = await ScanRepo.find();
+        res.status(200).json({ scans: Scans });
+    } catch (error) {
+        next(error);
+        return new CustomError(500, 'Failed to retrieve scans');
+    }
+}
+
+export const getScansByID = async (req: Request, res: Response, next: NextFunction) => {
+    if (!ScanHistoryValidation.parse({ id: req.params.id})) {
+        return new CustomError(400, "Invalid Scan ID");
+    }
+
+    try {
+        const scan = await ScanRepo.findOneBy({ _id: req.params.id });
+        if (!scan) {
+            return new CustomError(404, 'Scan not found');
+        }
+        res.status(200).json({ scan });
+    } catch (error) {
+        next(error);
+        return new CustomError(500, 'Failed to retrieve scan');
+    }
+}
+
+
 

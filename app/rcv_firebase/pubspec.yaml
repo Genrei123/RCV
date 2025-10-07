@@ -30,14 +30,16 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
+  graphql_flutter: ^5.2.0
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   firebase_core: ^2.24.0
   lucide_icons: ^0.257.0
   flutter_svg: ^2.2.0
+  qr_flutter: ^4.1.0 # Added for QR code generation
   dio: ^4.0.0
+  http: ^1.1.0
   flutter_polyline_points: ^3.0.1
   google_maps_flutter: ^2.3.0
   mobile_scanner: ^3.5.2
@@ -45,8 +47,13 @@ dependencies:
   google_mlkit_text_recognition: 0.15.0
   image_picker: ^1.0.4
   google_mlkit_commons: ^0.11.0
-
-
+  path_provider: ^2.1.1
+  fl_chart: ^1.1.1
+  provider: ^6.1.5+1
+  google_fonts: ^6.3.1
+  footer:
+  location: ^8.0.1
+  shared_preferences: ^2.5.3
 
 dev_dependencies:
   flutter_test:
@@ -69,11 +76,11 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  # To add assets to your application, add an assets section, like this:
   assets:
     - assets/
     # for users.json
     - assets/users.json
-
 
   # To add assets to your application, add an assets section, like this:
   # assets:

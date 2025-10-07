@@ -6,13 +6,15 @@ class GradientHeaderAppBar extends StatelessWidget
   final String greeting;
   final String user;
   final VoidCallback? onBack;
+  final bool showBackButton;
 
   const GradientHeaderAppBar({
-    Key? key,
+    super.key,
     this.greeting = 'Welcome back',
     this.user = 'user',
     this.onBack,
-  }) : super(key: key);
+    this.showBackButton = true,
+  });
 
   @override
   Size get preferredSize => const Size.fromHeight(100);
@@ -31,36 +33,40 @@ class GradientHeaderAppBar extends StatelessWidget
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          IconButton(
-            icon: Icon(
-              Icons.arrow_back_ios_new_rounded,
-              color: app_colors.AppColors.neutral,
+          if (showBackButton) ...[
+            IconButton(
+              icon: Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: app_colors.AppColors.neutral,
+              ),
+              onPressed: onBack ?? () => Navigator.of(context).maybePop(),
             ),
-            onPressed: onBack ?? () => Navigator.of(context).maybePop(),
-          ),
-          const SizedBox(width: 8),
+            const SizedBox(width: 8),
+          ],
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  greeting,
-                  style: TextStyle(
-                    color: app_colors.AppColors.neutral,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w400,
+                if (greeting.isNotEmpty)
+                  Text(
+                    greeting,
+                    style: TextStyle(
+                      color: app_colors.AppColors.neutral,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w400,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  user,
-                  style: TextStyle(
-                    color: app_colors.AppColors.neutral,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
+                if (greeting.isNotEmpty) const SizedBox(height: 2),
+                if (user.isNotEmpty)
+                  Text(
+                    user,
+                    style: TextStyle(
+                      color: app_colors.AppColors.neutral,
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
               ],
             ),
           ),

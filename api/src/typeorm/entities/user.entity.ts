@@ -1,19 +1,73 @@
 import {
   Entity,
   Column,
-  PrimaryColumn,
-  BeforeInsert,
+  PrimaryGeneratedColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  BeforeInsert,
 } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
-import { Roles } from '../../types/enums';
+import { z } from 'zod';
+
+// Helper to coerce date strings
+const coerceDate = (val: unknown) =>
+  typeof val === 'string' ? new Date(val) : val;
+
+export const UserValidation = z.object({
+  _id: z.string().optional(),
+  role: z.enum(['AGENT', 'ADMIN', 'USER']).optional(),
+  status: z.enum(['Archived', 'Active', 'Pending']).default('Pending'),
+  avatarUrl: z.string().optional(),
+  fName: z.string().min(2).max(50),
+  mName: z.string().min(2).max(50).optional(),
+  lName: z.string().min(2).max(50),
+  extName: z.string().max(10).optional(),
+  fullName: z.string().min(2).max(150),
+  email: z.string().email().min(5).max(100),
+  location: z.string().min(2).max(100),
+  currentLocation: z.object({
+    latitude: z.string(),
+    longitude: z.string()
+  }).optional(),
+  dateOfBirth: z.string(),
+  phoneNumber: z.string().min(10).max(15),
+  password: z.string().min(6).max(100),
+  badgeId: z.string().min(2).max(50),
+  createdAt: z.preprocess(
+    v => (v === undefined ? new Date() : coerceDate(v)),
+    z.date()
+  ).optional(),
+  updatedAt: z.preprocess(
+    v => (v === undefined ? new Date() : coerceDate(v)),
+    z.date()
+  ).optional()
+})
 
 @Entity()
 export class User {
-  //https://typeorm.io/entities#entity-columns
-  @PrimaryColumn('uuid')
-  id!: string;
+  @PrimaryGeneratedColumn('uuid')
+  _id!: string;
+
+  @Column({ type: 'enum', enum: ['AGENT', 'ADMIN', 'USER'], default: 'AGENT' })
+  role!: 'AGENT' | 'ADMIN' | 'USER';
+
+  @Column({ type: 'enum', enum: ['Archived', 'Active', 'Pending'], default: 'Pending' })
+  status!: 'Archived' | 'Active' | 'Pending';
+
+  @Column({ nullable: true })
+  avatarUrl?: string;
+
+  @Column()
+  fName!: string;
+
+  @Column({ nullable: true })
+  mName?: string;
+
+  @Column()
+  lName!: string;
+
+  @Column({ nullable: true })
+  extName?: string;
 
   @Column()
   fullName!: string;
@@ -22,7 +76,16 @@ export class User {
   email!: string;
 
   @Column()
-  dateOfBirth!: Date;
+  location!: string;
+
+  @Column({ type: 'json', nullable: true })
+  currentLocation?: {
+    latitude: string;
+    longitude: string;
+  };
+
+  @Column()
+  dateOfBirth!: string;
 
   @Column()
   phoneNumber!: string;
@@ -31,7 +94,7 @@ export class User {
   password!: string;
 
   @Column()
-  stationedAt!: string;
+  badgeId!: string;
 
   @CreateDateColumn()
   createdAt!: Date;
@@ -40,16 +103,7 @@ export class User {
   updatedAt!: Date;
 
   @BeforeInsert()
-  generateId() {
-    this.id = uuidv4();
+  assignId() {
+    if (!this._id) this._id = uuidv4();
   }
-
-  @Column()
-  isActive!: boolean;
-
-  @Column()
-  role!: Roles;
 }
-
-// Learn more about Column types for Postgres
-// https://typeorm.io/entities#column-types-for-postgres

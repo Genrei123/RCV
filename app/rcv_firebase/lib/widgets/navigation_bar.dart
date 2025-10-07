@@ -20,14 +20,14 @@ class AppBottomNavBar extends StatelessWidget {
         ? [
             '/admin-home',
             '/admin-audit-trail',
-            '/admin-scanning',
+            '/scanning',
             '/admin-reports',
             '/user-profile', // Shared profile page
           ]
         : [
             '/user-home',
             '/user-audit-trail',
-            '/user-scanning',
+            '/scanning',
             '/user-reports',
             '/user-profile', // Shared profile page
           ];

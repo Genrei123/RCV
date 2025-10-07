@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons/lucide_icons.dart';
-import '../widgets/admin_bottom_nav_bar.dart';
-import '../widgets/app_bar.dart';
-import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
 import '../widgets/gradient_header_app_bar.dart';
 import '../widgets/navigation_bar.dart';
+import 'dart:convert';
+import 'package:flutter/services.dart' show rootBundle;
+import '../widgets/app_buttons.dart';
+import '../widgets/graphql_audit_widget.dart'; // Import GraphQL audit widget
+import '../graphql/graphql_client.dart'; // Import GraphQL configuration
+import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
 
 void main() {
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -20,51 +22,147 @@ class MyApp extends StatelessWidget {
 }
 
 class HomePage extends StatefulWidget {
-  const HomePage({Key? key}) : super(key: key);
+  const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
-  int _counter = 0;
-  int _selectedIndex = 0;
+  Map<String, dynamic>? userData;
 
-  void _incrementCounter() {
+  @override
+  void initState() {
+    super.initState();
+    loadUserData();
+  }
+
+  Future<void> loadUserData() async {
+    final String jsonString = await rootBundle.loadString('assets/users.json');
+    final List<dynamic> dataList = json.decode(jsonString);
+    final Map<String, dynamic> data = dataList.isNotEmpty
+        ? dataList[0] as Map<String, dynamic>
+        : {};
     setState(() {
-      _counter++;
+      userData = data;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: GradientHeaderAppBar(
-        greeting: 'Welcome back',
-        user: 'Admin user',
-        onBack: () => Navigator.of(context).maybePop(),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
+    if (userData == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    return GraphQLWrapper(
+      child: Scaffold(
+        appBar: GradientHeaderAppBar(
+          greeting: 'Welcome back',
+          user: (userData!['name'] ?? '').toString().split(' ').first,
+          onBack: () => Navigator.of(context).maybePop(),
         ),
-      ),
-      //nav bar
-      bottomNavigationBar: AppBottomNavBar(
-        selectedIndex: 0,
-        role: NavBarRole.admin,
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
+        body: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              16.0,
+              16.0,
+              16.0,
+              24.0,
+            ), // Extra bottom padding
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 24.0),
+                  child: Text(
+                    'Home',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Montserrat', // Use your app font here
+                    ),
+                  ),
+                ),
+                AppButtons.main(
+                  text: 'Locations',
+                  subTitle: 'Tag the location',
+                  size: 80,
+                  textColor: app_colors.AppColors.white,
+                  color: app_colors.AppColors.primary,
+                  icon: Icon(
+                    Icons.location_on,
+                    color: app_colors.AppColors.white,
+                  ),
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/home-accounts');
+                  },
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 16.0, bottom: 16.0),
+                  child: AppButtons.main(
+                    text: 'Accounts',
+                    subTitle: 'Manage User Accounts',
+                    size: 80,
+                    textColor: app_colors.AppColors.white,
+                    color: app_colors.AppColors.primary,
+                    icon: Icon(Icons.person, color: app_colors.AppColors.white),
+                    onPressed: () {
+                      // Navigate to location page
+                    },
+                  ),
+                ),
+
+                // Your Recent Audits Section with GraphQL
+                Padding(
+                  padding: const EdgeInsets.only(top: 16.0, bottom: 16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header with lines on both sides
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(height: 1, color: Colors.black),
+                          ),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 8.0),
+                            child: Text(
+                              'Your Recent Audits',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Container(height: 1, color: Colors.black),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Use GraphQL-powered audit widget for recent audits
+                      GraphQLAuditWidget(
+                        userId:
+                            userData?['id']
+                                as String?, // Filter by current user
+                        showRecentOnly:
+                            true, // Show only recent audits (first 5)
+                        showPagination: false, // No pagination for homepage
+                        entriesPerPage: 5, // Limit to 5 recent entries
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        //nav bar
+        bottomNavigationBar: AppBottomNavBar(
+          selectedIndex: 0,
+          role: NavBarRole.admin,
+        ),
       ),
     );
   }
