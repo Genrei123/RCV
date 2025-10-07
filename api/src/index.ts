@@ -1,5 +1,5 @@
-import setUpApp from './setUpApp';
 import dotenv from 'dotenv';
+import setUpApp from './setUpApp';
 import { Product } from './typeorm/entities/product.entity';
 import { DB } from './typeorm/data-source';
 import { v4 as uuidv4 } from 'uuid';
@@ -12,7 +12,7 @@ const initializeApp = async () => {
   const app = await setUpApp();
 
   app.listen(PORT || 3000, () =>
-    console.log('Server is running on port: ', PORT)
+    console.log('Server is running on port: ', PORT)    
   );
 
   // Uncomment to test the blockchain functionality. Very similar talaga siya sa linkedlist.

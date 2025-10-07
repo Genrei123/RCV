@@ -4,6 +4,7 @@ import '../widgets/app_buttons.dart';
 import '../widgets/animated_form_field.dart';
 import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
 import '../widgets/navigation_bar.dart';
+import '../services/auth_service.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
 
@@ -41,11 +42,13 @@ class _LoginPageState extends State<LoginPage> {
   final passwordController = TextEditingController();
   final emailFocusNode = FocusNode();
   final passwordFocusNode = FocusNode();
+  final AuthService _authService = AuthService();
 
   String? emailError;
   String? passwordError;
   bool hasEmailError = false;
   bool hasPasswordError = false;
+  bool _isLoading = false;
 
   bool obscureText = true;
 

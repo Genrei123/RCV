@@ -11,7 +11,7 @@ const AuthRouter = Router();
 // refresh token, generate/Verify OTP, e.t.c
 AuthRouter.post('/signup', SignUp);
 AuthRouter.post('/signin', SignIn);
-AuthRouter.post('/login', Login);
+AuthRouter.post('/login', Login);   
 AuthRouter.post('/register', Register);
 AuthRouter.post('/logout', Logout);
 AuthRouter.post('/refreshToken', RefreshToken);
