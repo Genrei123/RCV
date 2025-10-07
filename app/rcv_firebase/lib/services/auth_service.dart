@@ -1,373 +1,266 @@
-// lib/services/auth_service.dart
-// Authentication service for login, logout, token management, and user state
-
-import '../models/api_models.dart';
-import '../config/api_constants.dart';
-import 'api_client.dart';
-import 'token_service.dart';
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:developer' as developer;
 
 class AuthService {
-  static final ApiClient _apiClient = ApiClient.instance;
+  // Backend API configuration
+  static const String baseUrl = 'http://10.0.2.2:3000/api/v1';
+  
+  // For iOS Simulator use: 'http://localhost:3000/api/v1'
+  // For Physical Device use: 'http://YOUR_COMPUTER_IP:3000/api/v1'
 
-  /// Login with email and password
-  static Future<ApiResponse<AuthData>> login(String email, String password) async {
-    try {
-      final loginRequest = LoginRequest(email: email, password: password);
-      
-      final response = await _apiClient.post(
-        ApiConstants.loginEndpoint,
-        data: loginRequest.toJson(),
-      );
-
-      final apiResponse = ApiResponse<AuthData>.fromJson(
-        response.data,
-        (data) => AuthData.fromJson(data),
-      );
-
-      // Save tokens if login successful
-      if (apiResponse.success && apiResponse.data != null) {
-        final authData = apiResponse.data!;
-        await TokenService.saveTokens(
-          authData.accessToken,
-          authData.refreshToken,
-          authData.expiresIn,
-        );
-      }
-
-      return apiResponse;
-    } catch (e) {
-      return ApiResponse<AuthData>(
-        success: false,
-        message: 'Login failed: ${e.toString()}',
-        errors: [e.toString()],
-      );
-    }
+  // Email validation
+  bool isValidEmail(String email) {
+    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
   }
 
-  /// Register new user account
-  static Future<ApiResponse<AuthData>> register({
-    required String email,
-    required String password,
-    required String firstName,
-    required String lastName,
-    UserRole role = UserRole.user,
-  }) async {
-    try {
-      final registerData = {
-        'email': email,
-        'password': password,
-        'firstName': firstName,
-        'lastName': lastName,
-        'role': role.toString().split('.').last.toUpperCase(),
-      };
-
-      final response = await _apiClient.post(
-        ApiConstants.registerEndpoint,
-        data: registerData,
-      );
-
-      final apiResponse = ApiResponse<AuthData>.fromJson(
-        response.data,
-        (data) => AuthData.fromJson(data),
-      );
-
-      // Save tokens if registration successful
-      if (apiResponse.success && apiResponse.data != null) {
-        final authData = apiResponse.data!;
-        await TokenService.saveTokens(
-          authData.accessToken,
-          authData.refreshToken,
-          authData.expiresIn,
-        );
-      }
-
-      return apiResponse;
-    } catch (e) {
-      return ApiResponse<AuthData>(
-        success: false,
-        message: 'Registration failed: ${e.toString()}',
-        errors: [e.toString()],
-      );
-    }
-  }
-
-  /// Logout user
-  static Future<ApiResponse<void>> logout() async {
-    try {
-      // Call logout endpoint to invalidate token on server
-      await _apiClient.post(ApiConstants.logoutEndpoint);
-    } catch (e) {
-      // Continue with local logout even if server call fails
-      print('Server logout failed: $e');
-    }
-
-    // Always clear local tokens
-    await TokenService.clearTokens();
-    
-    return ApiResponse<void>(
-      success: true,
-      message: 'Logged out successfully',
+  // Show message helper
+  void showMessage(BuildContext context, String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Colors.green,
+        duration: Duration(seconds: 3),
+      ),
     );
   }
 
-  /// Refresh access token using refresh token
-  static Future<ApiResponse<AuthData>> refreshToken() async {
+  // Show OTP dialog for testing
+  void showOTPDialog(BuildContext context, String email, String otp) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('OTP Generated'),
+          content: Text('OTP for $email: $otp\n\n(This is for testing purposes only)'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Store JWT token
+  Future<void> _storeToken(String token) async {
     try {
-      final refreshToken = await TokenService.getRefreshToken();
-      if (refreshToken == null) {
-        return ApiResponse<AuthData>(
-          success: false,
-          message: 'No refresh token available',
-          errors: ['Refresh token not found'],
-        );
-      }
-
-      final response = await _apiClient.post(
-        ApiConstants.refreshTokenEndpoint,
-        data: {'refreshToken': refreshToken},
-      );
-
-      final apiResponse = ApiResponse<AuthData>.fromJson(
-        response.data,
-        (data) => AuthData.fromJson(data),
-      );
-
-      // Save new tokens if refresh successful
-      if (apiResponse.success && apiResponse.data != null) {
-        final authData = apiResponse.data!;
-        await TokenService.saveTokens(
-          authData.accessToken,
-          authData.refreshToken,
-          authData.expiresIn,
-        );
-      }
-
-      return apiResponse;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('auth_token', token);
+      developer.log('Token stored successfully');
     } catch (e) {
-      // If refresh fails, clear all tokens
-      await TokenService.clearTokens();
+      developer.log('Error storing token: $e');
+    }
+  }
+
+  // Get stored JWT token
+  Future<String?> _getToken() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString('auth_token');
+    } catch (e) {
+      developer.log('Error getting token: $e');
+      return null;
+    }
+  }
+
+  // Clear stored token (for logout)
+  Future<void> _clearToken() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('auth_token');
+      developer.log('Token cleared successfully');
+    } catch (e) {
+      developer.log('Error clearing token: $e');
+    }
+  }
+
+  // Login user
+  Future<Map<String, dynamic>> login(String email, String password) async {
+    try {
+      developer.log('Attempting login for: $email');
       
-      return ApiResponse<AuthData>(
-        success: false,
-        message: 'Token refresh failed: ${e.toString()}',
-        errors: [e.toString()],
-      );
-    }
-  }
-
-  /// Check if user is currently authenticated
-  static Future<bool> isAuthenticated() async {
-    final hasValidToken = await TokenService.isTokenValid();
-    if (hasValidToken) return true;
-
-    // Try to refresh token if available
-    final needsRefresh = await TokenService.needsRefresh();
-    if (needsRefresh) {
-      final refreshResult = await refreshToken();
-      return refreshResult.success;
-    }
-
-    return false;
-  }
-
-  /// Get current user profile
-  static Future<ApiResponse<User>> getCurrentUser() async {
-    try {
-      final response = await _apiClient.get('/auth/profile');
-
-      return ApiResponse<User>.fromJson(
-        response.data,
-        (data) => User.fromJson(data),
-      );
-    } catch (e) {
-      return ApiResponse<User>(
-        success: false,
-        message: 'Failed to get user profile: ${e.toString()}',
-        errors: [e.toString()],
-      );
-    }
-  }
-
-  /// Update user profile
-  static Future<ApiResponse<User>> updateProfile({
-    String? firstName,
-    String? lastName,
-    String? avatar,
-  }) async {
-    try {
-      final updateData = <String, dynamic>{};
-      if (firstName != null) updateData['firstName'] = firstName;
-      if (lastName != null) updateData['lastName'] = lastName;
-      if (avatar != null) updateData['avatar'] = avatar;
-
-      final response = await _apiClient.put(
-        '/auth/profile',
-        data: updateData,
-      );
-
-      return ApiResponse<User>.fromJson(
-        response.data,
-        (data) => User.fromJson(data),
-      );
-    } catch (e) {
-      return ApiResponse<User>(
-        success: false,
-        message: 'Failed to update profile: ${e.toString()}',
-        errors: [e.toString()],
-      );
-    }
-  }
-
-  /// Change password
-  static Future<ApiResponse<void>> changePassword({
-    required String currentPassword,
-    required String newPassword,
-  }) async {
-    try {
-      final response = await _apiClient.put(
-        '/auth/change-password',
-        data: {
-          'currentPassword': currentPassword,
-          'newPassword': newPassword,
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/signin'),
+        headers: {
+          'Content-Type': 'application/json',
         },
-      );
+        body: json.encode({
+          'email': email,
+          'password': password,
+        }),
+      ).timeout(const Duration(seconds: 10));
 
-      return ApiResponse<void>.fromJson(
-        response.data,
-        (_) => null,
-      );
-    } catch (e) {
-      return ApiResponse<void>(
-        success: false,
-        message: 'Failed to change password: ${e.toString()}',
-        errors: [e.toString()],
-      );
-    }
-  }
+      developer.log('Login Response Status: ${response.statusCode}');
+      developer.log('Login Response Body: ${response.body}');
 
-  /// Request password reset
-  static Future<ApiResponse<void>> forgotPassword(String email) async {
-    try {
-      final response = await _apiClient.post(
-        ApiConstants.forgotPasswordEndpoint,
-        data: {'email': email},
-      );
-
-      return ApiResponse<void>.fromJson(
-        response.data,
-        (_) => null,
-      );
-    } catch (e) {
-      return ApiResponse<void>(
-        success: false,
-        message: 'Failed to request password reset: ${e.toString()}',
-        errors: [e.toString()],
-      );
-    }
-  }
-
-  /// Reset password with token
-  static Future<ApiResponse<void>> resetPassword({
-    required String token,
-    required String newPassword,
-  }) async {
-    try {
-      final response = await _apiClient.post(
-        ApiConstants.resetPasswordEndpoint,
-        data: {
-          'token': token,
-          'newPassword': newPassword,
-        },
-      );
-
-      return ApiResponse<void>.fromJson(
-        response.data,
-        (_) => null,
-      );
-    } catch (e) {
-      return ApiResponse<void>(
-        success: false,
-        message: 'Failed to reset password: ${e.toString()}',
-        errors: [e.toString()],
-      );
-    }
-  }
-
-  /// Verify email address
-  static Future<ApiResponse<void>> verifyEmail(String token) async {
-    try {
-      final response = await _apiClient.post(
-        ApiConstants.verifyEmailEndpoint,
-        data: {'token': token},
-      );
-
-      return ApiResponse<void>.fromJson(
-        response.data,
-        (_) => null,
-      );
-    } catch (e) {
-      return ApiResponse<void>(
-        success: false,
-        message: 'Failed to verify email: ${e.toString()}',
-        errors: [e.toString()],
-      );
-    }
-  }
-
-  /// Resend email verification
-  static Future<ApiResponse<void>> resendEmailVerification() async {
-    try {
-      final response = await _apiClient.post('/auth/resend-verification');
-
-      return ApiResponse<void>.fromJson(
-        response.data,
-        (_) => null,
-      );
-    } catch (e) {
-      return ApiResponse<void>(
-        success: false,
-        message: 'Failed to resend verification email: ${e.toString()}',
-        errors: [e.toString()],
-      );
-    }
-  }
-
-  /// Check if user has specific role
-  static Future<bool> hasRole(UserRole role) async {
-    try {
-      final userResponse = await getCurrentUser();
-      if (userResponse.success && userResponse.data != null) {
-        return userResponse.data!.role == role;
+      final responseData = json.decode(response.body);
+      
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        // Store the JWT token
+        if (responseData['token'] != null) {
+          await _storeToken(responseData['token']);
+        }
+        
+        return {
+          'success': true,
+          'message': responseData['message'] ?? 'Login successful',
+          'user': responseData['user'],
+          'token': responseData['token'],
+        };
+      } else {
+        return {
+          'success': false,
+          'message': responseData['message'] ?? 'Login failed',
+        };
       }
-      return false;
     } catch (e) {
+      developer.log('Login error: $e');
+      
+      String errorMessage;
+      if (e.toString().contains('SocketException')) {
+        errorMessage = 'Cannot connect to server. Make sure the API is running.';
+      } else if (e.toString().contains('TimeoutException')) {
+        errorMessage = 'Request timeout. Please try again.';
+      } else {
+        errorMessage = 'Network error: ${e.toString()}';
+      }
+      
+      return {
+        'success': false,
+        'message': errorMessage,
+      };
+    }
+  }
+
+  // Send password reset email
+  Future<Map<String, dynamic>> sendPasswordResetEmail(String email) async {
+    try {
+      developer.log('Sending password reset email for: $email');
+      
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/reset-password'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'email': email,
+        }),
+      ).timeout(const Duration(seconds: 10));
+
+      developer.log('Password Reset Response Status: ${response.statusCode}');
+      developer.log('Password Reset Response Body: ${response.body}');
+
+      final responseData = json.decode(response.body);
+      
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'message': responseData['message'] ?? 'OTP sent successfully',
+          'otp': responseData['otp'] ?? '123456', // For testing
+        };
+      } else {
+        return {
+          'success': false,
+          'message': responseData['message'] ?? 'Failed to send OTP',
+        };
+      }
+    } catch (e) {
+      developer.log('Error sending password reset email: $e');
+      
+      // Handle different types of errors
+      String errorMessage;
+      if (e.toString().contains('SocketException')) {
+        errorMessage = 'Cannot connect to server. Make sure the API is running and accessible.';
+      } else if (e.toString().contains('TimeoutException')) {
+        errorMessage = 'Request timeout. Please try again.';
+      } else {
+        errorMessage = 'Network error: ${e.toString()}';
+      }
+      
+      return {
+        'success': false,
+        'message': errorMessage,
+      };
+    }
+  }
+
+  // Verify OTP
+  Future<bool> verifyOTP(String email, String otp) async {
+    try {
+      developer.log('Verifying OTP for $email with code: $otp');
+      
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/verify-otp'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'email': email,
+          'otp': otp,
+        }),
+      ).timeout(const Duration(seconds: 10));
+
+      developer.log('OTP Verification Response Status: ${response.statusCode}');
+      developer.log('OTP Verification Response Body: ${response.body}');
+
+      return response.statusCode == 200;
+    } catch (e) {
+      developer.log('Error verifying OTP: $e');
       return false;
     }
   }
 
-  /// Check if user is admin
-  static Future<bool> isAdmin() async {
-    return await hasRole(UserRole.admin);
+  // Confirm password reset
+  Future<bool> confirmPasswordReset(String email, String otp, String newPassword) async {
+    try {
+      developer.log('Confirming password reset for $email');
+      
+      final response = await http.post(
+        Uri.parse('$baseUrl/auth/confirm-reset-password'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'email': email,
+          'otp': otp,
+          'newPassword': newPassword,
+        }),
+      ).timeout(const Duration(seconds: 10));
+
+      developer.log('Confirm Password Reset Response Status: ${response.statusCode}');
+      developer.log('Confirm Password Reset Response Body: ${response.body}');
+
+      return response.statusCode == 200;
+    } catch (e) {
+      developer.log('Error confirming password reset: $e');
+      return false;
+    }
   }
 
-  /// Check if user is inspector
-  static Future<bool> isInspector() async {
-    return await hasRole(UserRole.inspector);
+  // Logout functionality
+  Future<void> logout() async {
+    try {
+      developer.log('User logged out successfully');
+      // Clear stored token
+      await _clearToken();
+    } catch (e) {
+      developer.log('Error during logout: $e');
+    }
   }
 
-  /// Get authentication status information
-  static Future<Map<String, dynamic>> getAuthStatus() async {
-    final tokenInfo = await TokenService.getTokenInfo();
-    final isAuth = await isAuthenticated();
-    
-    return {
-      'isAuthenticated': isAuth,
-      'tokenInfo': tokenInfo,
-    };
+  // Check if user is logged in
+  Future<bool> isLoggedIn() async {
+    final token = await _getToken();
+    return token != null && token.isNotEmpty;
   }
 
-  /// Force logout (clear tokens without server call)
-  static Future<void> forceLogout() async {
-    await TokenService.clearTokens();
+  // Get current user token
+  Future<String?> getCurrentToken() async {
+    return await _getToken();
   }
 }
