@@ -1,9 +1,9 @@
 import { SecurityCode } from "./enums";
 
 export type TSignupForm = {
-  fName: string;
-  mName?: string;
-  lName: string;
+  firstName: string;
+  middleName?: string;
+  lastName: string;
   extName?: string;
   fullName: string;
   email: string;
@@ -24,9 +24,9 @@ export type TUser = {
   role: 'AGENT' | 'ADMIN' | 'USER';
   status: 'Archived' | 'Active' | 'Pending';
   avatarUrl?: string;
-  fName: string;
-  mName?: string;
-  lName: string;
+  firstName: string;
+  middleName?: string;
+  lastName: string;
   extName?: string;
   fullName: string;
   email: string;
@@ -84,9 +84,9 @@ export interface user {
   role: 'AGENT' | 'ADMIN' | 'USER'; // tentative 
   status: 'Archived' | 'Active' | 'Pending';
   avatarUrl: string;
-  fName: string; // first name
-  mName?: string; // middle name, optional
-  lName: string; // last name
+  firstName: string; // first name
+  middleName?: string; // middle name, optional
+  lastName: string; // last name
   extName?: string; // extension name, optional
   fullName: string; // full name
   email: string;
@@ -141,9 +141,9 @@ export interface report {
 
 
 export interface SignupForm {
-  fName: string;
-  mName?: string;
-  lName: string;
+  firstName: string;
+  middleName?: string;
+  lastName: string;
   extName?: string;
   password: string;
   phoneNumber: string;

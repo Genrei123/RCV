@@ -18,9 +18,9 @@ export const UserValidation = z.object({
   role: z.enum(['AGENT', 'ADMIN', 'USER']).optional(),
   status: z.enum(['Archived', 'Active', 'Pending']).default('Pending'),
   avatarUrl: z.string().optional(),
-  fName: z.string().min(2).max(50),
-  mName: z.string().min(2).max(50).optional(),
-  lName: z.string().min(2).max(50),
+  firstName: z.string().min(2).max(50),
+  middleName: z.string().min(2).max(50).optional(),
+  lastName: z.string().min(2).max(50),
   extName: z.string().max(10).optional(),
   fullName: z.string().min(2).max(150),
   email: z.string().email().min(5).max(100),
@@ -58,13 +58,13 @@ export class User {
   avatarUrl?: string;
 
   @Column()
-  fName!: string;
+  firstName!: string;
 
   @Column({ nullable: true })
-  mName?: string;
+  middleName?: string;
 
   @Column()
-  lName!: string;
+  lastName!: string;
 
   @Column({ nullable: true })
   extName?: string;

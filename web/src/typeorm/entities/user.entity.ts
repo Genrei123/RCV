@@ -3,9 +3,9 @@ export interface User {
   role?: 'AGENT' | 'ADMIN' | 'USER';
   status?: 'Archived' | 'Active' | 'Pending';
   avatarUrl?: string;
-  fName: string;
-  mName?: string;
-  lName: string;
+  firstName: string;
+  middleName?: string;
+  lastName: string;
   extName?: string;
   fullName: string;
   email: string;
