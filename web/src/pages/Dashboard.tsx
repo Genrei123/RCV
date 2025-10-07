@@ -32,7 +32,7 @@ export function Dashboard(props: DashboardProps) {
 
     const getGreeting = (): string => {
         if (!currentUser) return "Hello 👋";
-        const firstName = currentUser.firstName || "User";
+        const firstName = currentUser.fName || "User";
         return `Hello ${firstName} 👋`;
     };
     const columns: Column[] = [
@@ -41,11 +41,11 @@ export function Dashboard(props: DashboardProps) {
             label: "User ID"
         },
         {
-            key: "firstName",
+            key: "fName",
             label: "First Name"
         },
         {
-            key: "lastName",
+            key: "lName",
             label: "Last Name"
         },
         {

@@ -7,39 +7,32 @@ import {
   BeforeInsert,
 } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
-import { Roles } from '../../types/enums';
 import { z } from 'zod';
 
 // Helper to coerce date strings
 const coerceDate = (val: unknown) =>
   typeof val === 'string' ? new Date(val) : val;
 
-// Helper to normalize role (accept string or numeric)
-const normalizeRole = (val: unknown) => {
-  if (typeof val === 'string') {
-    // Match either exact enum key or value
-    if ((Roles as any)[val] !== undefined) {
-      return (Roles as any)[val];
-    }
-    // Try case-insensitive match
-    const matched = Object.keys(Roles).find(
-      k => k.toLowerCase() === val.toLowerCase()
-    );
-    if (matched) return (Roles as any)[matched];
-  }
-  return val;
-};
-
 export const UserValidation = z.object({
   _id: z.string().optional(),
-  firstName: z.string().min(2).max(50),
-  lastName: z.string().min(2).max(50),
-  middleName: z.string().min(2).max(50),
+  role: z.enum(['AGENT', 'ADMIN', 'USER']).optional(),
+  status: z.enum(['Archived', 'Active', 'Pending']).default('Pending'),
+  avatarUrl: z.string().optional(),
+  fName: z.string().min(2).max(50),
+  mName: z.string().min(2).max(50).optional(),
+  lName: z.string().min(2).max(50),
+  extName: z.string().max(10).optional(),
+  fullName: z.string().min(2).max(150),
   email: z.string().email().min(5).max(100),
-  dateOfBirth: z.preprocess(coerceDate, z.date()),
+  location: z.string().min(2).max(100),
+  currentLocation: z.object({
+    latitude: z.string(),
+    longitude: z.string()
+  }).optional(),
+  dateOfBirth: z.string(),
   phoneNumber: z.string().min(10).max(15),
   password: z.string().min(6).max(100),
-  stationedAt: z.string().min(2).max(100).optional(),
+  badgeId: z.string().min(2).max(50),
   createdAt: z.preprocess(
     v => (v === undefined ? new Date() : coerceDate(v)),
     z.date()
@@ -47,9 +40,7 @@ export const UserValidation = z.object({
   updatedAt: z.preprocess(
     v => (v === undefined ? new Date() : coerceDate(v)),
     z.date()
-  ).optional(),
-  isActive: z.preprocess(v => (v === undefined ? true : v), z.boolean()).optional(),
-  role: z.preprocess(normalizeRole, z.nativeEnum(Roles)).optional()
+  ).optional()
 })
 
 @Entity()
@@ -57,24 +48,44 @@ export class User {
   @PrimaryGeneratedColumn('uuid')
   _id!: string;
 
-  @Column()
-  firstName!: string;
+  @Column({ type: 'enum', enum: ['AGENT', 'ADMIN', 'USER'], default: 'AGENT' })
+  role!: 'AGENT' | 'ADMIN' | 'USER';
 
-  @Column()
-  lastName!: string;
-
-  get fullName(): string {
-    return `${this.firstName} ${this.lastName}`;
-  }
+  @Column({ type: 'enum', enum: ['Archived', 'Active', 'Pending'], default: 'Pending' })
+  status!: 'Archived' | 'Active' | 'Pending';
 
   @Column({ nullable: true })
-  middleName!: string;
+  avatarUrl?: string;
+
+  @Column()
+  fName!: string;
+
+  @Column({ nullable: true })
+  mName?: string;
+
+  @Column()
+  lName!: string;
+
+  @Column({ nullable: true })
+  extName?: string;
+
+  @Column()
+  fullName!: string;
 
   @Column({ unique: true })
   email!: string;
 
   @Column()
-  dateOfBirth!: Date;
+  location!: string;
+
+  @Column({ type: 'json', nullable: true })
+  currentLocation?: {
+    latitude: string;
+    longitude: string;
+  };
+
+  @Column()
+  dateOfBirth!: string;
 
   @Column()
   phoneNumber!: string;
@@ -83,7 +94,7 @@ export class User {
   password!: string;
 
   @Column()
-  stationedAt!: string;
+  badgeId!: string;
 
   @CreateDateColumn()
   createdAt!: Date;
@@ -95,10 +106,4 @@ export class User {
   assignId() {
     if (!this._id) this._id = uuidv4();
   }
-
-  @Column({ default: true })
-  isActive!: boolean;
-
-  @Column({ type: 'enum', enum: Roles, default: Roles.Unverified })
-  role!: Roles;
 }
