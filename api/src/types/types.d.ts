@@ -78,7 +78,7 @@ declare global {
 }
 
 //Finalize ==============================================================================================
-
+// Change nalang name ng TUser since ginamit na yung properties neto
 export interface user {
   _id: UUID; // tentative
   role: 'AGENT' | 'ADMIN' | 'USER'; // tentative 
