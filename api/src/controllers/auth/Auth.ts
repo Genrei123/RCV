@@ -37,7 +37,7 @@ export const userSignIn = async (req: Request, res: Response, next: NextFunction
 
     const token = createToken({
       sub: user._id,
-      isAdmin: user.role === 0 ? true : false,
+      isAdmin: user.role === 'ADMIN' ? true : false,
       iat: Date.now()
     });
 
@@ -89,7 +89,7 @@ export const me = async (req: Request, res: Response, next: NextFunction) => {
   }
   const User = await UserRepo.findOne({
     where: { _id: decoded.data?.sub },
-    select: ['_id', 'firstName', 'middleName', 'lastName', 'email', 'phoneNumber', 'stationedAt']
+    select: ['_id', 'fName', 'mName', 'lName', 'email', 'phoneNumber', 'location']
   });
   return res.send(User);
 }

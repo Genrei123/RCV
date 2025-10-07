@@ -27,6 +27,8 @@ interface LoginFormData {
 interface RegisterFormData {
   firstName: string;
   lastName: string;
+  middleName: string;
+  extName: string;
   email: string;
   password: string;
   confirmPassword: string;
@@ -59,6 +61,8 @@ export function AuthPage() {
   const [registerData, setRegisterData] = useState<RegisterFormData>({
     firstName: '',
     lastName: '',
+    middleName: '',
+    extName: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -112,6 +116,8 @@ export function AuthPage() {
     if (!registerData.firstName.trim()) {
       newErrors.firstName = 'First name is required';
     }
+
+    // middleName and extName are optional, no validation needed
 
     if (!registerData.lastName.trim()) {
       newErrors.lastName = 'Last name is required';
@@ -214,15 +220,18 @@ export function AuthPage() {
 
     try {
       const userData: Partial<User> = {
-        firstName: registerData.firstName,
-        lastName: registerData.lastName,
-        fullName: `${registerData.firstName} ${registerData.lastName}`,
+        fName: registerData.firstName,
+        lName: registerData.lastName,
+        mName: registerData.middleName || undefined,
+        extName: registerData.extName || undefined,
+        fullName: `${registerData.firstName} ${registerData.middleName} ${registerData.lastName} ${registerData.extName}`.replace(/\s+/g, ' ').trim(),
         email: registerData.email,
         password: registerData.password,
         phoneNumber: registerData.phoneNumber,
-        stationedAt: registerData.location,
-        dateOfBirth: new Date(registerData.dateOfBirth),
-        role: 1, // Default role: Agent
+        location: registerData.location,
+        dateOfBirth: registerData.dateOfBirth,
+        badgeId: registerData.badgeId || '',
+        role: 'AGENT', // Default role: Agent
       };
 
       const response = await AuthService.register(userData as User);
@@ -414,7 +423,7 @@ export function AuthPage() {
           ) : (
             /* Register Form */
             <form onSubmit={handleRegister} className="space-y-4">
-              <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     First Name *
@@ -435,6 +444,23 @@ export function AuthPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Middle Name (Optional)
+                  </label>
+                  <div className="relative">
+                    <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <Input
+                      type="text"
+                      placeholder="M."
+                      className={`pl-10 h-11 ${errors.middleName ? 'border-red-500' : ''}`}
+                      value={registerData.middleName}
+                      onChange={(e) => setRegisterData({ ...registerData, middleName: e.target.value })}
+                    />
+                  </div>
+                  {errors.middleName && <p className="text-red-500 text-xs mt-1">{errors.middleName}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Last Name *
                   </label>
                   <div className="relative">
@@ -449,6 +475,23 @@ export function AuthPage() {
                     />
                   </div>
                   {errors.lastName && <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Extension Name (Optional)
+                  </label>
+                  <div className="relative">
+                    <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <Input
+                      type="text"
+                      placeholder="Jr., Sr., III, etc."
+                      className={`pl-10 h-11 ${errors.extName ? 'border-red-500' : ''}`}
+                      value={registerData.extName}
+                      onChange={(e) => setRegisterData({ ...registerData, extName: e.target.value })}
+                    />
+                  </div>
+                  {errors.extName && <p className="text-red-500 text-xs mt-1">{errors.extName}</p>}
                 </div>
               </div>
 

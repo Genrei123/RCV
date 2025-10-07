@@ -8,15 +8,16 @@ const IdSchema = z.string().uuid();
 
 //para sa updateEntireUser
 const Required_Fields: (keyof any)[] = [
-  "firstName",
-  "lastName",
-  "middleName",
+  "fName",
+  "lName",
+  "mName",
   "fullName", 
   "dateOfBirth",
   "phoneNumber",
   "password",
-  "stationedAt",
+  "location",
   "role",
+  "badgeId",
 ];
 
 // ididisplay yung selected values pag nag get all users
@@ -29,8 +30,8 @@ export const getAllUsers = async (
     const users = await UserRepo.find({
       select: [
         "_id",
-        "firstName",
-        "lastName",
+        "fName",
+        "lName",
         "email",
         "role",
         "createdAt",
