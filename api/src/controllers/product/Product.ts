@@ -2,13 +2,14 @@ import { Request, Response, NextFunction } from 'express';
 import { ProductValidation } from '../../typeorm/entities/product.entity';
 import { ProductRepo } from '../../typeorm/data-source';
 import CustomError from '../../utils/CustomError';
+import { getCompanyById } from '../company/Company';
 
 export const getAllProducts = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const products = await ProductRepo.find();
         res.status(200).json({ products });
     } catch (error) {
-        return new CustomError(500, 'Failed to retrieve products');
+        return next(new CustomError(500, 'Failed to retrieve products'));
     }
 }
 
@@ -26,16 +27,16 @@ export const getProductById = async (req: Request, res: Response, next: NextFunc
 }
 
 export const createProduct = async (req: Request, res: Response, next: NextFunction) => {
-    if (!ProductValidation.parse(req.body)) {
-        return new CustomError(400, 'Invalid Product Data');
+    const Product = ProductValidation.safeParse(req.body);
+    if (Product.error) {
+        return next(new CustomError(400, 'Invalid Product Data or is missing parameters', { body: req.body }));
     }
-    try {
-        const newProduct = ProductRepo.create(req.body);
-        await ProductRepo.save(newProduct);
-        res.status(201).json({ product: newProduct });
-    } catch (error) {
-        return new CustomError(500, 'Failed to create product');
+
+    if (await ProductRepo.findOneBy({ CFPRNumber: Product.data.CFPRNumber })) {
+        return next(new CustomError(400, 'Product already exists in the database', { Product: ProductRepo.findOneBy({ CFPRNumber: Product.data.CFPRNumber })}))
     }
+    await ProductRepo.save(Product.data);
+    return res.status(200).json({ message: "Company successfully registered", Product: Product.data });
 };
 
 export const updateProduct = async (req: Request, res: Response, next: NextFunction) => {

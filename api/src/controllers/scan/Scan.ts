@@ -22,41 +22,41 @@ export const scanQR = async (req: Request, res: Response, next: NextFunction) =>
 export let globalProductBlockchain: ProductBlockchain;
 
 export const initializeProductBlockchain = async () => {
-    const mockUser = new User();
-    mockUser._id = "123213";
-    mockUser.firstName = "John";
-    mockUser.lastName = "Doe";
-    mockUser.email = "john_doe";
-    mockUser.phoneNumber = "09123456789";
-    mockUser.role = 1; // Admin
-    const salt = await bcrypt.genSalt(10);
-    mockUser.password = await bcrypt.hash("adminpassword", salt);
-    const mockAdmin = mockUser;
+    // const mockUser = new User();
+    // mockUser._id = "123213";
+    // mockUser.firstName = "John";
+    // mockUser.lastName = "Doe";
+    // mockUser.email = "john_doe";
+    // mockUser.phoneNumber = "09123456789";
+    // mockUser.role = 1; // Admin
+    // const salt = await bcrypt.genSalt(10);
+    // mockUser.password = await bcrypt.hash("adminpassword", salt);
+    // const mockAdmin = mockUser;
 
-    const mockCompany = new Company();
-    mockCompany._id = "comp123";
-    mockCompany.name = "Sample Manufacturer";
-    mockCompany.address = "123 Sample St, Sample City";
+    // const mockCompany = new Company();
+    // mockCompany._id = "comp123";
+    // mockCompany.name = "Sample Manufacturer";
+    // mockCompany.address = "123 Sample St, Sample City";
 
 
 
-    const sampleProduct: Product = {
-        _id: "prod123",
-        LTONumber: "1234567890",
-        CFPRNumber: "0987654321",
-        lotNumber: "LOT123456",
-        brandName: "Sample Brand",
-        productName: "Sample Product",
-        productClassification: 0,
-        productSubClassification: 0,
-        expirationDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
-        dateOfRegistration: new Date(),
-        registeredAt: new Date(),
-        registeredBy: mockAdmin,
-        company: mockCompany,   
-    }
-    globalProductBlockchain = new ProductBlockchain(sampleProduct);
-    globalProductBlockchain.addNewBlock(new ProductBlock(1, new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), sampleProduct));
+    // const sampleProduct: Product = {
+    //     _id: "prod123",
+    //     LTONumber: "1234567890",
+    //     CFPRNumber: "0987654321",
+    //     lotNumber: "LOT123456",
+    //     brandName: "Sample Brand",
+    //     productName: "Sample Product",
+    //     productClassification: 0,
+    //     productSubClassification: 0,
+    //     expirationDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
+    //     dateOfRegistration: new Date(),
+    //     registeredAt: new Date(),
+    //     registeredBy: mockAdmin,
+    //     company: mockCompany,   
+    // }
+    // globalProductBlockchain = new ProductBlockchain(sampleProduct);
+    // globalProductBlockchain.addNewBlock(new ProductBlock(1, new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), sampleProduct));
     
 }
 

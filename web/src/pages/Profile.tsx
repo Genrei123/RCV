@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge"
 import { DataTable, type Column } from "@/components/DataTable"
 import { Pagination } from "@/components/Pagination"
 import { PageContainer } from "@/components/PageContainer"
+import { useEffect, useState } from "react"
+import { UserPageService } from "@/services/userPageService"
 
 // Define activity data type
 export interface Activity {
@@ -16,14 +18,19 @@ export interface Activity {
 }
 
 export interface ProfileUser {
-  name: string;
-  role: string;
+  _id?: string;
+  firstName?: string;
+  lastName?: string;
+  middleName?: string;
+  name?: string; // For backward compatibility with mock data
+  role?: string | number;
   avatar?: string;
   email: string;
-  location: string;
-  dateOfBirth: string;
-  phoneNumber: string;
-  badgeId: string;
+  location?: string;
+  dateOfBirth?: string;
+  phoneNumber?: string;
+  badgeId?: string;
+  stationedAt?: string;
 }
 
 interface ProfileProps {
@@ -40,9 +47,9 @@ interface ProfileProps {
 }
 
 export function Profile({
-  user,
-  activities,
-  loading = false,
+  user: propUser,
+  activities: propActivities,
+  loading: propLoading = false,
   onEdit,
   onActivityView,
   currentPage = 1,
@@ -51,15 +58,53 @@ export function Profile({
   itemsPerPage = 10,
   onPageChange
 }: ProfileProps) {
-  // Default user data
-  const defaultUser: ProfileUser = {
-    name: "Karina Dela Cruz",
-    role: "Admin User",
-    email: "Yuulmin04@gmail.com",
-    location: "Caloocan City, Metro Manila",
-    dateOfBirth: "January 1, 1990",
-    phoneNumber: "09-123-456789",
-    badgeId: "Caloocan City, Metro Manila"
+  const [user, setUser] = useState<ProfileUser | null>(propUser || null);
+  const [loading, setLoading] = useState(propLoading);
+
+  // Fetch profile data on mount
+  useEffect(() => {
+    if (!propUser) {
+      fetchProfile();
+    } else {
+      setUser(propUser);
+    }
+  }, [propUser]);
+
+  const fetchProfile = async () => {
+    setLoading(true);
+    try {
+      const data = await UserPageService.getProfile();
+      if (data.profile) {
+        setUser(data.profile);
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Helper function to get role name
+  const getRoleName = (role?: string | number): string => {
+    if (typeof role === 'string') return role;
+    const roleMap: { [key: number]: string } = {
+      1: "Agent",
+      2: "Admin",
+      3: "Super Admin"
+    };
+    return roleMap[role || 1] || "User";
+  };
+
+  // Helper function to get full name
+  const getFullName = (userData: ProfileUser | null): string => {
+    if (!userData) return "User";
+    if (userData.name) return userData.name;
+    const parts = [
+      userData.firstName,
+      userData.middleName,
+      userData.lastName
+    ].filter(Boolean);
+    return parts.join(' ') || "User";
   };
 
   // Default activities data
@@ -202,8 +247,7 @@ export function Profile({
     }
   ];
 
-  const userData = user || defaultUser;
-  const activityData = activities || defaultActivities;
+  const activityData = propActivities || defaultActivities;
 
   if (loading) {
     return (
@@ -244,18 +288,18 @@ export function Profile({
             <div className="text-center mb-8">
               <div className="relative inline-block">
                 <div className="w-24 h-24 bg-gray-300 rounded-full flex items-center justify-center mx-auto mb-4">
-                  {userData.avatar ? (
+                  {user?.avatar ? (
                     <img 
-                      src={userData.avatar} 
-                      alt={userData.name}
+                      src={user.avatar} 
+                      alt={getFullName(user)}
                       className="w-24 h-24 rounded-full object-cover"
                     />
                   ) : (
                     <User className="w-12 h-12 text-gray-500" />
                   )}
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900">{userData.name}</h3>
-                <p className="text-sm text-gray-600">{userData.role}</p>
+                <h3 className="text-lg font-semibold text-gray-900">{getFullName(user)}</h3>
+                <p className="text-sm text-gray-600">{getRoleName(user?.role)}</p>
               </div>
             </div>
 
@@ -265,41 +309,59 @@ export function Profile({
                 <Mail className="w-5 h-5 text-gray-500 mt-0.5" />
                 <div className="flex-1">
                   <p className="text-sm font-medium text-gray-900">Email</p>
-                  <p className="text-sm text-gray-600">{userData.email}</p>
+                  <p className="text-sm text-gray-600">{user?.email || 'Not provided'}</p>
                 </div>
               </div>
 
-              <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
-                <MapPin className="w-5 h-5 text-gray-500 mt-0.5" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900">Location</p>
-                  <p className="text-sm text-gray-600">{userData.location}</p>
+              {user?.location && (
+                <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
+                  <MapPin className="w-5 h-5 text-gray-500 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900">Location</p>
+                    <p className="text-sm text-gray-600">{user.location}</p>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
-                <Calendar className="w-5 h-5 text-gray-500 mt-0.5" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900">Date of Birth</p>
-                  <p className="text-sm text-gray-600">{userData.dateOfBirth}</p>
+              {user?.dateOfBirth && (
+                <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
+                  <Calendar className="w-5 h-5 text-gray-500 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900">Date of Birth</p>
+                    <p className="text-sm text-gray-600">{user.dateOfBirth}</p>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
-                <Phone className="w-5 h-5 text-gray-500 mt-0.5" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900">Phone Number</p>
-                  <p className="text-sm text-gray-600">{userData.phoneNumber}</p>
+              {user?.phoneNumber && (
+                <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
+                  <Phone className="w-5 h-5 text-gray-500 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900">Phone Number</p>
+                    <p className="text-sm text-gray-600">{user.phoneNumber}</p>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
-                <BadgeIcon className="w-5 h-5 text-gray-500 mt-0.5" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900">Badge ID</p>
-                  <p className="text-sm text-gray-600">{userData.badgeId}</p>
+              {user?.badgeId && (
+                <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
+                  <BadgeIcon className="w-5 h-5 text-gray-500 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900">Badge ID</p>
+                    <p className="text-sm text-gray-600">{user.badgeId}</p>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {user?.stationedAt && (
+                <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
+                  <BadgeIcon className="w-5 h-5 text-gray-500 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900">Stationed At</p>
+                    <p className="text-sm text-gray-600">{user.stationedAt}</p>
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

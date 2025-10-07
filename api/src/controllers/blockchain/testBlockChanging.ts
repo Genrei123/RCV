@@ -28,34 +28,34 @@ const validateBlockIndex = (index: number, allowGenesis = true) => {
 };
 
 export const modifyBlockData = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-        ensureBlockchainInitialized();
+    // try {
+    //     ensureBlockchainInitialized();
         
-        const index = parseInt(req.params.blockIndex);
-        validateBlockIndex(index);
+    //     const index = parseInt(req.params.blockIndex);
+    //     validateBlockIndex(index);
 
-        const { productName, manufacturerName, distributorName, importerName } = req.body;
-        const block = globalProductBlockchain.blockhain[index];
-        const originalProductName = block.data.productName;
+    //     const { productName, manufacturerName, distributorName, importerName } = req.body;
+    //     const block = globalProductBlockchain.blockhain[index];
+    //     const originalProductName = block.data.productName;
 
-        if (productName) block.data.productName = productName;
-        if (manufacturerName) block.data.company = manufacturerName;
-        // if (distributorName) block.data.distributorName = distributorName;
-        // if (importerName) block.data.importerName = importerName;
+    //     if (productName) block.data.productName = productName;
+    //     if (manufacturerName) block.data.company = manufacturerName;
+    //     // if (distributorName) block.data.distributorName = distributorName;
+    //     // if (importerName) block.data.importerName = importerName;
 
-        res.status(200).json({
-            success: true,
-            message: `Block ${index} data modified (FRAUDULENT)`,
-            warning: 'Blockchain integrity compromised - for testing only!',
-            changes: {
-                blockIndex: index,
-                originalProductName,
-                newProductName: block.data.productName
-            }
-        });
-    } catch (error) {
-        next(error);
-    }
+    //     res.status(200).json({
+    //         success: true,
+    //         message: `Block ${index} data modified (FRAUDULENT)`,
+    //         warning: 'Blockchain integrity compromised - for testing only!',
+    //         changes: {
+    //             blockIndex: index,
+    //             originalProductName,
+    //             newProductName: block.data.productName
+    //         }
+    //     });
+    // } catch (error) {
+    //     next(error);
+    // }
 };
 
 export const modifyBlockHash = async (req: Request, res: Response, next: NextFunction) => {

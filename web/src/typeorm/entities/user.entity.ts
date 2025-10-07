@@ -1,33 +1,23 @@
-export const UserValidation = {
-  id: 'string',
-  firstName: 'string',
-  lastName: 'string',
-  middleName: 'string',
-  fullName: 'string',
-  email: 'string',
-  dateOfBirth: 'Date',
-  phoneNumber: 'string',
-  password: 'string',
-  stationedAt: 'string',
-  createdAt: 'Date',
-  updatedAt: 'Date',
-  isActive: 'boolean',
-  role: 'number',
-};
-
 export interface User {
-  _id: string;
-  firstName: string;
-  lastName: string;
+  _id?: string;
+  role?: 'AGENT' | 'ADMIN' | 'USER';
+  status?: 'Archived' | 'Active' | 'Pending';
+  avatarUrl?: string;
+  fName: string;
+  mName?: string;
+  lName: string;
+  extName?: string;
   fullName: string;
-  middleName: string;
   email: string;
-  dateOfBirth: Date;
+  location: string;
+  currentLocation?: {
+    latitude: string;
+    longitude: string;
+  };
+  dateOfBirth: string;
   phoneNumber: string;
   password: string;
-  stationedAt: string;
-  createdAt: Date;
-  updatedAt: Date;
-  isActive: boolean;
-  role: number;
+  badgeId: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }

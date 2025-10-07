@@ -1,0 +1,69 @@
+import type { Company } from "@/typeorm/entities/company.entity";
+import { apiClient } from "./axiosConfig";
+
+export interface CompanyApiResponse {
+    companies: Company[]
+}
+
+export interface CreateCompanyRequest {
+    name: string;
+    address: string;
+    licenseNumber: string;
+}
+
+export interface CreateCompanyResponse {
+    message: string;
+    company: Company;
+}
+
+export class CompanyService {
+    static async getAllCompanies() {
+        try {
+            const response = await apiClient.get<CompanyApiResponse>('/company/companies');
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching companies:', error);
+            throw error;
+        }
+    }
+
+    static async createCompany(companyData: CreateCompanyRequest) {
+        try {
+            const response = await apiClient.post<CreateCompanyResponse>('/company/companies', companyData);
+            return response.data;
+        } catch (error: any) {
+            console.error('Error creating company:', error);
+            throw error;
+        }
+    }
+
+    static async getCompanyById(id: string) {
+        try {
+            const response = await apiClient.get<{ company: Company }>(`/company/companies/${id}`);
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching company:', error);
+            throw error;
+        }
+    }
+
+    static async updateCompany(id: string, companyData: Partial<Company>) {
+        try {
+            const response = await apiClient.put<{ company: Company }>(`/company/companies/${id}`, companyData);
+            return response.data;
+        } catch (error) {
+            console.error('Error updating company:', error);
+            throw error;
+        }
+    }
+
+    static async deleteCompany(id: string) {
+        try {
+            const response = await apiClient.delete<{ message: string }>(`/company/companies/${id}`);
+            return response.data;
+        } catch (error) {
+            console.error('Error deleting company:', error);
+            throw error;
+        }
+    }
+}

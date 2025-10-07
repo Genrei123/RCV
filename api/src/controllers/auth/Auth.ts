@@ -1,198 +1,328 @@
 import bcryptjs from 'bcryptjs';
 import CustomError from '../../utils/CustomError';
-import { UserRepo } from '../../typeorm/data-source';
-import validateSignInForm from '../../utils/validateSignIn';
-import validateSignUpForm from '../../utils/validateSignUp';
+import { ForgotPasswordRepo, UserRepo } from '../../typeorm/data-source';
 import type { NextFunction, Request, Response } from 'express';
-import { createToken, verifyToken } from '../../utils/JWT';
+import { createForgotPasswordToken, createToken, verifyToken } from '../../utils/JWT';
 import { UserValidation } from '../../typeorm/entities/user.entity';
+import nodemailer_transporter from '../../utils/nodemailer';
 
-// Login handler removed; use SignIn controller instead
+export const userSignIn = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email, password } = req.body;
 
-// Register handler removed; use SignUp controller instead
+    // Find the user by email
+    const user = await UserRepo.findOne({
+      where: { email },
+    });
 
-export const Logout = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-        // Extract token from Authorization header
-        const authHeader = req.headers.authorization;
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            const error = new CustomError(401, 'No token provided', {
-                success: false,
-            });
-            return next(error);
-        }
-
-        const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-
-        // Verify the token to ensure it's valid before logout
-        try {
-            const decodedToken = verifyToken(token);
-            console.log('User logged out:', decodedToken);
-        } catch (jwtError) {
-            // Even if token is invalid/expired, we can still consider it a successful logout
-            console.log('Logout with invalid/expired token');
-        }
-
-        // In a production environment, you might want to:
-        // 1. Add the token to a blacklist/revocation list
-        // 2. Store logout event in audit trail
-        // 3. Clear any server-side sessions
-
-        return res.status(200).json({
-            success: true,
-            message: 'User logged out successfully',
-        });
-    } catch (error: any) {
-        return res.status(500).json({
-            success: false,
-            message: error.message,
-        });
+    if (!user) {
+      const error = new CustomError(401, 'Invalid email or password', {
+        success: false,
+        token: null,
+        user: null,
+      });
+      return next(error);
     }
+
+    // Verify the password
+    const isPasswordValid = bcryptjs.compareSync(password, user.password);
+    if (!isPasswordValid) {
+      const error = new CustomError(401, 'Invalid email or password', {
+        success: false,
+        token: null,
+        user: null,
+      });
+      return next(error);
+    }
+
+    const token = createToken({
+      sub: user._id,
+      isAdmin: user.role === 'ADMIN' ? true : false,
+      iat: Date.now()
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'User signed in successfully',
+      token,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+      token: null,
+      user: null,
+    });
+  }
+};
+
+export const userSignUp = async (req: Request, res: Response, next: NextFunction) => {
+  const newUser = UserValidation.safeParse(req.body);
+  if (!newUser || !newUser.success) {
+    return next(new CustomError(400, "Parsing failed, incomplete information"));
+  }
+
+  if (await UserRepo.findOneBy({ email: newUser.data?.email }) != null) {
+    return next(new CustomError(400, "Email already exists", { email: newUser.data.email }));
+  }
+
+  const hashPassword = bcryptjs.hashSync(newUser.data.password, bcryptjs.genSaltSync(10));
+  newUser.data.password = hashPassword;
+  UserRepo.save(newUser.data);
+  return res.status(200).json({ message: "User successfully registered", user: newUser.data });
+};
+
+export const logout = async (req: Request, res: Response, next: NextFunction) => {
+  // Log logout
+  return res.status(500).json({ success: false, message: 'Logout not implemented' });
 }
 
-export const RefreshToken = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-        // Extract token from Authorization header
-        const authHeader = req.headers.authorization;
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            const error = new CustomError(401, 'No token provided', {
-                success: false,
-                token: null,
-                user: null,
-            });
-            return next(error);
-        }
-
-        const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-
-        // Verify the token (even if expired, we can still refresh it)
-        let decodedToken: any;
-        try {
-            decodedToken = verifyToken(token);
-        } catch (jwtError) {
-            // For refresh token, we might want to be more lenient
-            // But for now, let's require a valid token
-            const error = new CustomError(401, 'Invalid or expired token', {
-                success: false,
-                token: null,
-                user: null,
-            });
-            return next(error);
-        }
-
-        // Find the user by ID from token to ensure they still exist and are active
-        const user = await UserRepo.findOne({
-            where: { _id: decodedToken.id },
-            select: ['_id', 'firstName', 'lastName', 'email', 'role', 'isActive'],
-        });
-
-        if (!user) {
-            const error = new CustomError(404, 'User not found', {
-                success: false,
-                token: null,
-                user: null,
-            });
-            return next(error);
-        }
-
-        // Allow token refresh regardless of current activation status
-
-        // Generate new token with updated timestamp
-        const userPayload = {
-            id: user._id,
-            role: user.role === 0 ? true : false,
-            iat: Date.now()
-        };
-
-        const newToken = createToken(userPayload);
-
-        return res.status(200).json({
-            success: true,
-            message: 'Token refreshed successfully',
-            token: newToken,
-            user: {
-                fullName: `${user.firstName} ${user.lastName}`,
-                email: user.email,
-                isAdmin: user.role === 0 ? true : false,
-            },
-        });
-    } catch (error: any) {
-        return res.status(500).json({
-            success: false,
-            message: error.message,
-            token: null,
-            user: null,
-        });
-    }
+export const refreshToken = async (req: Request, res: Response, next: NextFunction) => {
+  // Refresh token
+  return res.status(500).json({ success: false, message: 'Refresh token not implemented' });
 }
 
-export const Profile = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-        // Extract token from Authorization header
-        const authHeader = req.headers.authorization;
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            const error = new CustomError(401, 'No token provided', {
-                success: false,
-                user: null,
-            });
-            return next(error);
-        }
+export const me = async (req: Request, res: Response, next: NextFunction) => {
+  const decoded = verifyToken(req.headers.authorization as string);
+  if (!decoded) {
+    return next(new CustomError(400, "Token is invalid", { token: req.headers.authorization }));
+  }
+  const User = await UserRepo.findOne({
+    where: { _id: decoded.data?.sub },
+    select: ['_id', 'fName', 'mName', 'lName', 'email', 'phoneNumber', 'location']
+  });
+  return res.send(User);
+}
 
-        const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-
-        // Verify the token
-        let decodedToken: any;
-        try {
-            decodedToken = verifyToken(token);
-        } catch (jwtError) {
-            const error = new CustomError(401, 'Invalid or expired token', {
-                success: false,
-                user: null,
-            });
-            return next(error);
-        }
-
-        // Find the user by ID from token
-        const user = await UserRepo.findOne({
-            where: { _id: decodedToken.id },
-            select: ['_id', 'firstName', 'lastName', 'middleName', 'email', 'dateOfBirth', 'phoneNumber', 'stationedAt', 'createdAt', 'updatedAt', 'isActive', 'role'],
-        });
-
-        if (!user) {
-            const error = new CustomError(404, 'User not found', {
-                success: false,
-                user: null,
-            });
-            return next(error);
-        }
-
-        // Return user profile (excluding sensitive data like password)
-        return res.status(200).json({
-            success: true,
-            message: 'Profile retrieved successfully',
-            user: {
-                _id: user._id,
-                firstName: user.firstName,
-                lastName: user.lastName,
-                middleName: user.middleName,
-                fullName: `${user.firstName} ${user.lastName}`,
-                email: user.email,
-                dateOfBirth: user.dateOfBirth,
-                phoneNumber: user.phoneNumber,
-                stationedAt: user.stationedAt,
-                createdAt: user.createdAt,
-                updatedAt: user.updatedAt,
-                isActive: user.isActive,
-                role: user.role,
-                isAdmin: user.role === 0 ? true : false,
-            },
-        });
-    } catch (error: any) {
-        return res.status(500).json({
-            success: false,
-            message: error.message,
-            user: null,
-        });
+export const requestPasswordReset = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return next(new CustomError(400, "Email is required"));
     }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return next(new CustomError(400, "Invalid email format"));
+    }
+
+    const user = await UserRepo.findOneBy({ email: email });
+    if (!user) {
+      // Return success even if user not found (security best practice)
+      return res.status(200).json({ 
+        success: true, 
+        message: "If an account exists with this email, a reset code has been sent." 
+      });
+    }
+
+    // Generate 6-digit code
+    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Hash the code before storing
+    const hashedCode = bcryptjs.hashSync(resetCode, bcryptjs.genSaltSync(10));
+    
+    // Delete any existing reset requests for this user
+    await ForgotPasswordRepo.delete({ requestedBy: { _id: user._id } });
+    
+    // Save new reset request with expiration (15 minutes)
+    const resetRequest = ForgotPasswordRepo.create({
+      requestedBy: user,
+      key: hashedCode,
+    });
+    await ForgotPasswordRepo.save(resetRequest);
+
+    // Send email with 6-digit code
+    try {
+      await nodemailer_transporter.sendMail({
+        from: 'RCV Systems <genreycristobal03@gmail.com>',
+        to: email,
+        subject: "Password Reset Code - RCV System",
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #005440;">Password Reset Request</h2>
+            <p>You have requested to reset your password for your RCV System account.</p>
+            <p>Your 6-digit verification code is:</p>
+            <div style="background-color: #f5f5f5; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #005440;">
+              ${resetCode}
+            </div>
+            <p style="color: #666; margin-top: 20px;">
+              This code will expire in 15 minutes.
+            </p>
+            <p style="color: #666;">
+              If you didn't request this password reset, please ignore this email.
+            </p>
+            <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;" />
+            <p style="color: #999; font-size: 12px;">
+              This is an automated message from RCV System. Please do not reply to this email.
+            </p>
+          </div>
+        `,
+      });
+    } catch (emailError) {
+      console.error('Error sending email:', emailError);
+      return next(new CustomError(500, "Failed to send reset code email"));
+    }
+
+    return res.status(200).json({ 
+      success: true, 
+      message: "If an account exists with this email, a reset code has been sent." 
+    });
+  } catch (error: any) {
+    console.error('Password reset request error:', error);
+    return next(new CustomError(500, "Failed to process password reset request"));
+  }
+};
+
+export const verifyResetCode = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email, code } = req.body;
+
+    if (!email || !code) {
+      return next(new CustomError(400, "Email and code are required"));
+    }
+
+    if (code.length !== 6 || !/^\d+$/.test(code)) {
+      return res.status(200).json({ valid: false });
+    }
+
+    const user = await UserRepo.findOneBy({ email: email });
+    if (!user) {
+      return res.status(200).json({ valid: false });
+    }
+
+    // Find the reset request
+    const resetRequest = await ForgotPasswordRepo.findOne({
+      where: { requestedBy: { _id: user._id } },
+      relations: ['requestedBy'],
+    });
+
+    if (!resetRequest) {
+      return res.status(200).json({ valid: false });
+    }
+
+    // Verify the code
+    const isCodeValid = bcryptjs.compareSync(code, resetRequest.key);
+
+    return res.status(200).json({ valid: isCodeValid });
+  } catch (error: any) {
+    console.error('Verify reset code error:', error);
+    return next(new CustomError(500, "Failed to verify reset code"));
+  }
+};
+
+export const resetPassword = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email, code, newPassword } = req.body;
+
+    if (!email || !code || !newPassword) {
+      return next(new CustomError(400, "Email, code, and new password are required"));
+    }
+
+    // Validate password strength
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+    if (!passwordRegex.test(newPassword)) {
+      return next(new CustomError(400, "Password must be at least 8 characters with uppercase, lowercase, and number"));
+    }
+
+    const user = await UserRepo.findOneBy({ email: email });
+    if (!user) {
+      return next(new CustomError(400, "Invalid reset request"));
+    }
+
+    // Find and verify the reset request
+    const resetRequest = await ForgotPasswordRepo.findOne({
+      where: { requestedBy: { _id: user._id } },
+      relations: ['requestedBy'],
+    });
+
+    if (!resetRequest) {
+      return next(new CustomError(400, "Invalid or expired reset code"));
+    }
+
+    // Verify the code
+    const isCodeValid = bcryptjs.compareSync(code, resetRequest.key);
+    if (!isCodeValid) {
+      return next(new CustomError(400, "Invalid reset code"));
+    }
+
+    // Hash the new password
+    const hashedPassword = bcryptjs.hashSync(newPassword, bcryptjs.genSaltSync(10));
+
+    // Update user password
+    user.password = hashedPassword;
+    await UserRepo.save(user);
+
+    // Delete the used reset request
+    await ForgotPasswordRepo.delete({ id: resetRequest.id });
+
+    // Send confirmation email
+    try {
+      await nodemailer_transporter.sendMail({
+        from: 'RCV Systems <genreycristobal03@gmail.com>',
+        to: email,
+        subject: "Password Successfully Reset - RCV System",
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #005440;">Password Successfully Reset</h2>
+            <p>Your password has been successfully reset for your RCV System account.</p>
+            <p>You can now log in with your new password.</p>
+            <p style="color: #666; margin-top: 20px;">
+              If you didn't make this change, please contact support immediately.
+            </p>
+            <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;" />
+            <p style="color: #999; font-size: 12px;">
+              This is an automated message from RCV System. Please do not reply to this email.
+            </p>
+          </div>
+        `,
+      });
+    } catch (emailError) {
+      console.error('Error sending confirmation email:', emailError);
+      // Don't fail the request if email fails
+    }
+
+    return res.status(200).json({ 
+      success: true, 
+      message: "Password has been successfully reset" 
+    });
+  } catch (error: any) {
+    console.error('Reset password error:', error);
+    return next(new CustomError(500, "Failed to reset password"));
+  }
+};
+
+export const generateForgotPassword = async (req: Request, res: Response, next: NextFunction) => {
+  const { email } = req.body;
+  if (!email) {
+    return next(new CustomError(400, "No email field", { data: req.body }));
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return next(new CustomError(400, "Invalid email", { data: req.body }));
+  }
+
+  const User = await UserRepo.findOneBy({ email: email })
+  if (!User) {
+    return next(new CustomError(200, "User not found"));
+  }
+
+  const hashKey = createForgotPasswordToken({ email: email, iat: Date.now() });
+  ForgotPasswordRepo.save({ requestedBy: User, key: hashKey });
+
+  nodemailer_transporter.sendMail({
+    from: 'RCV Systems <genreycristobal03@gmail.com>',
+    to: "genreycristobal03@gmail.com",
+    subject: "Hello ✔",
+    text: "Hello world?",
+    html: `<a href=${process.env.BACKEND_URL}/api/v1/auth/forgotPassword/${hashKey}>Link to reset your password</a>`,
+  });
+  return res.status(200).json({ message: "Forgot password key sent",  email: email, hashKey: hashKey });
+}
+
+export const forgotPassword = async (req: Request, res: Response, next: NextFunction) => {
+  const token = req.params;
+  return res.redirect(`${process.env.FRONTEND_URL}/resetPassword?token=${token}`);
 }
 

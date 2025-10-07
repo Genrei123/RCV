@@ -3,7 +3,7 @@ import { Product } from "./product.entity";
 import { z } from "zod";
 
 export const CompanyValidation = z.object({
-    id: z.uuidv4(),
+    id: z.uuidv4().optional(),
     name: z.string().min(2).max(100),
     address: z.string().min(5).max(255),
     licenseNumber: z.string().min(2).max(50),

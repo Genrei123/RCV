@@ -3,26 +3,48 @@ import {
   Column,
   ManyToOne,
   PrimaryGeneratedColumn,
+  JoinColumn,
 } from 'typeorm';
 import { ProductSubClassification, ProductType } from '../../types/enums';
 import { User } from './user.entity';
 import { Company } from './company.entity';
 import { z } from 'zod';
 
+const coerceDate = (val: unknown) => {
+  if (typeof val === 'string') return new Date(val);
+  if (val instanceof Date) return val;
+  return val;
+};
+
 export const ProductValidation = z.object({
-  id: z.uuidv4(),
+  _id: z.string().uuid().optional(),
   LTONumber: z.string().min(2).max(50),
   CFPRNumber: z.string().min(2).max(50),
   lotNumber: z.string().min(2).max(50),
   brandName: z.string().min(2).max(100),
   productName: z.string().min(2).max(100),
-  productClassification: z.enum(ProductType),
-  productSubClassification: z.enum(ProductSubClassification),
-  expirationDate: z.date(),
-  dateOfRegistration: z.date(),
-  registeredBy: z.instanceof(User),
-  registeredAt: z.date(),
-  company: z.instanceof(Company),
+  productClassification: z.nativeEnum(ProductType),
+  productSubClassification: z.nativeEnum(ProductSubClassification),
+  expirationDate: z.preprocess(coerceDate, z.date()),
+  dateOfRegistration: z.preprocess(coerceDate, z.date()),
+  registeredById: z.string(), // Changed from z.instanceof(User)
+  registeredAt: z.preprocess(
+    v => (v === undefined ? new Date() : coerceDate(v)),
+    z.date()
+  ).optional(),
+  companyId: z.string(), // Changed from z.instanceof(Company)
+  createdAt: z.preprocess(
+    v => (v === undefined ? new Date() : coerceDate(v)),
+    z.date()
+  ).optional(),
+  updatedAt: z.preprocess(
+    v => (v === undefined ? new Date() : coerceDate(v)),
+    z.date()
+  ).optional(),
+  isActive: z.preprocess(
+    v => (v === undefined ? true : v),
+    z.boolean()
+  ).optional()
 });
 
 @Entity()
@@ -58,11 +80,11 @@ export class Product {
   dateOfRegistration!: Date;
 
   @ManyToOne(() => User, user => user._id)
-  registeredBy!: User;
+  registeredById!: string;
 
   @Column()
   registeredAt!: Date;
 
-  @ManyToOne(() => Company, company => company.products)
-  company!: Company;
+  @ManyToOne(() => Company, company => company._id)
+  companyId!: string;
 }

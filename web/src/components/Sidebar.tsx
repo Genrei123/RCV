@@ -1,28 +1,81 @@
 import { Link, useLocation } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { 
   LayoutDashboard, 
   Package,
   MapPin,
-  Users,
   User,
   LogOut,
   ChevronDown,
   Settings,
-  Bell
+  Bell,
+  Building2
 } from 'lucide-react'
 import { LogoutModal } from './LogoutModal'
+import { AuthService } from '@/services/authService'
+import { toast } from 'react-toastify'
+
+interface CurrentUser {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  middleName?: string;
+  email: string;
+  role?: number;
+}
 
 export function Sidebar() {
   const location = useLocation()
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchCurrentUser()
+  }, [])
+
+  const fetchCurrentUser = async () => {
+    setLoading(true)
+    try {
+      const user = await AuthService.getCurrentUser()
+      if (user) {
+        setCurrentUser(user)
+      }
+    } catch (error) {
+      console.error('Error fetching current user:', error)
+      toast.error('Failed to load user information')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const getFullName = (): string => {
+    if (!currentUser) return 'Loading...'
+    const parts = [
+      currentUser.firstName,
+      currentUser.middleName,
+      currentUser.lastName
+    ].filter(Boolean)
+    return parts.join(' ') || 'User'
+  }
+
+  const getRoleName = (): string => {
+    if (!currentUser?.role) return 'User'
+    const roleMap: { [key: number]: string } = {
+      1: "Agent",
+      2: "Admin",
+      3: "Super Admin"
+    }
+    return roleMap[currentUser.role] || "User"
+  }
   
   const menuItems = [
     { path: '/', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/products', label: 'Products', icon: Package },
+    { path: '/companies', label: 'Companies', icon: Building2 },
     { path: '/maps', label: 'Maps', icon: MapPin },
-    { path: '/users', label: 'Users', icon: Users },
+    // { path: '/users', label: 'Users', icon: Users },
   ]
 
   const profileMenuItems = [
@@ -31,12 +84,17 @@ export function Sidebar() {
     { path: '/notifications', label: 'Notifications', icon: Bell },
   ]
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setShowLogoutModal(false)
     setShowProfileMenu(false)
-    // Handle logout logic here
-    console.log('User logged out')
-    // In real app: clear auth tokens, redirect to login, etc.
+    
+    try {
+      toast.info('Signing out...')
+      await AuthService.logout()
+    } catch (error) {
+      console.error('Logout error:', error)
+      toast.error('Failed to logout. Please try again.')
+    }
   }
 
   return (
@@ -95,8 +153,12 @@ export function Sidebar() {
                 <User size={16} className="text-white" />
               </div>
               <div className="flex-1 text-left">
-                <p className="font-medium text-sm">Karina Dela Cruz</p>
-                <p className="text-xs text-slate-400">Admin User</p>
+                <p className="font-medium text-sm">
+                  {loading ? 'Loading...' : getFullName()}
+                </p>
+                <p className="text-xs text-slate-400">
+                  {loading ? 'Please wait...' : getRoleName()}
+                </p>
               </div>
               <ChevronDown 
                 size={16} 
@@ -155,7 +217,7 @@ export function Sidebar() {
         isOpen={showLogoutModal}
         onClose={() => setShowLogoutModal(false)}
         onConfirm={handleLogout}
-        userName="Karina Dela Cruz"
+        userName={getFullName()}
       />
     </>
   )
