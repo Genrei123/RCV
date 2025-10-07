@@ -220,9 +220,9 @@ export function AuthPage() {
 
     try {
       const userData: Partial<User> = {
-        fName: registerData.firstName,
-        lName: registerData.lastName,
-        mName: registerData.middleName || undefined,
+        firstName: registerData.firstName,
+        lastName: registerData.lastName,
+        middleName: registerData.middleName || undefined,
         extName: registerData.extName || undefined,
         fullName: `${registerData.firstName} ${registerData.middleName} ${registerData.lastName} ${registerData.extName}`.replace(/\s+/g, ' ').trim(),
         email: registerData.email,
