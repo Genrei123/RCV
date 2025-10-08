@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:image_picker/image_picker.dart';
 import '../widgets/gradient_header_app_bar.dart';
 import '../widgets/navigation_bar.dart';
-import '../auth/login_page.dart'; // Add this import to access appRole
 
 class QRScannerPage extends StatefulWidget {
   const QRScannerPage({super.key});
@@ -22,6 +22,11 @@ class _QRScannerPageState extends State<QRScannerPage> {
   bool isOCRMode = false;
   final ImagePicker _picker = ImagePicker();
   final TextRecognizer _textRecognizer = TextRecognizer();
+  
+  // For dual image OCR
+  String? _frontImagePath;
+  String? _backImagePath;
+  bool _showOCRHelper = false;
 
   @override
   void initState() {
@@ -104,21 +109,43 @@ class _QRScannerPageState extends State<QRScannerPage> {
                         ),
                         const SizedBox(height: 8),
                         const Text(
-                          'Select an image from gallery\nto extract text',
+                          'Please scan the FRONT and BACK\nof the product label',
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.grey,
+                            color: Colors.amber,
+                            fontWeight: FontWeight.w500,
                             height: 1.4,
                           ),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 20),
                         ElevatedButton.icon(
-                          onPressed: _pickImageForOCR,
+                          onPressed: () => _pickImageForOCR(true),
                           icon: const Icon(Icons.photo_library, size: 20),
-                          label: const Text('Select Image'),
+                          label: Text(_frontImagePath == null ? 'Select Front Image' : 'Front ✓'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF005440),
+                            backgroundColor: _frontImagePath == null 
+                                ? const Color(0xFF005440)
+                                : Colors.green,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        ElevatedButton.icon(
+                          onPressed: () => _pickImageForOCR(false),
+                          icon: const Icon(Icons.photo_library, size: 20),
+                          label: Text(_backImagePath == null ? 'Select Back Image' : 'Back ✓'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _backImagePath == null 
+                                ? const Color(0xFF005440)
+                                : Colors.green,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(
                               horizontal: 20,
@@ -172,11 +199,288 @@ class _QRScannerPageState extends State<QRScannerPage> {
           setState(() {
             result = scannedData;
           });
-          // Optionally: send to API, show feedback, etc.
+          // Show QR Code result in modal
+          _showQRCodeModal(scannedData);
         }
         break;
       }
     }
+  }
+
+  void _showQRCodeModal(String qrData) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.7,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF005440),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.qr_code_2,
+                        color: Colors.white,
+                        size: 28,
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'QR Code Scanned',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                ),
+                // Content
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Scanned Content:',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey[300]!),
+                          ),
+                          child: SelectableText(
+                            qrData,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              color: Colors.black87,
+                              height: 1.5,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () {
+                                  Clipboard.setData(ClipboardData(text: qrData));
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Copied to clipboard'),
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.copy, size: 18),
+                                label: const Text('Copy'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: const Color(0xFF005440),
+                                  side: const BorderSide(color: Color(0xFF005440)),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF005440),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: const Text('Close'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showOCRModal(String ocrText) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.7,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF005440),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.text_fields,
+                        color: Colors.white,
+                        size: 28,
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'Text Extracted (OCR)',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                ),
+                // Content
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Extracted Text:',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey[300]!),
+                          ),
+                          child: SelectableText(
+                            ocrText.isEmpty ? 'No text found in image' : ocrText,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              color: Colors.black87,
+                              height: 1.5,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: ocrText.isEmpty ? null : () {
+                                  Clipboard.setData(ClipboardData(text: ocrText));
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Copied to clipboard'),
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.copy, size: 18),
+                                label: const Text('Copy'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: const Color(0xFF005440),
+                                  side: const BorderSide(color: Color(0xFF005440)),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF005440),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: const Text('Close'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void _toggleFlash() async {
@@ -186,11 +490,54 @@ class _QRScannerPageState extends State<QRScannerPage> {
     });
   }
 
-  Future<void> _pickImageForOCR() async {
+  Future<void> _pickImageForOCR(bool isFront) async {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
-      await _performOCR(image.path);
+      setState(() {
+        if (isFront) {
+          _frontImagePath = image.path;
+        } else {
+          _backImagePath = image.path;
+        }
+      });
+      
+      // If both images are selected, perform OCR on both
+      if (_frontImagePath != null && _backImagePath != null) {
+        await _performDualOCR(_frontImagePath!, _backImagePath!);
+      }
     }
+  }
+
+  Future<void> _performDualOCR(String frontImagePath, String backImagePath) async {
+    // Process front image
+    final frontInputImage = InputImage.fromFilePath(frontImagePath);
+    final RecognizedText frontRecognizedText = await _textRecognizer.processImage(
+      frontInputImage,
+    );
+    String frontText = frontRecognizedText.text;
+
+    // Process back image
+    final backInputImage = InputImage.fromFilePath(backImagePath);
+    final RecognizedText backRecognizedText = await _textRecognizer.processImage(
+      backInputImage,
+    );
+    String backText = backRecognizedText.text;
+
+    // Combine both texts
+    String combinedText = '--- FRONT OF LABEL ---\n\n$frontText\n\n--- BACK OF LABEL ---\n\n$backText';
+    
+    setState(() {
+      result = combinedText;
+    });
+    
+    // Show combined OCR result in modal
+    _showOCRModal(combinedText);
+    
+    // Reset image paths for next scan
+    setState(() {
+      _frontImagePath = null;
+      _backImagePath = null;
+    });
   }
 
   Future<void> _performOCR(String imagePath) async {
@@ -199,11 +546,11 @@ class _QRScannerPageState extends State<QRScannerPage> {
       inputImage,
     );
     String extractedText = recognizedText.text;
-    if (extractedText.isNotEmpty) {
-      setState(() {
-        result = extractedText;
-      });
-    }
+    setState(() {
+      result = extractedText;
+    });
+    // Show OCR result in modal
+    _showOCRModal(extractedText);
   }
 
   @override
@@ -215,15 +562,11 @@ class _QRScannerPageState extends State<QRScannerPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Example: Replace with your actual user role logic
-    // You can get user role from provider, userData, or authentication state
-    final bool isAdmin = appRole == NavBarRole.admin;
-
     return Scaffold(
       appBar: GradientHeaderAppBar(
         greeting: 'Welcome back',
         user: 'user',
-        onBack: () => Navigator.of(context).maybePop(),
+        showBackButton: false, // Remove back button
       ),
       body: Column(
         children: [
@@ -292,35 +635,12 @@ class _QRScannerPageState extends State<QRScannerPage> {
               ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Text(
-                result.isEmpty
-                    ? 'Scan a QR code or use OCR to extract text.'
-                    : result,
-                style: const TextStyle(fontSize: 16, color: Colors.black87),
-              ),
-            ),
-          ),
+          // Result display removed - now using modals instead
         ],
       ),
       bottomNavigationBar: AppBottomNavBar(
         selectedIndex: 2,
-        role: isAdmin ? NavBarRole.admin : NavBarRole.user,
+        role: NavBarRole.user, // Simplified to always use user role
       ),
     );
   }

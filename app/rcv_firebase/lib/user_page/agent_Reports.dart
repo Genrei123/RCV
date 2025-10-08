@@ -17,7 +17,7 @@ class _UserReportsPageState extends State<UserReportsPage> {
       appBar: GradientHeaderAppBar(
         greeting: 'Welcome back',
         user: 'Agent user',
-        onBack: () => Navigator.of(context).maybePop(),
+        showBackButton: false, // Remove back button
       ),
       body: Center(
         child: Text(

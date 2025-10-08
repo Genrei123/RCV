@@ -7,6 +7,8 @@ import '../widgets/gradient_header_app_bar.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
 import '../widgets/custom_text_field.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 class UserProfilePage extends StatefulWidget {
   final String role;
@@ -19,6 +21,8 @@ class UserProfilePage extends StatefulWidget {
 class _UserProfilePageState extends State<UserProfilePage> {
   bool isEditing = false;
   String avatarPath = 'assets/avatar.png';
+  String? selectedImagePath; // For uploaded avatar
+  final ImagePicker _picker = ImagePicker();
 
   // User data loaded from JSON
   Map<String, dynamic>? userData;
@@ -72,13 +76,101 @@ class _UserProfilePageState extends State<UserProfilePage> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
-        return SizedBox(
-          height: 320,
-          child: Center(
-            child: Text('Image Crop Modal', style: AppFonts.titleStyle),
+        return Container(
+          height: 200,
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              Text(
+                'Choose Avatar Source',
+                style: AppFonts.titleStyle.copyWith(fontSize: 18),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      final XFile? image = await _picker.pickImage(
+                        source: ImageSource.camera,
+                      );
+                      if (image != null) {
+                        setState(() {
+                          selectedImagePath = image.path;
+                        });
+                      }
+                    },
+                    icon: const Icon(Icons.camera_alt),
+                    label: const Text('Camera'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: app_colors.AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      final XFile? image = await _picker.pickImage(
+                        source: ImageSource.gallery,
+                      );
+                      if (image != null) {
+                        setState(() {
+                          selectedImagePath = image.path;
+                        });
+                      }
+                    },
+                    icon: const Icon(Icons.photo_library),
+                    label: const Text('Gallery'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: app_colors.AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         );
       },
+    );
+  }
+
+  void _logout() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context); // Close dialog
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                '/login',
+                (route) => false,
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: app_colors.AppColors.error,
+            ),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -91,7 +183,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
       appBar: GradientHeaderAppBar(
         greeting: 'Welcome back',
         user: (userData!['name'] ?? '').toString().split(' ').first,
-        onBack: () => Navigator.of(context).maybePop(),
+        showBackButton: false, // Remove back button
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -102,38 +194,45 @@ class _UserProfilePageState extends State<UserProfilePage> {
               // Avatar
               GestureDetector(
                 onTap: isEditing ? openImageCropModal : null,
-                child: CircleAvatar(
-                  radius: 48,
-                  backgroundImage: AssetImage(avatarPath),
+                child: Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 48,
+                      backgroundImage: selectedImagePath != null
+                          ? FileImage(File(selectedImagePath!))
+                          : AssetImage(avatarPath) as ImageProvider,
+                    ),
+                    if (isEditing)
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: app_colors.AppColors.primary,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                          child: const Icon(
+                            Icons.camera_alt,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
               if (!isEditing) ...[
                 // Preview Mode
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            userData!['name'] ?? '',
-                            style: AppFonts.titleStyle.copyWith(fontSize: 18),
-                          ),
-                          Text(
-                            userData!['role'] ?? '',
-                            style: AppFonts.labelStyle.copyWith(fontSize: 14),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Text(
-                      userData!['id'] ?? '',
-                      style: AppFonts.labelStyle.copyWith(
-                        fontSize: 14,
-                        color: app_colors.AppColors.darkNeutral,
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 16),
+                Text(
+                  userData!['name'] ?? '',
+                  style: AppFonts.titleStyle.copyWith(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),
                 AppButtons(
@@ -210,11 +309,11 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 AppButtons(
                   text: 'Log Out',
                   size: 44,
-                  textColor: app_colors.AppColors.error,
+                  textColor: Colors.white,
                   backgroundColor: Colors.redAccent,
                   borderColor: Colors.redAccent,
                   icon: const Icon(Icons.logout, color: Colors.white),
-                  onPressed: () {},
+                  onPressed: _logout,
                   textStyle: AppFonts.labelStyle.copyWith(
                     fontSize: 16,
                     color: Colors.white,
@@ -250,28 +349,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            flex: 2,
-                            child: CustomTextField(
-                              controller: nameController,
-                              label: 'Full Name',
-                              hint: 'Enter your name...',
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            flex: 1,
-                            child: CustomTextField(
-                              controller: TextEditingController(
-                                text: userData!['role'] ?? '',
-                              ),
-                              label: 'Role',
-                              readOnly: true,
-                            ),
-                          ),
-                        ],
+                      CustomTextField(
+                        controller: nameController,
+                        label: 'Full Name',
+                        hint: 'Enter your name...',
                       ),
                       const SizedBox(height: 16),
                       CustomTextField(

@@ -6,6 +6,7 @@ import '../services/gps_service.dart';
 import '../themes/app_colors.dart' as app_colors;
 import '../widgets/app_buttons.dart';
 import '../widgets/gradient_header_app_bar.dart';
+import '../widgets/navigation_bar.dart';
 
 class LocationPage extends StatefulWidget {
   const LocationPage({Key? key}) : super(key: key);
@@ -149,7 +150,7 @@ class _LocationPageState extends State<LocationPage> {
       appBar: GradientHeaderAppBar(
         greeting: 'My Location',
         user: 'Location',
-        onBack: () => Navigator.of(context).pop(),
+        showBackButton: false, // Remove back button
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -385,6 +386,10 @@ class _LocationPageState extends State<LocationPage> {
             ),
           ],
         ),
+      ),
+      bottomNavigationBar: AppBottomNavBar(
+        selectedIndex: 3, // Maps is at index 3
+        role: NavBarRole.user,
       ),
     );
   }
