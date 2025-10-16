@@ -45,7 +45,8 @@ class MyApp extends StatelessWidget {
           '/login': (context) => const LoginPage(),
           '/otp-verification': (context) => const OtpVerificationPage(),
           '/reset-password': (context) => ResetPasswordPage(),
-          '/reset-new-password': (context) => const ResetNewPasswordPage(),
+          '/reset-new-password': (context) => const ResetN
+          ewPasswordPage(),
           '/user-profile': (context) => UserProfilePage(
             role: nav_bar.NavBarRole.user.toString(),
           ),
