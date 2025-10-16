@@ -68,6 +68,10 @@ export interface RateLimitResult {
     totalRequests?: number;
 }
 
+export interface OCRBlock {
+  blockOfText: string;
+}
+
 // Extend the Express Request type to include a user property
 declare global {
   namespace Express {

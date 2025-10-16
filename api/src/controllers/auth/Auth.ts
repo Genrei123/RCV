@@ -168,7 +168,7 @@ export const requestPasswordReset = async (req: Request, res: Response, next: Ne
       success: true, 
       message: "If an account exists with this email, a reset code has been sent." 
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Password reset request error:', error);
     return next(new CustomError(500, "Failed to process password reset request"));
   }

@@ -1,14 +1,23 @@
 import 'dart:convert';
+import 'dart:io';
+import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:developer' as developer;
+import '../config/api_config.dart';
+import '../models/product.dart';
 
 class ApiService {
+  static final ApiService _instance = ApiService._internal();
+  factory ApiService() => _instance;
+  ApiService._internal();
+
   // Backend API configuration
-  static const String baseUrl = 'http://10.0.2.2:3000/api/v1';
-  
+  // static const String baseUrl = 'http://localhost:3000/api/v1';
+  // For Android Emulator use: 'http://10.0.2.2:3000/api/v1'
   // For iOS Simulator use: 'http://localhost:3000/api/v1'
   // For Physical Device use: 'http://YOUR_COMPUTER_IP:3000/api/v1'
+  static const String baseUrl = 'https://c2aa8a8357ae.ngrok-free.app/api/v1';
 
   // Get authorization headers
   Future<Map<String, String>> _getHeaders() async {
@@ -17,6 +26,7 @@ class ApiService {
     
     Map<String, String> headers = {
       'Content-Type': 'application/json',
+      'Accept': 'application/json',
     };
     
     if (token != null && token.isNotEmpty) {
@@ -24,6 +34,131 @@ class ApiService {
     }
     
     return headers;
+  }
+
+  /// Scan product using OCR text
+  /// 
+  /// Sends the extracted OCR text to backend for processing
+  /// Returns list of matching products
+  Future<ScanProductResponse> scanProduct(String ocrText) async {
+    try {
+      developer.log('Sending OCR text to backend...');
+      developer.log('OCR Text length: ${ocrText.length} characters');
+      
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/scan/scanProduct'),
+            headers: await _getHeaders(),
+            body: jsonEncode({
+              'blockOfText': ocrText,
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
+
+      developer.log('Scan product response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        developer.log('Product scan successful: ${jsonData.toString()}');
+        return ScanProductResponse.fromJson(jsonData);
+      } else {
+        developer.log('Product scan failed: ${response.body}');
+        throw ApiException(
+          statusCode: response.statusCode,
+          message: 'Failed to scan product: ${response.body}',
+        );
+      }
+    } on SocketException catch (e) {
+      developer.log('Network error: $e');
+      throw ApiException(
+        statusCode: 0,
+        message: 'No internet connection. Please check your network.',
+        details: e.toString(),
+      );
+    } on TimeoutException catch (e) {
+      developer.log('Timeout error: $e');
+      throw ApiException(
+        statusCode: 0,
+        message: 'Request timeout. Please try again.',
+        details: e.toString(),
+      );
+    } on http.ClientException catch (e) {
+      developer.log('Client error: $e');
+      throw ApiException(
+        statusCode: 0,
+        message: 'Cannot connect to server. Make sure backend is running on $baseUrl',
+        details: e.toString(),
+      );
+    } catch (e) {
+      developer.log('Unexpected error: $e');
+      throw ApiException(
+        statusCode: 0,
+        message: 'An unexpected error occurred',
+        details: e.toString(),
+      );
+    }
+  }
+
+  /// Get all scans
+  Future<List<dynamic>> getScans() async {
+    try {
+      developer.log('Fetching all scans...');
+      
+      final response = await http
+          .get(
+            Uri.parse('$baseUrl/scan/getScans'),
+            headers: await _getHeaders(),
+          )
+          .timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        return jsonData['scans'] ?? [];
+      } else {
+        throw ApiException(
+          statusCode: response.statusCode,
+          message: 'Failed to get scans',
+        );
+      }
+    } catch (e) {
+      developer.log('Get scans error: $e');
+      throw ApiException(
+        statusCode: 0,
+        message: 'Failed to get scans',
+        details: e.toString(),
+      );
+    }
+  }
+
+  /// Get scan by ID
+  Future<Map<String, dynamic>> getScanById(String id) async {
+    try {
+      developer.log('Fetching scan with ID: $id');
+      
+      final response = await http
+          .get(
+            Uri.parse('$baseUrl/scan/getScans/$id'),
+            headers: await _getHeaders(),
+          )
+          .timeout(const Duration(seconds: 30));
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        return jsonData['scan'] ?? {};
+      } else {
+        throw ApiException(
+          statusCode: response.statusCode,
+          message: 'Failed to get scan',
+        );
+      }
+    } catch (e) {
+      developer.log('Get scan by ID error: $e');
+      throw ApiException(
+        statusCode: 0,
+        message: 'Failed to get scan',
+        details: e.toString(),
+      );
+    }
   }
 
   // Test connection to backend
@@ -39,9 +174,11 @@ class ApiService {
       developer.log('Connection test response: ${response.statusCode}');
       
       return {
-        'success': response.statusCode == 200 || response.statusCode == 405, // 405 means method not allowed but server is reachable
+        'success': response.statusCode == 200 || response.statusCode == 405,
         'statusCode': response.statusCode,
-        'message': response.statusCode == 200 ? 'Backend is running!' : 'Backend is reachable but endpoint needs POST method',
+        'message': response.statusCode == 200 
+            ? 'Backend is running!' 
+            : 'Backend is reachable but endpoint needs POST method',
       };
     } catch (e) {
       developer.log('Connection test failed: $e');
@@ -175,5 +312,23 @@ class ApiService {
         'message': 'Network error: ${e.toString()}',
       };
     }
+  }
+}
+
+/// Custom API Exception
+class ApiException implements Exception {
+  final int statusCode;
+  final String message;
+  final String? details;
+
+  ApiException({
+    required this.statusCode,
+    required this.message,
+    this.details,
+  });
+
+  @override
+  String toString() {
+    return 'ApiException: $message ${details != null ? '($details)' : ''}';
   }
 }
