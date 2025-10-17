@@ -58,14 +58,38 @@ class FirestoreService {
         return false;
       }
 
-      Map<String, dynamic> locationData = {
-        'latitude': latitude,
-        'longitude': longitude,
+      // Get user data from JWT token
+      String? token = await TokenService.getAccessToken();
+      Map<String, dynamic>? tokenData = token != null ? TokenService.decodeTokenPayload(token) : null;
+
+      Map<String, dynamic> userData = {
+        if (tokenData != null) ...{
+          '_id': tokenData['sub'],
+          'role': tokenData['role'],
+          'status': tokenData['status'],
+          'avatarUrl': 'assets/avatar.png',
+          'firstName': tokenData['firstName'],
+          'middleName': null,
+          'lastName': tokenData['lastName'],
+          'extName': null,
+          'fullName': tokenData['fullName'],
+          'email': tokenData['email'],
+          'location': null,
+          'currentLocation': {
+            'latitude': latitude,
+            'longitude': longitude,
+          },
+          'dateOfBirth': null,
+          'phoneNumber': null,
+          'badgeId': tokenData['badgeId'],
+          'createdAt': DateTime.now().toIso8601String(),
+          'updatedAt': DateTime.now().toIso8601String(),
+        }
       };
 
-      print('Saving location data to Firestore...');
-      bool result = await writeUserData(userId, locationData);
-      print('Location save result: $result');
+      print('Saving user data to Firestore...');
+      bool result = await writeUserData(userId, userData);
+      print('User data save result: $result');
       
       return result;
     } catch (e) {

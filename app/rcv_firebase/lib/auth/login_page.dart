@@ -15,20 +15,104 @@ class AppColors {
 }
 
 class User {
+  final String _id;
+  final String role;
+  final String status;
+  final String avatarUrl;
+  final String firstName;
+  final String? middleName;
+  final String lastName;
+  final String? extName;
+  final String fullName;
   final String email;
+  final String location;
+  final Map<String, dynamic>? currentLocation;
+  final String dateOfBirth;
+  final String phoneNumber;
   final String password;
-  final NavBarRole role;
-  final String id;
+  final String createdAt;
+  final String updatedAt;
+  final String badgeId;
 
-  User({required this.email, required this.password, required this.role, required this.id});
+  User({
+    required String id,
+    required this.role,
+    required this.status,
+    required this.avatarUrl,
+    required this.firstName,
+    this.middleName,
+    required this.lastName,
+    this.extName,
+    required this.fullName,
+    required this.email,
+    required this.location,
+    this.currentLocation,
+    required this.dateOfBirth,
+    required this.phoneNumber,
+    required this.password,
+    required this.createdAt,
+    required this.updatedAt,
+    required this.badgeId,
+  }) : _id = id;
+
+  NavBarRole get navBarRole {
+    switch (role) {
+      case 'ADMIN':
+        return NavBarRole.admin;
+      case 'AGENT':
+      case 'USER':
+      default:
+        return NavBarRole.user;
+    }
+  }
+
+  // Getter for ID compatibility
+  String get id => _id;
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
+      id: json['_id'],
+      role: json['role'],
+      status: json['status'],
+      avatarUrl: json['avatarUrl'],
+      firstName: json['firstName'],
+      middleName: json['middleName'],
+      lastName: json['lastName'],
+      extName: json['extName'],
+      fullName: json['fullName'],
       email: json['email'],
+      location: json['location'],
+      currentLocation: json['currentLocation'] as Map<String, dynamic>?,
+      dateOfBirth: json['dateOfBirth'],
+      phoneNumber: json['phoneNumber'],
       password: json['password'],
-      role: json['role'] == 'admin' ? NavBarRole.admin : NavBarRole.user,
-      id: json['id'],
+      createdAt: json['createdAt'],
+      updatedAt: json['updatedAt'],
+      badgeId: json['badgeId'],
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      '_id': _id,
+      'role': role,
+      'status': status,
+      'avatarUrl': avatarUrl,
+      'firstName': firstName,
+      'middleName': middleName,
+      'lastName': lastName,
+      'extName': extName,
+      'fullName': fullName,
+      'email': email,
+      'location': location,
+      'currentLocation': currentLocation,
+      'dateOfBirth': dateOfBirth,
+      'phoneNumber': phoneNumber,
+      'password': password,
+      'createdAt': createdAt,
+      'updatedAt': updatedAt,
+      'badgeId': badgeId,
+    };
   }
 }
 
@@ -113,7 +197,7 @@ class _LoginPageState extends State<LoginPage> {
         );
         
         // Set user role
-        appRole = user.role;
+        appRole = user.navBarRole;
         
         if (context.mounted) {
           Navigator.pushReplacementNamed(context, '/user-home');
@@ -137,12 +221,17 @@ class _LoginPageState extends State<LoginPage> {
     final users = await loadUsers();
     final user = users.firstWhere((u) => u.email == email);
     
-    // mock jwt payload
+    // Create mock JWT payload using new user structure
     final payload = {
-      'sub': user.id,
+      'sub': user.id, // UUID from new structure
       'email': user.email,
-      'role': user.role == NavBarRole.admin ? 'ADMIN' : 'USER',
-      'isAdmin': user.role == NavBarRole.admin,
+      'role': user.role, // ADMIN, AGENT, USER
+      'isAdmin': user.role == 'ADMIN',
+      'fullName': user.fullName,
+      'firstName': user.firstName,
+      'lastName': user.lastName,
+      'badgeId': user.badgeId,
+      'status': user.status,
       'iat': DateTime.now().millisecondsSinceEpoch ~/ 1000,
       'exp': (DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600,
     };
