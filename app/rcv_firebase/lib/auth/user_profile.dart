@@ -166,6 +166,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: app_colors.AppColors.error,
+              foregroundColor: app_colors.AppColors.white,
             ),
             child: const Text('Logout'),
           ),
@@ -184,6 +185,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
         greeting: 'Welcome back',
         user: (userData!['fullName'] ?? '').toString().split(' ').first,
         showBackButton: false, // Remove back button
+        showBranding: true, // Show simplified branding
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -253,8 +255,20 @@ class _UserProfilePageState extends State<UserProfilePage> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: app_colors.AppColors.darkNeutral.withOpacity(0.1),
+                    color: app_colors.AppColors.neutral.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: app_colors.AppColors.neutral.withOpacity(0.25),
+                        blurRadius: 8,
+                        spreadRadius: 2,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                    border: Border.all(
+                      color: app_colors.AppColors.primary,
+                      width: 1.5,
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -263,44 +277,48 @@ class _UserProfilePageState extends State<UserProfilePage> {
                         'Location',
                         style: AppFonts.labelStyle.copyWith(
                           fontWeight: FontWeight.bold,
+                          fontSize: 15,
                         ),
                       ),
                       Text(
                         userData!['location'] ?? '',
-                        style: AppFonts.contentStyle,
+                        style: AppFonts.contentStyle.copyWith(fontSize: 16),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         'Date of Birth',
                         style: AppFonts.labelStyle.copyWith(
                           fontWeight: FontWeight.bold,
+                          fontSize: 15,
                         ),
                       ),
                       Text(
                         userData!['dateOfBirth'] ?? '',
-                        style: AppFonts.contentStyle,
+                        style: AppFonts.contentStyle.copyWith(fontSize: 16),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         'Email',
                         style: AppFonts.labelStyle.copyWith(
                           fontWeight: FontWeight.bold,
+                          fontSize: 15,
                         ),
                       ),
                       Text(
                         userData!['email'] ?? '',
-                        style: AppFonts.contentStyle,
+                        style: AppFonts.contentStyle.copyWith(fontSize: 16),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         'Phone Number',
                         style: AppFonts.labelStyle.copyWith(
                           fontWeight: FontWeight.bold,
+                          fontSize: 15,
                         ),
                       ),
                       Text(
                         userData!['phoneNumber'] ?? '',
-                        style: AppFonts.contentStyle,
+                        style: AppFonts.contentStyle.copyWith(fontSize: 16),
                       ),
                     ],
                   ),
@@ -417,7 +435,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                           'Cancel',
                           style: AppFonts.labelStyle.copyWith(
                             color: app_colors.AppColors.error,
-                            fontSize: 16,
+                            fontSize: 12,
                           ),
                         ),
                       ),
@@ -439,7 +457,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                           'Confirm',
                           style: AppFonts.labelStyle.copyWith(
                             color: Colors.white,
-                            fontSize: 16,
+                            fontSize: 12,
                           ),
                         ),
                       ),
