@@ -4,8 +4,11 @@ import '../widgets/app_buttons.dart';
 import '../widgets/animated_form_field.dart';
 import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
 import '../widgets/navigation_bar.dart';
+import '../widgets/processing_modal.dart';
+import '../widgets/status_modal.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter/scheduler.dart';
 
 NavBarRole? appRole;
 
@@ -98,10 +101,7 @@ class _LoginPageState extends State<LoginPage> {
     for (var user in users) {
       if (user.email == email && user.password == password) {
         appRole = user.role;
-        if (context.mounted) {
-          // Navigate to homepage after login
-          Navigator.pushReplacementNamed(context, '/user-home');
-        }
+        // return success; navigation handled by caller so we can show status modal
         return true;
       }
     }
@@ -245,12 +245,52 @@ class _LoginPageState extends State<LoginPage> {
                             Icons.login,
                             color: app_colors.AppColors.text,
                           ),
-                          onPressed: () {
-                            validateLogin(
+                          onPressed: () async {
+                            // Show processing modal
+                            showProcessingModal(
+                              context,
+                              message: 'Signing in...',
+                            );
+
+                            // Allow a frame to render so the processing dialog appears
+                            await SchedulerBinding.instance.endOfFrame;
+                            final ok = await validateLogin(
                               emailController.text,
                               passwordController.text,
                               context,
                             );
+
+                            // Hide processing modal
+                            hideProcessingModal(context);
+
+                            // Wait a frame so the dialog has time to dismiss cleanly
+                            await SchedulerBinding.instance.endOfFrame;
+
+                            if (ok) {
+                              await showStatusModal(
+                                context,
+                                type: StatusModalType.success,
+                                title: 'Login Success!',
+                                message: 'Proceeding to Landing Page',
+                                buttonText: 'Proceed',
+                                onButtonPressed: () {
+                                  Navigator.of(context).pop(); // close modal
+                                  Navigator.pushReplacementNamed(
+                                    context,
+                                    '/user-home',
+                                  );
+                                },
+                              );
+                            } else {
+                              await showStatusModal(
+                                context,
+                                type: StatusModalType.error,
+                                title: 'Login Failed',
+                                message:
+                                    'Please check your credentials and try again.',
+                                buttonText: 'OK',
+                              );
+                            }
                           },
                         ),
                         SizedBox(height: 24),

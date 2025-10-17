@@ -24,7 +24,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
   bool isOCRMode = false;
   final ImagePicker _picker = ImagePicker();
   final TextRecognizer _textRecognizer = TextRecognizer();
-  
+
   // For dual image OCR
   String? _frontImagePath;
   String? _backImagePath;
@@ -124,9 +124,13 @@ class _QRScannerPageState extends State<QRScannerPage> {
                         ElevatedButton.icon(
                           onPressed: () => _pickImageForOCR(true),
                           icon: const Icon(Icons.photo_library, size: 20),
-                          label: Text(_frontImagePath == null ? 'Select Front Image' : 'Front ✓'),
+                          label: Text(
+                            _frontImagePath == null
+                                ? 'Select Front Image'
+                                : 'Front ✓',
+                          ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: _frontImagePath == null 
+                            backgroundColor: _frontImagePath == null
                                 ? const Color(0xFF005440)
                                 : Colors.green,
                             foregroundColor: Colors.white,
@@ -143,9 +147,13 @@ class _QRScannerPageState extends State<QRScannerPage> {
                         ElevatedButton.icon(
                           onPressed: () => _pickImageForOCR(false),
                           icon: const Icon(Icons.photo_library, size: 20),
-                          label: Text(_backImagePath == null ? 'Select Back Image' : 'Back ✓'),
+                          label: Text(
+                            _backImagePath == null
+                                ? 'Select Back Image'
+                                : 'Back ✓',
+                          ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: _backImagePath == null 
+                            backgroundColor: _backImagePath == null
                                 ? const Color(0xFF005440)
                                 : Colors.green,
                             foregroundColor: Colors.white,
@@ -298,7 +306,9 @@ class _QRScannerPageState extends State<QRScannerPage> {
                             Expanded(
                               child: OutlinedButton.icon(
                                 onPressed: () {
-                                  Clipboard.setData(ClipboardData(text: qrData));
+                                  Clipboard.setData(
+                                    ClipboardData(text: qrData),
+                                  );
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Text('Copied to clipboard'),
@@ -310,8 +320,12 @@ class _QRScannerPageState extends State<QRScannerPage> {
                                 label: const Text('Copy'),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: const Color(0xFF005440),
-                                  side: const BorderSide(color: Color(0xFF005440)),
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  side: const BorderSide(
+                                    color: Color(0xFF005440),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -325,7 +339,9 @@ class _QRScannerPageState extends State<QRScannerPage> {
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF005440),
                                   foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -422,7 +438,9 @@ class _QRScannerPageState extends State<QRScannerPage> {
                             border: Border.all(color: Colors.grey[300]!),
                           ),
                           child: SelectableText(
-                            ocrText.isEmpty ? 'No text found in image' : ocrText,
+                            ocrText.isEmpty
+                                ? 'No text found in image'
+                                : ocrText,
                             style: const TextStyle(
                               fontSize: 15,
                               color: Colors.black87,
@@ -435,21 +453,33 @@ class _QRScannerPageState extends State<QRScannerPage> {
                           children: [
                             Expanded(
                               child: OutlinedButton.icon(
-                                onPressed: ocrText.isEmpty ? null : () {
-                                  Clipboard.setData(ClipboardData(text: ocrText));
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Copied to clipboard'),
-                                      duration: Duration(seconds: 2),
-                                    ),
-                                  );
-                                },
+                                onPressed: ocrText.isEmpty
+                                    ? null
+                                    : () {
+                                        Clipboard.setData(
+                                          ClipboardData(text: ocrText),
+                                        );
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              'Copied to clipboard',
+                                            ),
+                                            duration: Duration(seconds: 2),
+                                          ),
+                                        );
+                                      },
                                 icon: const Icon(Icons.copy, size: 18),
                                 label: const Text('Copy'),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: const Color(0xFF005440),
-                                  side: const BorderSide(color: Color(0xFF005440)),
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  side: const BorderSide(
+                                    color: Color(0xFF005440),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -463,7 +493,9 @@ class _QRScannerPageState extends State<QRScannerPage> {
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF005440),
                                   foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -971,7 +1003,7 @@ Registered: ${_formatDate(product.dateOfRegistration)}
           _backImagePath = image.path;
         }
       });
-      
+
       // If both images are selected, perform OCR on both
       if (_frontImagePath != null && _backImagePath != null) {
         await _performDualOCR(_frontImagePath!, _backImagePath!);
@@ -1075,11 +1107,10 @@ Registered: ${_formatDate(product.dateOfRegistration)}
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return Scaffold( 
       appBar: GradientHeaderAppBar(
-        greeting: 'Welcome back',
-        user: 'user',
-        showBackButton: false, // Remove back button
+        showBackButton: false,
+        showBranding: true, // Show simplified branding
       ),
       body: Column(
         children: [

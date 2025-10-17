@@ -29,13 +29,6 @@ class AuditTrailPage extends StatefulWidget {
 
 class _AuditTrailPageState extends State<AuditTrailPage> {
   // Format date to readable string
-  String _formatDate(DateTime date) {
-    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    final hour = date.hour > 12 ? date.hour - 12 : (date.hour == 0 ? 12 : date.hour);
-    final period = date.hour >= 12 ? 'PM' : 'AM';
-    return '${months[date.month - 1]} ${date.day}, ${date.year} - ${hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')} $period';
-  }
-
   String _formatShortDate(DateTime date) {
     final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     final hour = date.hour > 12 ? date.hour - 12 : (date.hour == 0 ? 12 : date.hour);
@@ -55,7 +48,8 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
     ScanRecord(
       id: 'SCAN002',
       type: 'OCR',
-      content: 'Product Name: Premium Dog Food\nBrand: PetCare\nExpiry: 2025-12-31\nBatch: A12345',
+      content:
+          'Product Name: Premium Dog Food\nBrand: PetCare\nExpiry: 2025-12-31\nBatch: A12345',
       timestamp: DateTime.now().subtract(const Duration(days: 1)),
       location: 'Quezon City, Philippines',
     ),
@@ -69,7 +63,8 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
     ScanRecord(
       id: 'SCAN004',
       type: 'OCR',
-      content: 'Ingredients: Chicken, Rice, Vegetables\nNet Weight: 1.5kg\nManufactured by: ABC Corp',
+      content:
+          'Ingredients: Chicken, Rice, Vegetables\nNet Weight: 1.5kg\nManufactured by: ABC Corp',
       timestamp: DateTime.now().subtract(const Duration(days: 3)),
       location: 'Pasig, Philippines',
     ),
@@ -155,7 +150,7 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
                         const Divider(height: 24),
                         _buildDetailRow(
                           'Date & Time',
-                          _formatDate(scan.timestamp),
+                          _formatShortDate(scan.timestamp),
                         ),
                         const Divider(height: 24),
                         _buildDetailRow('Location', scan.location),
@@ -221,12 +216,7 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
             ),
           ),
         ),
-        Expanded(
-          child: Text(
-            value,
-            style: const TextStyle(fontSize: 14),
-          ),
-        ),
+        Expanded(child: Text(value, style: const TextStyle(fontSize: 14))),
       ],
     );
   }
@@ -235,27 +225,19 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: GradientHeaderAppBar(
-        greeting: 'Scan History',
-        user: 'Agent user',
         showBackButton: false,
+        showBranding: true, // Show simplified branding
       ),
       body: _mockScans.isEmpty
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.history,
-                    size: 80,
-                    color: Colors.grey[300],
-                  ),
+                  Icon(Icons.history, size: 80, color: Colors.grey[300]),
                   const SizedBox(height: 16),
                   Text(
                     'No scan records yet',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 18, color: Colors.grey[600]),
                   ),
                 ],
               ),
@@ -283,7 +265,9 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(
-                        scan.type == 'QR' ? Icons.qr_code_2 : Icons.text_snippet,
+                        scan.type == 'QR'
+                            ? Icons.qr_code_2
+                            : Icons.text_snippet,
                         color: scan.type == 'QR'
                             ? app_colors.AppColors.primary
                             : Colors.blue,
@@ -313,7 +297,11 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
                         const SizedBox(height: 4),
                         Row(
                           children: [
-                            Icon(Icons.access_time, size: 14, color: Colors.grey[600]),
+                            Icon(
+                              Icons.access_time,
+                              size: 14,
+                              color: Colors.grey[600],
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               _formatShortDate(scan.timestamp),
@@ -327,7 +315,11 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
                         const SizedBox(height: 2),
                         Row(
                           children: [
-                            Icon(Icons.location_on, size: 14, color: Colors.grey[600]),
+                            Icon(
+                              Icons.location_on,
+                              size: 14,
+                              color: Colors.grey[600],
+                            ),
                             const SizedBox(width: 4),
                             Expanded(
                               child: Text(
