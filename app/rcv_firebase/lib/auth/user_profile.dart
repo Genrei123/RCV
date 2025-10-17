@@ -24,6 +24,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
   String? selectedImagePath; // For uploaded avatar
   final ImagePicker _picker = ImagePicker();
 
+  // Password visibility toggles
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+
   // User data loaded from JSON
   Map<String, dynamic>? userData;
 
@@ -397,18 +401,84 @@ class _UserProfilePageState extends State<UserProfilePage> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      CustomTextField(
+                      TextField(
                         controller: passwordController,
-                        label: 'Password',
-                        hint: 'Enter your password',
-                        obscure: true,
+                        obscureText: _obscurePassword,
+                        decoration: InputDecoration(
+                          labelText: 'Password',
+                          hintText: 'Enter your password',
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: app_colors.AppColors.darkNeutral,
+                              width: 1.5,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: app_colors.AppColors.primary, width: 2),
+                          ),
+                          labelStyle: AppFonts.labelStyle.copyWith(
+                            color: app_colors.AppColors.darkNeutral,
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                              color: app_colors.AppColors.darkNeutral,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscurePassword = !_obscurePassword;
+                              });
+                            },
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 16),
-                      CustomTextField(
+                      TextField(
                         controller: confirmPasswordController,
-                        label: 'Confirm Password',
-                        hint: 'Enter your password',
-                        obscure: true,
+                        obscureText: _obscureConfirmPassword,
+                        decoration: InputDecoration(
+                          labelText: 'Confirm Password',
+                          hintText: 'Enter your password',
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: app_colors.AppColors.darkNeutral,
+                              width: 1.5,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: app_colors.AppColors.primary, width: 2),
+                          ),
+                          labelStyle: AppFonts.labelStyle.copyWith(
+                            color: app_colors.AppColors.darkNeutral,
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
+                              color: app_colors.AppColors.darkNeutral,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscureConfirmPassword = !_obscureConfirmPassword;
+                              });
+                            },
+                          ),
+                        ),
                       ),
                     ],
                   ),
