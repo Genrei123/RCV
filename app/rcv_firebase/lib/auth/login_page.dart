@@ -6,6 +6,7 @@ import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
 import '../widgets/navigation_bar.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
+import '../services/token_service.dart';
 
 NavBarRole? appRole;
 
@@ -17,14 +18,16 @@ class User {
   final String email;
   final String password;
   final NavBarRole role;
+  final String id;
 
-  User({required this.email, required this.password, required this.role});
+  User({required this.email, required this.password, required this.role, required this.id});
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
       email: json['email'],
       password: json['password'],
       role: json['role'] == 'admin' ? NavBarRole.admin : NavBarRole.user,
+      id: json['id'],
     );
   }
 }
@@ -97,9 +100,22 @@ class _LoginPageState extends State<LoginPage> {
     final users = await loadUsers();
     for (var user in users) {
       if (user.email == email && user.password == password) {
+        String mockToken = await _createMockJwtToken(user.email);
+        
+        print(' Mock login successful');
+        print(' Mock JWT Token: $mockToken');
+        
+        // Store the mock token
+        await TokenService.saveTokens(
+          mockToken,         
+          'mock_refresh_token',   
+          3600,                   
+        );
+        
+        // Set user role
         appRole = user.role;
+        
         if (context.mounted) {
-          // Navigate to homepage after login
           Navigator.pushReplacementNamed(context, '/user-home');
         }
         return true;
@@ -107,13 +123,33 @@ class _LoginPageState extends State<LoginPage> {
     }
 
     setState(() {
-      emailError = 'email not found';
+      emailError = 'Email not found';
       passwordError = 'Invalid password';
       hasEmailError = true;
       hasPasswordError = true;
     });
 
     return false;
+  }
+
+  // Create a mock JWT token for testing
+  Future<String> _createMockJwtToken(String email) async {
+    final users = await loadUsers();
+    final user = users.firstWhere((u) => u.email == email);
+    
+    // mock jwt payload
+    final payload = {
+      'sub': user.id,
+      'email': user.email,
+      'role': user.role == NavBarRole.admin ? 'ADMIN' : 'USER',
+      'isAdmin': user.role == NavBarRole.admin,
+      'iat': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      'exp': (DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600,
+    };
+    
+  
+    final encodedPayload = base64Url.encode(utf8.encode(jsonEncode(payload)));
+    return 'mock.$encodedPayload.mock';
   }
 
   @override

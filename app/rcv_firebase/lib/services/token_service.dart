@@ -3,6 +3,7 @@
 // Handles token storage, retrieval, and validation
 
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import '../config/api_constants.dart';
 
 class TokenService {
@@ -145,16 +146,10 @@ class TokenService {
           break;
       }
 
-      final decoded = Uri.decodeFull(String.fromCharCodes(
-        Uri.parse('data:application/octet-stream;base64,$normalizedPayload')
-            .data!
-            .contentAsBytes(),
-      ));
-
-      // This would require importing dart:convert for jsonDecode
-      // For now, return null - implement if needed
-      return null;
+      final decoded = utf8.decode(base64Url.decode(normalizedPayload));
+      return jsonDecode(decoded) as Map<String, dynamic>;
     } catch (e) {
+      print('Error decoding JWT token: $e');
       return null;
     }
   }
@@ -177,7 +172,10 @@ class TokenService {
     if (token == null) return null;
 
     final payload = decodeTokenPayload(token);
-    return payload?['userId'] as String?;
+    if (payload == null) return null;
+
+    // Your backend JWT uses 'sub' field for user ID
+    return payload['sub'] as String?;
   }
 
   /// Check if token will expire soon

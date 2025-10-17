@@ -4,6 +4,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../widgets/gradient_header_app_bar.dart';
 import '../widgets/navigation_bar.dart';
 import '../services/gps_service.dart';
+import '../services/firestore_service.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -96,6 +97,14 @@ class _HomeContentState extends State<HomeContent> {
                 zoom: 15.0,
               ),
             ),
+          );
+        }
+        
+        // Save location to Firestore
+        if (location.latitude != null && location.longitude != null) {
+          await FirestoreService.saveUserLocation(
+            location.latitude!, 
+            location.longitude!
           );
         }
       }
