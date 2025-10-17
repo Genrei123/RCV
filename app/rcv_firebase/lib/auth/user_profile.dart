@@ -50,11 +50,11 @@ class _UserProfilePageState extends State<UserProfilePage> {
         : {};
     setState(() {
       userData = data;
-      nameController.text = userData?['name'] ?? '';
+      nameController.text = userData?['fullName'] ?? '';
       emailController.text = userData?['email'] ?? '';
-      phoneController.text = userData?['phone'] ?? '';
-      dobController.text = userData?['dob'] ?? '';
-      avatarPath = userData?['avatarPath'] ?? avatarPath;
+      phoneController.text = userData?['phoneNumber'] ?? '';
+      dobController.text = userData?['dateOfBirth'] ?? '';
+      avatarPath = userData?['avatarUrl'] ?? avatarPath;
     });
   }
 
@@ -182,7 +182,9 @@ class _UserProfilePageState extends State<UserProfilePage> {
     }
     return Scaffold(
       appBar: GradientHeaderAppBar(
-        showBackButton: false,
+        greeting: 'Welcome back',
+        user: (userData!['fullName'] ?? '').toString().split(' ').first,
+        showBackButton: false, // Remove back button
         showBranding: true, // Show simplified branding
       ),
       body: SafeArea(
@@ -227,7 +229,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 // Preview Mode
                 const SizedBox(height: 16),
                 Text(
-                  userData!['name'] ?? '',
+                  userData!['fullName'] ?? '',
                   style: AppFonts.titleStyle.copyWith(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -291,7 +293,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                         ),
                       ),
                       Text(
-                        userData!['dob'] ?? '',
+                        userData!['dateOfBirth'] ?? '',
                         style: AppFonts.contentStyle.copyWith(fontSize: 16),
                       ),
                       const SizedBox(height: 8),
@@ -315,7 +317,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                         ),
                       ),
                       Text(
-                        userData!['phone'] ?? '',
+                        userData!['phoneNumber'] ?? '',
                         style: AppFonts.contentStyle.copyWith(fontSize: 16),
                       ),
                     ],

@@ -7,6 +7,8 @@ import '../themes/app_colors.dart' as app_colors;
 import '../widgets/app_buttons.dart';
 import '../widgets/gradient_header_app_bar.dart';
 import '../widgets/navigation_bar.dart';
+import '../services/firestore_service.dart';
+
 
 class LocationPage extends StatefulWidget {
   const LocationPage({Key? key}) : super(key: key);
@@ -87,6 +89,11 @@ class _LocationPageState extends State<LocationPage> {
             ),
           );
         }
+        await FirestoreService.saveUserLocation(
+          location.latitude!, 
+          location.longitude!
+        );
+        
       } else {
         setState(() {
           _locationStatus =
