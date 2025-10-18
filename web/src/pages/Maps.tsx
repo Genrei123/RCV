@@ -1,91 +1,57 @@
 import { MapComponent } from "@/components/MapComponent"
 import type { Inspector } from "@/components/MapComponent"
+import { FirestoreService } from "@/services/firestore"
+import { useEffect, useState } from "react"
 
 export function Maps() {
-  // Sample inspectors data
-  const inspectors: Inspector[] = [
-    {
-      id: "1",
-      name: "Gizelle Fungo",
-      role: "Inspector",
-      status: "active",
-      location: {
-        lat: 14.5995,
-        lng: 120.9842,
-        address: "Makati Business District",
-        city: "Makati"
+  const [inspectors, setInspectors] = useState<Inspector[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadInspectors = async () => {
+      try {
+        const users = await FirestoreService.getAllUsers();
+        console.log('Users from Firebase:', users);
+        
+        const mappedInspectors: Inspector[] = users
+          .filter(user => user.currentLocation)
+          .map(user => {
+            console.log('Mapping user:', user);
+            return {
+              id: user._id,
+              name: user.fullName,
+              role: user.role,
+              status: user.status === 'Active' ? 'active' as const : 'inactive' as const,
+              lastSeen: user.updatedAt,
+              badgeId: user.badgeId,
+              location: {
+                lat: user.currentLocation.latitude,
+                lng: user.currentLocation.longitude,
+                address: user.location || `${user.currentLocation.latitude.toFixed(6)}, ${user.currentLocation.longitude.toFixed(6)}`,
+                city: `${user.currentLocation.latitude.toFixed(6)}, ${user.currentLocation.longitude.toFixed(6)}`
+              }
+            };
+          });
+        
+        console.log('Mapped inspectors:', mappedInspectors);
+        setInspectors(mappedInspectors);
+      } catch (error) {
+        console.error('Error loading inspectors:', error);
+        setInspectors([]);
+      } finally {
+        setLoading(false);
       }
-    },
-    {
-      id: "2", 
-      name: "Winter Cruz",
-      role: "Inspector",
-      status: "active",
-      location: {
-        lat: 14.6091,
-        lng: 121.0223,
-        address: "Ortigas Center",
-        city: "Pasig"
-      }
-    },
-    {
-      id: "3",
-      name: "Karina Data Crud",
-      role: "Inspector", 
-      status: "active",
-      location: {
-        lat: 14.5794,
-        lng: 121.0359,
-        address: "BGC, Taguig",
-        city: "Taguig"
-      }
-    },
-    {
-      id: "4",
-      name: "Nitinging Torres",
-      role: "Inspector",
-      status: "active", 
-      location: {
-        lat: 14.6760,
-        lng: 121.0437,
-        address: "Quezon City Hall",
-        city: "Quezon City"
-      }
-    },
-    {
-      id: "5",
-      name: "John Doe",
-      role: "Inspector",
-      status: "inactive",
-      location: {
-        lat: 14.5547,
-        lng: 121.0244,
-        address: "Manila City Hall",
-        city: "Manila"
-      }
-    },
-    {
-      id: "6",
-      name: "Lorem Chon",
-      role: "Inspector",
-      status: "active",
-      location: {
-        lat: 14.5378,
-        lng: 121.0014,
-        address: "Malate District",
-        city: "Manila"
-      }
-    }
-  ];
+    };
+
+    loadInspectors();
+  }, []);
 
   const handleInspectorClick = (inspector: Inspector) => {
     console.log('Inspector clicked:', inspector);
-    // Handle inspector selection - navigate to profile, show details, etc.
   };
 
   const handleSearch = (query: string) => {
     console.log('Map search:', query);
-    // Handle map search - filter inspectors, search locations, etc.
   };
 
   return (
@@ -94,7 +60,7 @@ export function Maps() {
         inspectors={inspectors}
         onInspectorClick={handleInspectorClick}
         onSearch={handleSearch}
-        loading={false}
+        loading={loading}
       />
     </div>
   );

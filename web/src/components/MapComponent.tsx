@@ -10,6 +10,8 @@ export interface Inspector {
   name: string;
   role: string;
   status: 'active' | 'inactive';
+  lastSeen?: string;
+  badgeId?: string;
   location: { lat: number; lng: number; address: string; city: string; };
 }
 
@@ -157,8 +159,35 @@ export function MapComponent({
         zIndex: 9999,
       });
       marker.addListener("click", () => {
+        const statusColor = inspector.status === 'active' ? '#10b981' : '#6b7280';
+        const lastSeenText = inspector.lastSeen 
+          ? `<p style="margin: 4px 0; color: #6b7280; font-size: 12px;">Last Seen: ${new Date(inspector.lastSeen).toLocaleString()}</p>`
+          : '';
+        const badgeText = inspector.badgeId 
+          ? `<p style="margin: 4px 0; color: #059669; font-size: 12px; font-weight: 500;">Badge: ${inspector.badgeId}</p>`
+          : '';
+        
         infoWindowRef.current.setContent(
-          `<div style="padding:12px"><h3>${inspector.name}</h3><p>${inspector.role}</p><p>${inspector.location.city}</p></div>`
+          `<div style="
+            padding: 16px; 
+            font-family: system-ui, -apple-system, sans-serif; 
+            min-width: 200px;
+            border-radius: 8px;
+          ">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+              <div style="
+                width: 8px; 
+                height: 8px; 
+                background-color: ${statusColor}; 
+                border-radius: 50%;
+              "></div>
+              <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: #1f2937;">${inspector.name}</h3>
+            </div>
+            <p style="margin: 4px 0; color: #059669; font-weight: 500; font-size: 14px;">${inspector.role}</p>
+            ${badgeText}
+            <p style="margin: 4px 0; color: #4b5563; font-size: 13px;">Location: ${inspector.location.address}</p>
+            ${lastSeenText}
+          </div>`
         );
         infoWindowRef.current.open(googleMapRef.current, marker);
         setSelectedInspector(inspector);
@@ -240,18 +269,56 @@ export function MapComponent({
       </div>
       {selectedInspector && (
         <div className="absolute bottom-4 left-4 right-4 z-10 max-w-2xl mx-auto">
-          <Card className="shadow-xl border-l-4 bg-white border-l-teal-500 p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <User className="h-8 w-8 text-teal-600" />
+          <Card className="shadow-2xl border-l-4 bg-white border-l-teal-500 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <User className="h-12 w-12 text-teal-600 bg-teal-50 p-2 rounded-full" />
+                  <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${
+                    selectedInspector.status === 'active' ? 'bg-green-500' : 'bg-gray-400'
+                  }`} />
+                </div>
                 <div>
-                  <h3 className="font-semibold">{selectedInspector.name}</h3>
-                  <p className="text-sm text-gray-600">
-                    {selectedInspector.location.address}
-                  </p>
+                  <h3 className="font-bold text-lg text-gray-800">{selectedInspector.name}</h3>
+                  <p className="text-sm text-teal-600 font-medium">{selectedInspector.role}</p>
+                  {selectedInspector.badgeId && (
+                    <p className="text-xs text-gray-500">Badge ID: {selectedInspector.badgeId}</p>
+                  )}
                 </div>
               </div>
-              <Badge>{selectedInspector.status}</Badge>
+              <div className="text-right">
+                <Badge className={`${
+                  selectedInspector.status === 'active' 
+                    ? 'bg-green-100 text-green-800 border-green-300' 
+                    : 'bg-gray-100 text-gray-800 border-gray-300'
+                }`}>
+                  {selectedInspector.status}
+                </Badge>
+                <button 
+                  onClick={() => setSelectedInspector(null)}
+                  className="ml-2 p-1 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <X className="h-4 w-4 text-gray-500" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="border-t pt-4 space-y-2">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-gray-500" />
+                <p className="text-sm text-gray-600">{selectedInspector.location.address}</p>
+              </div>
+              
+              {selectedInspector.lastSeen && (
+                <div className="flex items-center gap-2">
+                  <div className="h-4 w-4 flex items-center justify-center">
+                    <div className="h-2 w-2 bg-gray-400 rounded-full" />
+                  </div>
+                  <p className="text-sm text-gray-500">
+                    Last Seen Online: {new Date(selectedInspector.lastSeen).toLocaleString()}
+                  </p>
+                </div>
+              )}
             </div>
           </Card>
         </div>
