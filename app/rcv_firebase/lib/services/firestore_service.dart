@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:location/location.dart';
 import 'token_service.dart';
 
 class FirestoreService {

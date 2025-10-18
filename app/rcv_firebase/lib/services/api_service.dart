@@ -4,7 +4,6 @@ import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:developer' as developer;
-import '../config/api_config.dart';
 import '../models/product.dart';
 
 class ApiService {
@@ -17,7 +16,7 @@ class ApiService {
   // For Android Emulator use: 'http://10.0.2.2:3000/api/v1'
   // For iOS Simulator use: 'http://localhost:3000/api/v1'
   // For Physical Device use: 'http://YOUR_COMPUTER_IP:3000/api/v1'
-  static const String baseUrl = 'https://c2aa8a8357ae.ngrok-free.app/api/v1';
+  static const String baseUrl = 'https://9508bfe7f063.ngrok-free.app/api/v1';
 
   // Get authorization headers
   Future<Map<String, String>> _getHeaders() async {

@@ -125,7 +125,6 @@ class OcrService {
       // Check file size (max 10MB)
       final int fileSize = await imageFile.length();
       const int maxSize = 10 * 1024 * 1024; // 10MB
-      
       if (fileSize > maxSize) {
         throw Exception('Image too large: ${fileSize ~/ 1024 ~/ 1024}MB. Max size: 10MB');
       }
