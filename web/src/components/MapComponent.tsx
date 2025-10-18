@@ -161,31 +161,21 @@ export function MapComponent({
       marker.addListener("click", () => {
         const statusColor = inspector.status === 'active' ? '#10b981' : '#6b7280';
         const lastSeenText = inspector.lastSeen 
-          ? `<p style="margin: 4px 0; color: #6b7280; font-size: 12px;">Last Seen: ${new Date(inspector.lastSeen).toLocaleString()}</p>`
+          ? `<p class="my-1 text-gray-500 text-xs">Last Seen: ${new Date(inspector.lastSeen).toLocaleString()}</p>`
           : '';
         const badgeText = inspector.badgeId 
-          ? `<p style="margin: 4px 0; color: #059669; font-size: 12px; font-weight: 500;">Badge: ${inspector.badgeId}</p>`
+          ? `<p class="my-1 text-emerald-600 text-xs font-medium">Badge: ${inspector.badgeId}</p>`
           : '';
         
         infoWindowRef.current.setContent(
-          `<div style="
-            padding: 16px; 
-            font-family: system-ui, -apple-system, sans-serif; 
-            min-width: 200px;
-            border-radius: 8px;
-          ">
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-              <div style="
-                width: 8px; 
-                height: 8px; 
-                background-color: ${statusColor}; 
-                border-radius: 50%;
-              "></div>
-              <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: #1f2937;">${inspector.name}</h3>
+          `<div class="p-4 font-sans min-w-[200px] rounded-lg">
+            <div class="flex items-center gap-2 mb-2">
+              <div class="w-2 h-2 rounded-full" style="background-color: ${statusColor};"></div>
+              <h3 class="m-0 text-base font-semibold text-gray-800">${inspector.name}</h3>
             </div>
-            <p style="margin: 4px 0; color: #059669; font-weight: 500; font-size: 14px;">${inspector.role}</p>
+            <p class="my-1 text-emerald-600 font-medium text-sm">${inspector.role}</p>
             ${badgeText}
-            <p style="margin: 4px 0; color: #4b5563; font-size: 13px;">Location: ${inspector.location.address}</p>
+            <p class="my-1 text-gray-600 text-xs">Location: ${inspector.location.address}</p>
             ${lastSeenText}
           </div>`
         );
