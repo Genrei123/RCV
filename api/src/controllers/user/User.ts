@@ -3,6 +3,11 @@ import { UserRepo } from "../../typeorm/data-source";
 import { UserValidation } from "../../typeorm/entities/user.entity";
 import CustomError from "../../utils/CustomError";
 import { z } from "zod";
+import {
+  parsePageParams,
+  buildLinks,
+  buildPaginationMeta,
+} from "../../utils/pagination";
 
 const IdSchema = z.string().uuid();
 
@@ -11,13 +16,12 @@ const Required_Fields: (keyof any)[] = [
   "firstName",
   "lastName",
   "middleName",
-  "fullName", 
+  "fullName",
   "dateOfBirth",
   "phoneNumber",
   "password",
-  "location",
+  "stationedAt",
   "role",
-  "badgeId",
 ];
 
 // ididisplay yung selected values pag nag get all users
@@ -27,18 +31,24 @@ export const getAllUsers = async (
   next: NextFunction
 ) => {
   try {
-    const users = await UserRepo.find({
+    const { page, limit, skip } = parsePageParams(req, 10);
+    const [users, total] = await UserRepo.findAndCount({
       select: [
         "_id",
         "firstName",
         "lastName",
         "email",
-        "role",
-        "createdAt",
-        "updatedAt",
       ],
+      skip,
+      take: limit,
+      order: { createdAt: "DESC" },
     });
-    return res.status(200).json({ success: true, users });
+
+    const meta = buildPaginationMeta(page, limit, total);
+    const links = buildLinks(req, page, limit, meta.total_pages);
+    return res
+      .status(200)
+      .json({ success: true, data: users, pagination: meta, links });
   } catch (error) {
     next(error);
     return CustomError.security(500, "Server Error");
@@ -46,7 +56,9 @@ export const getAllUsers = async (
 };
 
 function hasAllRequiredPutFields(body: Record<string, unknown>): boolean {
-  return Required_Fields.every(f => Object.prototype.hasOwnProperty.call(body, f));
+  return Required_Fields.every((f) =>
+    Object.prototype.hasOwnProperty.call(body, f)
+  );
 }
 
 export const getUserById = async (
@@ -89,13 +101,11 @@ export const createUser = async (
   try {
     const newUser = UserRepo.create(userData.data);
     await UserRepo.save(newUser);
-    return res
-      .status(201)
-      .json({
-        success: true,
-        user: newUser,
-        message: "User created successfully",
-      });
+    return res.status(201).json({
+      success: true,
+      user: newUser,
+      message: "User created successfully",
+    });
   } catch (error) {
     next(error);
     return CustomError.security(500, "Server Error");
@@ -115,7 +125,8 @@ export const updateEntireUser = async (
   if (!hasAllRequiredPutFields(req.body)) {
     return res.status(400).json({
       success: false,
-      message: "Full user payload required for PUT. Missing fields detected. Use PATCH for partial updates."
+      message:
+        "Full user payload required for PUT. Missing fields detected. Use PATCH for partial updates.",
     });
   }
 
@@ -124,7 +135,7 @@ export const updateEntireUser = async (
     return res.status(400).json({
       success: false,
       message: "Invalid user data",
-      errors: parsed.error.flatten ? parsed.error.flatten() : parsed.error
+      errors: parsed.error.flatten ? parsed.error.flatten() : parsed.error,
     });
   }
 
@@ -138,7 +149,13 @@ export const updateEntireUser = async (
 
     UserRepo.merge(user, parsed.data);
     const saved = await UserRepo.save(user);
-    return res.status(200).json({ success: true, user: saved,  message: "User updated successfully" });
+    return res
+      .status(200)
+      .json({
+        success: true,
+        user: saved,
+        message: "User updated successfully",
+      });
   } catch (error) {
     return next(CustomError.security(500, "Server Error"));
   }
@@ -157,14 +174,16 @@ export const partialUpdateUser = async (
   if (!req.body || Object.keys(req.body).length === 0) {
     return res.status(400).json({
       success: false,
-      message: "No fields supplied for partial update"
+      message: "No fields supplied for partial update",
     });
   }
 
   try {
     const user = await UserRepo.findOneBy({ _id: idResult.data });
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
     const partialSchema = (UserValidation as any).partial
@@ -179,7 +198,7 @@ export const partialUpdateUser = async (
           message: "Invalid user data",
           errors: subsetParse.error.flatten
             ? subsetParse.error.flatten()
-            : subsetParse.error
+            : subsetParse.error,
         });
       }
       UserRepo.merge(user, subsetParse.data);
@@ -192,7 +211,7 @@ export const partialUpdateUser = async (
           message: "Invalid user data",
           errors: fullParse.error.flatten
             ? fullParse.error.flatten()
-            : fullParse.error
+            : fullParse.error,
         });
       }
     }
@@ -201,14 +220,18 @@ export const partialUpdateUser = async (
     return res.status(200).json({
       success: true,
       user: saved,
-      message: "User updated successfully (partial)"
+      message: "User updated successfully (partial)",
     });
   } catch (error) {
     return next(CustomError.security(500, "Server Error"));
   }
 };
 
-export const deleteUser = async (req: Request, res: Response, next: NextFunction) => {
+export const deleteUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   const idResult = IdSchema.safeParse(req.params.id);
   if (!idResult.success) {
     return res.status(400).json({ success: false, message: "Invalid User ID" });
@@ -217,11 +240,15 @@ export const deleteUser = async (req: Request, res: Response, next: NextFunction
   try {
     const user = await UserRepo.findOneBy({ _id: idResult.data });
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
     await UserRepo.remove(user);
-    return res.status(200).json({ success: true, message: "User deleted successfully" });
+    return res
+      .status(200)
+      .json({ success: true, message: "User deleted successfully" });
   } catch (err) {
     return next(CustomError.security(500, "Server Error"));
   }
