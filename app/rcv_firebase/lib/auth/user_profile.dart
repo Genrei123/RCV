@@ -12,7 +12,7 @@ import 'dart:io';
 
 class UserProfilePage extends StatefulWidget {
   final String role;
-  const UserProfilePage({Key? key, required this.role}) : super(key: key);
+  const UserProfilePage({super.key, required this.role});
 
   @override
   State<UserProfilePage> createState() => _UserProfilePageState();

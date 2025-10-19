@@ -40,9 +40,9 @@ class ScannedItemDetails extends StatelessWidget {
   final ScannedItem item;
 
   const ScannedItemDetails({
-    Key? key,
+    super.key,
     required this.item,
-  }) : super(key: key);
+  });
 
   Widget _buildDetailRow(String label, String value) {
     return Padding(

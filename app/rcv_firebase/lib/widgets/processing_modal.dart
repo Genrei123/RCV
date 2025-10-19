@@ -11,10 +11,10 @@ class ProcessingModal extends StatelessWidget {
   final bool dismissible;
 
   const ProcessingModal({
-    Key? key,
+    super.key,
     this.message = 'Processing...',
     this.dismissible = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

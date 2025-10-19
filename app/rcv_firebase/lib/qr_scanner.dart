@@ -42,10 +42,10 @@ class CustomNavbar extends StatelessWidget {
   final Function(int) onItemTapped;
 
   const CustomNavbar({
-    Key? key,
+    super.key,
     required this.selectedIndex,
     required this.onItemTapped,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -100,7 +100,7 @@ class CustomNavbar extends StatelessWidget {
 // QR SCANNER PAGE
 // =========================================================================
 class QRScannerPage extends StatefulWidget {
-  const QRScannerPage({Key? key}) : super(key: key);
+  const QRScannerPage({super.key});
 
   @override
   State<QRScannerPage> createState() => _QRScannerPageState();
@@ -522,7 +522,7 @@ void main() {
 }
 
 class QRPageApp extends StatelessWidget {
-  const QRPageApp({Key? key}) : super(key: key);
+  const QRPageApp({super.key});
 
   @override
   Widget build(BuildContext context) {

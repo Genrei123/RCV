@@ -11,7 +11,7 @@ import '../services/firestore_service.dart';
 
 
 class LocationPage extends StatefulWidget {
-  const LocationPage({Key? key}) : super(key: key);
+  const LocationPage({super.key});
 
   @override
   State<LocationPage> createState() => _LocationPageState();
@@ -155,7 +155,7 @@ class _LocationPageState extends State<LocationPage> {
   // Format coordinates for display
   String _formatCoordinate(double? coord, String type) {
     if (coord == null) return 'N/A';
-    return '${type}: ${coord.toStringAsFixed(6)}°';
+    return '$type: ${coord.toStringAsFixed(6)}°';
   }
 
   @override

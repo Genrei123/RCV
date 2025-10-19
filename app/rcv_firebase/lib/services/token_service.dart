@@ -118,9 +118,7 @@ class TokenService {
       'expiry': expiry?.toIso8601String(),
       'isValid': isValid,
       'needsRefresh': needsRefresh,
-      'timeUntilExpiry': expiry != null 
-          ? expiry.difference(DateTime.now()).inMinutes 
-          : null,
+      'timeUntilExpiry': expiry?.difference(DateTime.now()).inMinutes,
     };
   }
 

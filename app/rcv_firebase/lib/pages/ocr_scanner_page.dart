@@ -16,7 +16,7 @@ import 'package:rcv_firebase/themes/app_colors.dart';
 import '../services/ocr_service.dart';
 
 class OcrScannerPage extends StatefulWidget {
-  const OcrScannerPage({Key? key}) : super(key: key);
+  const OcrScannerPage({super.key});
 
   @override
   State<OcrScannerPage> createState() => _OcrScannerPageState();

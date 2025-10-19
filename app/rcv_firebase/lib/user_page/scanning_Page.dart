@@ -28,7 +28,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
   // For dual image OCR
   String? _frontImagePath;
   String? _backImagePath;
-  bool _showOCRHelper = false;
+  final bool _showOCRHelper = false;
 
   @override
   void initState() {

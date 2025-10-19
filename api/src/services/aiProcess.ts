@@ -2,6 +2,10 @@ import OpenAI from 'openai';
 
 interface ProductJSON {
     productName: string;
+    LTONum: string;
+    CFPRNum: string;
+    ManufacturedBy: string;
+    ExpiryDate: string;
 }
 
 const openai = new OpenAI({
@@ -15,15 +19,20 @@ export async function ProcessText(blockofText: string): Promise<ProductJSON> {
         messages: [
             {
                 role: "system",
-                content: `Extract product information from OCR text.
+                content: `
+                You are in the Philippines, and you are 
+                Extract product information from OCR text.
                 Return ONLY valid JSON in this exact format:
                 {
-                    "productName": "extracted product name here"
+                    "productName": "extracted product name here",
+                    "LTONum": "extracted lto number here",
+                    "CFPRNum": "extracted CFPR number here",
+                    "ManufacturedBy": "extracted manufacturer",
+                    "ExpiryDate": "extracted date" 
                 }
-                
                 Complete incomplete letters and fix typos.
                 Handle messy formatting.
-                If you cannot determine the product name, use "Unknown Product".`
+                If you cannot determine some fields, use "Unknown".`
             },
             {
                 role: "user",
@@ -42,7 +51,16 @@ export async function ProcessText(blockofText: string): Promise<ProductJSON> {
     const parsed = JSON.parse(content) as ProductJSON;
 
     // Validate the structure
-    if (!parsed.productName || typeof parsed.productName !== 'string') {
+    if (!parsed.productName || 
+        !parsed.CFPRNum || 
+        !parsed.LTONum || 
+        !parsed.ManufacturedBy || 
+        !parsed.ExpiryDate || 
+        typeof parsed.productName !== 'string' || 
+        typeof parsed.CFPRNum !== 'string' || 
+        typeof parsed.LTONum !== 'string' || 
+        typeof parsed.ManufacturedBy !== 'string' || 
+        typeof parsed.ExpiryDate !== 'string') {
         throw new Error('Invalid response structure: missing or invalid productName');
     }
 

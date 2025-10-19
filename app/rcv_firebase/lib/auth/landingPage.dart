@@ -5,7 +5,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:rcv_firebase/widgets/app_buttons.dart';
 
 class LandingPage extends StatelessWidget {
-  const LandingPage({Key? key}) : super(key: key);
+  const LandingPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +32,7 @@ class LandingPage extends StatelessWidget {
               ),
               Padding(
                 padding: const EdgeInsets.only(top: 24.0),
-                child: Container(
+                child: SizedBox(
                   width: MediaQuery.of(context).size.width * 0.5,
                   height: 48,
                   child: AppButtons(

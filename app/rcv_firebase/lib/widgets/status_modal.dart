@@ -12,13 +12,13 @@ class StatusModal extends StatelessWidget {
   final VoidCallback? onButtonPressed;
 
   const StatusModal({
-    Key? key,
+    super.key,
     required this.type,
     required this.title,
     required this.message,
     this.buttonText = 'Proceed',
     this.onButtonPressed,
-  }) : super(key: key);
+  });
 
   Color _backgroundColor() {
     switch (type) {
