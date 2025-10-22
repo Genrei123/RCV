@@ -51,10 +51,10 @@ export function Dashboard(props: DashboardProps) {
     return `Hello ${firstName} 👋`;
   };
   const columns: Column[] = [
-    {
-      key: "_id",
-      label: "User ID",
-    },
+    // {
+    //   key: "_id",
+    //   label: "User ID",
+    // },
     {
       key: "firstName",
       label: "First Name",

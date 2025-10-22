@@ -10,7 +10,8 @@ import {
   Settings,
   Bell,
   Building2,
-  Sliders
+  Sliders,
+  Activity
 } from 'lucide-react'
 import { LogoutModal } from './LogoutModal'
 import { AuthService } from '@/services/authService'
@@ -77,6 +78,7 @@ export function Sidebar() {
     { path: '/companies', label: 'Companies', icon: Building2 },
     { path: '/maps', label: 'Maps', icon: MapPin },
     { path: '/remote-config', label: 'Remote Config', icon: Sliders },
+    { path: '/kiosk-monitor', label: 'Kiosk Monitor', icon: Activity },
     // { path: '/users', label: 'Users', icon: Users },
   ]
 

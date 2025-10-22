@@ -28,7 +28,6 @@ class _QRScannerPageState extends State<QRScannerPage> {
   // For dual image OCR
   String? _frontImagePath;
   String? _backImagePath;
-  final bool _showOCRHelper = false;
 
   @override
   void initState() {
@@ -363,6 +362,307 @@ class _QRScannerPageState extends State<QRScannerPage> {
     );
   }
 
+  void _showExtractedInfoModal(
+    Map<String, dynamic> extractedInfo,
+    String ocrText,
+  ) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.75,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF00A47D), Color(0xFF005440)],
+                    ),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.info_outline,
+                        color: Colors.white,
+                        size: 28,
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'Extracted Information',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                ),
+                // Content
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Please review the extracted information:',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.black54,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Product Name
+                        _buildExtractedField(
+                          'Product Name',
+                          extractedInfo['productName'] ?? 'Not found',
+                          Icons.inventory_2,
+                          Colors.blue,
+                        ),
+                        const SizedBox(height: 12),
+
+                        // LTO Number
+                        _buildExtractedField(
+                          'LTO Number',
+                          extractedInfo['LTONumber'] ?? 'Not found',
+                          Icons.badge,
+                          Colors.orange,
+                        ),
+                        const SizedBox(height: 12),
+
+                        // CFPR Number
+                        _buildExtractedField(
+                          'CFPR Number',
+                          extractedInfo['CFPRNumber'] ?? 'Not found',
+                          Icons.assignment,
+                          Colors.teal,
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Expiration Date
+                        _buildExtractedField(
+                          'Expiration Date',
+                          extractedInfo['expirationDate'] ?? 'Not found',
+                          Icons.event_busy,
+                          Colors.red,
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Manufacturer
+                        _buildExtractedField(
+                          'Manufacturer',
+                          extractedInfo['manufacturer'] ?? 'Not found',
+                          Icons.factory,
+                          Colors.purple,
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // Action Buttons
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                  _showOCRModal(ocrText);
+                                },
+                                icon: const Icon(Icons.text_snippet, size: 18),
+                                label: const Text('View OCR Text'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: const Color(0xFF005440),
+                                  side: const BorderSide(
+                                    color: Color(0xFF005440),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () => _searchProductInDatabase(
+                                  extractedInfo,
+                                  ocrText,
+                                ),
+                                icon: const Icon(Icons.search, size: 18),
+                                label: const Text('Search Product'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF005440),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  elevation: 2,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildExtractedField(
+    String label,
+    String value,
+    IconData icon,
+    MaterialColor color,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[300]!),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: color[50],
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color[700], size: 20),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _searchProductInDatabase(
+    Map<String, dynamic> extractedInfo,
+    String ocrText,
+  ) async {
+    try {
+      // Close the extracted info modal
+      Navigator.of(context).pop();
+
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      final apiService = ApiService();
+      final searchResponse = await apiService.searchProduct(
+        productName: extractedInfo['productName'],
+        ltoNumber: extractedInfo['LTONumber'],
+        cfprNumber: extractedInfo['CFPRNumber'],
+        expirationDate: extractedInfo['expirationDate'],
+      );
+
+      // Close loading dialog
+      if (mounted) Navigator.pop(context);
+
+      if (searchResponse.success && searchResponse.products.isNotEmpty) {
+        // Product found - show result modal
+        _showProductResultModal(searchResponse.products, ocrText);
+      } else {
+        // Product not found
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No matching product found in database'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      // Close loading dialog if open
+      if (mounted) Navigator.pop(context);
+
+      print('Error searching product: $e');
+
+      // Show error message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error searching product: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
+  }
+
   void _showOCRModal(String ocrText) {
     showDialog(
       context: context,
@@ -522,7 +822,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
       context: context,
       builder: (BuildContext context) {
         final product = products.first; // Display first product
-        
+
         return Dialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
@@ -590,7 +890,11 @@ class _QRScannerPageState extends State<QRScannerPage> {
                             ),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                            icon: const Icon(
+                              Icons.close,
+                              color: Colors.white,
+                              size: 28,
+                            ),
                             onPressed: () => Navigator.of(context).pop(),
                           ),
                         ],
@@ -598,7 +902,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
                     ],
                   ),
                 ),
-                
+
                 // Content
                 Flexible(
                   child: SingleChildScrollView(
@@ -617,14 +921,21 @@ class _QRScannerPageState extends State<QRScannerPage> {
                               colors: [Colors.green[50]!, Colors.green[100]!],
                             ),
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: Colors.green[300]!, width: 2),
+                            border: Border.all(
+                              color: Colors.green[300]!,
+                              width: 2,
+                            ),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
                                 children: [
-                                  Icon(Icons.inventory_2, color: Colors.green[700], size: 24),
+                                  Icon(
+                                    Icons.inventory_2,
+                                    color: Colors.green[700],
+                                    size: 24,
+                                  ),
                                   const SizedBox(width: 8),
                                   Text(
                                     'Product Name',
@@ -650,9 +961,9 @@ class _QRScannerPageState extends State<QRScannerPage> {
                             ],
                           ),
                         ),
-                        
+
                         const SizedBox(height: 24),
-                        
+
                         // Product Details Section
                         Text(
                           'Product Details',
@@ -663,7 +974,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        
+
                         // Details Grid
                         _buildDetailCard(
                           icon: Icons.business,
@@ -672,7 +983,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
                           color: Colors.blue,
                         ),
                         const SizedBox(height: 12),
-                        
+
                         _buildDetailCard(
                           icon: Icons.factory,
                           label: 'Company',
@@ -680,7 +991,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
                           color: Colors.purple,
                         ),
                         const SizedBox(height: 12),
-                        
+
                         _buildDetailCard(
                           icon: Icons.badge,
                           label: 'LTO Number',
@@ -688,7 +999,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
                           color: Colors.orange,
                         ),
                         const SizedBox(height: 12),
-                        
+
                         _buildDetailCard(
                           icon: Icons.assignment,
                           label: 'CFPR Number',
@@ -696,16 +1007,16 @@ class _QRScannerPageState extends State<QRScannerPage> {
                           color: Colors.teal,
                         ),
                         const SizedBox(height: 12),
-                        
+
                         _buildDetailCard(
                           icon: Icons.qr_code,
                           label: 'Lot Number',
                           value: product.lotNumber,
                           color: Colors.indigo,
                         ),
-                        
+
                         const SizedBox(height: 24),
-                        
+
                         // Dates Section
                         Text(
                           'Important Dates',
@@ -716,7 +1027,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        
+
                         Row(
                           children: [
                             Expanded(
@@ -738,17 +1049,23 @@ class _QRScannerPageState extends State<QRScannerPage> {
                             ),
                           ],
                         ),
-                        
+
                         const SizedBox(height: 24),
-                        
+
                         // OCR Text Section (Collapsible)
                         Theme(
-                          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                          data: Theme.of(
+                            context,
+                          ).copyWith(dividerColor: Colors.transparent),
                           child: ExpansionTile(
                             tilePadding: EdgeInsets.zero,
                             title: Row(
                               children: [
-                                Icon(Icons.text_snippet, color: Colors.grey[700], size: 20),
+                                Icon(
+                                  Icons.text_snippet,
+                                  color: Colors.grey[700],
+                                  size: 20,
+                                ),
                                 const SizedBox(width: 8),
                                 Text(
                                   'Scanned Text (OCR)',
@@ -782,16 +1099,17 @@ class _QRScannerPageState extends State<QRScannerPage> {
                             ],
                           ),
                         ),
-                        
+
                         const SizedBox(height: 24),
-                        
+
                         // Action Buttons
                         Row(
                           children: [
                             Expanded(
                               child: OutlinedButton.icon(
                                 onPressed: () {
-                                  final productInfo = '''
+                                  final productInfo =
+                                      '''
 Product: ${product.productName}
 Brand: ${product.brandName}
 LTO: ${product.ltoNumber}
@@ -800,7 +1118,9 @@ Lot: ${product.lotNumber}
 Expiration: ${_formatDate(product.expirationDate)}
 Registered: ${_formatDate(product.dateOfRegistration)}
 ''';
-                                  Clipboard.setData(ClipboardData(text: productInfo));
+                                  Clipboard.setData(
+                                    ClipboardData(text: productInfo),
+                                  );
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Text('Product details copied'),
@@ -813,8 +1133,12 @@ Registered: ${_formatDate(product.dateOfRegistration)}
                                 label: const Text('Copy Details'),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: const Color(0xFF005440),
-                                  side: const BorderSide(color: Color(0xFF005440)),
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  side: const BorderSide(
+                                    color: Color(0xFF005440),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -830,7 +1154,9 @@ Registered: ${_formatDate(product.dateOfRegistration)}
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF005440),
                                   foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -951,37 +1277,6 @@ Registered: ${_formatDate(product.dateOfRegistration)}
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              '$label:',
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Colors.black54,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.black87,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
   }
@@ -1011,56 +1306,58 @@ Registered: ${_formatDate(product.dateOfRegistration)}
     }
   }
 
-  Future<void> _performDualOCR(String frontImagePath, String backImagePath) async {
+  Future<void> _performDualOCR(
+    String frontImagePath,
+    String backImagePath,
+  ) async {
     try {
       // Show loading indicator
       if (!mounted) return;
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(),
-        ),
+        builder: (context) => const Center(child: CircularProgressIndicator()),
       );
 
       // Process front image
       final frontInputImage = InputImage.fromFilePath(frontImagePath);
-      final RecognizedText frontRecognizedText = await _textRecognizer.processImage(
-        frontInputImage,
-      );
+      final RecognizedText frontRecognizedText = await _textRecognizer
+          .processImage(frontInputImage);
       String frontText = frontRecognizedText.text;
 
       // Process back image
       final backInputImage = InputImage.fromFilePath(backImagePath);
-      final RecognizedText backRecognizedText = await _textRecognizer.processImage(
-        backInputImage,
-      );
+      final RecognizedText backRecognizedText = await _textRecognizer
+          .processImage(backInputImage);
       String backText = backRecognizedText.text;
 
       // Combine both texts with clear labels
-      String combinedText = '--- FRONT OF LABEL ---\n\n$frontText\n\n--- BACK OF LABEL ---\n\n$backText';
-      
+      String combinedText =
+          '--- FRONT OF LABEL ---\n\n$frontText\n\n--- BACK OF LABEL ---\n\n$backText';
+
       print('Combined OCR Text:\n$combinedText');
 
-      // Send to backend API for product recognition
+      // Send to backend API for OCR processing (NOT database search yet)
       final apiService = ApiService();
       final response = await apiService.scanProduct(combinedText);
 
       // Close loading dialog
       if (mounted) Navigator.pop(context);
 
-      if (response.success && response.products.isNotEmpty) {
-        // Product found - show result modal
-        _showProductResultModal(response.products, combinedText);
+      // Check if extraction was successful
+      if (response['success'] == true && response['extractedInfo'] != null) {
+        final extractedInfo = response['extractedInfo'];
+        // Show extracted information to user with "Search Product" button
+        _showExtractedInfoModal(extractedInfo, combinedText);
       } else {
-        // Product not found - show OCR text only
+        // Extraction failed - show OCR text only
         _showOCRModal(combinedText);
       }
 
       setState(() {
         result = combinedText;
       });
-      
+
       // Reset image paths for next scan
       setState(() {
         _frontImagePath = null;
@@ -1069,9 +1366,9 @@ Registered: ${_formatDate(product.dateOfRegistration)}
     } catch (e) {
       // Close loading dialog if open
       if (mounted) Navigator.pop(context);
-      
+
       print('Error in dual OCR: $e');
-      
+
       // Show error message
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1085,19 +1382,6 @@ Registered: ${_formatDate(product.dateOfRegistration)}
     }
   }
 
-  Future<void> _performOCR(String imagePath) async {
-    final inputImage = InputImage.fromFilePath(imagePath);
-    final RecognizedText recognizedText = await _textRecognizer.processImage(
-      inputImage,
-    );
-    String extractedText = recognizedText.text;
-    setState(() {
-      result = extractedText;
-    });
-    // Show OCR result in modal
-    _showOCRModal(extractedText);
-  }
-
   @override
   void dispose() {
     cameraController.dispose();
@@ -1107,7 +1391,7 @@ Registered: ${_formatDate(product.dateOfRegistration)}
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold( 
+    return Scaffold(
       appBar: GradientHeaderAppBar(
         showBackButton: false,
         showBranding: true, // Show simplified branding

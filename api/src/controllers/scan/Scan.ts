@@ -91,66 +91,117 @@ export const scanProduct = async (
     console.log("Received OCR text length:", OCRText.blockOfText.length);
     console.log("Processing OCR text with AI...");
 
-    // Process the OCR text with AI to extract product name
+    // Process the OCR text with AI to extract product information
     const processedOCRText = await ProcessText(OCRText.blockOfText);
 
-    console.log("Extracted product name:", processedOCRText.productName);
+    console.log("Extracted product information:", processedOCRText);
 
-    // Search for product in database (paginated)
+    // Return the extracted information WITHOUT querying the database
+    // User will decide whether to search the database or not
+    res.status(200).json({
+      success: true,
+      message: "OCR text processed successfully",
+      extractedInfo: {
+        productName: processedOCRText.productName || "Unknown",
+        LTONumber: processedOCRText.LTONum || null,
+        CFPRNumber: processedOCRText.CFPRNum || null,
+        expirationDate: processedOCRText.ExpiryDate || null,
+        manufacturer: processedOCRText.ManufacturedBy || null,
+      },
+      rawOCRText: OCRText.blockOfText,
+    });
+  } catch (error) {
+    console.error("Error in scanProduct:", error);
+    next(error);
+  }
+};
+
+// New endpoint to search for product in database
+export const searchScannedProduct = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { productName, LTONumber, CFPRNumber } = req.body;
+
+    // Validate input - at least one search criteria is required
+    if (!productName && !LTONumber && !CFPRNumber) {
+      return next(
+        new CustomError(400, "At least one search criteria is required", {
+          data: "Provide productName, LTONumber, or CFPRNumber",
+        })
+      );
+    }
+
+    console.log("Searching for product with criteria:", { productName, LTONumber, CFPRNumber });
+
     const { page, limit, skip } = parsePageParams(req, 10);
+    
+    // Build search criteria
+    const searchCriteria: any = {};
+    if (productName) {
+      searchCriteria.productName = ILike(`%${productName}%`);
+    }
+    if (LTONumber) {
+      searchCriteria.LTONumber = LTONumber;
+    }
+    if (CFPRNumber) {
+      searchCriteria.CFPRNumber = CFPRNumber;
+    }
+
     const [products, total] = await ProductRepo.findAndCount({
-      where: { productName: ILike(processedOCRText.productName) },
+      where: searchCriteria,
       skip,
       take: limit,
       order: { dateOfRegistration: "DESC" },
+      relations: ["company", "registeredBy"],
     });
 
     if (!products || products.length === 0) {
-      // console.log('Product not found in database. Creating sample product...');
+      console.log("Product not found in database. Creating sample product...");
 
-      // // First, get or create a sample company
-      // let sampleCompany = await CompanyRepo.findOne({
-      //     where: { name: 'Sample Test Company' }
-      // });
+      // First, get or create a sample company
+      let sampleCompany = await CompanyRepo.findOne({
+        where: { name: "Sample Test Company" },
+      });
 
-      // if (!sampleCompany) {
-      //     console.log('Creating sample company...');
-      //     sampleCompany = new Company();
-      //     sampleCompany.name = 'Sample Test Company';
-      //     sampleCompany.address = '123 Sample Street, Test City, Philippines';
-      //     sampleCompany.licenseNumber = 'LIC-' + Math.floor(Math.random() * 1000000);
-      //     sampleCompany = await CompanyRepo.save(sampleCompany);
-      //     console.log('Sample company created with ID:', sampleCompany._id);
-      // }
+      if (!sampleCompany) {
+        console.log("Creating sample company...");
+        sampleCompany = new Company();
+        sampleCompany.name = "Sample Test Company";
+        sampleCompany.address = "123 Sample Street, Test City, Philippines";
+        sampleCompany.licenseNumber =
+          "LIC-" + Math.floor(Math.random() * 1000000);
+        sampleCompany = await CompanyRepo.save(sampleCompany);
+        console.log("Sample company created with ID:", sampleCompany._id);
+      }
 
-      // // Create sample product with the extracted name
-      // const newProduct = new Product();
-      // newProduct.productName = processedOCRText.productName;
-      // newProduct.brandName = 'Sample Brand';
-      // newProduct.LTONumber = 'LTO-2024-' + Math.floor(Math.random() * 100000);
-      // newProduct.CFPRNumber = 'CFPR-2024-' + Math.floor(Math.random() * 100000);
-      // newProduct.lotNumber = 'LOT-' + Math.floor(Math.random() * 1000000);
-      // newProduct.productClassification = 0; // Default classification
-      // newProduct.productSubClassification = 0; // Default sub-classification
-      // newProduct.dateOfRegistration = new Date();
-      // newProduct.expirationDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 year from now
-      // newProduct.registeredById = '56c69f46-e5ae-410e-b935-f714fbc6556c';
-      // newProduct.registeredAt = new Date();
-      // newProduct.companyId = sampleCompany._id; // Use the valid company ID
+      // Create sample product with the extracted data
+      const newProduct = new Product();
+      newProduct.productName = productName || "Unknown Product";
+      newProduct.brandName = req.body.brandName || "Sample Brand";
+      newProduct.LTONumber = LTONumber || "LTO-2024-" + Math.floor(Math.random() * 100000);
+      newProduct.CFPRNumber = CFPRNumber || "CFPR-2024-" + Math.floor(Math.random() * 100000);
+      newProduct.lotNumber = req.body.lotNumber || "LOT-" + Math.floor(Math.random() * 1000000);
+      newProduct.productClassification = 0;
+      newProduct.productSubClassification = 0;
+      newProduct.dateOfRegistration = new Date();
+      newProduct.expirationDate = req.body.expirationDate 
+        ? new Date(req.body.expirationDate)
+        : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+      newProduct.registeredById = "56c69f46-e5ae-410e-b935-f714fbc6556c";
+      newProduct.registeredAt = new Date();
+      newProduct.companyId = sampleCompany._id;
 
-      // // Save the new product
-      // const savedProduct = await ProductRepo.save(newProduct);
-      // console.log('Sample product created with ID:', savedProduct._id);
+      // Save the new product
+      const savedProduct = await ProductRepo.save(newProduct);
+      console.log("Sample product created with ID:", savedProduct._id);
 
-      // return res.status(200).json({
-      //     success: true,
-      //     message: 'Product not found - created sample product for testing',
-      //     extractedName: processedOCRText.productName,
-      //     Product: [savedProduct]
-      // });
-      return res.status(400).json({
-        success: false,
-        message: "Product not found",
+      return res.status(200).json({
+        success: true,
+        message: "Product not found - created sample product for testing",
+        Product: [savedProduct],
       });
     }
 
@@ -162,13 +213,13 @@ export const scanProduct = async (
     res.status(200).json({
       success: true,
       message: "Product found successfully",
-      extractedName: processedOCRText.productName,
       data: products,
       pagination: meta,
       links,
+      Product: products, // Keep this for compatibility with Flutter app
     });
   } catch (error) {
-    console.error("Error in scanProduct:", error);
+    console.error("Error in searchScannedProduct:", error);
     next(error);
   }
 };

@@ -16,7 +16,7 @@ class ApiService {
   // For Android Emulator use: 'http://10.0.2.2:3000/api/v1'
   // For iOS Simulator use: 'http://localhost:3000/api/v1'
   // For Physical Device use: 'http://YOUR_COMPUTER_IP:3000/api/v1'
-  static const String baseUrl = 'https://9508bfe7f063.ngrok-free.app/api/v1';
+  static const String baseUrl = 'https://13727598fac3.ngrok-free.app/api/v1';
 
   // Get authorization headers
   Future<Map<String, String>> _getHeaders() async {
@@ -38,10 +38,10 @@ class ApiService {
   /// Scan product using OCR text
   /// 
   /// Sends the extracted OCR text to backend for processing
-  /// Returns list of matching products
-  Future<ScanProductResponse> scanProduct(String ocrText) async {
+  /// Returns extracted product information WITHOUT querying database
+  Future<Map<String, dynamic>> scanProduct(String ocrText) async {
     try {
-      developer.log('Sending OCR text to backend...');
+      developer.log('Sending OCR text to backend for processing...');
       developer.log('OCR Text length: ${ocrText.length} characters');
       
       final response = await http
@@ -58,13 +58,90 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final jsonData = jsonDecode(response.body);
-        developer.log('Product scan successful: ${jsonData.toString()}');
-        return ScanProductResponse.fromJson(jsonData);
+        developer.log('OCR processing successful: ${jsonData.toString()}');
+        return jsonData;
       } else {
-        developer.log('Product scan failed: ${response.body}');
+        developer.log('OCR processing failed: ${response.body}');
         throw ApiException(
           statusCode: response.statusCode,
-          message: 'Failed to scan product: ${response.body}',
+          message: 'Failed to process OCR text: ${response.body}',
+        );
+      }
+    } on SocketException catch (e) {
+      developer.log('Network error: $e');
+      throw ApiException(
+        statusCode: 0,
+        message: 'No internet connection. Please check your network.',
+        details: e.toString(),
+      );
+    } on TimeoutException catch (e) {
+      developer.log('Timeout error: $e');
+      throw ApiException(
+        statusCode: 0,
+        message: 'Request timeout. Please try again.',
+        details: e.toString(),
+      );
+    } on http.ClientException catch (e) {
+      developer.log('Client error: $e');
+      throw ApiException(
+        statusCode: 0,
+        message: 'Cannot connect to server. Make sure backend is running on $baseUrl',
+        details: e.toString(),
+      );
+    } catch (e) {
+      developer.log('Unexpected error: $e');
+      throw ApiException(
+        statusCode: 0,
+        message: 'An unexpected error occurred',
+        details: e.toString(),
+      );
+    }
+  }
+
+  /// Search for product in database
+  /// 
+  /// User can search by productName, LTONumber, or CFPRNumber
+  /// This is called AFTER the user reviews the extracted information
+  Future<ScanProductResponse> searchProduct({
+    String? productName,
+    String? ltoNumber,
+    String? cfprNumber,
+    String? brandName,
+    String? lotNumber,
+    String? expirationDate,
+  }) async {
+    try {
+      developer.log('Searching for product in database...');
+      
+      final body = <String, dynamic>{};
+      if (productName != null) body['productName'] = productName;
+      if (ltoNumber != null) body['LTONumber'] = ltoNumber;
+      if (cfprNumber != null) body['CFPRNumber'] = cfprNumber;
+      if (brandName != null) body['brandName'] = brandName;
+      if (lotNumber != null) body['lotNumber'] = lotNumber;
+      if (expirationDate != null) body['expirationDate'] = expirationDate;
+      
+      developer.log('Search criteria: $body');
+      
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/scan/searchProduct'),
+            headers: await _getHeaders(),
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 30));
+
+      developer.log('Search product response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        developer.log('Product search successful: ${jsonData.toString()}');
+        return ScanProductResponse.fromJson(jsonData);
+      } else {
+        developer.log('Product search failed: ${response.body}');
+        throw ApiException(
+          statusCode: response.statusCode,
+          message: 'Failed to search product: ${response.body}',
         );
       }
     } on SocketException catch (e) {

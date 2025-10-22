@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input'
 import { ProductService } from '@/services/productService'
 import type { CreateProductRequest } from '@/services/productService'
 import { toast } from 'react-toastify'
-import { AuthService } from '@/services/authService'
 
 interface AddProductModalProps {
   isOpen: boolean
@@ -86,27 +85,27 @@ export function AddProductModal({ isOpen, onClose, onSuccess, companies }: AddPr
     setLoading(true)
 
     try {
-      // Get current user ID
-      const currentUser = await AuthService.getCurrentUser()
-      if (!currentUser) {
-        toast.error('Unable to get user information')
-        return
-      }
-
+      // The JWT token is automatically included in the request via axios interceptor
+      // The backend will extract the user from the JWT token
       const productData: CreateProductRequest = {
-        ...formData,
+        LTONumber: formData.LTONumber,
+        CFPRNumber: formData.CFPRNumber,
+        lotNumber: formData.lotNumber,
+        brandName: formData.brandName,
+        productName: formData.productName,
         productClassification: Number(formData.productClassification),
         productSubClassification: Number(formData.productSubClassification),
         expirationDate: new Date(formData.expirationDate),
         dateOfRegistration: new Date(formData.dateOfRegistration),
-        registeredById: currentUser._id as any,
-        registeredAt: new Date(),
-        companyId: formData.companyId as any
+        companyId: formData.companyId
       }
 
-      await ProductService.addProduct(productData)
+      const response = await ProductService.addProduct(productData)
       
-      toast.success('Product created successfully!')
+      // Show success message with who registered it
+      toast.success(`Product created successfully by ${response.registeredBy.name}!`)
+      
+      console.log('Product registered by:', response.registeredBy)
       
       // Reset form
       setFormData({
@@ -126,7 +125,7 @@ export function AddProductModal({ isOpen, onClose, onSuccess, companies }: AddPr
       onClose()
     } catch (error: any) {
       console.error('Error creating product:', error)
-      const errorMessage = error.response?.data?.message || 'Failed to create product. Please try again.'
+      const errorMessage = error.message || error.response?.data?.message || 'Failed to create product. Please try again.'
       toast.error(errorMessage)
     } finally {
       setLoading(false)

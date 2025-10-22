@@ -20,12 +20,13 @@ export const getAllProducts = async (
       skip,
       take: limit,
       order: { dateOfRegistration: "DESC" },
-      relations: ["companyId"],
+      relations: ["company", "registeredBy"],
     });
     const meta = buildPaginationMeta(page, limit, total);
     const links = buildLinks(req, page, limit, meta.total_pages);
     res.status(200).json({ data: products, pagination: meta, links });
   } catch (error) {
+    console.error('Error fetching products:', error);
     return next(new CustomError(500, "Failed to retrieve products"));
   }
 };
@@ -54,27 +55,83 @@ export const createProduct = async (
   res: Response,
   next: NextFunction
 ) => {
-  const Product = ProductValidation.safeParse(req.body);
-  if (Product.error) {
-    return next(
-      new CustomError(400, "Invalid Product Data or is missing parameters", {
-        body: req.body,
-      })
-    );
-  }
+  try {
+    // Get authenticated user from request (set by verifyUser middleware)
+    const currentUser = req.user;
+    if (!currentUser) {
+      return next(new CustomError(401, "User not authenticated"));
+    }
 
-  if (await ProductRepo.findOneBy({ CFPRNumber: Product.data.CFPRNumber })) {
-    return next(
-      new CustomError(400, "Product already exists in the database", {
-        Product: ProductRepo.findOneBy({ CFPRNumber: Product.data.CFPRNumber }),
-      })
-    );
+    console.log('Creating product, authenticated user:', currentUser._id);
+
+    // Prepare product data with registeredById from JWT
+    const productData = {
+      ...req.body,
+      registeredById: currentUser._id,
+      registeredAt: new Date(),
+    };
+
+    // Validate product data
+    const validatedProduct = ProductValidation.safeParse(productData);
+    if (!validatedProduct.success) {
+      console.error('Validation errors:', validatedProduct.error);
+      return next(
+        new CustomError(400, "Invalid Product Data or missing parameters", {
+          errors: validatedProduct.error.issues,
+          body: req.body,
+        })
+      );
+    }
+
+    // Check if product already exists
+    const existingProduct = await ProductRepo.findOneBy({ 
+      CFPRNumber: validatedProduct.data.CFPRNumber 
+    });
+    
+    if (existingProduct) {
+      return next(
+        new CustomError(400, "Product with this CFPR Number already exists", {
+          existingProduct: {
+            _id: existingProduct._id,
+            productName: existingProduct.productName,
+            CFPRNumber: existingProduct.CFPRNumber,
+          },
+        })
+      );
+    }
+
+    // Verify company exists
+    const company = await ProductRepo.manager.findOne('Company', {
+      where: { _id: validatedProduct.data.companyId }
+    });
+
+    if (!company) {
+      return next(
+        new CustomError(400, "Company not found", {
+          companyId: validatedProduct.data.companyId,
+        })
+      );
+    }
+
+    // Save product
+    const savedProduct = await ProductRepo.save(validatedProduct.data);
+    
+    console.log('Product created successfully:', savedProduct._id);
+
+    return res.status(201).json({
+      success: true,
+      message: "Product successfully registered",
+      product: savedProduct,
+      registeredBy: {
+        _id: currentUser._id,
+        name: `${currentUser.firstName} ${currentUser.lastName}`,
+        email: currentUser.email,
+      },
+    });
+  } catch (error) {
+    console.error('Error creating product:', error);
+    return next(new CustomError(500, "Failed to create product"));
   }
-  await ProductRepo.save(Product.data);
-  return res.status(200).json({
-    message: "Company successfully registered",
-    Product: Product.data,
-  });
 };
 
 export const updateProduct = async (

@@ -1,4 +1,14 @@
 import { SecurityCode } from "./enums";
+import { User } from "../typeorm/entities/user.entity";
+
+// Extend Express Request to include user
+declare global {
+  namespace Express {
+    interface Request {
+      user?: User;
+    }
+  }
+}
 
 export type TSignupForm = {
   firstName: string;
