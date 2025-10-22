@@ -57,17 +57,27 @@ export class RemoteConfigService {
 
 
 
-  // Note: Future implementation for updates through backend API
-  static async updateParameter(key: string, value: string | boolean | number): Promise<void> {
-    console.log(`Will update ${key} to ${value} through API`);
-    
-    // TODO: Implement API call for updates
-    // await fetch(`${this.baseURL}/api/v1/firebase/updateConfig`, {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ key, value })
-    // });
-    
-    throw new Error('Remote Config updates not yet implemented');
+  // Publish Remote Config changes
+  static async publishConfig(parameters: RemoteConfigParameter[]): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseURL}/api/v1/firebase/publishConfig`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ parameters }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Remote Config published:', data);
+      
+    } catch (error) {
+      console.error('Failed to publish Remote Config:', error);
+      throw error;
+    }
   }
 }
