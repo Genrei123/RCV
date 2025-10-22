@@ -9,7 +9,8 @@ import {
   ChevronDown,
   Settings,
   Bell,
-  Building2
+  Building2,
+  Sliders
 } from 'lucide-react'
 import { LogoutModal } from './LogoutModal'
 import { AuthService } from '@/services/authService'
@@ -75,6 +76,7 @@ export function Sidebar() {
     { path: '/products', label: 'Products', icon: Package },
     { path: '/companies', label: 'Companies', icon: Building2 },
     { path: '/maps', label: 'Maps', icon: MapPin },
+    { path: '/remote-config', label: 'Remote Config', icon: Sliders },
     // { path: '/users', label: 'Users', icon: Users },
   ]
 
