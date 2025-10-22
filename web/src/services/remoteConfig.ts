@@ -1,10 +1,3 @@
-import { remoteConfig } from '../lib/firebase';
-import { 
-  fetchAndActivate, 
-  getValue, 
-  getAll
-} from 'firebase/remote-config';
-
 interface RemoteConfigParameter {
   key: string;
   value: string | boolean | number;
@@ -13,63 +6,30 @@ interface RemoteConfigParameter {
 }
 
 export class RemoteConfigService {
-  private static initialized = false;
-
-  static async initialize(): Promise<void> {
-    if (this.initialized) return;
-
-    try {
-      // Fetch and activate the latest Remote Config values
-      await fetchAndActivate(remoteConfig);
-      this.initialized = true;
-      
-      console.log('Remote Config initialized successfully');
-    } catch (error) {
-      console.error('Failed to initialize Remote Config:', error);
-      throw error;
-    }
-  }
-
-  static async refreshConfig(): Promise<void> {
-    try {
-      await fetchAndActivate(remoteConfig);
-      console.log('Remote Config refreshed successfully');
-    } catch (error) {
-      console.error('Failed to refresh Remote Config:', error);
-      throw error;
-    }
-  }
+  private static baseURL = import.meta.env.VITE_API_BASE_URL?.replace('/api/v1', '') || 'http://localhost:3001';
 
   static async getAllParameters(): Promise<RemoteConfigParameter[]> {
     try {
-      await this.initialize();
-      const allValues = getAll(remoteConfig);
+      const response = await fetch(`${this.baseURL}/api/v1/firebase/getConfig`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        cache: 'no-cache' // Prevent browser caching
+      });
       
-      const parameters: RemoteConfigParameter[] = [];
-      
-      for (const [key, remoteValue] of Object.entries(allValues)) {
-        const value = remoteValue.asString();
-        let parsedValue: string | boolean | number = value;
-        let type: 'string' | 'boolean' | 'number' = 'string';
-        
-        // Try to determine the type and parse the value
-        if (value === 'true' || value === 'false') {
-          parsedValue = value === 'true';
-          type = 'boolean';
-        } else if (!isNaN(Number(value)) && value !== '') {
-          parsedValue = Number(value);
-          type = 'number';
-        }
-        
-        parameters.push({
-          key,
-          value: parsedValue,
-          type,
-          description: this.getParameterDescription(key)
-        });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
       
+      const data = await response.json();
+      
+      // The API returns { parameters: [...] }
+      const parameters = data.parameters || [];
+      
+      // Return parameters as-is from the API
       return parameters;
+      
     } catch (error) {
       console.error('Failed to get all parameters:', error);
       throw error;
@@ -78,46 +38,36 @@ export class RemoteConfigService {
 
   // Convenience methods for getting specific parameter types
   static async getParameterAsString(key: string): Promise<string> {
-    await this.initialize();
-    return getValue(remoteConfig, key).asString();
+    const parameters = await this.getAllParameters();
+    const param = parameters.find(p => p.key === key);
+    return param ? String(param.value) : '';
   }
 
   static async getParameterAsBoolean(key: string): Promise<boolean> {
-    await this.initialize();
-    return getValue(remoteConfig, key).asBoolean();
+    const parameters = await this.getAllParameters();
+    const param = parameters.find(p => p.key === key);
+    return param ? Boolean(param.value) : false;
   }
 
   static async getParameterAsNumber(key: string): Promise<number> {
-    await this.initialize();
-    return getValue(remoteConfig, key).asNumber();
+    const parameters = await this.getAllParameters();
+    const param = parameters.find(p => p.key === key);
+    return param ? Number(param.value) : 0;
   }
 
-  // Helper method for parameter descriptions
-  private static getParameterDescription(key: string): string {
-    const descriptions: { [key: string]: string } = {
-      disable_application: 'Controls whether the mobile app should be disabled',
-      maintenance_message: 'Message shown to users when app is disabled',
-      app_version_requirement: 'Minimum app version required to use the app',
-      feature_flags: 'JSON object containing feature flag settings'
-    };
-    
-    return descriptions[key] || 'Custom parameter';
-  }
 
-  // Note: Updates must be done through Firebase Console or backend API
-  // This is just a placeholder for future backend integration
+
+  // Note: Future implementation for updates through backend API
   static async updateParameter(key: string, value: string | boolean | number): Promise<void> {
-    console.warn('Remote Config updates from web client require backend implementation.');
-    console.log(`Would update ${key} to ${value}`);
+    console.log(`Will update ${key} to ${value} through API`);
     
-    // Here you would call your backend API that uses Firebase Admin SDK
-    // Example:
-    // await fetch('/api/remote-config/update', {
+    // TODO: Implement API call for updates
+    // await fetch(`${this.baseURL}/api/v1/firebase/updateConfig`, {
     //   method: 'POST',
     //   headers: { 'Content-Type': 'application/json' },
     //   body: JSON.stringify({ key, value })
     // });
     
-    throw new Error('Remote Config updates require backend implementation with Admin SDK');
+    throw new Error('Remote Config updates not yet implemented');
   }
 }
