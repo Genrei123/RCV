@@ -23,7 +23,7 @@ import CompanyRouter from './routes/v1/company';
 // Instantiate the express app
 const setUpApp = async () => {
   const app = express();
-  
+
   // Register middlewares on the app
   app.use(cors({ origin: '*' }));
   app.use(cookieParser(COOKIE_SECRET!));
@@ -53,7 +53,28 @@ const setUpApp = async () => {
   // Custom Error handler placed after all other routes
   app.use(customErrorHandler);
 
-  // Connect to Database and on success, return the app instance
+  let currentCommand = { action: "none", led: 0, state: "off" };
+  app.get('/kiosk/command', (req, res) => {
+    res.json(currentCommand);
+    // Reset after sending
+    currentCommand = { action: "none", led: 0, state: "off"};
+  });
+
+  app.post('/kiosk/led-1', (req, res) => {
+    currentCommand = { action: "control", led: 1, state: "on" };
+    res.json({ success: true });
+  });
+
+  app.post('/kiosk/led-2', (req, res) => {
+    currentCommand = { action: "control", led: 2, state: "on" };
+    res.json({ success: true });
+  });
+
+  app.post('/kiosk/led-3', (req, res) => {
+    currentCommand = { action: "control", led: 3, state: "on" };
+    res.json({ success: true });
+  });
+
   await ConnectDatabase();
 
 
