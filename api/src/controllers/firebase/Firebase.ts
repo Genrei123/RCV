@@ -97,3 +97,34 @@ export const getConfig = async (req: Request, res: Response, next: NextFunction)
     return next(new CustomError(500, `Failed to get Remote Config: ${error.message}`));
   }
 };
+
+// Publish Config Changes
+export const publishConfig = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { parameters } = req.body;
+    
+    if (!parameters || !Array.isArray(parameters)) {
+      return next(new CustomError(400, 'Parameters array is required'));
+    }
+    
+    const template = await admin.remoteConfig().getTemplate();
+    
+    parameters.forEach(({ key, value, type }) => {
+      if (!key) return;
+      
+      template.parameters[key] = {
+        defaultValue: { value: String(value) }
+      };
+    });
+    
+    const publishedTemplate = await admin.remoteConfig().publishTemplate(template);
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Remote Config published successfully',
+      version: publishedTemplate.version?.versionNumber,
+    });
+  } catch (error: any) {
+    return next(new CustomError(500, `Failed to publish Remote Config: ${error.message}`));
+  }
+};
