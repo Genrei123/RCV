@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
+import { getRemoteConfig } from 'firebase/remote-config';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -16,5 +17,12 @@ const app = initializeApp(firebaseConfig);
 
 export const db = getFirestore(app);
 export const auth = getAuth(app);
+export const remoteConfig = getRemoteConfig(app);
+
+// yung values depende pamuna (pang dev yung ganitong parameters)
+remoteConfig.settings = {
+  minimumFetchIntervalMillis: 0,
+  fetchTimeoutMillis: 10000,
+};
 
 export default app;

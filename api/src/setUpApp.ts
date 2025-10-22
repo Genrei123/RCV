@@ -19,6 +19,7 @@ import BlockchainRouter from './routes/v1/blockchain';
 import UserRouter from './routes/v1/user';
 import ProductRouter from './routes/v1/product';
 import CompanyRouter from './routes/v1/company';
+import FirebaseRouter from './routes/v1/firebase';
 
 // Instantiate the express app
 const setUpApp = async () => {
@@ -42,6 +43,7 @@ const setUpApp = async () => {
   app.use('/api/v1/user', UserRouter);
   app.use('/api/v1/product', ProductRouter);
   app.use('/api/v1/company', CompanyRouter);
+  app.use('/api/v1/firebase', FirebaseRouter);
 
   // Root Health Check
   app.get('/', (req, res) => {
