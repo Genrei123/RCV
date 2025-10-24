@@ -17,7 +17,7 @@ class _LandingPageState extends State<LandingPage> {
   @override
   void initState() {
     super.initState();
-    RemoteConfigService.addRealtimeListener((bool isDisabled) {
+    RemoteConfigService.addRealtimeListener(() {
       if (mounted) {
         setState(() {
         });
