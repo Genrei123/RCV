@@ -66,6 +66,20 @@ class RemoteConfigService {
     return getBool('disable_application', defaultValue: false);
   }
   
+  // Function inside the page for enability checkings
+
+  //sample format:
+  //    if (RemoteConfigService.isFeatureDisabled('disable_scanning_page')) {
+  //   return const FeatureDisabledScreen(
+  //      featureName: 'QR Code Scanning',
+  //      icon: Icons.qr_code_scanner,
+  //    );
+  //  }
+  
+  static bool isFeatureDisabled(String featureKey) {
+    return getBool(featureKey, defaultValue: false);
+  }
+  
   /// Manually refresh Remote Config values
   static Future<bool> refresh() async {
     try {
