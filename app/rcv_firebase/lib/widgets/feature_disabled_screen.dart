@@ -1,23 +1,29 @@
 import 'package:flutter/material.dart';
+import 'navigation_bar.dart';
+import 'gradient_header_app_bar.dart';
 
 class FeatureDisabledScreen extends StatelessWidget {
   final String featureName;
   final String? message;
   final IconData? icon;
+  final int? selectedNavIndex;
+  final NavBarRole? navBarRole;
 
   const FeatureDisabledScreen({
     super.key,
     required this.featureName,
     this.message,
     this.icon,
+    this.selectedNavIndex,
+    this.navBarRole,
   });
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Feature Unavailable'),
-        backgroundColor: const Color(0xFF005440),
+      appBar: GradientHeaderAppBar(
+        showBackButton: false,
+        showBranding: true,
       ),
       body: Center(
         child: Padding(
@@ -59,25 +65,16 @@ class FeatureDisabledScreen extends StatelessWidget {
                     ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 32),
-              ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                icon: const Icon(Icons.arrow_back),
-                label: const Text('Go Back'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF005440),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 16,
-                  ),
-                ),
-              ),
             ],
           ),
         ),
       ),
+      bottomNavigationBar: (selectedNavIndex != null && navBarRole != null)
+          ? AppBottomNavBar(
+              selectedIndex: selectedNavIndex!,
+              role: navBarRole!,
+            )
+          : null,
     );
   }
 }

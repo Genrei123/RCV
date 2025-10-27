@@ -73,9 +73,11 @@ class RemoteConfigService {
   //   return const FeatureDisabledScreen(
   //      featureName: 'QR Code Scanning',
   //      icon: Icons.qr_code_scanner,
+  //      selectedNavIndex: 2,
+  //      navBarRole: NavBarRole.user,
   //    );
   //  }
-  
+
   static bool isFeatureDisabled(String featureKey) {
     return getBool(featureKey, defaultValue: false);
   }

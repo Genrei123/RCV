@@ -9,6 +9,8 @@ import 'package:flutter/services.dart' show rootBundle;
 import '../widgets/custom_text_field.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import '../services/remote_config_service.dart';
+import '../widgets/feature_disabled_screen.dart';
 
 class UserProfilePage extends StatefulWidget {
   final String role;
@@ -181,6 +183,18 @@ class _UserProfilePageState extends State<UserProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+
+    //Feature disable checker
+    if (RemoteConfigService.isFeatureDisabled('disable_profile_page')) {
+      return FeatureDisabledScreen(
+        featureName: 'Profile',
+        icon: Icons.person,
+        selectedNavIndex: 4,
+        navBarRole: NavBarRole.user,
+      );
+    }
+    
+
     if (userData == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }

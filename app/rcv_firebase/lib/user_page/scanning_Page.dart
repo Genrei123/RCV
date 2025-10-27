@@ -1399,6 +1399,8 @@ Registered: ${_formatDate(product.dateOfRegistration)}
       return const FeatureDisabledScreen(
         featureName: 'QR Code Scanning',
         icon: Icons.qr_code_scanner,
+        selectedNavIndex: 2,
+        navBarRole: NavBarRole.user,
       );
     }
     
