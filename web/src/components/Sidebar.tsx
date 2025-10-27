@@ -77,7 +77,7 @@ export function Sidebar() {
     { path: '/products', label: 'Products', icon: Package },
     { path: '/companies', label: 'Companies', icon: Building2 },
     { path: '/maps', label: 'Maps', icon: MapPin },
-    { path: '/remote-config', label: 'Remote Config', icon: Sliders },
+    { path: '/remote-config', label: 'Mobile Config', icon: Sliders },
     { path: '/kiosk-monitor', label: 'Kiosk Monitor', icon: Activity },
     // { path: '/users', label: 'Users', icon: Users },
   ]
