@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../widgets/gradient_header_app_bar.dart';
 import '../widgets/navigation_bar.dart';
 import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
+import '../services/remote_config_service.dart';
+import '../widgets/feature_disabled_screen.dart';
 
 // Mock scan data model
 class ScanRecord {
@@ -223,6 +225,17 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
 
   @override
   Widget build(BuildContext context) {
+
+    //Feature disable checker
+    if (RemoteConfigService.isFeatureDisabled('disable_audit_page')) {
+      return FeatureDisabledScreen(
+        featureName: 'Audit',
+        icon: Icons.qr_code_scanner,
+        selectedNavIndex: 2,
+        navBarRole: NavBarRole.user,
+      );
+    }
+
     return Scaffold(
       appBar: GradientHeaderAppBar(
         showBackButton: false,

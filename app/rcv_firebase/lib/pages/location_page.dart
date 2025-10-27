@@ -8,6 +8,8 @@ import '../widgets/app_buttons.dart';
 import '../widgets/gradient_header_app_bar.dart';
 import '../widgets/navigation_bar.dart';
 import '../services/firestore_service.dart';
+import '../services/remote_config_service.dart';
+import '../widgets/feature_disabled_screen.dart';
 
 
 class LocationPage extends StatefulWidget {
@@ -160,6 +162,19 @@ class _LocationPageState extends State<LocationPage> {
 
   @override
   Widget build(BuildContext context) {
+
+    
+    //Feature disable checker
+    if (RemoteConfigService.isFeatureDisabled('disable_maps_page')) {
+      return FeatureDisabledScreen(
+        featureName: 'Maps',
+        icon: Icons.navigation,
+        selectedNavIndex: 3,
+        navBarRole: NavBarRole.user,
+      );
+    }
+    
+
     return Scaffold(
       appBar: GradientHeaderAppBar(
         showBackButton: false,

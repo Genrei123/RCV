@@ -7,6 +7,8 @@ import '../services/gps_service.dart';
 import '../services/firestore_service.dart';
 import 'dart:async';
 import 'dart:io';
+import '../services/remote_config_service.dart';
+import '../widgets/feature_disabled_screen.dart';
 
 class UserHomePage extends StatefulWidget {
   const UserHomePage({super.key});
@@ -21,7 +23,18 @@ class _UserHomePageState extends State<UserHomePage> {
   final List<Widget> _pages = [const HomeContent()];
 
   @override
+  
   Widget build(BuildContext context) {
+
+    //Feature disable checker
+    if (RemoteConfigService.isFeatureDisabled('disable_home_page')) {
+      return FeatureDisabledScreen(
+        featureName: 'Home',
+        icon: Icons.home,
+        selectedNavIndex: _selectedIndex,
+        navBarRole: NavBarRole.user,
+      );
+    }
     return Scaffold(
       appBar: GradientHeaderAppBar(
         showBackButton: false,

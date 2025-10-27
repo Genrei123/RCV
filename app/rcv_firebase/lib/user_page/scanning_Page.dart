@@ -8,6 +8,8 @@ import '../widgets/gradient_header_app_bar.dart';
 import '../widgets/navigation_bar.dart';
 import '../services/api_service.dart';
 import '../models/product.dart';
+import '../services/remote_config_service.dart';
+import '../widgets/feature_disabled_screen.dart';
 
 class QRScannerPage extends StatefulWidget {
   const QRScannerPage({super.key});
@@ -1390,7 +1392,18 @@ Registered: ${_formatDate(product.dateOfRegistration)}
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
+    // Check if scanning feature is disabled
+    if (RemoteConfigService.isFeatureDisabled('disable_scanning_page')) {
+      return const FeatureDisabledScreen(
+        featureName: 'QR Code Scanning',
+        icon: Icons.qr_code_scanner,
+        selectedNavIndex: 2,
+        navBarRole: NavBarRole.user,
+      );
+    }
+    
     return Scaffold(
       appBar: GradientHeaderAppBar(
         showBackButton: false,
