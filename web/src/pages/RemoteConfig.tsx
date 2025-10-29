@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { RemoteConfigService } from '../services/remoteConfig';
-import { Settings, Edit3, Save, X, RotateCcw } from 'lucide-react';
+import { Settings, Edit3, Save, X } from 'lucide-react';
 import { toast } from 'react-toastify';
 
 interface RemoteConfigParameter {
