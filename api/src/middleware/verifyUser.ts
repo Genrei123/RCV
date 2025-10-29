@@ -40,8 +40,13 @@ export const verifyUser = async (
     const token = authHeader.split(' ')[1];
 
     // Verify the token
-    const decoded = verifyToken(token) as jwt.JwtPayload;
-    const user = await UserRepo.findOne({ where: { _id: decoded.userId } });
+    const decoded = verifyToken(token);
+    if (!decoded || !decoded.success || !decoded.data) {
+      throw new CustomError(401, 'Invalid token', { success: false });
+    }
+
+    const userId = decoded.data.sub;
+    const user = await UserRepo.findOne({ where: { _id: userId } });
     if (!user) throw new CustomError(404, 'User not found', { success: false });
 
     // Add the user to the request object

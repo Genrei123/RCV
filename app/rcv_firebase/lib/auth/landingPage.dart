@@ -3,12 +3,35 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:rcv_firebase/widgets/app_buttons.dart';
+import 'package:rcv_firebase/services/remote_config_service.dart';
+import 'package:rcv_firebase/widgets/app_disabled_screen.dart';
 
-class LandingPage extends StatelessWidget {
-  const LandingPage({Key? key}) : super(key: key);
+class LandingPage extends StatefulWidget {
+  const LandingPage({super.key});
+
+  @override
+  State<LandingPage> createState() => _LandingPageState();
+}
+
+class _LandingPageState extends State<LandingPage> {
+  @override
+  void initState() {
+    super.initState();
+    RemoteConfigService.addRealtimeListener(() {
+      if (mounted) {
+        setState(() {
+        });
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    // Remote  config checker if disabled
+    if (RemoteConfigService.getDisableApplication()) {
+      return const AppDisabledScreen();
+    }
+    
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -32,7 +55,7 @@ class LandingPage extends StatelessWidget {
               ),
               Padding(
                 padding: const EdgeInsets.only(top: 24.0),
-                child: Container(
+                child: SizedBox(
                   width: MediaQuery.of(context).size.width * 0.5,
                   height: 48,
                   child: AppButtons(

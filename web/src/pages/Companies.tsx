@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
-import { Plus, Building2 } from 'lucide-react';
-import { PageContainer } from '@/components/PageContainer';
-import { Button } from '@/components/ui/button';
-import { DataTable, type Column } from '@/components/DataTable';
-import type { Company } from '@/typeorm/entities/company.entity';
-import { AddCompanyModal } from '@/components/AddCompanyModal';
-import { CompanyService } from '@/services/companyService';
+import { useState, useEffect } from "react";
+import { Plus, Building2 } from "lucide-react";
+import { PageContainer } from "@/components/PageContainer";
+import { Button } from "@/components/ui/button";
+import { DataTable, type Column } from "@/components/DataTable";
+import type { Company } from "@/typeorm/entities/company.entity";
+import { AddCompanyModal } from "@/components/AddCompanyModal";
+import { CompanyService } from "@/services/companyService";
+import { Pagination } from "@/components/Pagination";
 
 export interface CompaniesProps {
   companies?: Company[];
@@ -18,23 +19,38 @@ export function Companies(props: CompaniesProps) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [companies, setCompanies] = useState<Company[]>(props.companies || []);
   const [loading, setLoading] = useState(props.loading || false);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pagination, setPagination] = useState<any | null>(null);
+  const pageSize = 10;
 
   // Fetch companies on mount
   useEffect(() => {
-    if (!props.companies) {
-      fetchCompanies();
-    } else {
+    if (props.companies && props.companies.length > 0) {
       setCompanies(props.companies);
+    } else {
+      // fetch first page if parent didn't provide companies
+      fetchCompaniesPage(1);
     }
   }, [props.companies]);
 
-  const fetchCompanies = async () => {
+  // NOTE: legacy fetchCompanies removed in favor of server-driven fetchCompaniesPage
+
+  // Server-driven: fetch a page
+  const fetchCompaniesPage = async (page: number) => {
     setLoading(true);
     try {
-      const data = await CompanyService.getAllCompanies();
-      setCompanies(data.companies || []);
-    } catch (error) {
-      console.error('Error fetching companies:', error);
+      const resp = await CompanyService.getCompaniesPage(page, pageSize);
+      // debug: log server response for pagination diagnosis
+      // eslint-disable-next-line no-console
+      console.debug("Companies.fetchCompaniesPage response:", resp);
+      // resp may have { data, pagination }
+      // prefer resp.data or resp.companies
+      const items = resp.data || (resp as any).companies || [];
+      setCompanies(items);
+      setPagination(resp.pagination || null);
+      setCurrentPage(Number(resp.pagination?.current_page) || page);
+    } catch (err) {
+      console.error("Error fetching companies page:", err);
     } finally {
       setLoading(false);
     }
@@ -45,14 +61,15 @@ export function Companies(props: CompaniesProps) {
     if (props.onRefresh) {
       props.onRefresh();
     } else {
-      fetchCompanies();
+      // refresh the current page so newly added items appear on the correct page
+      fetchCompaniesPage(currentPage || 1);
     }
   };
 
   const columns: Column[] = [
     {
-      key: 'name',
-      label: 'Company Name',
+      key: "name",
+      label: "Company Name",
       render: (value: string) => (
         <div className="flex items-center gap-2">
           <div className="p-2 bg-teal-100 rounded-lg">
@@ -60,36 +77,36 @@ export function Companies(props: CompaniesProps) {
           </div>
           <span className="font-medium">{value}</span>
         </div>
-      )
+      ),
     },
     {
-      key: 'address',
-      label: 'Address'
+      key: "address",
+      label: "Address",
     },
     {
-      key: 'licenseNumber',
-      label: 'License Number',
+      key: "licenseNumber",
+      label: "License Number",
       render: (value: string) => (
         <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-sm font-mono">
           {value}
         </span>
-      )
+      ),
     },
     {
-      key: 'products',
-      label: 'Products',
+      key: "products",
+      label: "Products",
       render: (value: any[]) => {
         const productCount = value?.length || 0;
         return (
           <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm font-medium">
-            {productCount} {productCount === 1 ? 'Product' : 'Products'}
+            {productCount} {productCount === 1 ? "Product" : "Products"}
           </span>
         );
-      }
+      },
     },
     {
-      key: 'actions',
-      label: 'Actions',
+      key: "actions",
+      label: "Actions",
       render: (_, row: Company) => (
         <div className="flex gap-2">
           <Button
@@ -100,14 +117,22 @@ export function Companies(props: CompaniesProps) {
             View Details
           </Button>
         </div>
-      )
-    }
+      ),
+    },
   ];
 
   const onSearch = (query: string) => {
     // Search functionality can be implemented here
-    console.log('Search query:', query);
+    console.log("Search query:", query);
   };
+
+  const totalItems = pagination?.total_items ?? companies.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const pagedCompanies = companies;
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
 
   return (
     <>
@@ -126,23 +151,50 @@ export function Companies(props: CompaniesProps) {
 
           <div className="flex items-center gap-4">
             <div className="text-sm text-gray-600">
-              <span className="font-medium">{companies.length}</span> {companies.length === 1 ? 'company' : 'companies'} registered
+              <span className="font-medium">
+                {pagination?.total_items ?? companies.length}
+              </span>{" "}
+              {(pagination?.total_items ?? companies.length) === 1
+                ? "company"
+                : "companies"}{" "}
+              registered
             </div>
           </div>
         </div>
 
         {/* Data Table */}
-        <DataTable
-          title=""
-          columns={columns}
-          data={companies}
-          searchPlaceholder="Search companies by name, address, or license number..."
-          onSearch={onSearch}
-          onSort={(sortKey) => console.log('Sort by:', sortKey)}
-          loading={loading}
-          emptyStateTitle="No Companies Found"
-          emptyStateDescription="Try adjusting your search or add a new company to get started."
-        />
+        <>
+          <DataTable
+            title=""
+            columns={columns}
+            data={pagedCompanies}
+            searchPlaceholder="Search companies by name, address, or license number..."
+            onSearch={onSearch}
+            onSort={(sortKey) => console.log("Sort by:", sortKey)}
+            loading={loading}
+            emptyStateTitle="No Companies Found"
+            emptyStateDescription="Try adjusting your search or add a new company to get started."
+          />
+
+          <div className="mt-4 flex items-center justify-between">
+            <div>
+              <span className="text-sm">
+                Page {currentPage} of {totalPages}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                itemsPerPage={pageSize}
+                onPageChange={(p: number) => fetchCompaniesPage(p)}
+                showingPosition="right"
+              />
+            </div>
+          </div>
+        </>
       </PageContainer>
 
       {/* Add Company Modal */}

@@ -27,12 +27,12 @@ export const ProductValidation = z.object({
   productSubClassification: z.nativeEnum(ProductSubClassification),
   expirationDate: z.preprocess(coerceDate, z.date()),
   dateOfRegistration: z.preprocess(coerceDate, z.date()),
-  registeredById: z.string(), // Changed from z.instanceof(User)
+  registeredById: z.string().uuid(),
   registeredAt: z.preprocess(
     v => (v === undefined ? new Date() : coerceDate(v)),
     z.date()
   ).optional(),
-  companyId: z.string(), // Changed from z.instanceof(Company)
+  companyId: z.string().uuid(),
   createdAt: z.preprocess(
     v => (v === undefined ? new Date() : coerceDate(v)),
     z.date()
@@ -80,11 +80,19 @@ export class Product {
   dateOfRegistration!: Date;
 
   @ManyToOne(() => User, user => user._id)
+  @JoinColumn({ name: 'registeredById' })
+  registeredBy!: User;
+
+  @Column()
   registeredById!: string;
 
   @Column()
   registeredAt!: Date;
 
   @ManyToOne(() => Company, company => company._id)
+  @JoinColumn({ name: 'companyId' })
+  company!: Company;
+
+  @Column()
   companyId!: string;
 }

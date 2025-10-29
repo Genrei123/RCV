@@ -1,13 +1,14 @@
-import { useState } from 'react';
-import { Plus, Grid, List } from 'lucide-react';
-import { PageContainer } from '@/components/PageContainer';
-import { Button } from '@/components/ui/button';
-import { DataTable, type Column } from '@/components/DataTable';
-import type { Product } from '@/typeorm/entities/product.entity';
-import { ProductCard } from '@/components/ProductCard';
-import { AddProductModal } from '@/components/AddProductModal';
-import { ProductDetailsModal } from '@/components/ProductDetailsModal';
-import type { Company } from '@/typeorm/entities/company.entity';
+import { useState, useEffect } from "react";
+import { Plus, Grid, List } from "lucide-react";
+import { PageContainer } from "@/components/PageContainer";
+import { Button } from "@/components/ui/button";
+import { DataTable, type Column } from "@/components/DataTable";
+import { Pagination } from "@/components/Pagination";
+import type { Product } from "@/typeorm/entities/product.entity";
+import { ProductCard } from "@/components/ProductCard";
+import { AddProductModal } from "@/components/AddProductModal";
+import { ProductDetailsModal } from "@/components/ProductDetailsModal";
+import type { Company } from "@/typeorm/entities/company.entity";
 
 export interface ProductsProps {
   products?: Product[];
@@ -19,10 +20,15 @@ export interface ProductsProps {
 }
 
 export function Products(props: ProductsProps) {
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [loading, setLoading] = useState<boolean>(props.loading || false);
+  const [products, setProducts] = useState<Product[]>(props.products || []);
+  const [pagination, setPagination] = useState<any | null>(null);
+  const pageSize = 10;
 
   const handleProductClick = (product: Product) => {
     setSelectedProduct(product);
@@ -45,46 +51,68 @@ export function Products(props: ProductsProps) {
     }
   };
 
+  // Server-driven: fetch a page of products
+  const fetchProductsPage = async (page: number) => {
+    setLoading(true);
+    try {
+      const resp = await (
+        await import("@/services/productService")
+      ).ProductService.getProductsPage(page, pageSize);
+      // resp may contain { products, data, pagination }
+      const items = resp.products || resp.data || [];
+      setProducts(items);
+      setPagination(resp.pagination || null);
+      setCurrentPage(Number(resp.pagination?.current_page) || page);
+      // debug
+      // eslint-disable-next-line no-console
+      console.debug("Products.fetchProductsPage response:", resp);
+    } catch (err) {
+      console.error("Error fetching products page:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const columns: Column[] = [
     {
-      key: 'LTONumber',
-      label: 'LTO Number'
+      key: "LTONumber",
+      label: "LTO Number",
     },
     {
-      key: 'CFPRNumber',
-      label: 'CFPR Number'
+      key: "CFPRNumber",
+      label: "CFPR Number",
     },
     {
-      key: 'brandName',
-      label: 'Brand Name'
+      key: "brandName",
+      label: "Brand Name",
     },
     {
-      key: 'productName',
-      label: 'Product Name'
+      key: "productName",
+      label: "Product Name",
     },
     {
-      key: 'lotNumber',
-      label: 'Lot Number'
+      key: "lotNumber",
+      label: "Lot Number",
     },
     {
-      key: 'expirationDate',
-      label: 'Expiration Date',
+      key: "expirationDate",
+      label: "Expiration Date",
       render: (value: Date) => {
-        return new Date(value).toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric'
+        return new Date(value).toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
         });
-      }
+      },
     },
     {
-      key: 'company',
-      label: 'Company',
-      render: (value: any) => value?.name || 'N/A'
+      key: "companyId",
+      label: "Company",
+      render: (value: any) => value?.name || "N/A",
     },
     {
-      key: 'actions',
-      label: 'Actions',
+      key: "actions",
+      label: "Actions",
       render: (_, row: Product) => (
         <div className="flex gap-2">
           <Button
@@ -95,9 +123,27 @@ export function Products(props: ProductsProps) {
             View Details
           </Button>
         </div>
-      )
-    }
+      ),
+    },
   ];
+
+  // Prefer server-provided pagination when available, otherwise fall back to props.products
+  useEffect(() => {
+    if (props.products && props.products.length > 0) {
+      setProducts(props.products);
+    } else {
+      fetchProductsPage(1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.products]);
+
+  const totalItems = pagination?.total_items ?? products.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const pagedProducts = products;
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
 
   return (
     <PageContainer
@@ -115,17 +161,17 @@ export function Products(props: ProductsProps) {
 
         <div className="flex border rounded-lg">
           <Button
-            variant={viewMode === 'grid' ? 'default' : 'ghost'}
+            variant={viewMode === "grid" ? "default" : "ghost"}
             size="sm"
-            onClick={() => setViewMode('grid')}
+            onClick={() => setViewMode("grid")}
             className="rounded-r-none"
           >
             <Grid className="h-4 w-4" />
           </Button>
           <Button
-            variant={viewMode === 'list' ? 'default' : 'ghost'}
+            variant={viewMode === "list" ? "default" : "ghost"}
             size="sm"
-            onClick={() => setViewMode('list')}
+            onClick={() => setViewMode("list")}
             className="rounded-l-none"
           >
             <List className="h-4 w-4" />
@@ -134,29 +180,70 @@ export function Products(props: ProductsProps) {
       </div>
 
       {/* Content */}
-      {viewMode === 'list' ? (
-        <DataTable
-          title=""
-          columns={columns}
-          data={props.products || []}
-          searchPlaceholder="Search products..."
-          onSort={(sortKey) => console.log('Sort by:', sortKey)}
-          loading={props.loading || false}
-          emptyStateTitle="No Products Found"
-          emptyStateDescription="Try adjusting your search or add a new product to get started."
-        />
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {props.products && props.products.length > 0 && (
-            props.products?.map((product) => (
-              <ProductCard
-                key={product._id}
-                product={product}
-                onClick={() => handleProductClick(product)}
-              />
+      {viewMode === "list" ? (
+        <>
+          <DataTable
+            title=""
+            columns={columns}
+            data={pagedProducts}
+            searchPlaceholder="Search products..."
+            onSort={(sortKey) => console.log("Sort by:", sortKey)}
+            loading={loading}
+            emptyStateTitle="No Products Found"
+            emptyStateDescription="Try adjusting your search or add a new product to get started."
+          />
 
-            )))}
-        </div>
+          <div className="mt-4 flex items-center justify-between">
+            <div>
+              <span className="text-sm">
+                Page {currentPage} of {totalPages}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                itemsPerPage={pageSize}
+                onPageChange={(p: number) => fetchProductsPage(p)}
+                showingPosition="right"
+              />
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {pagedProducts &&
+              pagedProducts.length > 0 &&
+              pagedProducts.map((product) => (
+                <ProductCard
+                  key={product._id}
+                  product={product}
+                  onClick={() => handleProductClick(product)}
+                />
+              ))}
+          </div>
+
+          <div className="mt-4 flex items-center justify-between">
+            <div>
+              <span className="text-sm">
+                Page {currentPage} of {totalPages}
+              </span>
+            </div>
+            <div className="flex items-center gap-4">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                itemsPerPage={pageSize}
+                onPageChange={(p: number) => setCurrentPage(p)}
+                showingPosition="right"
+              />
+            </div>
+          </div>
+        </>
       )}
 
       {/* Add Product Modal */}

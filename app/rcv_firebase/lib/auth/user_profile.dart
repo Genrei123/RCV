@@ -7,10 +7,14 @@ import '../widgets/gradient_header_app_bar.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
 import '../widgets/custom_text_field.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+import '../services/remote_config_service.dart';
+import '../widgets/feature_disabled_screen.dart';
 
 class UserProfilePage extends StatefulWidget {
   final String role;
-  const UserProfilePage({Key? key, required this.role}) : super(key: key);
+  const UserProfilePage({super.key, required this.role});
 
   @override
   State<UserProfilePage> createState() => _UserProfilePageState();
@@ -19,6 +23,12 @@ class UserProfilePage extends StatefulWidget {
 class _UserProfilePageState extends State<UserProfilePage> {
   bool isEditing = false;
   String avatarPath = 'assets/avatar.png';
+  String? selectedImagePath; // For uploaded avatar
+  final ImagePicker _picker = ImagePicker();
+
+  // Password visibility toggles
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
   // User data loaded from JSON
   Map<String, dynamic>? userData;
@@ -46,11 +56,11 @@ class _UserProfilePageState extends State<UserProfilePage> {
         : {};
     setState(() {
       userData = data;
-      nameController.text = userData?['name'] ?? '';
+      nameController.text = userData?['fullName'] ?? '';
       emailController.text = userData?['email'] ?? '';
-      phoneController.text = userData?['phone'] ?? '';
-      dobController.text = userData?['dob'] ?? '';
-      avatarPath = userData?['avatarPath'] ?? avatarPath;
+      phoneController.text = userData?['phoneNumber'] ?? '';
+      dobController.text = userData?['dateOfBirth'] ?? '';
+      avatarPath = userData?['avatarUrl'] ?? avatarPath;
     });
   }
 
@@ -72,26 +82,128 @@ class _UserProfilePageState extends State<UserProfilePage> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
-        return SizedBox(
-          height: 320,
-          child: Center(
-            child: Text('Image Crop Modal', style: AppFonts.titleStyle),
+        return Container(
+          height: 200,
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              Text(
+                'Choose Avatar Source',
+                style: AppFonts.titleStyle.copyWith(fontSize: 18),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      final XFile? image = await _picker.pickImage(
+                        source: ImageSource.camera,
+                      );
+                      if (image != null) {
+                        setState(() {
+                          selectedImagePath = image.path;
+                        });
+                      }
+                    },
+                    icon: const Icon(Icons.camera_alt),
+                    label: const Text('Camera'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: app_colors.AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      final XFile? image = await _picker.pickImage(
+                        source: ImageSource.gallery,
+                      );
+                      if (image != null) {
+                        setState(() {
+                          selectedImagePath = image.path;
+                        });
+                      }
+                    },
+                    icon: const Icon(Icons.photo_library),
+                    label: const Text('Gallery'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: app_colors.AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         );
       },
     );
   }
 
+  void _logout() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context); // Close dialog
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                '/login',
+                (route) => false,
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: app_colors.AppColors.error,
+              foregroundColor: app_colors.AppColors.white,
+            ),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+
+    //Feature disable checker
+    if (RemoteConfigService.isFeatureDisabled('disable_profile_page')) {
+      return FeatureDisabledScreen(
+        featureName: 'Profile',
+        icon: Icons.person,
+        selectedNavIndex: 4,
+        navBarRole: NavBarRole.user,
+      );
+    }
+    
+
     if (userData == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     return Scaffold(
       appBar: GradientHeaderAppBar(
         greeting: 'Welcome back',
-        user: (userData!['name'] ?? '').toString().split(' ').first,
-        onBack: () => Navigator.of(context).maybePop(),
+        user: (userData!['fullName'] ?? '').toString().split(' ').first,
+        showBackButton: false, // Remove back button
+        showBranding: true, // Show simplified branding
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -102,38 +214,45 @@ class _UserProfilePageState extends State<UserProfilePage> {
               // Avatar
               GestureDetector(
                 onTap: isEditing ? openImageCropModal : null,
-                child: CircleAvatar(
-                  radius: 48,
-                  backgroundImage: AssetImage(avatarPath),
+                child: Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 48,
+                      backgroundImage: selectedImagePath != null
+                          ? FileImage(File(selectedImagePath!))
+                          : AssetImage(avatarPath) as ImageProvider,
+                    ),
+                    if (isEditing)
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: app_colors.AppColors.primary,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                          child: const Icon(
+                            Icons.camera_alt,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
               if (!isEditing) ...[
                 // Preview Mode
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            userData!['name'] ?? '',
-                            style: AppFonts.titleStyle.copyWith(fontSize: 18),
-                          ),
-                          Text(
-                            userData!['role'] ?? '',
-                            style: AppFonts.labelStyle.copyWith(fontSize: 14),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Text(
-                      userData!['id'] ?? '',
-                      style: AppFonts.labelStyle.copyWith(
-                        fontSize: 14,
-                        color: app_colors.AppColors.darkNeutral,
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 16),
+                Text(
+                  userData!['fullName'] ?? '',
+                  style: AppFonts.titleStyle.copyWith(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),
                 AppButtons(
@@ -154,8 +273,20 @@ class _UserProfilePageState extends State<UserProfilePage> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: app_colors.AppColors.darkNeutral.withOpacity(0.1),
+                    color: app_colors.AppColors.neutral.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: app_colors.AppColors.neutral.withOpacity(0.25),
+                        blurRadius: 8,
+                        spreadRadius: 2,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                    border: Border.all(
+                      color: app_colors.AppColors.primary,
+                      width: 1.5,
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -164,44 +295,48 @@ class _UserProfilePageState extends State<UserProfilePage> {
                         'Location',
                         style: AppFonts.labelStyle.copyWith(
                           fontWeight: FontWeight.bold,
+                          fontSize: 15,
                         ),
                       ),
                       Text(
                         userData!['location'] ?? '',
-                        style: AppFonts.contentStyle,
+                        style: AppFonts.contentStyle.copyWith(fontSize: 16),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         'Date of Birth',
                         style: AppFonts.labelStyle.copyWith(
                           fontWeight: FontWeight.bold,
+                          fontSize: 15,
                         ),
                       ),
                       Text(
-                        userData!['dob'] ?? '',
-                        style: AppFonts.contentStyle,
+                        userData!['dateOfBirth'] ?? '',
+                        style: AppFonts.contentStyle.copyWith(fontSize: 16),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         'Email',
                         style: AppFonts.labelStyle.copyWith(
                           fontWeight: FontWeight.bold,
+                          fontSize: 15,
                         ),
                       ),
                       Text(
                         userData!['email'] ?? '',
-                        style: AppFonts.contentStyle,
+                        style: AppFonts.contentStyle.copyWith(fontSize: 16),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         'Phone Number',
                         style: AppFonts.labelStyle.copyWith(
                           fontWeight: FontWeight.bold,
+                          fontSize: 15,
                         ),
                       ),
                       Text(
-                        userData!['phone'] ?? '',
-                        style: AppFonts.contentStyle,
+                        userData!['phoneNumber'] ?? '',
+                        style: AppFonts.contentStyle.copyWith(fontSize: 16),
                       ),
                     ],
                   ),
@@ -210,11 +345,11 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 AppButtons(
                   text: 'Log Out',
                   size: 44,
-                  textColor: app_colors.AppColors.error,
+                  textColor: Colors.white,
                   backgroundColor: Colors.redAccent,
                   borderColor: Colors.redAccent,
                   icon: const Icon(Icons.logout, color: Colors.white),
-                  onPressed: () {},
+                  onPressed: _logout,
                   textStyle: AppFonts.labelStyle.copyWith(
                     fontSize: 16,
                     color: Colors.white,
@@ -250,28 +385,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            flex: 2,
-                            child: CustomTextField(
-                              controller: nameController,
-                              label: 'Full Name',
-                              hint: 'Enter your name...',
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            flex: 1,
-                            child: CustomTextField(
-                              controller: TextEditingController(
-                                text: userData!['role'] ?? '',
-                              ),
-                              label: 'Role',
-                              readOnly: true,
-                            ),
-                          ),
-                        ],
+                      CustomTextField(
+                        controller: nameController,
+                        label: 'Full Name',
+                        hint: 'Enter your name...',
                       ),
                       const SizedBox(height: 16),
                       CustomTextField(
@@ -300,18 +417,84 @@ class _UserProfilePageState extends State<UserProfilePage> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      CustomTextField(
+                      TextField(
                         controller: passwordController,
-                        label: 'Password',
-                        hint: 'Enter your password',
-                        obscure: true,
+                        obscureText: _obscurePassword,
+                        decoration: InputDecoration(
+                          labelText: 'Password',
+                          hintText: 'Enter your password',
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: app_colors.AppColors.darkNeutral,
+                              width: 1.5,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: app_colors.AppColors.primary, width: 2),
+                          ),
+                          labelStyle: AppFonts.labelStyle.copyWith(
+                            color: app_colors.AppColors.darkNeutral,
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                              color: app_colors.AppColors.darkNeutral,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscurePassword = !_obscurePassword;
+                              });
+                            },
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 16),
-                      CustomTextField(
+                      TextField(
                         controller: confirmPasswordController,
-                        label: 'Confirm Password',
-                        hint: 'Enter your password',
-                        obscure: true,
+                        obscureText: _obscureConfirmPassword,
+                        decoration: InputDecoration(
+                          labelText: 'Confirm Password',
+                          hintText: 'Enter your password',
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: app_colors.AppColors.darkNeutral,
+                              width: 1.5,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: app_colors.AppColors.primary, width: 2),
+                          ),
+                          labelStyle: AppFonts.labelStyle.copyWith(
+                            color: app_colors.AppColors.darkNeutral,
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
+                              color: app_colors.AppColors.darkNeutral,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _obscureConfirmPassword = !_obscureConfirmPassword;
+                              });
+                            },
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -336,7 +519,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                           'Cancel',
                           style: AppFonts.labelStyle.copyWith(
                             color: app_colors.AppColors.error,
-                            fontSize: 16,
+                            fontSize: 12,
                           ),
                         ),
                       ),
@@ -358,7 +541,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                           'Confirm',
                           style: AppFonts.labelStyle.copyWith(
                             color: Colors.white,
-                            fontSize: 16,
+                            fontSize: 12,
                           ),
                         ),
                       ),

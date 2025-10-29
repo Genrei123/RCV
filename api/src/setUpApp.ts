@@ -19,11 +19,12 @@ import BlockchainRouter from './routes/v1/blockchain';
 import UserRouter from './routes/v1/user';
 import ProductRouter from './routes/v1/product';
 import CompanyRouter from './routes/v1/company';
+import FirebaseRouter from './routes/v1/firebase';
 
 // Instantiate the express app
 const setUpApp = async () => {
   const app = express();
-  
+
   // Register middlewares on the app
   app.use(cors({ origin: '*' }));
   app.use(cookieParser(COOKIE_SECRET!));
@@ -42,6 +43,7 @@ const setUpApp = async () => {
   app.use('/api/v1/user', UserRouter);
   app.use('/api/v1/product', ProductRouter);
   app.use('/api/v1/company', CompanyRouter);
+  app.use('/api/v1/firebase', FirebaseRouter);
 
   // Root Health Check
   app.get('/', (req, res) => {
@@ -53,7 +55,68 @@ const setUpApp = async () => {
   // Custom Error handler placed after all other routes
   app.use(customErrorHandler);
 
-  // Connect to Database and on success, return the app instance
+  // Kiosk Health Tracking
+  let kioskHealth = {
+    lastPoll: null as Date | null,
+    pollCount: 0,
+    startTime: new Date(),
+  };
+
+  let currentCommand = { action: "none", led: 0, state: "off" };
+  
+  // Health endpoint - returns current kiosk status
+  app.get('/kiosk/health', (req, res) => {
+    const now = new Date();
+    
+    // Calculate time since last poll in milliseconds
+    const timeSinceLastPoll = kioskHealth.lastPoll 
+      ? now.getTime() - kioskHealth.lastPoll.getTime()
+      : null;
+    
+    // Device is online if it polled within the last 30 seconds (30000ms)
+    const isOnline = timeSinceLastPoll !== null && timeSinceLastPoll < 30000;
+    
+    // Calculate uptime
+    const uptime = Math.floor((now.getTime() - kioskHealth.startTime.getTime()) / 1000);
+
+    res.json({
+      lastPoll: kioskHealth.lastPoll,
+      isOnline,
+      pollCount: kioskHealth.pollCount,
+      uptime,
+      timeSinceLastPoll: timeSinceLastPoll, // in milliseconds, for debugging
+      serverTime: now.toISOString(),
+    });
+  });
+
+  // Command endpoint - ESP32 polls this to get commands
+  app.get('/kiosk/command', (req, res) => {
+    // Update health tracking every time ESP32 polls
+    kioskHealth.lastPoll = new Date();
+    kioskHealth.pollCount++;
+    
+    console.log(`[Kiosk] Poll #${kioskHealth.pollCount} at ${kioskHealth.lastPoll.toISOString()}`);
+    
+    res.json(currentCommand);
+    // Reset command after sending to ESP32
+    currentCommand = { action: "none", led: 0, state: "off"};
+  });
+
+  app.post('/kiosk/led-1', (req, res) => {
+    currentCommand = { action: "control", led: 1, state: "on" };
+    res.json({ success: true });
+  });
+
+  app.post('/kiosk/led-2', (req, res) => {
+    currentCommand = { action: "control", led: 2, state: "on" };
+    res.json({ success: true });
+  });
+
+  app.post('/kiosk/led-3', (req, res) => {
+    currentCommand = { action: "control", led: 3, state: "on" };
+    res.json({ success: true });
+  });
+
   await ConnectDatabase();
 
 

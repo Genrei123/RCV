@@ -95,11 +95,11 @@ class AuditTrailTable extends StatelessWidget {
   final bool showEmpty;
 
   const AuditTrailTable({
-    Key? key,
+    super.key,
     required this.entries,
     required this.onDetailsPressed,
     this.showEmpty = true,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -275,7 +275,7 @@ class AuditTrailTable extends StatelessWidget {
                   ],
                 ),
               );
-            }).toList(),
+            }),
         ],
       ),
     );
@@ -297,7 +297,7 @@ class AuditTrailPagination extends StatelessWidget {
   final VoidCallback? onLastPage;
 
   const AuditTrailPagination({
-    Key? key,
+    super.key,
     required this.currentPage,
     required this.totalPages,
     required this.totalEntries,
@@ -307,7 +307,7 @@ class AuditTrailPagination extends StatelessWidget {
     this.onPreviousPage,
     this.onNextPage,
     this.onLastPage,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -395,12 +395,12 @@ class CompleteAuditWidget extends StatefulWidget {
   final bool showPagination;
 
   const CompleteAuditWidget({
-    Key? key,
+    super.key,
     this.filterByUserId,
     this.showRecentOnly = false,
     this.entriesPerPage = 10,
     this.showPagination = true,
-  }) : super(key: key);
+  });
 
   @override
   State<CompleteAuditWidget> createState() => _CompleteAuditWidgetState();

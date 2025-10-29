@@ -7,10 +7,10 @@ class AdminAccountsTable extends StatelessWidget {
   final Function(Map<String, dynamic>, Offset)? onActionTap;
 
   const AdminAccountsTable({
-    Key? key,
+    super.key,
     required this.users,
     this.onActionTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

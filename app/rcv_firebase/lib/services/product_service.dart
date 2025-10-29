@@ -185,7 +185,7 @@ class ProductService {
 
       return ApiResponse<void>.fromJson(
         response.data,
-        (_) => null,
+        (_) {},
       );
     } catch (e) {
       return ApiResponse<void>(

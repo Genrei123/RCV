@@ -6,6 +6,8 @@ import { Maps } from './pages/Maps';
 import { Profile } from './pages/Profile';
 import { Blockchain } from './pages/Blockchain';
 import { ScanHistory } from './pages/ScanHistory';
+import { RemoteConfig } from './pages/RemoteConfig';
+import { KioskMonitor } from './pages/KioskMonitor';
 import { Sidebar } from './components/Sidebar';
 import { Footer } from './components/Footer';
 import { AuthService } from './services/authService';
@@ -214,6 +216,16 @@ function App() {
               <Route path="/scan-history" element={
                 <ProtectedRoutes>
                   <ScanHistory />
+                </ProtectedRoutes>
+              } />
+              <Route path="/remote-config" element={
+                <ProtectedRoutes>
+                  <RemoteConfig />
+                </ProtectedRoutes>
+              } />
+              <Route path="/kiosk-monitor" element={
+                <ProtectedRoutes>
+                  <KioskMonitor />
                 </ProtectedRoutes>
               } />
             </Routes>

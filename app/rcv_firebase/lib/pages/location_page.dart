@@ -6,9 +6,14 @@ import '../services/gps_service.dart';
 import '../themes/app_colors.dart' as app_colors;
 import '../widgets/app_buttons.dart';
 import '../widgets/gradient_header_app_bar.dart';
+import '../widgets/navigation_bar.dart';
+import '../services/firestore_service.dart';
+import '../services/remote_config_service.dart';
+import '../widgets/feature_disabled_screen.dart';
+
 
 class LocationPage extends StatefulWidget {
-  const LocationPage({Key? key}) : super(key: key);
+  const LocationPage({super.key});
 
   @override
   State<LocationPage> createState() => _LocationPageState();
@@ -17,13 +22,13 @@ class LocationPage extends StatefulWidget {
 class _LocationPageState extends State<LocationPage> {
   final GpsService _gpsService = GpsService();
   GoogleMapController? _mapController;
-  
+
   // Location state
   LocationData? _currentLocation;
   String _locationStatus = 'Location not available';
   bool _isLoading = false;
   bool _isTrackingLocation = false;
-  
+
   @override
   void initState() {
     super.initState();
@@ -35,17 +40,19 @@ class _LocationPageState extends State<LocationPage> {
     setState(() {
       _locationStatus = 'Checking permissions...';
     });
-    
+
     bool serviceEnabled = await _gpsService.isLocationServiceEnabled();
     bool hasPermission = await _gpsService.hasLocationPermission();
-    
+
     if (!serviceEnabled) {
       setState(() {
-        _locationStatus = 'Location service is disabled. Please enable it in settings.';
+        _locationStatus =
+            'Location service is disabled. Please enable it in settings.';
       });
     } else if (!hasPermission) {
       setState(() {
-        _locationStatus = 'Location permission denied. Please grant permission.';
+        _locationStatus =
+            'Location permission denied. Please grant permission.';
       });
     } else {
       setState(() {
@@ -63,16 +70,18 @@ class _LocationPageState extends State<LocationPage> {
 
     try {
       LocationData? location = await _gpsService.getCurrentLocation();
-      
+
       if (location != null) {
         setState(() {
           _currentLocation = location;
           _locationStatus = 'Location updated successfully!';
           _isLoading = false;
         });
-        
+
         // Move map to current location
-        if (_mapController != null && location.latitude != null && location.longitude != null) {
+        if (_mapController != null &&
+            location.latitude != null &&
+            location.longitude != null) {
           _mapController!.animateCamera(
             CameraUpdate.newCameraPosition(
               CameraPosition(
@@ -82,9 +91,15 @@ class _LocationPageState extends State<LocationPage> {
             ),
           );
         }
+        await FirestoreService.saveUserLocation(
+          location.latitude!, 
+          location.longitude!
+        );
+        
       } else {
         setState(() {
-          _locationStatus = 'Failed to get location. Check permissions and GPS.';
+          _locationStatus =
+              'Failed to get location. Check permissions and GPS.';
           _isLoading = false;
         });
       }
@@ -113,15 +128,17 @@ class _LocationPageState extends State<LocationPage> {
     setState(() {
       _locationStatus = 'Tracking location in real-time...';
     });
-    
+
     _gpsService.getLocationStream().listen((LocationData location) {
       setState(() {
         _currentLocation = location;
         _locationStatus = 'Location tracking active';
       });
-      
+
       // Update map camera when we get new location
-      if (_mapController != null && location.latitude != null && location.longitude != null) {
+      if (_mapController != null &&
+          location.latitude != null &&
+          location.longitude != null) {
         _mapController!.animateCamera(
           CameraUpdate.newLatLng(
             LatLng(location.latitude!, location.longitude!),
@@ -140,16 +157,28 @@ class _LocationPageState extends State<LocationPage> {
   // Format coordinates for display
   String _formatCoordinate(double? coord, String type) {
     if (coord == null) return 'N/A';
-    return '${type}: ${coord.toStringAsFixed(6)}°';
+    return '$type: ${coord.toStringAsFixed(6)}°';
   }
 
   @override
   Widget build(BuildContext context) {
+
+    
+    //Feature disable checker
+    if (RemoteConfigService.isFeatureDisabled('disable_maps_page')) {
+      return FeatureDisabledScreen(
+        featureName: 'Maps',
+        icon: Icons.navigation,
+        selectedNavIndex: 3,
+        navBarRole: NavBarRole.user,
+      );
+    }
+    
+
     return Scaffold(
       appBar: GradientHeaderAppBar(
-        greeting: 'My Location',
-        user: 'Location',
-        onBack: () => Navigator.of(context).pop(),
+        showBackButton: false,
+        showBranding: true, // Show simplified branding
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -164,12 +193,12 @@ class _LocationPageState extends State<LocationPage> {
                 child: Column(
                   children: [
                     Icon(
-                      _currentLocation != null 
-                          ? LucideIcons.mapPin 
+                      _currentLocation != null
+                          ? LucideIcons.mapPin
                           : LucideIcons.mapPinOff,
                       size: 48,
-                      color: _currentLocation != null 
-                          ? app_colors.AppColors.success 
+                      color: _currentLocation != null
+                          ? app_colors.AppColors.success
                           : app_colors.AppColors.muted,
                     ),
                     const SizedBox(height: 12),
@@ -178,8 +207,8 @@ class _LocationPageState extends State<LocationPage> {
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 16,
-                        color: _currentLocation != null 
-                            ? app_colors.AppColors.success 
+                        color: _currentLocation != null
+                            ? app_colors.AppColors.success
                             : app_colors.AppColors.text,
                       ),
                     ),
@@ -192,7 +221,7 @@ class _LocationPageState extends State<LocationPage> {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 20),
 
             // Google Maps Widget
@@ -208,15 +237,18 @@ class _LocationPageState extends State<LocationPage> {
                   borderRadius: BorderRadius.circular(8),
                   child: GoogleMap(
                     initialCameraPosition: CameraPosition(
-                      target: LatLng(14.5995, 120.9842), // Default to Philippines center
+                      target: LatLng(
+                        14.5995,
+                        120.9842,
+                      ), // Default to Philippines center
                       zoom: 6.0,
                     ),
                     onMapCreated: (GoogleMapController controller) {
                       _mapController = controller;
-                      
+
                       // If we already have location when map is created, move to it
-                      if (_currentLocation != null && 
-                          _currentLocation!.latitude != null && 
+                      if (_currentLocation != null &&
+                          _currentLocation!.latitude != null &&
                           _currentLocation!.longitude != null) {
                         Future.delayed(Duration(milliseconds: 500), () {
                           controller.animateCamera(
@@ -233,9 +265,10 @@ class _LocationPageState extends State<LocationPage> {
                         });
                       }
                     },
-                    markers: _currentLocation != null &&
-                        _currentLocation!.latitude != null &&
-                        _currentLocation!.longitude != null
+                    markers:
+                        _currentLocation != null &&
+                            _currentLocation!.latitude != null &&
+                            _currentLocation!.longitude != null
                         ? {
                             Marker(
                               markerId: const MarkerId('current_location'),
@@ -245,7 +278,8 @@ class _LocationPageState extends State<LocationPage> {
                               ),
                               infoWindow: InfoWindow(
                                 title: 'Current Location',
-                                snippet: 'Lat: ${_currentLocation!.latitude?.toStringAsFixed(6)}, Lng: ${_currentLocation!.longitude?.toStringAsFixed(6)}',
+                                snippet:
+                                    'Lat: ${_currentLocation!.latitude?.toStringAsFixed(6)}, Lng: ${_currentLocation!.longitude?.toStringAsFixed(6)}',
                               ),
                               icon: BitmapDescriptor.defaultMarkerWithHue(
                                 BitmapDescriptor.hueRed,
@@ -288,20 +322,20 @@ class _LocationPageState extends State<LocationPage> {
                       ),
                       const SizedBox(height: 16),
                       _buildLocationDetail(
-                        'Latitude', 
+                        'Latitude',
                         _formatCoordinate(_currentLocation!.latitude, 'Lat'),
                         LucideIcons.navigation,
                       ),
                       const Divider(),
                       _buildLocationDetail(
-                        'Longitude', 
+                        'Longitude',
                         _formatCoordinate(_currentLocation!.longitude, 'Lng'),
                         LucideIcons.navigation,
                       ),
                       if (_currentLocation!.accuracy != null) ...[
                         const Divider(),
                         _buildLocationDetail(
-                          'Accuracy', 
+                          'Accuracy',
                           '±${_currentLocation!.accuracy!.toStringAsFixed(1)}m',
                           LucideIcons.target,
                         ),
@@ -309,7 +343,7 @@ class _LocationPageState extends State<LocationPage> {
                       if (_currentLocation!.altitude != null) ...[
                         const Divider(),
                         _buildLocationDetail(
-                          'Altitude', 
+                          'Altitude',
                           '${_currentLocation!.altitude!.toStringAsFixed(1)}m',
                           LucideIcons.mountain,
                         ),
@@ -333,24 +367,24 @@ class _LocationPageState extends State<LocationPage> {
               ),
               onPressed: _isLoading ? null : _getCurrentLocation,
             ),
-            
+
             const SizedBox(height: 12),
-            
+
             AppButtons.outline(
-              text: _isTrackingLocation 
-                  ? 'Stop Location Tracking' 
+              text: _isTrackingLocation
+                  ? 'Stop Location Tracking'
                   : 'Start Location Tracking',
               size: 54,
-              textColor: _isTrackingLocation 
-                  ? app_colors.AppColors.error 
+              textColor: _isTrackingLocation
+                  ? app_colors.AppColors.error
                   : app_colors.AppColors.primary,
-              outlineColor: _isTrackingLocation 
-                  ? app_colors.AppColors.error 
+              outlineColor: _isTrackingLocation
+                  ? app_colors.AppColors.error
                   : app_colors.AppColors.primary,
               icon: Icon(
                 _isTrackingLocation ? LucideIcons.square : LucideIcons.play,
-                color: _isTrackingLocation 
-                    ? app_colors.AppColors.error 
+                color: _isTrackingLocation
+                    ? app_colors.AppColors.error
                     : app_colors.AppColors.primary,
               ),
               onPressed: _toggleLocationTracking,
@@ -365,10 +399,7 @@ class _LocationPageState extends State<LocationPage> {
                 padding: const EdgeInsets.all(12.0),
                 child: Row(
                   children: [
-                    Icon(
-                      LucideIcons.info,
-                      color: app_colors.AppColors.primary,
-                    ),
+                    Icon(LucideIcons.info, color: app_colors.AppColors.primary),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -386,6 +417,10 @@ class _LocationPageState extends State<LocationPage> {
           ],
         ),
       ),
+      bottomNavigationBar: AppBottomNavBar(
+        selectedIndex: 3, // Maps is at index 3
+        role: NavBarRole.user,
+      ),
     );
   }
 
@@ -394,11 +429,7 @@ class _LocationPageState extends State<LocationPage> {
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
         children: [
-          Icon(
-            icon,
-            size: 20,
-            color: app_colors.AppColors.primary,
-          ),
+          Icon(icon, size: 20, color: app_colors.AppColors.primary),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
