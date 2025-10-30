@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, type ComponentType } from "react"
 import { Dashboard } from "@/pages/Dashboard"
 import { Users, UserCheck, MonitorSpeaker } from "lucide-react"
 import type { StatItem } from "@/components/StatsGrid"
@@ -159,8 +159,10 @@ export function DashboardContainer() {
     setCurrentPage(page);
   };
 
+  const DashboardComponent = Dashboard as ComponentType<any>;
+
   return (
-    <Dashboard
+    <DashboardComponent
       stats={stats}
       auditData={auditData}
       loading={loading || auditLoading}
