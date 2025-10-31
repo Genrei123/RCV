@@ -56,6 +56,10 @@ dependencies:
   location: ^8.0.1
   shared_preferences: ^2.5.3
   cloud_firestore: ^4.17.5
+  # Use a version that removed jcenter() from its Gradle build
+  flutter_tesseract_ocr: 0.4.30
+  crop_your_image: ^2.0.0
+  image: ^4.2.0
 
 dev_dependencies:
   flutter_test:
@@ -93,6 +97,14 @@ flutter:
     - assets/
     # for users.json
     - assets/users.json
+    # Explicitly include Tesseract traineddata files
+    - assets/tessdata/eng.traineddata
+    - assets/tessdata/fil.traineddata
+    - assets/tessdata/tgl.traineddata
+    - assets/tessdata/thai.traineddata
+    - assets/tessdata/vie.traineddata
+    - assets/tessdata/ind.traineddata
+    - assets/tessdata_config.json
 
   # To add assets to your application, add an assets section, like this:
   # assets:

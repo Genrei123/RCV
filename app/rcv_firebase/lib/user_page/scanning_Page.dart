@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:image_picker/image_picker.dart';
+import '../services/ocr_service.dart';
 import '../widgets/gradient_header_app_bar.dart';
 import '../widgets/navigation_bar.dart';
 import '../services/api_service.dart';
@@ -26,6 +28,9 @@ class _QRScannerPageState extends State<QRScannerPage> {
   bool isOCRMode = false;
   final ImagePicker _picker = ImagePicker();
   final TextRecognizer _textRecognizer = TextRecognizer();
+  final OcrService _ocrService = OcrService();
+  final List<String> _ocrLangs = ['eng', 'fil', 'tgl', 'thai', 'vie', 'ind'];
+  bool _useTesseract = true; // Switch engine; default to Tesseract
 
   // For dual image OCR
   String? _frontImagePath;
@@ -1293,11 +1298,28 @@ Registered: ${_formatDate(product.dateOfRegistration)}
   Future<void> _pickImageForOCR(bool isFront) async {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
+      // Navigate to crop page to allow precise label cropping
+      String? croppedPath;
+      try {
+        croppedPath =
+            await Navigator.pushNamed(
+                  context,
+                  '/crop-label',
+                  arguments: {'imagePath': image.path},
+                )
+                as String?;
+      } catch (_) {}
+
+      // If user canceled cropping, do nothing
+      if (croppedPath == null || croppedPath.isEmpty) {
+        return;
+      }
+
       setState(() {
         if (isFront) {
-          _frontImagePath = image.path;
+          _frontImagePath = croppedPath;
         } else {
-          _backImagePath = image.path;
+          _backImagePath = croppedPath;
         }
       });
 
@@ -1321,17 +1343,70 @@ Registered: ${_formatDate(product.dateOfRegistration)}
         builder: (context) => const Center(child: CircularProgressIndicator()),
       );
 
-      // Process front image
-      final frontInputImage = InputImage.fromFilePath(frontImagePath);
-      final RecognizedText frontRecognizedText = await _textRecognizer
-          .processImage(frontInputImage);
-      String frontText = frontRecognizedText.text;
+      String frontText = '';
+      String backText = '';
 
-      // Process back image
-      final backInputImage = InputImage.fromFilePath(backImagePath);
-      final RecognizedText backRecognizedText = await _textRecognizer
-          .processImage(backInputImage);
-      String backText = backRecognizedText.text;
+      if (_useTesseract) {
+        // Tesseract path using OcrService with preprocessing
+        final File frontFile = File(frontImagePath);
+        final File backFile = File(backImagePath);
+
+        final File preFront = await _ocrService.preprocessImage(frontFile);
+        final File preBack = await _ocrService.preprocessImage(backFile);
+
+        final ocrFront = await _ocrService.extractText(
+          preFront,
+          languages: _ocrLangs,
+          dpi: 300,
+        );
+        final ocrBack = await _ocrService.extractText(
+          preBack,
+          languages: _ocrLangs,
+          dpi: 300,
+        );
+
+        frontText = ocrFront.text;
+        backText = ocrBack.text;
+
+        // Debug lengths for diagnostics
+        // ignore: avoid_print
+        print(
+          'Front OCR length: ${frontText.length}, Back OCR length: ${backText.length}',
+        );
+
+        // If any side is too short, automatically fall back to ML Kit for that side only
+        if (frontText.trim().length < 10) {
+          // ignore: avoid_print
+          print('Front OCR too short via Tesseract; falling back to ML Kit');
+          final frontInputImage = InputImage.fromFilePath(frontImagePath);
+          final RecognizedText frontRecognizedText = await _textRecognizer
+              .processImage(frontInputImage);
+          frontText = frontRecognizedText.text;
+          // ignore: avoid_print
+          print('Front ML Kit length: ${frontText.length}');
+        }
+        if (backText.trim().length < 10) {
+          // ignore: avoid_print
+          print('Back OCR too short via Tesseract; falling back to ML Kit');
+          final backInputImage = InputImage.fromFilePath(backImagePath);
+          final RecognizedText backRecognizedText = await _textRecognizer
+              .processImage(backInputImage);
+          backText = backRecognizedText.text;
+          // ignore: avoid_print
+          print('Back ML Kit length: ${backText.length}');
+        }
+      } else {
+        // ML Kit engine for both
+        final frontInputImage = InputImage.fromFilePath(frontImagePath);
+        final RecognizedText frontRecognizedText = await _textRecognizer
+            .processImage(frontInputImage);
+        frontText = frontRecognizedText.text;
+
+        final backInputImage = InputImage.fromFilePath(backImagePath);
+        final RecognizedText backRecognizedText = await _textRecognizer
+            .processImage(backInputImage);
+        backText = backRecognizedText.text;
+      }
 
       // Combine both texts with clear labels
       String combinedText =
@@ -1403,7 +1478,7 @@ Registered: ${_formatDate(product.dateOfRegistration)}
         navBarRole: NavBarRole.user,
       );
     }
-    
+
     return Scaffold(
       appBar: GradientHeaderAppBar(
         showBackButton: false,
