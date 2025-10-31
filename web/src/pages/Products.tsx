@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { Plus, Grid, List } from "lucide-react";
+import { Plus, Grid, List, Search } from "lucide-react";
 import { PageContainer } from "@/components/PageContainer";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { DataTable, type Column } from "@/components/DataTable";
 import { Pagination } from "@/components/Pagination";
 import type { Product } from "@/typeorm/entities/product.entity";
@@ -187,7 +188,6 @@ export function Products(props: ProductsProps) {
             columns={columns}
             data={pagedProducts}
             searchPlaceholder="Search products..."
-            onSort={(sortKey) => console.log("Sort by:", sortKey)}
             loading={loading}
             emptyStateTitle="No Products Found"
             emptyStateDescription="Try adjusting your search or add a new product to get started."
@@ -213,17 +213,44 @@ export function Products(props: ProductsProps) {
           </div>
         </>
       ) : (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {pagedProducts &&
-              pagedProducts.length > 0 &&
-              pagedProducts.map((product) => (
-                <ProductCard
-                  key={product._id}
-                  product={product}
-                  onClick={() => handleProductClick(product)}
-                />
-              ))}
+        <div className="space-y-6">
+          {/* Search Input for Grid View */}
+          <div className="flex items-center justify-between">
+            <div></div>
+            <div className="relative w-64">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                type="text"
+                placeholder="Search products..."
+                className="pl-10"
+              />
+            </div>
+          </div>
+
+          {/* Grid Content Container */}
+          <div className="bg-white rounded-lg">
+            {pagedProducts && pagedProducts.length > 0 ? (
+              <div className="p-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {pagedProducts.map((product) => (
+                    <ProductCard
+                      key={product._id}
+                      product={product}
+                      onClick={() => handleProductClick(product)}
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : !loading ? (
+              <div className="flex flex-col items-center justify-center py-12">
+                <div className="text-center">
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Products Found</h3>
+                  <p className="text-gray-500">
+                    Try adjusting your search or add a new product to get started.
+                  </p>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <div className="mt-4 flex items-center justify-between">
@@ -238,12 +265,12 @@ export function Products(props: ProductsProps) {
                 totalPages={totalPages}
                 totalItems={totalItems}
                 itemsPerPage={pageSize}
-                onPageChange={(p: number) => setCurrentPage(p)}
+                onPageChange={(p: number) => fetchProductsPage(p)}
                 showingPosition="right"
               />
             </div>
           </div>
-        </>
+        </div>
       )}
 
       {/* Add Product Modal */}

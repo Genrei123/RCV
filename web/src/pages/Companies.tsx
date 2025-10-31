@@ -168,7 +168,7 @@ export function Companies(props: CompaniesProps) {
             title=""
             columns={columns}
             data={pagedCompanies}
-            searchPlaceholder="Search companies by name, address, or license number..."
+            searchPlaceholder="Search companies..."
             onSearch={onSearch}
             onSort={(sortKey) => console.log("Sort by:", sortKey)}
             loading={loading}
