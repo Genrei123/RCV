@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show compute; // offload heavy work
 import 'package:path_provider/path_provider.dart';
 import 'package:image/image.dart' as img;
+import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
 
 class CropLabelPage extends StatefulWidget {
   const CropLabelPage({super.key});
@@ -57,24 +58,21 @@ class _CropLabelPageState extends State<CropLabelPage> {
     setState(() => _isBuildingPreview = true);
     try {
       if (_applyGrayscale) {
-        // Offload decode -> (optional) resize -> grayscale -> encode to isolate
         final Uint8List result = await compute(
           _buildPreviewBytes,
           <String, dynamic>{
             'bytes': _imageBytes!,
             'applyGrayscale': true,
-            'maxDim': 1600, // cap preview size for speed/memory
+            'maxDim': 1600,
           },
         );
-        // Drop stale results if a newer task started
         if (!mounted || taskId != _previewTaskId) return;
         _previewBytes = result;
       } else {
-        // Use original bytes as preview to preserve fidelity
         _previewBytes = _imageBytes;
       }
     } catch (_) {
-      _previewBytes = _imageBytes; // fallback on any error
+      _previewBytes = _imageBytes;
     } finally {
       if (mounted && taskId == _previewTaskId) {
         setState(() => _isBuildingPreview = false);
@@ -90,13 +88,11 @@ class _CropLabelPageState extends State<CropLabelPage> {
 
   Future<void> _handleCropped(Uint8List bytes) async {
     try {
-      // Optionally apply grayscale filter before saving
       Uint8List outputBytes = bytes;
       if (_applyGrayscale) {
         final img.Image? decoded = img.decodeImage(bytes);
         if (decoded != null) {
           final img.Image gray = img.grayscale(decoded);
-          // Save as PNG to avoid quality loss
           final List<int> png = img.encodePng(gray, level: 6);
           outputBytes = Uint8List.fromList(png);
         }
@@ -121,130 +117,175 @@ class _CropLabelPageState extends State<CropLabelPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Crop Label')),
-      body: _imageBytes == null
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                Expanded(
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      if (_previewBytes != null)
-                        Crop(
-                          image: _previewBytes!,
-                          controller: _controller,
-                          withCircleUi: false,
-                          onCropped: (result) async {
-                            try {
-                              if (result is CropSuccess) {
-                                await _handleCropped(result.croppedImage);
-                              } else {
-                                if (!mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Crop failed: unsupported result (${result.runtimeType})',
+    return WillPopScope(
+      onWillPop: () async => !(_isCropping || _isBuildingPreview),
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: app_colors.AppColors.primary,
+          iconTheme: const IconThemeData(color: Colors.white),
+          title: const Text(
+            'Crop Label',
+            style: TextStyle(color: Colors.white),
+          ),
+          centerTitle: true,
+        ),
+        body: _imageBytes == null
+            ? const Center(child: CircularProgressIndicator())
+            : Column(
+                children: [
+                  Expanded(
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        if (_previewBytes != null)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                            child: Crop(
+                              image: _previewBytes!,
+                              controller: _controller,
+                              withCircleUi: false,
+                              onCropped: (result) async {
+                                try {
+                                  if (result is CropSuccess) {
+                                    await _handleCropped(result.croppedImage);
+                                  } else {
+                                    if (!mounted) return;
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Crop failed: unsupported result (${result.runtimeType})',
+                                        ),
+                                      ),
+                                    );
+                                    setState(() => _isCropping = false);
+                                  }
+                                } catch (e) {
+                                  if (!mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Crop failed: $e')),
+                                  );
+                                  setState(() => _isCropping = false);
+                                }
+                              },
+                              baseColor: Colors.black,
+                              maskColor: Colors.black.withOpacity(0.5),
+                              cornerDotBuilder: (size, edgeAlignment) =>
+                                  Container(
+                                    width: size,
+                                    height: size,
+                                    decoration: const BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
                                     ),
                                   ),
-                                );
-                                setState(() => _isCropping = false);
-                              }
-                            } catch (e) {
-                              if (!mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Crop failed: $e')),
-                              );
-                              setState(() => _isCropping = false);
-                            }
-                          },
-                          baseColor: Colors.black,
-                          maskColor: Colors.black.withOpacity(0.5),
-                          cornerDotBuilder: (size, edgeAlignment) => Container(
-                            width: size,
-                            height: size,
-                            decoration: const BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
                             ),
                           ),
-                        ),
-                      if (_isBuildingPreview)
-                        Container(
-                          color: Colors.black.withOpacity(0.2),
-                          child: const Center(
-                            child: CircularProgressIndicator(),
-                          ),
-                        ),
-                      if (_applyGrayscale && !_isBuildingPreview)
-                        Positioned(
-                          left: 8,
-                          top: 8,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.6),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Text(
-                              'Grayscale preview',
-                              style: TextStyle(color: Colors.white),
+                        if (_isBuildingPreview)
+                          Container(
+                            color: Colors.black.withOpacity(0.2),
+                            child: const Center(
+                              child: CircularProgressIndicator(),
                             ),
                           ),
-                        ),
-                    ],
-                  ),
-                ),
-                SafeArea(
-                  top: false,
-                  child: Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Row(
-                          children: [
-                            Switch(
-                              value: _applyGrayscale,
-                              onChanged: _isCropping
-                                  ? null
-                                  : (v) async {
-                                      setState(() => _applyGrayscale = v);
-                                      await _rebuildPreview();
-                                    },
+                        if (_isCropping)
+                          Container(
+                            color: Colors.black.withOpacity(0.3),
+                            child: const Center(
+                              child: CircularProgressIndicator(),
                             ),
-                            const SizedBox(width: 8),
-                            const Text('Apply grayscale (better OCR)'),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            TextButton.icon(
-                              onPressed: _isCropping
-                                  ? null
-                                  : () => Navigator.pop(context),
-                              icon: const Icon(Icons.close),
-                              label: const Text('Cancel'),
+                          ),
+                        if (_applyGrayscale && !_isBuildingPreview)
+                          Positioned(
+                            left: 8,
+                            top: 8,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.6),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Text(
+                                'Grayscale preview',
+                                style: TextStyle(color: Colors.white),
+                              ),
                             ),
-                            FilledButton.icon(
-                              onPressed: _isCropping ? null : _onConfirmCrop,
-                              icon: const Icon(Icons.check),
-                              label: const Text('Crop'),
-                            ),
-                          ],
-                        ),
+                          ),
                       ],
                     ),
                   ),
-                ),
-              ],
-            ),
+                  SafeArea(
+                    top: false,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Switch(
+                                value: _applyGrayscale,
+                                onChanged: (_isCropping || _isBuildingPreview)
+                                    ? null
+                                    : (v) async {
+                                        setState(() => _applyGrayscale = v);
+                                        await _rebuildPreview();
+                                      },
+                              ),
+                              const SizedBox(width: 8),
+                              const Text('Apply grayscale (better OCR)'),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              TextButton.icon(
+                                onPressed: _isCropping
+                                    ? null
+                                    : () => Navigator.pop(context),
+                                icon: const Icon(Icons.close),
+                                label: const Text('Cancel'),
+                              ),
+                              FilledButton(
+                                onPressed: _isCropping ? null : _onConfirmCrop,
+                                child: _isCropping
+                                    ? Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: const [
+                                          SizedBox(
+                                            width: 16,
+                                            height: 16,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                          SizedBox(width: 10),
+                                          Text('Processing…'),
+                                        ],
+                                      )
+                                    : Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: const [
+                                          Icon(Icons.check),
+                                          SizedBox(width: 8),
+                                          Text('Crop'),
+                                        ],
+                                      ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+      ),
     );
   }
 
