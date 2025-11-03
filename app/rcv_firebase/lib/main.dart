@@ -6,14 +6,13 @@ import 'services/remote_config_service.dart';
 // Import all your pages
 import 'auth/landingPage.dart';
 import 'auth/login_page.dart';
-import 'widgets/navigation_bar.dart' as nav_bar;
 import 'auth/otp_verification_page.dart';
 import 'auth/reset_password.dart';
 import 'auth/reset_new_password_page.dart';
-import 'auth/user_profile.dart';
+import 'pages/user_profile_page.dart';
 import 'user_page/agent_homePage.dart';
 import 'user_page/scanning_Page.dart';
-import 'user_page/agent_auditTrail.dart';
+import 'pages/audit_trail_page.dart';
 import 'user_page/agent_Reports.dart';
 import 'pages/location_page.dart';
 import 'widgets/connectivity_check_screen.dart';
@@ -52,8 +51,7 @@ class MyApp extends StatelessWidget {
           '/otp-verification': (context) => const OtpVerificationPage(),
           '/reset-password': (context) => ResetPasswordPage(),
           '/reset-new-password': (context) => const ResetNewPasswordPage(),
-          '/user-profile': (context) =>
-              UserProfilePage(role: nav_bar.NavBarRole.user.toString()),
+          '/user-profile': (context) => const UserProfilePage(),
           //User Pages
           '/user-home': (context) => const UserHomePage(),
           '/user-audit-trail': (context) => const AuditTrailPage(),

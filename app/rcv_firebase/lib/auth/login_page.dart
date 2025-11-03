@@ -5,118 +5,14 @@ import '../widgets/animated_form_field.dart';
 import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
 import '../widgets/navigation_bar.dart';
 import '../widgets/processing_modal.dart';
-// Removed status modal usage per request
-import 'dart:convert';
-import 'package:flutter/services.dart' show rootBundle;
-import '../services/token_service.dart';
+import '../services/auth_service.dart';
+import '../services/audit_log_service.dart';
 import 'package:flutter/scheduler.dart';
 
 NavBarRole? appRole;
 
 class AppColors {
   static const Color primary = Color(0xFF00BA8E);
-}
-
-class User {
-  final String _id;
-  final String role;
-  final String status;
-  final String avatarUrl;
-  final String firstName;
-  final String? middleName;
-  final String lastName;
-  final String? extName;
-  final String fullName;
-  final String email;
-  final String location;
-  final Map<String, dynamic>? currentLocation;
-  final String dateOfBirth;
-  final String phoneNumber;
-  final String password;
-  final String createdAt;
-  final String updatedAt;
-  final String badgeId;
-
-  User({
-    required String id,
-    required this.role,
-    required this.status,
-    required this.avatarUrl,
-    required this.firstName,
-    this.middleName,
-    required this.lastName,
-    this.extName,
-    required this.fullName,
-    required this.email,
-    required this.location,
-    this.currentLocation,
-    required this.dateOfBirth,
-    required this.phoneNumber,
-    required this.password,
-    required this.createdAt,
-    required this.updatedAt,
-    required this.badgeId,
-  }) : _id = id;
-
-  NavBarRole get navBarRole {
-    switch (role) {
-      case 'ADMIN':
-        return NavBarRole.admin;
-      case 'AGENT':
-      case 'USER':
-      default:
-        return NavBarRole.user;
-    }
-  }
-
-  // Getter for ID compatibility
-  String get id => _id;
-
-  factory User.fromJson(Map<String, dynamic> json) {
-    return User(
-      id: json['_id'],
-      role: json['role'],
-      status: json['status'],
-      avatarUrl: json['avatarUrl'],
-      firstName: json['firstName'],
-      middleName: json['middleName'],
-      lastName: json['lastName'],
-      extName: json['extName'],
-      fullName: json['fullName'],
-      email: json['email'],
-      location: json['location'],
-      currentLocation: json['currentLocation'] as Map<String, dynamic>?,
-      dateOfBirth: json['dateOfBirth'],
-      phoneNumber: json['phoneNumber'],
-      password: json['password'],
-      createdAt: json['createdAt'],
-      updatedAt: json['updatedAt'],
-      badgeId: json['badgeId'],
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      '_id': _id,
-      'role': role,
-      'status': status,
-      'avatarUrl': avatarUrl,
-      'firstName': firstName,
-      'middleName': middleName,
-      'lastName': lastName,
-      'extName': extName,
-      'fullName': fullName,
-      'email': email,
-      'location': location,
-      'currentLocation': currentLocation,
-      'dateOfBirth': dateOfBirth,
-      'phoneNumber': phoneNumber,
-      'password': password,
-      'createdAt': createdAt,
-      'updatedAt': updatedAt,
-      'badgeId': badgeId,
-    };
-  }
 }
 
 class LoginPage extends StatefulWidget {
@@ -138,12 +34,7 @@ class _LoginPageState extends State<LoginPage> {
   bool hasPasswordError = false;
 
   bool obscureText = true;
-
-  Future<List<User>> loadUsers() async {
-    final String response = await rootBundle.loadString('assets/users.json');
-    final List<dynamic> data = jsonDecode(response);
-    return data.map((json) => User.fromJson(json)).toList();
-  }
+  final AuthService _authService = AuthService();
 
   Future<bool> validateLogin(
     String email,
@@ -184,59 +75,47 @@ class _LoginPageState extends State<LoginPage> {
       return false;
     }
 
-    final users = await loadUsers();
-    for (var user in users) {
-      if (user.email == email && user.password == password) {
-        String mockToken = await _createMockJwtToken(user.email);
+    // Call real backend API
+    final result = await _authService.login(email, password);
 
-        print(' Mock login successful');
-        print(' Mock JWT Token: $mockToken');
+    if (result['success'] == true) {
+      print('✓ Login successful');
+      print('✓ Token: ${result['token']}');
+      print('✓ User: ${result['user']}');
 
-        // Store the mock token
-        await TokenService.saveTokens(mockToken, 'mock_refresh_token', 3600);
-
-        // Set user role
-        appRole = user.navBarRole;
-
-        if (context.mounted) {
-          Navigator.pushReplacementNamed(context, '/user-home');
-        }
-        return true;
+      // Determine user role from backend response
+      final user = result['user'];
+      if (user['role'] == 'ADMIN') {
+        appRole = NavBarRole.admin;
+      } else {
+        appRole = NavBarRole.user;
       }
+
+      // Log the login action to audit trail
+      AuditLogService.logLogin();
+
+      return true;
+    } else {
+      // Handle different error cases
+      if (result['approved'] == false) {
+        // Account pending approval
+        setState(() {
+          emailError = 'Account pending approval';
+          passwordError = 'Please wait for admin approval';
+          hasEmailError = true;
+          hasPasswordError = true;
+        });
+      } else {
+        // Invalid credentials or other error
+        setState(() {
+          emailError = result['message'] ?? 'Login failed';
+          passwordError = result['message'] ?? 'Please check your credentials';
+          hasEmailError = true;
+          hasPasswordError = true;
+        });
+      }
+      return false;
     }
-
-    setState(() {
-      emailError = 'Email not found';
-      passwordError = 'Invalid password';
-      hasEmailError = true;
-      hasPasswordError = true;
-    });
-
-    return false;
-  }
-
-  // Create a mock JWT token for testing
-  Future<String> _createMockJwtToken(String email) async {
-    final users = await loadUsers();
-    final user = users.firstWhere((u) => u.email == email);
-
-    // Create mock JWT payload using new user structure
-    final payload = {
-      'sub': user.id, // UUID from new structure
-      'email': user.email,
-      'role': user.role, // ADMIN, AGENT, USER
-      'isAdmin': user.role == 'ADMIN',
-      'fullName': user.fullName,
-      'firstName': user.firstName,
-      'lastName': user.lastName,
-      'badgeId': user.badgeId,
-      'status': user.status,
-      'iat': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      'exp': (DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600,
-    };
-
-    final encodedPayload = base64Url.encode(utf8.encode(jsonEncode(payload)));
-    return 'mock.$encodedPayload.mock';
   }
 
   @override
