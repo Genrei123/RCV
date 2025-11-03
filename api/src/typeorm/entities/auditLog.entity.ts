@@ -25,6 +25,7 @@ export const AuditLogValidation = z.object({
     'UPDATE_PRODUCT',
     'DELETE_PRODUCT',
     'UPDATE_PROFILE',
+    'CHANGE_PASSWORD',
     'ARCHIVE_ACCOUNT',
     'LOCATION_UPDATE',
     'APP_CLOSED'
@@ -69,6 +70,7 @@ export class AuditLog {
       'UPDATE_PRODUCT',
       'DELETE_PRODUCT',
       'UPDATE_PROFILE',
+      'CHANGE_PASSWORD',
       'ARCHIVE_ACCOUNT',
       'LOCATION_UPDATE',
       'APP_CLOSED'

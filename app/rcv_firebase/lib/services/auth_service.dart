@@ -6,8 +6,9 @@ import 'dart:developer' as developer;
 
 class AuthService {
   // Backend API configuration
-  static const String baseUrl = 'http://10.0.2.2:3000/api/v1';
+  static const String baseUrl = 'https://rcv-production-cbd6.up.railway.app/api/v1';
   
+  // For local development use: 'http://10.0.2.2:3000/api/v1' (Android emulator)
   // For iOS Simulator use: 'http://localhost:3000/api/v1'
   // For Physical Device use: 'http://YOUR_COMPUTER_IP:3000/api/v1'
 
@@ -85,7 +86,7 @@ class AuthService {
       developer.log('Attempting login for: $email');
       
       final response = await http.post(
-        Uri.parse('$baseUrl/auth/signin'),
+        Uri.parse('$baseUrl/auth/login'),
         headers: {
           'Content-Type': 'application/json',
         },
@@ -112,6 +113,19 @@ class AuthService {
           'user': responseData['user'],
           'token': responseData['token'],
         };
+      } else if (response.statusCode == 403) {
+        // Account pending approval
+        return {
+          'success': false,
+          'approved': responseData['approved'] ?? false,
+          'message': responseData['message'] ?? 'Account pending approval',
+        };
+      } else if (response.statusCode == 401) {
+        // Invalid credentials
+        return {
+          'success': false,
+          'message': 'Invalid email or password',
+        };
       } else {
         return {
           'success': false,
@@ -123,7 +137,7 @@ class AuthService {
       
       String errorMessage;
       if (e.toString().contains('SocketException')) {
-        errorMessage = 'Cannot connect to server. Make sure the API is running.';
+        errorMessage = 'Cannot connect to server. Please check your internet connection.';
       } else if (e.toString().contains('TimeoutException')) {
         errorMessage = 'Request timeout. Please try again.';
       } else {
