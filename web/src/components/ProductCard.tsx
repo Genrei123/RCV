@@ -1,4 +1,4 @@
-import { Package, Calendar, Building2, MoreVertical, AlertCircle } from "lucide-react"
+import { Package, Calendar, Building2 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -48,17 +48,6 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
             <Badge className={status.color}>
               {status.label}
             </Badge>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-8 w-8 p-0"
-              onClick={(e) => {
-                e.stopPropagation();
-                // Handle menu click
-              }}
-            >
-              <MoreVertical className="h-4 w-4" />
-            </Button>
           </div>
         </div>
 
@@ -90,12 +79,19 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
           </div>
         </div>
 
-        {isExpired && (
-          <div className="mt-3 flex items-center gap-2 text-xs text-red-600 bg-red-50 p-2 rounded">
-            <AlertCircle className="h-3 w-3" />
-            <span>This product has expired</span>
-          </div>
-        )}
+        <div className="mt-3">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={(e) => {
+              e.stopPropagation();
+              onClick?.(product);
+            }}
+            className="w-full"
+          >
+            View Details
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

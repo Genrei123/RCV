@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
+import { Search } from "lucide-react"
 import type { ReactNode } from "react"
 import { useState, useMemo } from "react"
 
@@ -26,14 +26,11 @@ export interface DataTableProps {
   data: any[];
   searchPlaceholder?: string;
   onSearch?: (value: string) => void;
-  onSort?: (sortBy: string) => void;
-  sortLabel?: string;
   loading?: boolean;
   emptyStateTitle?: string;
   emptyStateDescription?: string;
   emptyStateIcon?: ReactNode;
   showSearch?: boolean;
-  showSort?: boolean;
 }
 
 const defaultEmptyIcon = (
@@ -48,40 +45,19 @@ export function DataTable({
   data,
   searchPlaceholder = "Search...",
   onSearch,
-  onSort,
-  sortLabel = "Sort Table: All",
   loading = false,
   emptyStateTitle = "No Data Found",
   emptyStateDescription = "You may try to input different keywords, check for typos, or adjust your filters.",
   emptyStateIcon = defaultEmptyIcon,
-  showSearch = true,
-  showSort = true
+  showSearch = true
 }: DataTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortKey, setSortKey] = useState<string | null>(null);
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   // Handle search
   const handleSearch = (value: string) => {
     setSearchQuery(value);
     if (onSearch) {
       onSearch(value);
-    }
-  };
-
-  // Handle column sorting
-  const handleSort = (columnKey: string) => {
-    if (sortKey === columnKey) {
-      // Toggle direction if clicking same column
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      // Set new column and default to ascending
-      setSortKey(columnKey);
-      setSortDirection('asc');
-    }
-    
-    if (onSort) {
-      onSort(columnKey);
     }
   };
 
@@ -108,54 +84,8 @@ export function DataTable({
       });
     }
 
-    // Apply sorting
-    if (sortKey) {
-      filtered.sort((a, b) => {
-        let aValue = a[sortKey];
-        let bValue = b[sortKey];
-
-        // Handle nested objects (e.g., company.name)
-        if (typeof aValue === 'object' && aValue !== null) {
-          aValue = aValue.name || aValue._id || '';
-        }
-        if (typeof bValue === 'object' && bValue !== null) {
-          bValue = bValue.name || bValue._id || '';
-        }
-
-        // Handle dates
-        if (aValue instanceof Date || bValue instanceof Date) {
-          aValue = new Date(aValue).getTime();
-          bValue = new Date(bValue).getTime();
-        }
-
-        // Handle strings
-        if (typeof aValue === 'string') {
-          aValue = aValue.toLowerCase();
-        }
-        if (typeof bValue === 'string') {
-          bValue = bValue.toLowerCase();
-        }
-
-        // Compare
-        if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
-        if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
-        return 0;
-      });
-    }
-
     return filtered;
-  }, [data, searchQuery, sortKey, sortDirection, columns]);
-
-  const renderSortIcon = (columnKey: string) => {
-    if (sortKey !== columnKey) {
-      return <ArrowUpDown className="ml-2 h-4 w-4 inline-block text-gray-400" />;
-    }
-    return sortDirection === 'asc' ? (
-      <ArrowUp className="ml-2 h-4 w-4 inline-block text-teal-600" />
-    ) : (
-      <ArrowDown className="ml-2 h-4 w-4 inline-block text-teal-600" />
-    );
-  };
+  }, [data, searchQuery, columns]);
 
   const renderCellContent = (column: Column, row: any) => {
     const value = row[column.key];
@@ -197,22 +127,6 @@ export function DataTable({
                 />
               </div>
             )}
-            {showSort && (
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => {
-                  setSortKey(null);
-                  setSortDirection('asc');
-                  onSort?.('all');
-                }}
-              >
-                {sortLabel}
-                <svg className="ml-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </Button>
-            )}
           </div>
         </div>
       </CardHeader>
@@ -239,13 +153,9 @@ export function DataTable({
                 {columns.map((column) => (
                   <TableHead 
                     key={column.key} 
-                    className="text-left font-medium text-gray-600 cursor-pointer hover:text-teal-600 transition-colors"
-                    onClick={() => column.key !== 'actions' && handleSort(column.key)}
+                    className="text-left font-medium text-gray-600"
                   >
-                    <div className="flex items-center">
-                      {column.label}
-                      {column.key !== 'actions' && renderSortIcon(column.key)}
-                    </div>
+                    {column.label}
                   </TableHead>
                 ))}
               </TableRow>
