@@ -170,7 +170,6 @@ export function Companies(props: CompaniesProps) {
             data={pagedCompanies}
             searchPlaceholder="Search companies..."
             onSearch={onSearch}
-            onSort={(sortKey) => console.log("Sort by:", sortKey)}
             loading={loading}
             emptyStateTitle="No Companies Found"
             emptyStateDescription="Try adjusting your search or add a new company to get started."
