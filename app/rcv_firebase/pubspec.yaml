@@ -56,7 +56,6 @@ dependencies:
   location: ^8.0.1
   shared_preferences: ^2.5.3
   cloud_firestore: ^4.17.5
-  # Use a version that removed jcenter() from its Gradle build
   flutter_tesseract_ocr: 0.4.30
   crop_your_image: ^2.0.0
   image: ^4.2.0

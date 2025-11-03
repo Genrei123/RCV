@@ -11,6 +11,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/crop_image_widget.dart';
 import '../services/remote_config_service.dart';
 import '../widgets/feature_disabled_screen.dart';
@@ -48,6 +49,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
   void initState() {
     super.initState();
     loadUserData();
+    _loadLocalAvatar();
   }
 
   Future<void> loadUserData() async {
@@ -154,11 +156,29 @@ class _UserProfilePageState extends State<UserProfilePage> {
       );
 
       if (cropped != null) {
-        final tmp = await getTemporaryDirectory();
-        final out = File(
-          '${tmp.path}/avatar_${DateTime.now().millisecondsSinceEpoch}.png',
-        );
+        // Persist cropped avatar to app documents directory (unique filename)
+        final docsDir = await getApplicationDocumentsDirectory();
+        final avatarDir = Directory('${docsDir.path}/avatars');
+        if (!await avatarDir.exists()) {
+          await avatarDir.create(recursive: true);
+        }
+        final prefs = await SharedPreferences.getInstance();
+        final prevPath = prefs.getString(_avatarLocalKey);
+        final newPath =
+            '${avatarDir.path}/profile_avatar_${DateTime.now().millisecondsSinceEpoch}.png';
+        final out = File(newPath);
         await out.writeAsBytes(cropped, flush: true);
+        // Clean up previous saved avatar if different
+        if (prevPath != null && prevPath.isNotEmpty && prevPath != newPath) {
+          final prevFile = File(prevPath);
+          if (await prevFile.exists()) {
+            try {
+              await prevFile.delete();
+            } catch (_) {}
+          }
+        }
+        // Save new path to local storage so it persists across sessions
+        await prefs.setString(_avatarLocalKey, out.path);
         if (!mounted) return;
         setState(() {
           selectedImagePath = out.path;
@@ -169,6 +189,29 @@ class _UserProfilePageState extends State<UserProfilePage> {
       print('Crop dialog error: $e');
     }
   }
+
+  static const String _avatarLocalKey = 'profile_avatar_path';
+
+  Future<void> _loadLocalAvatar() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedPath = prefs.getString(_avatarLocalKey);
+      if (savedPath != null && savedPath.isNotEmpty) {
+        final f = File(savedPath);
+        if (await f.exists()) {
+          if (!mounted) return;
+          setState(() {
+            selectedImagePath = savedPath;
+          });
+        }
+      }
+    } catch (e) {
+      // ignore: avoid_print
+      print('Load local avatar error: $e');
+    }
+  }
+
+  // Note: Avatar removal flow can be added if needed (e.g., long-press to reset).
 
   void _logout() {
     showDialog(
@@ -261,6 +304,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                   ],
                 ),
               ),
+              // Replacing the avatar is done by tapping the camera overlay (avatar area)
               if (!isEditing) ...[
                 // Preview Mode
                 const SizedBox(height: 16),

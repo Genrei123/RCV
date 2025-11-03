@@ -9,6 +9,7 @@ import '../services/ocr_service.dart';
 import '../widgets/gradient_header_app_bar.dart';
 import '../widgets/navigation_bar.dart';
 import '../services/api_service.dart';
+import '../services/audit_log_service.dart';
 import '../models/product.dart';
 import '../services/remote_config_service.dart';
 import '../widgets/feature_disabled_screen.dart';
@@ -215,6 +216,15 @@ class _QRScannerPageState extends State<QRScannerPage> {
           setState(() {
             result = scannedData;
           });
+          
+          // Log scan to audit trail
+          AuditLogService.logScanProduct(
+            scanData: {
+              'scannedData': scannedData,
+              'scanType': 'QR',
+            },
+          );
+          
           // Show QR Code result in modal
           _showQRCodeModal(scannedData);
         }
@@ -1424,9 +1434,29 @@ Registered: ${_formatDate(product.dateOfRegistration)}
       // Check if extraction was successful
       if (response['success'] == true && response['extractedInfo'] != null) {
         final extractedInfo = response['extractedInfo'];
+        
+        // Log OCR scan to audit trail
+        AuditLogService.logScanProduct(
+          scanData: {
+            'scannedText': combinedText.substring(0, combinedText.length > 500 ? 500 : combinedText.length),
+            'scanType': 'OCR',
+            'extractionSuccess': true,
+            'extractedInfo': extractedInfo,
+          },
+        );
+        
         // Show extracted information to user with "Search Product" button
         _showExtractedInfoModal(extractedInfo, combinedText);
       } else {
+        // Log failed OCR scan
+        AuditLogService.logScanProduct(
+          scanData: {
+            'scannedText': combinedText.substring(0, combinedText.length > 500 ? 500 : combinedText.length),
+            'scanType': 'OCR',
+            'extractionSuccess': false,
+          },
+        );
+        
         // Extraction failed - show OCR text only
         _showOCRModal(combinedText);
       }
