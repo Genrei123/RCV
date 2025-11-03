@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import { AuthService } from "@/services/authService";
 import { Pagination } from "@/components/Pagination";
 import { DashboardService } from "@/services/dashboardService";
+import { UserDetailModal } from "@/components/UserDetailModal";
+import { UserPageService } from "@/services/userPageService";
+import { toast } from "react-toastify";
 
 export interface DashboardProps {
   success?: boolean;
@@ -28,6 +31,8 @@ export function Dashboard(props: DashboardProps) {
   const [, setSearch] = useState<string>("");
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const pageSize = 10;
 
   useEffect(() => {
@@ -88,12 +93,20 @@ export function Dashboard(props: DashboardProps) {
     {
       key: "createdAt",
       label: "Created At",
-      render: (value: string) => {
-        return new Date(value).toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        });
+      render: (value: string | Date) => {
+        if (!value) return 'N/A';
+        try {
+          const date = new Date(value);
+          // Check if date is valid
+          if (isNaN(date.getTime())) return 'Invalid Date';
+          return date.toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          });
+        } catch (error) {
+          return 'Invalid Date';
+        }
       },
     },
     {
@@ -104,24 +117,57 @@ export function Dashboard(props: DashboardProps) {
           <Button
             size="sm"
             variant="outline"
-            onClick={() => handleApprove(row)}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleRowClick(row);
+            }}
           >
-            Approve
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => handleDeny(row)}>
-            Deny
+            View Details
           </Button>
         </div>
       ),
     },
   ];
 
-  const handleApprove = (_user: User) => {
-    // Implement approve logic here
+  const handleRowClick = (user: User) => {
+    setSelectedUser(user);
+    setIsModalOpen(true);
   };
 
-  const handleDeny = (_user: User) => {
-    // Implement deny logic here
+  const handleApprove = async (user: User) => {
+    if (!user._id) {
+      toast.error('User ID is missing');
+      return;
+    }
+    
+    try {
+      await UserPageService.approveUser(user._id);
+      toast.success(`${user.firstName} ${user.lastName}'s account has been approved!`);
+      setIsModalOpen(false);
+      // Refresh the user list
+      await fetchPage(currentPage);
+    } catch (error) {
+      console.error('Error approving user:', error);
+      toast.error('Failed to approve user. Please try again.');
+    }
+  };
+
+  const handleReject = async (user: User) => {
+    if (!user._id) {
+      toast.error('User ID is missing');
+      return;
+    }
+    
+    try {
+      await UserPageService.rejectUser(user._id);
+      toast.success(`${user.firstName} ${user.lastName}'s account has been rejected.`);
+      setIsModalOpen(false);
+      // Refresh the user list
+      await fetchPage(currentPage);
+    } catch (error) {
+      console.error('Error rejecting user:', error);
+      toast.error('Failed to reject user. Please try again.');
+    }
   };
 
   const onSearch = (query: string) => {
@@ -209,10 +255,10 @@ export function Dashboard(props: DashboardProps) {
           data={usersArray}
           searchPlaceholder="Search users..."
           onSearch={(query) => onSearch(query)}
-          onSort={(sortKey) => console.log("Sort by:", sortKey)}
           loading={loading}
           emptyStateTitle="No Users Found"
           emptyStateDescription="You may try to input different keywords, check for typos, or adjust your filters."
+          onRowClick={handleRowClick}
         />
         <div className="mt-4 flex items-center justify-between">
           <div>
@@ -233,6 +279,15 @@ export function Dashboard(props: DashboardProps) {
           </div>
         </div>
       </PageContainer>
+
+      {/* User Detail Modal */}
+      <UserDetailModal
+        user={selectedUser}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onApprove={handleApprove}
+        onReject={handleReject}
+      />
     </>
   );
 }

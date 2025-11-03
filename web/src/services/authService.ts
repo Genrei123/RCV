@@ -1,4 +1,4 @@
-import type { User } from "@/typeorm/entities/user.entity";
+import type { User, RegisterResponse } from "@/typeorm/entities/user.entity";
 import { apiClient } from "./axiosConfig";
 
 export interface LoginRequest {
@@ -9,6 +9,11 @@ export interface LoginRequest {
 export interface LoginResponse {
     status: string;
     token: string;
+    user?: {
+        approved?: boolean;
+        email?: string;
+        firstName?: string;
+    };
 }
 
 export interface PasswordResetRequest {
@@ -85,16 +90,20 @@ export class AuthService {
             localStorage.setItem('token', response.data.token);
             return response;
         } catch (error) {
-            console.error(error);
+            console.error('Login error in AuthService:', error);
+            // Re-throw the error so it can be caught by the component
+            throw error;
         }
     }
 
     static async register(Credentials: User) {
         try {
-            const response = await apiClient.post<User>('/auth/register', Credentials);
+            const response = await apiClient.post<RegisterResponse>('/auth/register', Credentials);
             return response;
         } catch (error) {
-            console.error(error);
+            console.error('Registration error in AuthService:', error);
+            // Re-throw the error so it can be caught by the component
+            throw error;
         }
     }
 

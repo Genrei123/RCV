@@ -8,7 +8,6 @@ import {
 } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Search } from "lucide-react"
 import type { ReactNode } from "react"
@@ -26,6 +25,7 @@ export interface DataTableProps {
   data: any[];
   searchPlaceholder?: string;
   onSearch?: (value: string) => void;
+  onRowClick?: (row: any) => void;
   loading?: boolean;
   emptyStateTitle?: string;
   emptyStateDescription?: string;
@@ -45,6 +45,7 @@ export function DataTable({
   data,
   searchPlaceholder = "Search...",
   onSearch,
+  onRowClick,
   loading = false,
   emptyStateTitle = "No Data Found",
   emptyStateDescription = "You may try to input different keywords, check for typos, or adjust your filters.",
@@ -162,7 +163,11 @@ export function DataTable({
             </TableHeader>
             <TableBody>
               {processedData.map((row, rowIndex) => (
-                <TableRow key={rowIndex} className="border-b border-gray-100 hover:bg-teal-50">
+                <TableRow 
+                  key={rowIndex} 
+                  className={`border-b border-gray-100 hover:bg-teal-50 ${onRowClick ? 'cursor-pointer' : ''}`}
+                  onClick={() => onRowClick?.(row)}
+                >
                   {columns.map((column) => (
                     <TableCell 
                       key={column.key} 

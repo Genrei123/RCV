@@ -16,6 +16,7 @@ import { DashboardService } from './services/dashboardService';
 import { ProductService } from './services/productService';
 import { AuthPage } from './pages/AuthPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
+import { PendingApprovalPage } from './pages/PendingApprovalPage';
 import { CompanyService } from './services/companyService';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -168,6 +169,9 @@ function App() {
                 <PublicRoute>
                   <ForgotPasswordPage />
                 </PublicRoute>
+              } />
+              <Route path="/pending-approval" element={
+                <PendingApprovalPage />
               } />
               
               {/* Protected Routes */}

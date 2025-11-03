@@ -36,8 +36,20 @@ export const getAllUsers = async (
       select: [
         "_id",
         "firstName",
+        "middleName",
         "lastName",
+        "extName",
+        "fullName",
         "email",
+        "phoneNumber",
+        "dateOfBirth",
+        "location",
+        "badgeId",
+        "approved",
+        "status",
+        "role",
+        "createdAt",
+        "updatedAt",
       ],
       skip,
       take: limit,
@@ -74,7 +86,7 @@ export const getUserById = async (
   try {
     const user = await UserRepo.findOne({
       where: { _id: req.params.id },
-      select: ["_id", "email", "role", "createdAt", "updatedAt"],
+      select: ["_id", "email", "role", "approved", "status", "createdAt", "updatedAt"],
     });
     if (!user) {
       return res
@@ -250,6 +262,153 @@ export const deleteUser = async (
       .status(200)
       .json({ success: true, message: "User deleted successfully" });
   } catch (err) {
+    return next(CustomError.security(500, "Server Error"));
+  }
+};
+
+// Get all pending (unapproved) users
+export const getPendingUsers = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { page, limit, skip } = parsePageParams(req, 10);
+    const [users, total] = await UserRepo.findAndCount({
+      where: { approved: false },
+      select: [
+        "_id",
+        "firstName",
+        "lastName",
+        "email",
+        "role",
+        "status",
+        "approved",
+        "createdAt",
+      ],
+      skip,
+      take: limit,
+      order: { createdAt: "DESC" },
+    });
+
+    const meta = buildPaginationMeta(page, limit, total);
+    const links = buildLinks(req, page, limit, meta.total_pages);
+    return res
+      .status(200)
+      .json({ success: true, data: users, pagination: meta, links });
+  } catch (error) {
+    next(error);
+    return CustomError.security(500, "Server Error");
+  }
+};
+
+// Approve a user
+export const approveUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const idResult = IdSchema.safeParse(req.params.id);
+  if (!idResult.success) {
+    return res.status(400).json({ success: false, message: "Invalid User ID" });
+  }
+
+  try {
+    const user = await UserRepo.findOneBy({ _id: idResult.data });
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    user.approved = true;
+    // Optionally set status to Active when approved
+    if (user.status === 'Pending') {
+      user.status = 'Active';
+    }
+    
+    const saved = await UserRepo.save(user);
+    return res.status(200).json({
+      success: true,
+      user: saved,
+      message: "User approved successfully",
+    });
+  } catch (error) {
+    return next(CustomError.security(500, "Server Error"));
+  }
+};
+
+// Reject/unapprove a user
+export const rejectUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const idResult = IdSchema.safeParse(req.params.id);
+  if (!idResult.success) {
+    return res.status(400).json({ success: false, message: "Invalid User ID" });
+  }
+
+  try {
+    const user = await UserRepo.findOneBy({ _id: idResult.data });
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    user.approved = false;
+    // Optionally set status back to Pending when rejected
+    if (user.status === 'Active') {
+      user.status = 'Pending';
+    }
+    
+    const saved = await UserRepo.save(user);
+    return res.status(200).json({
+      success: true,
+      user: saved,
+      message: "User approval revoked successfully",
+    });
+  } catch (error) {
+    return next(CustomError.security(500, "Server Error"));
+  }
+};
+
+// Toggle user approval status
+export const toggleUserApproval = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const idResult = IdSchema.safeParse(req.params.id);
+  if (!idResult.success) {
+    return res.status(400).json({ success: false, message: "Invalid User ID" });
+  }
+
+  try {
+    const user = await UserRepo.findOneBy({ _id: idResult.data });
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    user.approved = !user.approved;
+    
+    // Update status based on approval
+    if (user.approved && user.status === 'Pending') {
+      user.status = 'Active';
+    } else if (!user.approved && user.status === 'Active') {
+      user.status = 'Pending';
+    }
+    
+    const saved = await UserRepo.save(user);
+    return res.status(200).json({
+      success: true,
+      user: saved,
+      message: `User ${user.approved ? 'approved' : 'unapproved'} successfully`,
+    });
+  } catch (error) {
     return next(CustomError.security(500, "Server Error"));
   }
 };
