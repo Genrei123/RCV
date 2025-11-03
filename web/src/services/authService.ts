@@ -1,5 +1,6 @@
 import type { User, RegisterResponse } from "@/typeorm/entities/user.entity";
 import { apiClient } from "./axiosConfig";
+import axios from "axios";
 
 export interface LoginRequest {
     email: string;
@@ -119,7 +120,7 @@ export class AuthService {
 
     static async requestPasswordReset(email: string): Promise<PasswordResetResponse> {
         try {
-            const response = await apiClient.post<PasswordResetResponse>('/auth/forgot-password', { email });
+            const response = await axios.post(import.meta.env.VITE_NGROK_BASE_URL + '/auth/forgot-password', { email })
             return response.data;
         } catch (error: any) {
             console.error('Request password reset error:', error);

@@ -9,8 +9,10 @@ import {
   generateForgotPassword,
   requestPasswordReset,
   verifyResetCode,
-  resetPassword
+  resetPassword,
+  changePassword
 } from '../../controllers/auth/Auth';
+import { verifyUser } from '../../middleware/verifyUser';
 
 const AuthRouter = Router();
 
@@ -20,6 +22,9 @@ AuthRouter.post('/register', userSignUp);
 AuthRouter.post('/logout', logout);
 AuthRouter.post('/refreshToken', refreshToken);
 AuthRouter.get('/me', me);
+
+// Password Management
+AuthRouter.post('/change-password', verifyUser, changePassword);
 
 // Password Reset Flow (New 3-step process)
 AuthRouter.post('/forgot-password', requestPasswordReset);

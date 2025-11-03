@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { RemoteConfigService } from '../services/remoteConfig';
-import { Settings, Edit3, Save, X } from 'lucide-react';
+import { Settings, Save } from 'lucide-react';
 import { toast } from 'react-toastify';
 
 interface RemoteConfigParameter {
@@ -16,7 +16,7 @@ export function RemoteConfig() {
   const [draftParameters, setDraftParameters] = useState<RemoteConfigParameter[]>([]);
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+
   const location = useLocation();
 
   // Check if there are unsaved changes
@@ -32,7 +32,6 @@ export function RemoteConfig() {
       const params = await RemoteConfigService.getAllParameters();
       setPublishedParameters(params);
       setDraftParameters([...params]); // Create a copy for drafts
-      setIsEditing(false);
     } catch (error) {
       console.error('Error loading Remote Config parameters:', error);
       toast.error('Failed to load Remote Config parameters');
@@ -41,14 +40,7 @@ export function RemoteConfig() {
     }
   };
 
-  const handleEdit = () => {
-    setIsEditing(true);
-  };
 
-  const handleCancelEdit = () => {
-    setDraftParameters([...publishedParameters]); // Reset to published values
-    setIsEditing(false);
-  };
 
   const handleValueChange = (key: string, newValue: string | boolean | number) => {
     setDraftParameters(prev => 
@@ -63,7 +55,6 @@ export function RemoteConfig() {
       setPublishing(true);
       await RemoteConfigService.publishConfig(draftParameters);
       setPublishedParameters([...draftParameters]);
-      setIsEditing(false);
       toast.success('Remote Config published successfully!');
     } catch (error) {
       console.error('Error publishing Remote Config:', error);
@@ -73,62 +64,9 @@ export function RemoteConfig() {
     }
   };
 
-  const formatValue = (param: RemoteConfigParameter): string => {
-    if (param.type === 'boolean') {
-      return param.value ? 'true' : 'false';
-    }
-    return param.value.toString();
-  };
 
-  const getValueColor = (param: RemoteConfigParameter): string => {
-    if (param.type === 'boolean') {
-      return param.value ? 'text-green-600' : 'text-red-600';
-    }
-    return 'text-blue-600';
-  };
 
-  const renderValueInput = (param: RemoteConfigParameter) => {
-    if (!isEditing) {
-      return (
-        <code className={`px-2 py-1 bg-gray-100 rounded text-sm font-mono ${getValueColor(param)}`}>
-          {formatValue(param)}
-        </code>
-      );
-    }
 
-    // Editing mode
-    switch (param.type) {
-      case 'boolean':
-        return (
-          <select
-            value={param.value.toString()}
-            onChange={(e) => handleValueChange(param.key, e.target.value === 'true')}
-            className="px-2 py-1 border border-gray-300 rounded text-sm font-mono focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-          >
-            <option value="true">true</option>
-            <option value="false">false</option>
-          </select>
-        );
-      case 'number':
-        return (
-          <input
-            type="number"
-            value={param.value.toString()}
-            onChange={(e) => handleValueChange(param.key, Number(e.target.value))}
-            className="px-2 py-1 border border-gray-300 rounded text-sm font-mono focus:ring-2 focus:ring-teal-500 focus:border-teal-500 w-32"
-          />
-        );
-      default: // string
-        return (
-          <input
-            type="text"
-            value={param.value.toString()}
-            onChange={(e) => handleValueChange(param.key, e.target.value)}
-            className="px-2 py-1 border border-gray-300 rounded text-sm font-mono focus:ring-2 focus:ring-teal-500 focus:border-teal-500 min-w-48"
-          />
-        );
-    }
-  };
 
   if (loading) {
     return (
@@ -136,7 +74,7 @@ export function RemoteConfig() {
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
-              <div className="animate-spin h-12 w-12 border-b-2 border-teal-600 mx-auto mb-4"></div>
+              <div className="animate-spin h-12 w-12 border-4 border-gray-200 border-t-teal-600 rounded-full mx-auto mb-4"></div>
               <p className="text-gray-600">Loading Remote Config...</p>
             </div>
           </div>
@@ -148,54 +86,41 @@ export function RemoteConfig() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-6xl mx-auto">
+        {/* Page Header */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Mobile App Settings</h1>
+          <p className="text-gray-600">
+            Control which features are available in the mobile application. Changes are applied instantly to all connected devices.
+          </p>
+        </div>
 
-        {/* Parameters List */}
+        {/* Settings List */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="p-6 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">
-                  Configuration Parameters ({draftParameters.length})
+                  App Features ({draftParameters.length})
                 </h2>
-                {hasChanges && (
-                  <p className="text-sm text-orange-600 mt-1">You have unsaved changes</p>
-                )}
+                <p className="text-sm text-gray-500 mt-1">
+                  Toggle features on or off for the mobile application
+                </p>
               </div>
               
               <div className="flex items-center gap-3">
-                {!isEditing ? (
+                {hasChanges && (
                   <button
-                    onClick={handleEdit}
-                    className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+                    onClick={handlePublish}
+                    disabled={publishing}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Edit3 className="h-4 w-4" />
-                    Edit
-                  </button>
-                ) : (
-                  <>
-                    <button
-                      onClick={handleCancelEdit}
-                      className="flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
-                    >
-                      <X className="h-4 w-4" />
-                      Cancel
-                    </button>
-                    
-                    {hasChanges && (
-                      <button
-                        onClick={handlePublish}
-                        disabled={publishing}
-                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {publishing ? (
-                          <div className="animate-spin h-4 w-4 border-b-2 border-white rounded-full"></div>
-                        ) : (
-                          <Save className="h-4 w-4" />
-                        )}
-                        {publishing ? 'Publishing...' : 'Publish Changes'}
-                      </button>
+                    {publishing ? (
+                      <div className="animate-spin h-4 w-4 border-4 border-white border-t-transparent rounded-full"></div>
+                    ) : (
+                      <Save className="h-4 w-4" />
                     )}
-                  </>
+                    {publishing ? 'Saving...' : 'Save Changes'}
+                  </button>
                 )}
               </div>
             </div>
@@ -204,46 +129,74 @@ export function RemoteConfig() {
           {draftParameters.length === 0 ? (
             <div className="p-12 text-center">
               <Settings className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No Parameters Found</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No Settings Found</h3>
               <p className="text-gray-600">
-                No Remote Config parameters are currently configured.
+                No mobile app settings are currently configured.
               </p>
             </div>
           ) : (
             <div className="divide-y divide-gray-200">
               {draftParameters.map((param) => {
                 const isChanged = publishedParameters.find(p => p.key === param.key)?.value !== param.value;
+                const getFeatureName = (key: string) => {
+                  switch (key) {
+                    case 'disable_application': return 'Application Access';
+                    case 'disable_audit_page': return 'Audit History';
+                    case 'disable_maps_page': return 'Maps & Location';
+                    case 'disable_home_page': return 'Home Dashboard';
+                    case 'disable_profile_page': return 'User Profile';
+                    case 'disable_scanning_page': return 'QR Code Scanning';
+                    default: return key.replace(/disable_|_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                  }
+                };
+                
+                const getFeatureDescription = (key: string) => {
+                  switch (key) {
+                    case 'disable_application': return 'Controls whether users can access the mobile application';
+                    case 'disable_audit_page': return 'Shows or hides the audit trail and history page';
+                    case 'disable_maps_page': return 'Controls access to maps and location tracking features';
+                    case 'disable_home_page': return 'Shows or hides the main dashboard and statistics';
+                    case 'disable_profile_page': return 'Controls access to user profile and account settings';
+                    case 'disable_scanning_page': return 'Enables or disables QR code scanning functionality';
+                    default: return `Controls the ${key.replace(/disable_|_/g, ' ')} feature`;
+                  }
+                };
                 
                 return (
                   <div key={param.key} className={`p-6 ${isChanged ? 'bg-orange-50 border-l-4 border-orange-400' : ''}`}>
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <h3 className="font-semibold text-gray-900">{param.key}</h3>
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                            param.type === 'boolean' ? 'bg-green-100 text-green-800' :
-                            param.type === 'number' ? 'bg-blue-100 text-blue-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {param.type}
-                          </span>
+                          <h3 className="font-semibold text-gray-900">{getFeatureName(param.key)}</h3>
                           {isChanged && (
                             <span className="px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800">
-                              Modified
+                              Unsaved
                             </span>
                           )}
                         </div>
                         
-                        {param.description && (
-                          <p className="text-gray-600 text-sm mb-3">{param.description}</p>
-                        )}
+                        <p className="text-gray-600 text-sm mb-3">{getFeatureDescription(param.key)}</p>
                         
                         <div className="flex items-center gap-3">
-                          <span className="text-sm text-gray-500">Value:</span>
-                          <div className="flex items-center gap-2">
-                            {renderValueInput(param)}
-                          </div>
+                          <span className="text-sm text-gray-500">
+                            Status: <span className={param.value ? 'text-red-600 font-medium' : 'text-green-600 font-medium'}>
+                              {param.value ? 'Disabled' : 'Enabled'}
+                            </span>
+                          </span>
                         </div>
+                      </div>
+                      
+                      <div className="flex items-center">
+                        <button
+                          onClick={() => handleValueChange(param.key, !param.value)}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 ${
+                            param.value ? 'bg-red-600' : 'bg-green-600'
+                          }`}
+                        >
+                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            param.value ? 'translate-x-1' : 'translate-x-6'
+                          }`} />
+                        </button>
                       </div>
                     </div>
                   </div>
