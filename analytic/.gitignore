@@ -1,0 +1,25 @@
+# Python virtual environment
+venv/
+
+# Generated HTML maps
+sample_clusters_map.html
+*.html
+
+# Sample/test data files
+sample_payload.json
+sample/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
