@@ -1,23 +1,33 @@
-import { User, Mail, MapPin, Calendar, Phone, Badge as BadgeIcon, Archive, Eye } from "lucide-react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { DataTable, type Column } from "@/components/DataTable"
-import { Pagination } from "@/components/Pagination"
-import { PageContainer } from "@/components/PageContainer"
-import { EditProfileModal } from "@/components/EditProfileModal"
-import { ArchiveAccountModal } from "@/components/ArchiveAccountModal"
-import { useEffect, useState } from "react"
-import { UserPageService, type UserProfile } from "@/services/userPageService"
-import { AuditLogService, type AuditLog } from "@/services/auditLogService"
-import { toast } from "react-toastify"
-import { useNavigate } from "react-router-dom"
-import { AuthService } from "@/services/authService"
+import {
+  User,
+  Mail,
+  MapPin,
+  Calendar,
+  Phone,
+  Badge as BadgeIcon,
+  Archive,
+  Eye,
+} from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { DataTable, type Column } from "@/components/DataTable";
+import { Pagination } from "@/components/Pagination";
+import { PageContainer } from "@/components/PageContainer";
+import { EditProfileModal } from "@/components/EditProfileModal";
+import { ArchiveAccountModal } from "@/components/ArchiveAccountModal";
+import { useEffect, useState } from "react";
+import { UserPageService, type UserProfile } from "@/services/userPageService";
+import { AuditLogService, type AuditLog } from "@/services/auditLogService";
+import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
+import { AuthService } from "@/services/authService";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
+// Avatar editing is handled in EditProfileModal; Profile view is read-only.
 
 export interface ProfileUser {
   _id?: string;
@@ -44,14 +54,18 @@ export function Profile({
   user: propUser,
   loading: propLoading = false,
 }: ProfileProps) {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
   const [user, setUser] = useState<ProfileUser | null>(propUser || null);
   const [loading, setLoading] = useState(propLoading);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
-  
+  // Avatar local state
+  // Avatar local state for display only (view mode)
+  const [localAvatar, setLocalAvatar] = useState<string | null>(null);
+  // Removed cropOpen, cropImageSrc, and fileInputRef for view-only mode
+
   // Audit logs state
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
@@ -70,6 +84,14 @@ export function Profile({
       setUser(propUser);
     }
     fetchAuditLogs(1);
+    // Load avatar from localStorage override if present
+    // Load avatar from localStorage override if present (view-only on Profile page)
+    try {
+      const saved = localStorage.getItem("profile_avatar_data");
+      if (saved) setLocalAvatar(saved);
+    } catch (e) {
+      // noop
+    }
   }, [propUser]);
 
   const fetchProfile = async () => {
@@ -80,8 +102,8 @@ export function Profile({
         setUser(data.profile);
       }
     } catch (error) {
-      console.error('Error fetching profile:', error);
-      toast.error('Failed to load profile data');
+      console.error("Error fetching profile:", error);
+      toast.error("Failed to load profile data");
     } finally {
       setLoading(false);
     }
@@ -137,15 +159,20 @@ export function Profile({
         location: updatedUser.location,
         badgeId: updatedUser.badgeId,
       };
-      
+
       await UserPageService.updateProfile(profileData);
-      toast.success('Profile updated successfully!');
+      // Refresh local avatar preview from localStorage if changed in modal
+      try {
+        const saved = localStorage.getItem("profile_avatar_data");
+        if (saved) setLocalAvatar(saved);
+      } catch {}
+      toast.success("Profile updated successfully!");
       await fetchProfile(); // Refresh profile data
       await fetchAuditLogs(logsPagination.current_page); // Refresh audit logs
       setShowEditModal(false);
     } catch (error) {
-      console.error('Failed to update profile:', error);
-      toast.error('Failed to update profile');
+      console.error("Failed to update profile:", error);
+      toast.error("Failed to update profile");
     }
   };
 
@@ -156,24 +183,24 @@ export function Profile({
   const handleConfirmArchive = async () => {
     try {
       await UserPageService.archiveAccount();
-      toast.success('Account archived. Logging out...');
+      toast.success("Account archived. Logging out...");
       setShowArchiveModal(false);
       // Logout and redirect
       await AuthService.logout();
-      navigate('/login');
+      navigate("/login");
     } catch (error) {
-      console.error('Failed to archive account:', error);
-      toast.error('Failed to archive account');
+      console.error("Failed to archive account:", error);
+      toast.error("Failed to archive account");
     }
   };
 
   // Helper function to get role name
   const getRoleName = (role?: string | number): string => {
-    if (typeof role === 'string') return role;
+    if (typeof role === "string") return role;
     const roleMap: { [key: number]: string } = {
       1: "Agent",
       2: "Admin",
-      3: "Super Admin"
+      3: "Super Admin",
     };
     return roleMap[role || 1] || "User";
   };
@@ -185,41 +212,44 @@ export function Profile({
     const parts = [
       userData.firstName,
       userData.middleName,
-      userData.lastName
+      userData.lastName,
     ].filter(Boolean);
-    return parts.join(' ') || "User";
+    return parts.join(" ") || "User";
   };
+
+  // Avatar handlers
+  // Note: Editing avatar is handled inside the Edit Profile modal. Profile page avatar is view-only.
 
   // Activity table columns for audit logs
   const activityColumns: Column[] = [
-    { 
-      key: 'action', 
-      label: 'Action',
+    {
+      key: "action",
+      label: "Action",
       render: (value) => {
         return <span className="font-medium text-gray-900">{value}</span>;
-      }
+      },
     },
-    { 
-      key: 'platform', 
-      label: 'Platform',
+    {
+      key: "platform",
+      label: "Platform",
       render: (value: string) => {
-        const icon = value === 'WEB' ? '🖥️' : '📱';
+        const icon = value === "WEB" ? "🖥️" : "📱";
         return (
           <span className="text-sm text-gray-600">
             {icon} {value}
           </span>
         );
-      }
+      },
     },
-    { 
-      key: 'createdAt', 
-      label: 'Date & Time',
+    {
+      key: "createdAt",
+      label: "Date & Time",
       render: (value: string) => {
-        if (!value) return 'N/A';
+        if (!value) return "N/A";
         try {
           const date = new Date(value);
-          if (isNaN(date.getTime())) return 'Invalid Date';
-          
+          if (isNaN(date.getTime())) return "Invalid Date";
+
           const dateStr = date.toLocaleDateString("en-US", {
             year: "numeric",
             month: "short",
@@ -229,21 +259,23 @@ export function Profile({
             hour: "2-digit",
             minute: "2-digit",
           });
-          
+
           return (
             <div className="flex flex-col">
-              <span className="text-sm font-medium text-gray-900">{dateStr}</span>
+              <span className="text-sm font-medium text-gray-900">
+                {dateStr}
+              </span>
               <span className="text-xs text-gray-500">{timeStr}</span>
             </div>
           );
         } catch (error) {
-          return 'Invalid Date';
+          return "Invalid Date";
         }
-      }
+      },
     },
     {
-      key: '_id',
-      label: 'Actions',
+      key: "_id",
+      label: "Actions",
       render: (_value: string, row: any) => {
         return (
           <Button
@@ -256,8 +288,8 @@ export function Profile({
             View Details
           </Button>
         );
-      }
-    }
+      },
+    },
   ];
 
   const handleViewDetails = async (log: AuditLog) => {
@@ -265,8 +297,8 @@ export function Profile({
       setSelectedLog(log);
       setShowDetailsModal(true);
     } catch (error) {
-      console.error('Error opening details:', error);
-      toast.error('Failed to load log details');
+      console.error("Error opening details:", error);
+      toast.error("Failed to load log details");
     }
   };
 
@@ -285,16 +317,18 @@ export function Profile({
   }
 
   return (
-    <PageContainer title="Profile" description="Manage your personal account information and activity"
+    <PageContainer
+      title="Profile"
+      description="Manage your personal account information and activity"
       headerAction={
         <div className="flex gap-3">
-          <Button 
+          <Button
             onClick={handleEditProfile}
             className="bg-teal-600 hover:bg-teal-700 text-white"
           >
             Edit Profile
           </Button>
-          <Button 
+          <Button
             onClick={handleArchiveAccount}
             variant="destructive"
             className="bg-red-600 hover:bg-red-700 text-white"
@@ -305,32 +339,46 @@ export function Profile({
         </div>
       }
     >
-
       <div className="grid lg:grid-cols-2 gap-8">
         {/* Profile Information */}
         <Card>
           <CardContent className="p-6">
             <div className="mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-1">Profile Information</h2>
-              <p className="text-sm text-gray-600">Update your personal account</p>
+              <h2 className="text-xl font-semibold text-gray-900 mb-1">
+                Profile Information
+              </h2>
+              <p className="text-sm text-gray-600">
+                Update your personal account
+              </p>
             </div>
 
             {/* Avatar Section */}
             <div className="text-center mb-8">
               <div className="relative inline-block">
-                <div className="w-24 h-24 bg-gray-300 rounded-full flex items-center justify-center mx-auto mb-4">
-                  {user?.avatar ? (
-                    <img 
-                      src={user.avatar} 
+                <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4 overflow-hidden">
+                  {localAvatar ? (
+                    <img
+                      src={localAvatar}
                       alt={getFullName(user)}
-                      className="w-24 h-24 rounded-full object-cover"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : user?.avatar ? (
+                    <img
+                      src={user.avatar}
+                      alt={getFullName(user)}
+                      className="w-full h-full object-cover"
                     />
                   ) : (
                     <User className="w-12 h-12 text-gray-500" />
                   )}
+                  {/* View-only avatar: no overlay or edit icon */}
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900">{getFullName(user)}</h3>
-                <p className="text-sm text-gray-600">{getRoleName(user?.role)}</p>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {getFullName(user)}
+                </h3>
+                <p className="text-sm text-gray-600">
+                  {getRoleName(user?.role)}
+                </p>
               </div>
             </div>
 
@@ -340,7 +388,9 @@ export function Profile({
                 <Mail className="w-5 h-5 text-gray-500 mt-0.5" />
                 <div className="flex-1">
                   <p className="text-sm font-medium text-gray-900">Email</p>
-                  <p className="text-sm text-gray-600">{user?.email || 'Not provided'}</p>
+                  <p className="text-sm text-gray-600">
+                    {user?.email || "Not provided"}
+                  </p>
                 </div>
               </div>
 
@@ -348,7 +398,9 @@ export function Profile({
                 <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
                   <MapPin className="w-5 h-5 text-gray-500 mt-0.5" />
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">Location</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      Location
+                    </p>
                     <p className="text-sm text-gray-600">{user.location}</p>
                   </div>
                 </div>
@@ -358,7 +410,9 @@ export function Profile({
                 <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
                   <Calendar className="w-5 h-5 text-gray-500 mt-0.5" />
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">Date of Birth</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      Date of Birth
+                    </p>
                     <p className="text-sm text-gray-600">{user.dateOfBirth}</p>
                   </div>
                 </div>
@@ -368,7 +422,9 @@ export function Profile({
                 <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
                   <Phone className="w-5 h-5 text-gray-500 mt-0.5" />
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">Phone Number</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      Phone Number
+                    </p>
                     <p className="text-sm text-gray-600">{user.phoneNumber}</p>
                   </div>
                 </div>
@@ -378,7 +434,9 @@ export function Profile({
                 <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
                   <BadgeIcon className="w-5 h-5 text-gray-500 mt-0.5" />
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">Badge ID</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      Badge ID
+                    </p>
                     <p className="text-sm text-gray-600">{user.badgeId}</p>
                   </div>
                 </div>
@@ -388,7 +446,9 @@ export function Profile({
                 <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
                   <BadgeIcon className="w-5 h-5 text-gray-500 mt-0.5" />
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">Stationed At</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      Stationed At
+                    </p>
                     <p className="text-sm text-gray-600">{user.stationedAt}</p>
                   </div>
                 </div>
@@ -401,7 +461,9 @@ export function Profile({
         <Card>
           <CardContent className="p-6">
             <div className="mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-1">Your Recent Activities</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-1">
+                Your Recent Activities
+              </h2>
             </div>
 
             {/* Activities Table */}
@@ -440,7 +502,7 @@ export function Profile({
       <ArchiveAccountModal
         isOpen={showArchiveModal}
         onClose={() => setShowArchiveModal(false)}
-        userEmail={user?.email || ''}
+        userEmail={user?.email || ""}
         onConfirm={handleConfirmArchive}
       />
 
@@ -450,34 +512,48 @@ export function Profile({
           <DialogHeader>
             <DialogTitle>Activity Details</DialogTitle>
           </DialogHeader>
-          
+
           {selectedLog && (
             <div className="space-y-4">
               {/* Action */}
               <div className="border-b pb-3">
                 <p className="text-sm font-medium text-gray-500 mb-1">Action</p>
-                <p className="text-base font-semibold text-gray-900">{selectedLog.action}</p>
+                <p className="text-base font-semibold text-gray-900">
+                  {selectedLog.action}
+                </p>
               </div>
 
               {/* Action Type */}
               <div className="border-b pb-3">
                 <p className="text-sm font-medium text-gray-500 mb-1">Type</p>
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${AuditLogService.getActionTypeBadge(selectedLog.actionType).className}`}>
-                  {AuditLogService.getActionTypeBadge(selectedLog.actionType).label}
+                <span
+                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    AuditLogService.getActionTypeBadge(selectedLog.actionType)
+                      .className
+                  }`}
+                >
+                  {
+                    AuditLogService.getActionTypeBadge(selectedLog.actionType)
+                      .label
+                  }
                 </span>
               </div>
 
               {/* Platform */}
               <div className="border-b pb-3">
-                <p className="text-sm font-medium text-gray-500 mb-1">Platform</p>
+                <p className="text-sm font-medium text-gray-500 mb-1">
+                  Platform
+                </p>
                 <p className="text-base text-gray-900">
-                  {selectedLog.platform === 'WEB' ? '🖥️ Web' : '📱 Mobile'}
+                  {selectedLog.platform === "WEB" ? "🖥️ Web" : "📱 Mobile"}
                 </p>
               </div>
 
               {/* Date & Time */}
               <div className="border-b pb-3">
-                <p className="text-sm font-medium text-gray-500 mb-1">Date & Time</p>
+                <p className="text-sm font-medium text-gray-500 mb-1">
+                  Date & Time
+                </p>
                 <p className="text-base text-gray-900">
                   {new Date(selectedLog.createdAt).toLocaleString("en-US", {
                     year: "numeric",
@@ -493,29 +569,41 @@ export function Profile({
               {/* IP Address */}
               {selectedLog.ipAddress && (
                 <div className="border-b pb-3">
-                  <p className="text-sm font-medium text-gray-500 mb-1">IP Address</p>
-                  <p className="text-base text-gray-900 font-mono">{selectedLog.ipAddress}</p>
+                  <p className="text-sm font-medium text-gray-500 mb-1">
+                    IP Address
+                  </p>
+                  <p className="text-base text-gray-900 font-mono">
+                    {selectedLog.ipAddress}
+                  </p>
                 </div>
               )}
 
               {/* User Agent */}
               {selectedLog.userAgent && (
                 <div className="border-b pb-3">
-                  <p className="text-sm font-medium text-gray-500 mb-1">User Agent</p>
-                  <p className="text-sm text-gray-700 break-words">{selectedLog.userAgent}</p>
+                  <p className="text-sm font-medium text-gray-500 mb-1">
+                    User Agent
+                  </p>
+                  <p className="text-sm text-gray-700 break-words">
+                    {selectedLog.userAgent}
+                  </p>
                 </div>
               )}
 
               {/* Location */}
               {selectedLog.location && (
                 <div className="border-b pb-3">
-                  <p className="text-sm font-medium text-gray-500 mb-1">Location</p>
+                  <p className="text-sm font-medium text-gray-500 mb-1">
+                    Location
+                  </p>
                   <div className="space-y-1">
-                    {selectedLog.location.latitude && selectedLog.location.longitude && (
-                      <p className="text-sm text-gray-700">
-                        📍 Coordinates: {selectedLog.location.latitude}, {selectedLog.location.longitude}
-                      </p>
-                    )}
+                    {selectedLog.location.latitude &&
+                      selectedLog.location.longitude && (
+                        <p className="text-sm text-gray-700">
+                          📍 Coordinates: {selectedLog.location.latitude},{" "}
+                          {selectedLog.location.longitude}
+                        </p>
+                      )}
                     {selectedLog.location.address && (
                       <p className="text-sm text-gray-700">
                         📫 Address: {selectedLog.location.address}
@@ -526,31 +614,46 @@ export function Profile({
               )}
 
               {/* Metadata */}
-              {selectedLog.metadata && Object.keys(selectedLog.metadata).length > 0 && (
-                <div className="border-b pb-3">
-                  <p className="text-sm font-medium text-gray-500 mb-2">Additional Information</p>
-                  <div className="bg-gray-50 rounded-lg p-3 space-y-2">
-                    {Object.entries(selectedLog.metadata).map(([key, value]) => (
-                      <div key={key} className="flex justify-between items-start">
-                        <span className="text-sm font-medium text-gray-600 capitalize">
-                          {key.replace(/([A-Z])/g, ' $1').trim()}:
-                        </span>
-                        <span className="text-sm text-gray-900 text-right ml-4">
-                          {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                        </span>
-                      </div>
-                    ))}
+              {selectedLog.metadata &&
+                Object.keys(selectedLog.metadata).length > 0 && (
+                  <div className="border-b pb-3">
+                    <p className="text-sm font-medium text-gray-500 mb-2">
+                      Additional Information
+                    </p>
+                    <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                      {Object.entries(selectedLog.metadata).map(
+                        ([key, value]) => (
+                          <div
+                            key={key}
+                            className="flex justify-between items-start"
+                          >
+                            <span className="text-sm font-medium text-gray-600 capitalize">
+                              {key.replace(/([A-Z])/g, " $1").trim()}:
+                            </span>
+                            <span className="text-sm text-gray-900 text-right ml-4">
+                              {typeof value === "object"
+                                ? JSON.stringify(value)
+                                : String(value)}
+                            </span>
+                          </div>
+                        )
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
               {/* Target User */}
               {selectedLog.targetUser && (
                 <div className="border-b pb-3">
-                  <p className="text-sm font-medium text-gray-500 mb-1">Target User</p>
+                  <p className="text-sm font-medium text-gray-500 mb-1">
+                    Target User
+                  </p>
                   <p className="text-base text-gray-900">
-                    {selectedLog.targetUser.firstName} {selectedLog.targetUser.lastName}
-                    <span className="text-sm text-gray-500 ml-2">({selectedLog.targetUser.email})</span>
+                    {selectedLog.targetUser.firstName}{" "}
+                    {selectedLog.targetUser.lastName}
+                    <span className="text-sm text-gray-500 ml-2">
+                      ({selectedLog.targetUser.email})
+                    </span>
                   </p>
                 </div>
               )}
@@ -558,7 +661,9 @@ export function Profile({
               {/* Log ID */}
               <div>
                 <p className="text-sm font-medium text-gray-500 mb-1">Log ID</p>
-                <p className="text-xs text-gray-600 font-mono">{selectedLog._id}</p>
+                <p className="text-xs text-gray-600 font-mono">
+                  {selectedLog._id}
+                </p>
               </div>
             </div>
           )}
@@ -573,6 +678,8 @@ export function Profile({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Avatar Crop Dialog */}
     </PageContainer>
   );
 }
