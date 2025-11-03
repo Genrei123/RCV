@@ -5,10 +5,12 @@ import type { User } from "@/typeorm/entities/user.entity";
 import { Button } from "@/components/ui/button";
 import { AuthService } from "@/services/authService";
 import { Pagination } from "@/components/Pagination";
-import { DashboardService } from "@/services/dashboardService";
+import { DashboardService, type DashboardStats } from "@/services/dashboardService";
 import { UserDetailModal } from "@/components/UserDetailModal";
 import { UserPageService } from "@/services/userPageService";
 import { toast } from "react-toastify";
+import { Card, CardContent } from "@/components/ui/card";
+import { Users, Package, Building2, Activity } from "lucide-react";
 
 export interface DashboardProps {
   success?: boolean;
@@ -32,10 +34,13 @@ export function Dashboard(props: DashboardProps) {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState<boolean>(true);
   const pageSize = 10;
 
   useEffect(() => {
     fetchCurrentUser();
+    fetchDashboardStats();
   }, []);
 
   const fetchCurrentUser = async () => {
@@ -49,11 +54,18 @@ export function Dashboard(props: DashboardProps) {
     }
   };
 
-  const getGreeting = (): string => {
-    if (!currentUser) return "Hello 👋";
-    const firstName = currentUser.firstName || "User";
-    return `Hello ${firstName} 👋`;
+  const fetchDashboardStats = async () => {
+    setStatsLoading(true);
+    try {
+      const data = await DashboardService.getDashboardStats();
+      setStats(data);
+    } catch (error) {
+      console.error("Error fetching dashboard stats:", error);
+    } finally {
+      setStatsLoading(false);
+    }
   };
+
   const columns: Column[] = [
     // {
     //   key: "_id",
@@ -274,7 +286,106 @@ export function Dashboard(props: DashboardProps) {
 
   return (
     <>
-      <PageContainer title={getGreeting()}>
+      <PageContainer title="Dashboard" description="Overview of system statistics and user management">
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* Total Users */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Users</p>
+                  <p className="text-3xl font-bold text-gray-900 mt-2">
+                    {statsLoading ? (
+                      <span className="animate-pulse">...</span>
+                    ) : (
+                      stats?.totalUsers || 0
+                    )}
+                  </p>
+                </div>
+                <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <Users className="h-6 w-6 text-blue-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Total Products */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Products</p>
+                  <p className="text-3xl font-bold text-gray-900 mt-2">
+                    {statsLoading ? (
+                      <span className="animate-pulse">...</span>
+                    ) : (
+                      stats?.totalProducts || 0
+                    )}
+                  </p>
+                </div>
+                <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
+                  <Package className="h-6 w-6 text-green-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Total Companies */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Companies</p>
+                  <p className="text-3xl font-bold text-gray-900 mt-2">
+                    {statsLoading ? (
+                      <span className="animate-pulse">...</span>
+                    ) : (
+                      stats?.totalCompanies || 0
+                    )}
+                  </p>
+                </div>
+                <div className="h-12 w-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <Building2 className="h-6 w-6 text-purple-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Kiosk Status */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Kiosk Status</p>
+                  <p className="text-xl font-bold mt-2">
+                    {statsLoading ? (
+                      <span className="animate-pulse">...</span>
+                    ) : (
+                      <span className={stats?.kioskStatus.isOnline ? "text-green-600" : "text-red-600"}>
+                        {stats?.kioskStatus.isOnline ? "Online" : "Offline"}
+                      </span>
+                    )}
+                  </p>
+                  {stats?.kioskStatus.lastPoll && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Last ping: {new Date(stats.kioskStatus.lastPoll).toLocaleTimeString()}
+                    </p>
+                  )}
+                </div>
+                <div className={`h-12 w-12 rounded-lg flex items-center justify-center ${
+                  stats?.kioskStatus.isOnline ? "bg-green-100" : "bg-red-100"
+                }`}>
+                  <Activity className={`h-6 w-6 ${
+                    stats?.kioskStatus.isOnline ? "text-green-600" : "text-red-600"
+                  }`} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Users Table */}
         <DataTable
           title="Users"
           columns={columns}

@@ -24,7 +24,7 @@ export const getAllCompanies = async (
     });
     const meta = buildPaginationMeta(page, limit, total);
     const links = buildLinks(req, page, limit, meta.total_pages);
-    res.status(200).json({ data: companies, pagination: meta, links });
+    res.status(200).json({ success: true, data: companies, pagination: meta, links });
   } catch (error) {
     return new CustomError(500, "Failed to all retrieve companies");
   }
