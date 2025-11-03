@@ -1,0 +1,1008 @@
+{
+  "reports": [
+    {
+      "_id": "5bdb4f0381ae4ed8bd42dc3839dcccc6",
+      "lat": "8.0849",
+      "long": "123.8626",
+      "product": "Hotdog 1kg",
+      "scannedBy": "Eve Davis",
+      "scannedAt": "2025-10-08T12:54:14.042791Z",
+      "scanResult": 1,
+      "remarks": "Passed authentication"
+    },
+    {
+      "_id": "0555eb2662ef4f6d9221ff4088fee5e6",
+      "lat": "7.1353",
+      "long": "121.9865",
+      "product": "Shampoo 200ml",
+      "scannedBy": "Miguel Cruz",
+      "scannedAt": "2025-10-20T06:02:14.042791Z",
+      "scanResult": 0,
+      "remarks": "Unregistered product code"
+    },
+    {
+      "_id": "90be22ff338e4697a8ff39458a3d223b",
+      "lat": "9.0274",
+      "long": "118.2558",
+      "product": "Coffee Instant 200g",
+      "scannedBy": "Lara Tan",
+      "scannedAt": "2025-10-21T02:01:14.042791Z",
+      "scanResult": 0,
+      "remarks": "Counterfeit suspected"
+    },
+    {
+      "_id": "224e8aa0110f47b0ada5952d3541e868",
+      "lat": "13.4962",
+      "long": "121.6678",
+      "product": "Milk Powder 500g",
+      "scannedBy": "Sofia Hernandez",
+      "scannedAt": "2025-10-09T07:45:14.042791Z",
+      "scanResult": 0,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "57619d5b89a14091acc56121ae6ea5e0",
+      "lat": "16.8365",
+      "long": "120.3433",
+      "product": "Instant Noodles 70g",
+      "scannedBy": "Tommy Lee",
+      "scannedAt": "2025-11-01T11:58:14.042791Z",
+      "scanResult": 1,
+      "remarks": "Scan successful"
+    },
+    {
+      "_id": "6b3c756d5ffa49c3b871978d2b1458ba",
+      "lat": "10.2795",
+      "long": "118.5071",
+      "product": "Soy Sauce 350ml",
+      "scannedBy": "Paula Ramos",
+      "scannedAt": "2025-09-30T03:40:14.042791Z",
+      "scanResult": 2,
+      "remarks": "Pending verification"
+    },
+    {
+      "_id": "645823f0023e4bb693bba7be14346ef7",
+      "lat": "7.7122",
+      "long": "125.3901",
+      "product": "Cooking Oil 1L",
+      "scannedBy": "Frank Miller",
+      "scannedAt": "2025-10-06T15:41:14.042791Z",
+      "scanResult": 2,
+      "remarks": "Pending verification"
+    },
+    {
+      "_id": "b0b4212391c74dbbb283a94be08baab4",
+      "lat": "12.7587",
+      "long": "122.0967",
+      "product": "Hotdog 1kg",
+      "scannedBy": "Rico Bautista",
+      "scannedAt": "2025-10-10T17:25:14.042791Z",
+      "scanResult": 0,
+      "remarks": "Counterfeit suspected"
+    },
+    {
+      "_id": "2829d9fbb601462d9a937969312325fe",
+      "lat": "6.7631",
+      "long": "121.7671",
+      "product": "Salt Iodized 500g",
+      "scannedBy": "Lara Tan",
+      "scannedAt": "2025-10-22T05:58:14.042791Z",
+      "scanResult": 2,
+      "remarks": "Pending verification"
+    },
+    {
+      "_id": "ea1de541541643038a89e8123afc0b36",
+      "lat": "12.2893",
+      "long": "122.3384",
+      "product": "Dishwashing Liquid 250ml",
+      "scannedBy": "Kyle Reyes",
+      "scannedAt": "2025-10-28T01:44:14.042791Z",
+      "scanResult": 1,
+      "remarks": "Matched database record"
+    },
+    {
+      "_id": "70380e905ed04a1e98006bca09ea326c",
+      "lat": "7.3358",
+      "long": "122.2384",
+      "product": "Noodles Pack 400g",
+      "scannedBy": "Nina Santos",
+      "scannedAt": "2025-10-11T09:51:14.042791Z",
+      "scanResult": 2,
+      "remarks": "Awaiting inspection"
+    },
+    {
+      "_id": "bcc47197f7484c1c8c4c0b0af667da0b",
+      "lat": "7.3139",
+      "long": "126.5078",
+      "product": "Corned Beef 150g",
+      "scannedBy": "Alice Johnson",
+      "scannedAt": "2025-10-05T02:02:14.042791Z",
+      "scanResult": 0,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "94b8072842cf41209f4d47c5302c87a3",
+      "lat": "6.2492",
+      "long": "122.6512",
+      "product": "Shampoo 200ml",
+      "scannedBy": "Charlie Brown",
+      "scannedAt": "2025-10-01T00:36:14.042791Z",
+      "scanResult": 2,
+      "remarks": "Under manual review"
+    },
+    {
+      "_id": "411de7dbb986446f810d2e5ccb7967bc",
+      "lat": "9.0882",
+      "long": "118.4768",
+      "product": "Tuna Flakes 180g",
+      "scannedBy": "Eve Davis",
+      "scannedAt": "2025-10-17T14:06:14.042791Z",
+      "scanResult": 1,
+      "remarks": "Matched database record"
+    },
+    {
+      "_id": "da573cb7242c40f5b80b99968f6c792e",
+      "lat": "13.2495",
+      "long": "120.9431",
+      "product": "Bath Soap 90g",
+      "scannedBy": "Lara Tan",
+      "scannedAt": "2025-10-20T06:21:14.042791Z",
+      "scanResult": 0,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "ac4e7feadb884b5280cf5f906de344f3",
+      "lat": "6.9358",
+      "long": "121.7097",
+      "product": "Coffee Instant 200g",
+      "scannedBy": "Eve Davis",
+      "scannedAt": "2025-09-30T10:22:14.042791Z",
+      "scanResult": 0,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "a50cebb8e66b42a59004505eb303db07",
+      "lat": "12.4445",
+      "long": "121.1437",
+      "product": "Canned Goods 425g",
+      "scannedBy": "Heidi Garcia",
+      "scannedAt": "2025-10-20T06:49:14.042791Z",
+      "scanResult": 2,
+      "remarks": "Under manual review"
+    },
+    {
+      "_id": "e069705baf104da5a7f1ffde37291909",
+      "lat": "9.2606",
+      "long": "119.1776",
+      "product": "Dishwashing Liquid 250ml",
+      "scannedBy": "Paula Ramos",
+      "scannedAt": "2025-10-18T20:17:14.042791Z",
+      "scanResult": 0,
+      "remarks": "Unregistered product code"
+    },
+    {
+      "_id": "ead90b0cfc8a4f8d940c4933fa7c98ee",
+      "lat": "6.1005",
+      "long": "122.7117",
+      "product": "Bath Soap 90g",
+      "scannedBy": "Lara Tan",
+      "scannedAt": "2025-10-05T23:53:14.042791Z",
+      "scanResult": 2,
+      "remarks": "Under manual review"
+    },
+    {
+      "_id": "7e08318628da483b8b4c40645841039e",
+      "lat": "6.6125",
+      "long": "122.0551",
+      "product": "Noodles Pack 400g",
+      "scannedBy": "Tommy Lee",
+      "scannedAt": "2025-10-21T13:41:14.042791Z",
+      "scanResult": 0,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "0be16c68d8e44c8eac2f543d527b4e0c",
+      "lat": "8.4793",
+      "long": "123.8348",
+      "product": "Corned Beef 150g",
+      "scannedBy": "Jane Martinez",
+      "scannedAt": "2025-10-04T03:43:14.042791Z",
+      "scanResult": 1,
+      "remarks": "Passed authentication"
+    },
+    {
+      "_id": "313dc69d6845472aa2dbae2dc9a209fd",
+      "lat": "10.1606",
+      "long": "118.6394",
+      "product": "Cooking Oil 1L",
+      "scannedBy": "Grace Wilson",
+      "scannedAt": "2025-10-17T16:33:14.042791Z",
+      "scanResult": 0,
+      "remarks": "Counterfeit suspected"
+    },
+    {
+      "_id": "f017ce7e8e734f649c780e954b586157",
+      "lat": "13.692",
+      "long": "120.5779",
+      "product": "Instant Noodles 70g",
+      "scannedBy": "Frank Miller",
+      "scannedAt": "2025-10-20T02:29:14.042791Z",
+      "scanResult": 1,
+      "remarks": "Passed authentication"
+    },
+    {
+      "_id": "8f957391aea140dfaae3a93f82f7f4ce",
+      "lat": "10.3241",
+      "long": "123.5996",
+      "product": "Bath Soap 90g",
+      "scannedBy": "Nina Santos",
+      "scannedAt": "2025-10-03T18:53:14.042791Z",
+      "scanResult": 1,
+      "remarks": "Product verified authentic"
+    },
+    {
+      "_id": "d2041d3517e84d9c8030fd7b93a07bbd",
+      "lat": "8.6753",
+      "long": "124.2457",
+      "product": "Rice 5kg",
+      "scannedBy": "Charlie Brown",
+      "scannedAt": "2025-10-18T09:44:14.042791Z",
+      "scanResult": 1,
+      "remarks": "Matched database record"
+    },
+    {
+      "_id": "498446aed20044e8841c096efe9b9657",
+      "lat": "16.0091",
+      "long": "120.6166",
+      "product": "Sugar 1kg",
+      "scannedBy": "Alice Johnson",
+      "scannedAt": "2025-10-01T10:16:14.042791Z",
+      "scanResult": 0,
+      "remarks": "Counterfeit suspected"
+    },
+    {
+      "_id": "0a577e8fc051469cb149aa2fbbc7523d",
+      "lat": "13.5476",
+      "long": "121.7789",
+      "product": "Corned Beef 150g",
+      "scannedBy": "Grace Wilson",
+      "scannedAt": "2025-10-21T22:14:14.042791Z",
+      "scanResult": 1,
+      "remarks": "Passed authentication"
+    },
+    {
+      "_id": "61a52f49015f4d738308c41378274ba9",
+      "lat": "9.4956",
+      "long": "124.8113",
+      "product": "Hotdog 1kg",
+      "scannedBy": "Lara Tan",
+      "scannedAt": "2025-10-31T14:34:14.042791Z",
+      "scanResult": 1,
+      "remarks": "Scan successful"
+    },
+    {
+      "_id": "8f5fa0a6ebc34e91886888c3c08f6323",
+      "lat": "12.482",
+      "long": "122.8509",
+      "product": "Coffee Instant 200g",
+      "scannedBy": "Ivan Rodriguez",
+      "scannedAt": "2025-10-07T07:29:14.042791Z",
+      "scanResult": 1,
+      "remarks": "Matched database record"
+    },
+    {
+      "_id": "7c2e17b528d1420eb6d343a49ad62bdd",
+      "lat": "6.3273",
+      "long": "121.4676",
+      "product": "Milk Powder 500g",
+      "scannedBy": "Jane Martinez",
+      "scannedAt": "2025-10-06T09:28:14.042791Z",
+      "scanResult": 0,
+      "remarks": "Counterfeit suspected"
+    },
+    {
+      "_id": "59ce1c24803740fe99ce254a31623409",
+      "lat": "7.358",
+      "long": "125.7575",
+      "product": "Hotdog 1kg",
+      "scannedBy": "Kyle Reyes",
+      "scannedAt": "2025-10-15T20:49:14.042791Z",
+      "scanResult": 0,
+      "remarks": "Counterfeit suspected"
+    },
+    {
+      "_id": "de944f35f4604600975540c573ee4aeb",
+      "lat": "9.3203",
+      "long": "124.3279",
+      "product": "Shampoo 200ml",
+      "scannedBy": "Quinn Lim",
+      "scannedAt": "2025-10-20T03:08:14.042791Z",
+      "scanResult": 2,
+      "remarks": "Under manual review"
+    },
+    {
+      "_id": "2bdeec1157744674826bbbc182ac8767",
+      "lat": "6.6156",
+      "long": "124.9988",
+      "product": "Fish Sauce 750ml",
+      "scannedBy": "Heidi Garcia",
+      "scannedAt": "2025-10-27T14:29:14.042791Z",
+      "scanResult": 0,
+      "remarks": "Counterfeit suspected"
+    },
+    {
+      "_id": "b566d1bf38e74a88984e5bd4dafa0581",
+      "lat": "16.8745",
+      "long": "120.0207",
+      "product": "Shampoo 200ml",
+      "scannedBy": "Heidi Garcia",
+      "scannedAt": "2025-10-07T01:41:14.042791Z",
+      "scanResult": 2,
+      "remarks": "Pending verification"
+    },
+    {
+      "_id": "2c38dbb4a870437b88cba2443c536eb7",
+      "lat": "7.7924",
+      "long": "126.3453",
+      "product": "Vinegar White 500ml",
+      "scannedBy": "Paula Ramos",
+      "scannedAt": "2025-11-02T17:17:14.042791Z",
+      "scanResult": 1,
+      "remarks": "Passed authentication"
+    },
+    {
+      "_id": "e203e41199da4a5c9ccb3d1317e340b2",
+      "lat": "9.6571",
+      "long": "123.2726",
+      "product": "Hotdog 1kg",
+      "scannedBy": "Quinn Lim",
+      "scannedAt": "2025-10-29T15:09:14.042791Z",
+      "scanResult": 1,
+      "remarks": "Matched database record"
+    },
+    {
+      "_id": "bb88486143984028a0ba1f837d63c5e2",
+      "lat": "13.4503",
+      "long": "121.7097",
+      "product": "Fish Sauce 750ml",
+      "scannedBy": "Sofia Hernandez",
+      "scannedAt": "2025-10-28T19:31:14.042791Z",
+      "scanResult": 2,
+      "remarks": "Under manual review"
+    },
+    {
+      "_id": "59c726f2b3c64b06862f2aab66590cbb",
+      "lat": "16.3007",
+      "long": "120.6951",
+      "product": "Noodles Pack 400g",
+      "scannedBy": "Grace Wilson",
+      "scannedAt": "2025-10-26T13:39:14.042791Z",
+      "scanResult": 1,
+      "remarks": "Product verified authentic"
+    },
+    {
+      "_id": "25c28022c04f45dd8e6bcbe8b9421abc",
+      "lat": "6.2287",
+      "long": "121.598",
+      "product": "Soy Sauce 350ml",
+      "scannedBy": "Frank Miller",
+      "scannedAt": "2025-10-10T15:01:14.042791Z",
+      "scanResult": 2,
+      "remarks": "Under manual review"
+    },
+    {
+      "_id": "bb3e2dc5c82b4cbda91179d95ff9a551",
+      "lat": "7.5604",
+      "long": "125.2016",
+      "product": "Shampoo 200ml",
+      "scannedBy": "Jane Martinez",
+      "scannedAt": "2025-10-31T11:30:14.042791Z",
+      "scanResult": 0,
+      "remarks": "Counterfeit suspected"
+    },
+    {
+      "_id": "7f18b277875c412a96e8f44e2203eeb8",
+      "lat": "13.4618",
+      "long": "121.7681",
+      "product": "Shampoo 200ml",
+      "scannedBy": "Grace Wilson",
+      "scannedAt": "2025-10-23T14:57:14.042791Z",
+      "scanResult": 0,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "ec631cdec464454db1a9d1454f7105d3",
+      "lat": "6.8872",
+      "long": "124.8515",
+      "product": "Sugar 1kg",
+      "scannedBy": "Frank Miller",
+      "scannedAt": "2025-10-21T07:33:14.042791Z",
+      "scanResult": 0,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "82c6b31446da42b58dda34e6e277543e",
+      "lat": "10.5481",
+      "long": "118.3468",
+      "product": "Bath Soap 90g",
+      "scannedBy": "Tommy Lee",
+      "scannedAt": "2025-10-06T15:43:14.042791Z",
+      "scanResult": 2,
+      "remarks": "Under manual review"
+    },
+    {
+      "_id": "3e101ae6a3d84c80a93344431871f0ac",
+      "lat": "12.6665",
+      "long": "122.201",
+      "product": "Rice 5kg",
+      "scannedBy": "Nina Santos",
+      "scannedAt": "2025-10-20T19:45:14.042791Z",
+      "scanResult": 2,
+      "remarks": "Pending verification"
+    },
+    {
+      "_id": "11d66b2d4a78480aab0ef03d58e05a05",
+      "lat": "8.3748",
+      "long": "124.5525",
+      "product": "Bath Soap 90g",
+      "scannedBy": "Jane Martinez",
+      "scannedAt": "2025-10-05T20:58:14.042791Z",
+      "scanResult": 1,
+      "remarks": "Scan successful"
+    },
+    {
+      "_id": "9fc3d1b468254e5fb83e1c15f382a9ae",
+      "lat": "8.3404",
+      "long": "124.3562",
+      "product": "Salt Iodized 500g",
+      "scannedBy": "Nina Santos",
+      "scannedAt": "2025-10-21T10:19:14.042791Z",
+      "scanResult": 0,
+      "remarks": "Unregistered product code"
+    },
+    {
+      "_id": "72910f71f9fb4e29931af44901bb95bf",
+      "lat": "16.3665",
+      "long": "120.0302",
+      "product": "Hotdog 1kg",
+      "scannedBy": "Rico Bautista",
+      "scannedAt": "2025-10-24T19:00:14.042791Z",
+      "scanResult": 2,
+      "remarks": "Awaiting inspection"
+    },
+    {
+      "_id": "afbbb46002184fd086c8c4587d1106d5",
+      "lat": "17.1683",
+      "long": "120.0533",
+      "product": "Corned Beef 150g",
+      "scannedBy": "Sofia Hernandez",
+      "scannedAt": "2025-10-30T00:19:14.042791Z",
+      "scanResult": 1,
+      "remarks": "Passed authentication"
+    },
+    {
+      "_id": "ebf2eb1e539a43e6b0254c089df31382",
+      "lat": "14.3874",
+      "long": "121.3598",
+      "product": "Vinegar White 500ml",
+      "scannedBy": "Bob Smith",
+      "scannedAt": "2025-10-21T09:09:14.042791Z",
+      "scanResult": 1,
+      "remarks": "Passed authentication"
+    },
+    {
+      "_id": "25fef66c95bd430eb4391f6a72860610",
+      "lat": "9.0804",
+      "long": "125.2629",
+      "product": "Laundry Detergent 1kg",
+      "scannedBy": "Heidi Garcia",
+      "scannedAt": "2025-10-03T15:01:14.042791Z",
+      "scanResult": 2,
+      "remarks": "Pending verification"
+    },
+    {
+      "_id": "170627ab03104cbead0524c1a8be2581",
+      "lat": "6.2698",
+      "long": "121.5465",
+      "product": "Corned Beef 150g",
+      "scannedBy": "Nina Santos",
+      "scannedAt": "2025-10-13T04:57:14.042791Z",
+      "scanResult": 2,
+      "remarks": "Pending verification"
+    },
+    {
+      "_id": "394776987e4344539eeb9701ef411cb6",
+      "lat": "15.9882",
+      "long": "119.8558",
+      "product": "Vinegar White 500ml",
+      "scannedBy": "Ivan Rodriguez",
+      "scannedAt": "2025-10-31T20:05:14.042791Z",
+      "scanResult": 1,
+      "remarks": "Matched database record"
+    },
+    {
+      "_id": "23e9d30900c943328b847d159cf8d325",
+      "lat": "6.4247",
+      "long": "126.3781",
+      "product": "Instant Noodles 70g",
+      "scannedBy": "Oscar Dizon",
+      "scannedAt": "2025-10-16T08:50:14.042791Z",
+      "scanResult": 1,
+      "remarks": "Scan successful"
+    },
+    {
+      "_id": "28b50246b2394b85b0e824ef2fd5cd13",
+      "lat": "16.3915",
+      "long": "119.9142",
+      "product": "Fish Sauce 750ml",
+      "scannedBy": "Tommy Lee",
+      "scannedAt": "2025-10-16T06:20:14.042791Z",
+      "scanResult": 1,
+      "remarks": "Scan successful"
+    },
+    {
+      "_id": "d3fdc13a66264be3b591aba30fbe7a4a",
+      "lat": "17.1328",
+      "long": "121.1295",
+      "product": "Hotdog 1kg",
+      "scannedBy": "Sofia Hernandez",
+      "scannedAt": "2025-10-11T06:24:14.042791Z",
+      "scanResult": 1,
+      "remarks": "Product verified authentic"
+    },
+    {
+      "_id": "4c6dd25d77b44402bc75a7b16b102145",
+      "lat": "13.4667",
+      "long": "121.563",
+      "product": "Rice 5kg",
+      "scannedBy": "Eve Davis",
+      "scannedAt": "2025-11-02T10:56:14.042791Z",
+      "scanResult": 2,
+      "remarks": "Pending verification"
+    },
+    {
+      "_id": "e311a2516a0a4b5391813222de7b8091",
+      "lat": "6.8158",
+      "long": "126.2431",
+      "product": "Soy Sauce 350ml",
+      "scannedBy": "Oscar Dizon",
+      "scannedAt": "2025-10-20T05:15:14.042791Z",
+      "scanResult": 1,
+      "remarks": "Product verified authentic"
+    },
+    {
+      "_id": "eac0c9d40e5b4feb8081a9b48ae40bf9",
+      "lat": "6.2456",
+      "long": "121.3887",
+      "product": "Canned Goods 425g",
+      "scannedBy": "Miguel Cruz",
+      "scannedAt": "2025-10-19T15:15:14.042791Z",
+      "scanResult": 0,
+      "remarks": "Counterfeit suspected"
+    },
+    {
+      "_id": "16c42bc290644790b92dcc71600ac198",
+      "lat": "6.7126",
+      "long": "121.9299",
+      "product": "Vinegar White 500ml",
+      "scannedBy": "Bob Smith",
+      "scannedAt": "2025-10-19T16:43:14.042791Z",
+      "scanResult": 1,
+      "remarks": "Scan successful"
+    },
+    {
+      "_id": "c5e7355d490a45d89951635b01f15c93",
+      "lat": "6.5996",
+      "long": "125.9109",
+      "product": "Noodles Pack 400g",
+      "scannedBy": "Charlie Brown",
+      "scannedAt": "2025-10-12T01:13:14.042791Z",
+      "scanResult": 0,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "ff1153b8a0684851a9ee3018f4ad5077",
+      "lat": "7.4614",
+      "long": "122.7105",
+      "product": "Shampoo 200ml",
+      "scannedBy": "Jane Martinez",
+      "scannedAt": "2025-10-06T16:02:14.042791Z",
+      "scanResult": 2,
+      "remarks": "Pending verification"
+    },
+    {
+      "_id": "4d1fbced0c7c48a4ac1cdc336059745e",
+      "lat": "9.2258",
+      "long": "118.5108",
+      "product": "Noodles Pack 400g",
+      "scannedBy": "Quinn Lim",
+      "scannedAt": "2025-10-27T07:39:14.042791Z",
+      "scanResult": 0,
+      "remarks": "Counterfeit suspected"
+    },
+    {
+      "_id": "df5cf0badcbf4a948efe9a7ec726f893",
+      "lat": "12.2558",
+      "long": "122.7992",
+      "product": "Dishwashing Liquid 250ml",
+      "scannedBy": "Rico Bautista",
+      "scannedAt": "2025-10-28T19:38:14.042791Z",
+      "scanResult": 1,
+      "remarks": "Matched database record"
+    },
+    {
+      "_id": "a69fbffac6214bbaaf5aff8f581c1a08",
+      "lat": "17.1902",
+      "long": "120.3001",
+      "product": "Sugar 1kg",
+      "scannedBy": "Quinn Lim",
+      "scannedAt": "2025-10-22T03:30:14.042791Z",
+      "scanResult": 0,
+      "remarks": "Unregistered product code"
+    },
+    {
+      "_id": "c762dd7e369a400d8a40d0ddf863b652",
+      "lat": "7.3803",
+      "long": "122.1066",
+      "product": "Bath Soap 90g",
+      "scannedBy": "Alice Johnson",
+      "scannedAt": "2025-10-27T16:12:14.042791Z",
+      "scanResult": 1,
+      "remarks": "Product verified authentic"
+    },
+    {
+      "_id": "cfd570bb94f9436885c2cf0fe0dde88b",
+      "lat": "13.4255",
+      "long": "122.3511",
+      "product": "Cooking Oil 1L",
+      "scannedBy": "Sofia Hernandez",
+      "scannedAt": "2025-10-10T21:11:14.042791Z",
+      "scanResult": 2,
+      "remarks": "Under manual review"
+    },
+    {
+      "_id": "951a3b899109484595ab531651a1939c",
+      "lat": "15.8804",
+      "long": "120.7542",
+      "product": "Instant Noodles 70g",
+      "scannedBy": "Oscar Dizon",
+      "scannedAt": "2025-10-20T06:02:14.042791Z",
+      "scanResult": 2,
+      "remarks": "Pending verification"
+    },
+    {
+      "_id": "040d38ff23e546f3986af4babdbb4f61",
+      "lat": "10.9829",
+      "long": "123.9177",
+      "product": "Instant Noodles 70g",
+      "scannedBy": "Oscar Dizon",
+      "scannedAt": "2025-10-25T03:25:14.042791Z",
+      "scanResult": 1,
+      "remarks": "Product verified authentic"
+    },
+    {
+      "_id": "8aa8763042d4484eaf2ade1b2dfb022e",
+      "lat": "11.5559",
+      "long": "122.3406",
+      "product": "Dishwashing Liquid 250ml",
+      "scannedBy": "Sofia Hernandez",
+      "scannedAt": "2025-10-25T18:35:14.042791Z",
+      "scanResult": 0,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "63b7f03d721d40d3b68a4b429481b3c2",
+      "lat": "7.7903",
+      "long": "124.4634",
+      "product": "Corned Beef 150g",
+      "scannedBy": "Quinn Lim",
+      "scannedAt": "2025-10-20T09:15:14.042791Z",
+      "scanResult": 2,
+      "remarks": "Pending verification"
+    },
+    {
+      "_id": "bbb52494ff114238a00f890b8fd7e4de",
+      "lat": "9.734",
+      "long": "123.4972",
+      "product": "Bath Soap 90g",
+      "scannedBy": "Ivan Rodriguez",
+      "scannedAt": "2025-10-27T05:07:14.042791Z",
+      "scanResult": 1,
+      "remarks": "Product verified authentic"
+    },
+    {
+      "_id": "753cc4ac65874219817c7534f141b062",
+      "lat": "11.7284",
+      "long": "121.4019",
+      "product": "Vinegar White 500ml",
+      "scannedBy": "Oscar Dizon",
+      "scannedAt": "2025-10-11T18:11:14.042791Z",
+      "scanResult": 1,
+      "remarks": "Scan successful"
+    },
+    {
+      "_id": "79c1493873e74f848c3b958649058243",
+      "lat": "9.6899",
+      "long": "123.954",
+      "product": "Canned Goods 425g",
+      "scannedBy": "Paula Ramos",
+      "scannedAt": "2025-10-22T10:06:14.042791Z",
+      "scanResult": 2,
+      "remarks": "Under manual review"
+    },
+    {
+      "_id": "a994fa931c5c43e4a8c798f2ffca09ae",
+      "lat": "15.8932",
+      "long": "120.9453",
+      "product": "Canned Goods 425g",
+      "scannedBy": "Nina Santos",
+      "scannedAt": "2025-10-24T06:00:14.042791Z",
+      "scanResult": 0,
+      "remarks": "Unregistered product code"
+    },
+    {
+      "_id": "6a18b1fbbe234b49aafb752ef1ffa464",
+      "lat": "9.2347",
+      "long": "119.1161",
+      "product": "Hotdog 1kg",
+      "scannedBy": "Heidi Garcia",
+      "scannedAt": "2025-10-09T22:06:14.042791Z",
+      "scanResult": 1,
+      "remarks": "Scan successful"
+    },
+    {
+      "_id": "068090b1e833455bbf61f34f11e5a6bb",
+      "lat": "7.0266",
+      "long": "122.6424",
+      "product": "Laundry Detergent 1kg",
+      "scannedBy": "Tommy Lee",
+      "scannedAt": "2025-10-03T05:49:14.042791Z",
+      "scanResult": 0,
+      "remarks": "Counterfeit suspected"
+    },
+    {
+      "_id": "e3d818d642de4cb38f5d4ef2277073cb",
+      "lat": "15.8691",
+      "long": "120.9925",
+      "product": "Dishwashing Liquid 250ml",
+      "scannedBy": "Miguel Cruz",
+      "scannedAt": "2025-10-20T23:01:14.042791Z",
+      "scanResult": 1,
+      "remarks": "Scan successful"
+    },
+    {
+      "_id": "b4566fd00ae94efe91a2c8d154cc4f4f",
+      "lat": "9.8113",
+      "long": "122.948",
+      "product": "Coffee Instant 200g",
+      "scannedBy": "Charlie Brown",
+      "scannedAt": "2025-10-01T17:40:14.042791Z",
+      "scanResult": 1,
+      "remarks": "Passed authentication"
+    },
+    {
+      "_id": "d6736de3911f4bed87e392cfb61ffb1d",
+      "lat": "9.4141",
+      "long": "123.3291",
+      "product": "Canned Goods 425g",
+      "scannedBy": "Heidi Garcia",
+      "scannedAt": "2025-10-23T03:28:14.042791Z",
+      "scanResult": 1,
+      "remarks": "Product verified authentic"
+    },
+    {
+      "_id": "9515fdc91d4042739ed46ddd65d5189e",
+      "lat": "6.7487",
+      "long": "125.4297",
+      "product": "Rice 5kg",
+      "scannedBy": "Heidi Garcia",
+      "scannedAt": "2025-11-01T08:45:14.042791Z",
+      "scanResult": 1,
+      "remarks": "Scan successful"
+    },
+    {
+      "_id": "70316025995845b8b77e701cb26b73ca",
+      "lat": "9.6856",
+      "long": "123.8284",
+      "product": "Salt Iodized 500g",
+      "scannedBy": "Jane Martinez",
+      "scannedAt": "2025-10-25T07:53:14.042791Z",
+      "scanResult": 0,
+      "remarks": "Counterfeit suspected"
+    },
+    {
+      "_id": "c5a7317d586e4dc88fbd3e1dbb983df5",
+      "lat": "11.2881",
+      "long": "124.8559",
+      "product": "Milk Powder 500g",
+      "scannedBy": "Kyle Reyes",
+      "scannedAt": "2025-10-30T02:16:14.042791Z",
+      "scanResult": 2,
+      "remarks": "Awaiting inspection"
+    },
+    {
+      "_id": "612b3a2d43eb4f39a4fdb868cbde9aaf",
+      "lat": "6.4188",
+      "long": "125.8248",
+      "product": "Hotdog 1kg",
+      "scannedBy": "Rico Bautista",
+      "scannedAt": "2025-10-11T00:07:14.042791Z",
+      "scanResult": 2,
+      "remarks": "Under manual review"
+    },
+    {
+      "_id": "2a1f4d73b7c44f8290861fd4d029c801",
+      "lat": "6.2837",
+      "long": "125.6864",
+      "product": "Milk Powder 500g",
+      "scannedBy": "Alice Johnson",
+      "scannedAt": "2025-10-02T01:49:14.042791Z",
+      "scanResult": 0,
+      "remarks": "Unregistered product code"
+    },
+    {
+      "_id": "0e617edf71bc4b26a4b8dd88a66676ec",
+      "lat": "7.3181",
+      "long": "121.4717",
+      "product": "Instant Noodles 70g",
+      "scannedBy": "Eve Davis",
+      "scannedAt": "2025-10-27T22:55:14.042791Z",
+      "scanResult": 0,
+      "remarks": "Counterfeit suspected"
+    },
+    {
+      "_id": "13c3327fb3494dec838534e7757a2de9",
+      "lat": "14.3844",
+      "long": "121.0261",
+      "product": "Coffee Instant 200g",
+      "scannedBy": "Dana White",
+      "scannedAt": "2025-11-01T23:20:14.042791Z",
+      "scanResult": 1,
+      "remarks": "Scan successful"
+    },
+    {
+      "_id": "86659fbc6aae41278f07fe62b4ddbaf1",
+      "lat": "13.2862",
+      "long": "120.3694",
+      "product": "Corned Beef 150g",
+      "scannedBy": "Jane Martinez",
+      "scannedAt": "2025-10-20T05:52:14.042791Z",
+      "scanResult": 2,
+      "remarks": "Pending verification"
+    },
+    {
+      "_id": "e227f563b74740a182f8de500e697e08",
+      "lat": "6.7087",
+      "long": "125.7232",
+      "product": "Sugar 1kg",
+      "scannedBy": "Oscar Dizon",
+      "scannedAt": "2025-10-09T13:55:14.042791Z",
+      "scanResult": 0,
+      "remarks": "Unregistered product code"
+    },
+    {
+      "_id": "551205f50e32484a8c589d70010977e1",
+      "lat": "16.5017",
+      "long": "120.5812",
+      "product": "Rice 5kg",
+      "scannedBy": "Grace Wilson",
+      "scannedAt": "2025-10-16T05:15:14.042791Z",
+      "scanResult": 1,
+      "remarks": "Scan successful"
+    },
+    {
+      "_id": "2830c374808d4dafa3cd81960d34baf0",
+      "lat": "10.1963",
+      "long": "118.8732",
+      "product": "Sugar 1kg",
+      "scannedBy": "Dana White",
+      "scannedAt": "2025-10-22T00:35:14.042791Z",
+      "scanResult": 2,
+      "remarks": "Under manual review"
+    },
+    {
+      "_id": "f2ac444143d94db48edfcd045cb9f049",
+      "lat": "11.0349",
+      "long": "124.8471",
+      "product": "Corned Beef 150g",
+      "scannedBy": "Bob Smith",
+      "scannedAt": "2025-10-26T12:32:14.042791Z",
+      "scanResult": 0,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "b48d0fe6c83548fc84bb5b24b63f4cb9",
+      "lat": "9.5727",
+      "long": "118.6616",
+      "product": "Rice 5kg",
+      "scannedBy": "Tommy Lee",
+      "scannedAt": "2025-10-29T16:55:14.042791Z",
+      "scanResult": 2,
+      "remarks": "Pending verification"
+    },
+    {
+      "_id": "8d5fbfeb575c4b6182f1e0a48ec9fa0f",
+      "lat": "12.7056",
+      "long": "122.1215",
+      "product": "Hotdog 1kg",
+      "scannedBy": "Bob Smith",
+      "scannedAt": "2025-10-30T17:04:14.042791Z",
+      "scanResult": 2,
+      "remarks": "Under manual review"
+    },
+    {
+      "_id": "8cfe0194064f40829174a038a06aa3d1",
+      "lat": "8.6383",
+      "long": "123.6765",
+      "product": "Vinegar White 500ml",
+      "scannedBy": "Lara Tan",
+      "scannedAt": "2025-10-09T06:00:14.042791Z",
+      "scanResult": 2,
+      "remarks": "Under manual review"
+    },
+    {
+      "_id": "950cc8b5974346b994b8700145542de7",
+      "lat": "16.0482",
+      "long": "120.7685",
+      "product": "Sugar 1kg",
+      "scannedBy": "Lara Tan",
+      "scannedAt": "2025-09-30T21:43:14.042791Z",
+      "scanResult": 0,
+      "remarks": "Counterfeit suspected"
+    },
+    {
+      "_id": "4e919aebe62f4845a488f762c4131693",
+      "lat": "7.5415",
+      "long": "121.3905",
+      "product": "Fish Sauce 750ml",
+      "scannedBy": "Sofia Hernandez",
+      "scannedAt": "2025-10-10T02:22:14.042791Z",
+      "scanResult": 2,
+      "remarks": "Awaiting inspection"
+    },
+    {
+      "_id": "7d3a1568b5254b6291d07ffb9afaf4d8",
+      "lat": "7.1077",
+      "long": "124.6073",
+      "product": "Laundry Detergent 1kg",
+      "scannedBy": "Ivan Rodriguez",
+      "scannedAt": "2025-09-30T21:54:14.042791Z",
+      "scanResult": 0,
+      "remarks": "Counterfeit suspected"
+    },
+    {
+      "_id": "d6f834036fcb46dab55ab913ea93d426",
+      "lat": "15.8309",
+      "long": "120.5311",
+      "product": "Salt Iodized 500g",
+      "scannedBy": "Quinn Lim",
+      "scannedAt": "2025-10-16T09:13:14.042791Z",
+      "scanResult": 0,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "4dd817ac94e74fa989ebd0b18876ea3c",
+      "lat": "7.1691",
+      "long": "124.7254",
+      "product": "Instant Noodles 70g",
+      "scannedBy": "Ivan Rodriguez",
+      "scannedAt": "2025-10-01T09:56:14.042791Z",
+      "scanResult": 1,
+      "remarks": "Product verified authentic"
+    },
+    {
+      "_id": "98496eb707014bf0bc1e5d1c50d45571",
+      "lat": "9.6889",
+      "long": "124.4125",
+      "product": "Noodles Pack 400g",
+      "scannedBy": "Oscar Dizon",
+      "scannedAt": "2025-10-15T09:00:14.042791Z",
+      "scanResult": 1,
+      "remarks": "Scan successful"
+    }
+  ],
+  "parameters": {
+    "eps_km": 30.0,
+    "min_samples": 3
+  }
+}

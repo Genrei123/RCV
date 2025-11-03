@@ -11,10 +11,11 @@ import {
   Building2,
   Sliders,
   Activity,
-} from "lucide-react";
-import { LogoutModal } from "./LogoutModal";
-import { AuthService } from "@/services/authService";
-import { toast } from "react-toastify";
+  BarChart3
+} from 'lucide-react'
+import { LogoutModal } from './LogoutModal'
+import { AuthService } from '@/services/authService'
+import { toast } from 'react-toastify'
 
 interface CurrentUser {
   _id: string;
@@ -108,12 +109,13 @@ export function Sidebar() {
   };
 
   const menuItems = [
-    { path: "/", label: "Dashboard", icon: LayoutDashboard },
-    { path: "/products", label: "Products", icon: Package },
-    { path: "/companies", label: "Companies", icon: Building2 },
-    { path: "/maps", label: "Maps", icon: MapPin },
-    { path: "/remote-config", label: "Mobile Config", icon: Sliders },
-    { path: "/kiosk-monitor", label: "Kiosk Monitor", icon: Activity },
+    { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/products', label: 'Products', icon: Package },
+    { path: '/companies', label: 'Companies', icon: Building2 },
+    { path: '/maps', label: 'Maps', icon: MapPin },
+    { path: '/analytics', label: 'Analytics', icon: BarChart3 },
+    { path: '/remote-config', label: 'Mobile Config', icon: Sliders },
+    { path: '/kiosk-monitor', label: 'Kiosk Monitor', icon: Activity },
     // { path: '/users', label: 'Users', icon: Users },
   ];
 

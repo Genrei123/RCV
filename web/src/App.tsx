@@ -3,6 +3,7 @@ import { Dashboard, type DashboardProps } from './pages/Dashboard';
 import { Products, type ProductsProps } from './pages/Products';
 import { Companies, type CompaniesProps } from './pages/Companies';
 import { Maps } from './pages/Maps';
+import { Analytics } from './pages/Analytics';
 import { Profile } from './pages/Profile';
 import { Blockchain } from './pages/Blockchain';
 import { ScanHistory } from './pages/ScanHistory';
@@ -206,6 +207,11 @@ function App() {
               <Route path="/maps" element={
                 <ProtectedRoutes>
                   <Maps />
+                </ProtectedRoutes>
+              } />
+              <Route path="/analytics" element={
+                <ProtectedRoutes>
+                  <Analytics />
                 </ProtectedRoutes>
               } />
               <Route path="/profile" element={
