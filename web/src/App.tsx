@@ -17,6 +17,7 @@ import { ProductService } from './services/productService';
 import { AuthPage } from './pages/AuthPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { PendingApprovalPage } from './pages/PendingApprovalPage';
+import { NotFoundPage } from './pages/NotFoundPage';
 import { CompanyService } from './services/companyService';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -232,6 +233,9 @@ function App() {
                   <KioskMonitor />
                 </ProtectedRoutes>
               } />
+              
+              {/* 404 Catch-all Route - Must be last */}
+              <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </div>
         </main>
