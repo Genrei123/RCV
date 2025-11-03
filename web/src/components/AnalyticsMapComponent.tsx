@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import analyticsService from "../services/analyticsService";
 import type { APIResponse } from "../services/analyticsService";
 import sampleReportsData from "../../reports_sample.json";
+import { ScatterplotLayer } from '@deck.gl/layers';
+import { GoogleMapsOverlay } from '@deck.gl/google-maps';
 
 declare global {
   interface Window { google: any; }
@@ -20,6 +22,7 @@ export function AnalyticsMapComponent() {
   const googleMapRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
   const infoWindowRef = useRef<any>(null);
+  const deckOverlayRef = useRef<any>(null); // For deck.gl overlay
 
   const callDBSCANAPI = async () => {
     setLoading(true);
@@ -43,7 +46,7 @@ export function AnalyticsMapComponent() {
     if (window.google?.maps) { setMapLoaded(true); return; }
     
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,visualization`;
     script.async = true;
     script.onload = () => setMapLoaded(true);
     script.onerror = () => setMapError(true);
@@ -90,6 +93,12 @@ export function AnalyticsMapComponent() {
     });
 
     infoWindowRef.current = new window.google.maps.InfoWindow();
+    
+    // Initialize deck.gl overlay
+    deckOverlayRef.current = new GoogleMapsOverlay({
+      interleaved: true,
+    });
+    deckOverlayRef.current.setMap(googleMapRef.current);
   }, [mapLoaded]);
 
   // Create markers when API response changes
@@ -319,6 +328,62 @@ export function AnalyticsMapComponent() {
           });
         });
       }
+      
+      // Clear existing hotspot circles
+      
+      // Create deck.gl heatmap layer
+      const createDeckHeatmap = () => {
+        const heatmapData: any[] = [];
+        
+        // Add all cluster points to heatmap data (excluding noise points)
+        apiResponse.results.clusters.forEach((cluster) => {
+          cluster.points.forEach(point => {
+            const latitude = typeof point.lat === 'string' ? parseFloat(point.lat) : point.latitude;
+            const longitude = typeof point.long === 'string' ? parseFloat(point.long) : point.longitude;
+            
+            heatmapData.push({
+              coordinates: [longitude, latitude], // deck.gl uses [lng, lat] format
+              weight: 1, // You could use cluster size or other weight
+            });
+          });
+        });
+        
+        const heatmapLayer = new ScatterplotLayer({
+          id: 'geographic-heatmap-layer',
+          data: heatmapData,
+          getPosition: (d: any) => d.coordinates,
+          getRadius: () => apiResponse.results.clustering_params.eps_km * 1000,
+          getFillColor: (d: any) => {
+
+            const intensity = d.weight || 1;
+            const alpha = Math.min(255, intensity * 100);
+            return [240, 59, 32, alpha];
+          },
+          radiusUnits: 'meters', 
+          radiusScale: 1,
+          stroked: false,
+          filled: true,
+          radiusMinPixels: 0,
+          radiusMaxPixels: 1000,
+          updateTriggers: {
+            getRadius: [apiResponse.results.clustering_params.eps_km],
+            getFillColor: heatmapData,
+            getPosition: heatmapData
+          }
+        });
+        
+        // Update deck overlay with heatmap
+        if (deckOverlayRef.current) {
+          deckOverlayRef.current.setProps({
+            layers: [heatmapLayer],
+          });
+        }
+        
+        console.log('Deck.gl heatmap created with data points:', heatmapData.length);
+      };
+      
+      // Create the deck.gl heatmap
+      createDeckHeatmap();
       
       googleMapRef.current.fitBounds(bounds);
     }
