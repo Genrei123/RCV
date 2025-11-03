@@ -17,6 +17,7 @@ export const UserValidation = z.object({
   _id: z.string().optional(),
   role: z.enum(['AGENT', 'ADMIN', 'USER']).optional(),
   status: z.enum(['Archived', 'Active', 'Pending']).default('Pending'),
+  approved: z.boolean().optional().default(false),
   avatarUrl: z.string().optional(),
   firstName: z.string().min(2).max(50),
   middleName: z.string().min(2).max(50).optional(),
@@ -53,6 +54,9 @@ export class User {
 
   @Column({ type: 'enum', enum: ['Archived', 'Active', 'Pending'], default: 'Pending' })
   status!: 'Archived' | 'Active' | 'Pending';
+
+  @Column({ type: 'boolean', default: false })
+  approved!: boolean;
 
   @Column({ nullable: true })
   avatarUrl?: string;

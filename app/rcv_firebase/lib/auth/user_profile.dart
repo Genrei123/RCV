@@ -9,6 +9,9 @@ import 'package:flutter/services.dart' show rootBundle;
 import '../widgets/custom_text_field.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:path_provider/path_provider.dart';
+import '../widgets/crop_image_widget.dart';
 import '../services/remote_config_service.dart';
 import '../widgets/feature_disabled_screen.dart';
 
@@ -64,17 +67,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
     });
   }
 
-  @override
-  void dispose() {
-    nameController.dispose();
-    emailController.dispose();
-    phoneController.dispose();
-    dobController.dispose();
-    passwordController.dispose();
-    confirmPasswordController.dispose();
-    super.dispose();
-  }
-
   void openImageCropModal() {
     showModalBottomSheet(
       context: context,
@@ -102,9 +94,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                         source: ImageSource.camera,
                       );
                       if (image != null) {
-                        setState(() {
-                          selectedImagePath = image.path;
-                        });
+                        await _showAvatarCropDialog(image.path);
                       }
                     },
                     icon: const Icon(Icons.camera_alt),
@@ -125,9 +115,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                         source: ImageSource.gallery,
                       );
                       if (image != null) {
-                        setState(() {
-                          selectedImagePath = image.path;
-                        });
+                        await _showAvatarCropDialog(image.path);
                       }
                     },
                     icon: const Icon(Icons.photo_library),
@@ -148,6 +136,38 @@ class _UserProfilePageState extends State<UserProfilePage> {
         );
       },
     );
+  }
+
+  Future<void> _showAvatarCropDialog(String imagePath) async {
+    try {
+      final file = File(imagePath);
+      if (!await file.exists()) return;
+      final Uint8List bytes = await file.readAsBytes();
+
+      final Uint8List? cropped = await showImageCropperDialog(
+        context,
+        imageBytes: bytes,
+        title: 'Crop Avatar',
+        withCircleUi: true,
+        aspectRatio: 1,
+        headerColor: app_colors.AppColors.primary,
+      );
+
+      if (cropped != null) {
+        final tmp = await getTemporaryDirectory();
+        final out = File(
+          '${tmp.path}/avatar_${DateTime.now().millisecondsSinceEpoch}.png',
+        );
+        await out.writeAsBytes(cropped, flush: true);
+        if (!mounted) return;
+        setState(() {
+          selectedImagePath = out.path;
+        });
+      }
+    } catch (e) {
+      // ignore: avoid_print
+      print('Crop dialog error: $e');
+    }
   }
 
   void _logout() {
@@ -183,7 +203,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-
     //Feature disable checker
     if (RemoteConfigService.isFeatureDisabled('disable_profile_page')) {
       return FeatureDisabledScreen(
@@ -193,7 +212,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
         navBarRole: NavBarRole.user,
       );
     }
-    
 
     if (userData == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -438,14 +456,19 @@ class _UserProfilePageState extends State<UserProfilePage> {
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: app_colors.AppColors.primary, width: 2),
+                            borderSide: BorderSide(
+                              color: app_colors.AppColors.primary,
+                              width: 2,
+                            ),
                           ),
                           labelStyle: AppFonts.labelStyle.copyWith(
                             color: app_colors.AppColors.darkNeutral,
                           ),
                           suffixIcon: IconButton(
                             icon: Icon(
-                              _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                              _obscurePassword
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
                               color: app_colors.AppColors.darkNeutral,
                             ),
                             onPressed: () {
@@ -478,19 +501,25 @@ class _UserProfilePageState extends State<UserProfilePage> {
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(color: app_colors.AppColors.primary, width: 2),
+                            borderSide: BorderSide(
+                              color: app_colors.AppColors.primary,
+                              width: 2,
+                            ),
                           ),
                           labelStyle: AppFonts.labelStyle.copyWith(
                             color: app_colors.AppColors.darkNeutral,
                           ),
                           suffixIcon: IconButton(
                             icon: Icon(
-                              _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
+                              _obscureConfirmPassword
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
                               color: app_colors.AppColors.darkNeutral,
                             ),
                             onPressed: () {
                               setState(() {
-                                _obscureConfirmPassword = !_obscureConfirmPassword;
+                                _obscureConfirmPassword =
+                                    !_obscureConfirmPassword;
                               });
                             },
                           ),

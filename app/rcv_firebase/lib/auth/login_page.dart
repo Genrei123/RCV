@@ -5,7 +5,7 @@ import '../widgets/animated_form_field.dart';
 import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
 import '../widgets/navigation_bar.dart';
 import '../widgets/processing_modal.dart';
-import '../widgets/status_modal.dart';
+// Removed status modal usage per request
 import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
 import '../services/token_service.dart';
@@ -188,20 +188,16 @@ class _LoginPageState extends State<LoginPage> {
     for (var user in users) {
       if (user.email == email && user.password == password) {
         String mockToken = await _createMockJwtToken(user.email);
-        
+
         print(' Mock login successful');
         print(' Mock JWT Token: $mockToken');
-        
+
         // Store the mock token
-        await TokenService.saveTokens(
-          mockToken,         
-          'mock_refresh_token',   
-          3600,                   
-        );
-        
+        await TokenService.saveTokens(mockToken, 'mock_refresh_token', 3600);
+
         // Set user role
         appRole = user.navBarRole;
-        
+
         if (context.mounted) {
           Navigator.pushReplacementNamed(context, '/user-home');
         }
@@ -223,7 +219,7 @@ class _LoginPageState extends State<LoginPage> {
   Future<String> _createMockJwtToken(String email) async {
     final users = await loadUsers();
     final user = users.firstWhere((u) => u.email == email);
-    
+
     // Create mock JWT payload using new user structure
     final payload = {
       'sub': user.id, // UUID from new structure
@@ -238,8 +234,7 @@ class _LoginPageState extends State<LoginPage> {
       'iat': DateTime.now().millisecondsSinceEpoch ~/ 1000,
       'exp': (DateTime.now().millisecondsSinceEpoch ~/ 1000) + 3600,
     };
-    
-  
+
     final encodedPayload = base64Url.encode(utf8.encode(jsonEncode(payload)));
     return 'mock.$encodedPayload.mock';
   }
@@ -395,29 +390,24 @@ class _LoginPageState extends State<LoginPage> {
                             await SchedulerBinding.instance.endOfFrame;
 
                             if (ok) {
-                              await showStatusModal(
-                                context,
-                                type: StatusModalType.success,
-                                title: 'Login Success!',
-                                message: 'Proceeding to Landing Page',
-                                buttonText: 'Proceed',
-                                onButtonPressed: () {
-                                  Navigator.of(context).pop(); // close modal
-                                  Navigator.pushReplacementNamed(
-                                    context,
-                                    '/user-home',
-                                  );
-                                },
-                              );
+                              // Direct navigation without status modal
+                              if (mounted) {
+                                Navigator.pushReplacementNamed(
+                                  context,
+                                  '/user-home',
+                                );
+                              }
                             } else {
-                              await showStatusModal(
-                                context,
-                                type: StatusModalType.error,
-                                title: 'Login Failed',
-                                message:
-                                    'Please check your credentials and try again.',
-                                buttonText: 'OK',
-                              );
+                              // Show a lightweight SnackBar instead of a modal (optional)
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Login failed. Please check your credentials.',
+                                    ),
+                                  ),
+                                );
+                              }
                             }
                           },
                         ),

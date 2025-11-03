@@ -2,6 +2,7 @@ export interface User {
   _id?: string;
   role?: 'AGENT' | 'ADMIN' | 'USER';
   status?: 'Archived' | 'Active' | 'Pending';
+  approved?: boolean;
   avatarUrl?: string;
   firstName: string;
   middleName?: string;
@@ -16,8 +17,16 @@ export interface User {
   };
   dateOfBirth: string;
   phoneNumber: string;
-  password: string;
+  password?: string;
   badgeId: string;
-  createdAt?: Date;
-  updatedAt?: Date;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
+}
+
+export interface RegisterResponse {
+  success: boolean;
+  message?: string;
+  user?: Partial<User>;
+  pendingApproval?: boolean;
+  approved?: boolean;
 }

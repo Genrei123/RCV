@@ -8,6 +8,7 @@ import {
   buildPaginationMeta,
   buildLinks,
 } from "../../utils/pagination";
+import { AuditLogService } from "../../services/auditLogService";
 
 export const getAllCompanies = async (
   req: Request,
@@ -23,7 +24,7 @@ export const getAllCompanies = async (
     });
     const meta = buildPaginationMeta(page, limit, total);
     const links = buildLinks(req, page, limit, meta.total_pages);
-    res.status(200).json({ data: companies, pagination: meta, links });
+    res.status(200).json({ success: true, data: companies, pagination: meta, links });
   } catch (error) {
     return new CustomError(500, "Failed to all retrieve companies");
   }
@@ -55,32 +56,61 @@ export const createCompany = async (
   res: Response,
   next: NextFunction
 ) => {
-  const Company = CompanyValidation.safeParse(req.body);
-  if (Company.error) {
-    return next(
-      new CustomError(400, "Invalid Company Data or missing parameters", {
-        body: req.body,
-      })
-    );
-  }
+  try {
+    // Get authenticated user from request
+    const currentUser = req.user;
+    if (!currentUser) {
+      return next(new CustomError(401, "User not authenticated"));
+    }
 
-  if (
-    await CompanyRepo.findOneBy({ licenseNumber: Company.data.licenseNumber })
-  ) {
-    return next(
-      new CustomError(400, "Company with license number already exists", {
-        company: Company.data.licenseNumber,
-      })
-    );
-  }
+    const Company = CompanyValidation.safeParse(req.body);
+    if (Company.error) {
+      return next(
+        new CustomError(400, "Invalid Company Data or missing parameters", {
+          body: req.body,
+          errors: Company.error.issues,
+        })
+      );
+    }
 
-  CompanyRepo.save(Company.data);
-  return res
-    .status(200)
-    .json({
-      message: "Company successfully registered",
-      company: Company.data,
+    if (
+      await CompanyRepo.findOneBy({ licenseNumber: Company.data.licenseNumber })
+    ) {
+      return next(
+        new CustomError(400, "Company with license number already exists", {
+          company: Company.data.licenseNumber,
+        })
+      );
+    }
+
+    const savedCompany = await CompanyRepo.save(Company.data);
+    
+    // Log company creation
+    await AuditLogService.createLog({
+      action: `Created company: ${savedCompany.name} (License: ${savedCompany.licenseNumber})`,
+      actionType: 'CREATE_PRODUCT', // Reusing CREATE_PRODUCT as there's no CREATE_COMPANY type yet
+      userId: currentUser._id,
+      platform: 'WEB',
+      metadata: {
+        companyId: savedCompany._id,
+        companyName: savedCompany.name,
+        licenseNumber: savedCompany.licenseNumber,
+        address: savedCompany.address,
+      },
+      req,
     });
+
+    return res
+      .status(200)
+      .json({
+        success: true,
+        message: "Company successfully registered",
+        company: savedCompany,
+      });
+  } catch (error) {
+    console.error('Error creating company:', error);
+    return next(new CustomError(500, "Failed to create company"));
+  }
 };
 
 export const updateCompany = async (

@@ -199,7 +199,34 @@ export function AuthPage() {
         toast.error('Login failed. Please check your credentials.');
       }
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || 'Login failed. Please try again.';
+      console.log('Login error caught:', err);
+      console.log('Error response:', err.response);
+      console.log('Error status:', err.response?.status || err.status);
+      console.log('Error data:', err.response?.data);
+      
+      // Check if the error is due to unapproved account
+      // Check both err.response.status and err.status (axios error structure can vary)
+      const status = err.response?.status || err.status;
+      const isUnapproved = status === 403 || err.response?.data?.approved === false;
+      
+      if (isUnapproved) {
+        const email = err.response?.data?.email || loginData.email;
+        
+        console.log('Unapproved account detected, redirecting to pending approval page');
+        
+        // Store email for the pending approval page
+        localStorage.setItem('pendingApprovalEmail', email);
+        
+        // Navigate to pending approval page
+        navigate('/pending-approval', { 
+          state: { email },
+          replace: true 
+        });
+        return; // Don't show error toast
+      }
+      
+      // For all other errors
+      const errorMessage = err.response?.data?.message || err.message || 'Login failed. Please check your credentials.';
       toast.error(errorMessage);
       console.error('Login error:', err);
     } finally {
@@ -237,25 +264,45 @@ export function AuthPage() {
       const response = await AuthService.register(userData as User);
 
       if (response?.data) {
-        toast.success('Registration successful! Logging you in...');
-        
-        // Auto login after registration
-        const loginResponse = await AuthService.login({
-          email: registerData.email,
-          password: registerData.password
-        });
-
-        if (loginResponse?.data.token) {
-          localStorage.setItem('token', loginResponse.data.token);
+        // Check if account is pending approval
+        if (response.data.pendingApproval || response.data.approved === false) {
+          const email = response.data.user?.email || registerData.email;
           
+          // Store email for the pending approval page
+          localStorage.setItem('pendingApprovalEmail', email);
+          
+          toast.success(
+            'Registration successful! Redirecting to approval status...',
+            { autoClose: 2000 }
+          );
+          
+          // Navigate to pending approval page
           setTimeout(() => {
-            navigate('/dashboard', { replace: true });
-            window.location.reload();
-          }, 500);
+            navigate('/pending-approval', { 
+              state: { email },
+              replace: true 
+            });
+          }, 1500);
         } else {
-          // Registration successful but auto-login failed
-          setIsLogin(true);
-          toast.info('Account created successfully! Please log in.');
+          // If somehow already approved, try auto-login
+          toast.success('Registration successful! Logging you in...');
+          
+          const loginResponse = await AuthService.login({
+            email: registerData.email,
+            password: registerData.password
+          });
+
+          if (loginResponse?.data.token) {
+            localStorage.setItem('token', loginResponse.data.token);
+            
+            setTimeout(() => {
+              navigate('/dashboard', { replace: true });
+              window.location.reload();
+            }, 500);
+          } else {
+            setIsLogin(true);
+            toast.info('Account created successfully! Please log in.');
+          }
         }
       }
     } catch (err: any) {

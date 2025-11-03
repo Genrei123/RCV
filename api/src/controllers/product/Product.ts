@@ -8,6 +8,7 @@ import {
   buildPaginationMeta,
   buildLinks,
 } from "../../utils/pagination";
+import { AuditLogService } from "../../services/auditLogService";
 
 export const getAllProducts = async (
   req: Request,
@@ -24,7 +25,7 @@ export const getAllProducts = async (
     });
     const meta = buildPaginationMeta(page, limit, total);
     const links = buildLinks(req, page, limit, meta.total_pages);
-    res.status(200).json({ data: products, pagination: meta, links });
+    res.status(200).json({ success: true, data: products, pagination: meta, links });
   } catch (error) {
     console.error('Error fetching products:', error);
     return next(new CustomError(500, "Failed to retrieve products"));
@@ -117,6 +118,24 @@ export const createProduct = async (
     const savedProduct = await ProductRepo.save(validatedProduct.data);
     
     console.log('Product created successfully:', savedProduct._id);
+
+    // Log product creation
+    await AuditLogService.createLog({
+      action: `Created product: ${savedProduct.productName} (${savedProduct.CFPRNumber})`,
+      actionType: 'CREATE_PRODUCT',
+      userId: currentUser._id,
+      targetProductId: savedProduct._id,
+      platform: 'WEB',
+      metadata: {
+        productName: savedProduct.productName,
+        CFPRNumber: savedProduct.CFPRNumber,
+        companyId: savedProduct.companyId,
+        productClassification: savedProduct.productClassification,
+        productSubClassification: savedProduct.productSubClassification,
+        brandName: savedProduct.brandName,
+      },
+      req,
+    });
 
     return res.status(201).json({
       success: true,

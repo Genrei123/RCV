@@ -17,14 +17,15 @@ import 'user_page/agent_auditTrail.dart';
 import 'user_page/agent_Reports.dart';
 import 'pages/location_page.dart';
 import 'widgets/connectivity_check_screen.dart';
+import 'pages/crop_label.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  
+
   // Initialize Remote Config
   await RemoteConfigService.initialize();
-  
+
   runApp(const MyApp());
 }
 
@@ -51,9 +52,8 @@ class MyApp extends StatelessWidget {
           '/otp-verification': (context) => const OtpVerificationPage(),
           '/reset-password': (context) => ResetPasswordPage(),
           '/reset-new-password': (context) => const ResetNewPasswordPage(),
-          '/user-profile': (context) => UserProfilePage(
-            role: nav_bar.NavBarRole.user.toString(),
-          ),
+          '/user-profile': (context) =>
+              UserProfilePage(role: nav_bar.NavBarRole.user.toString()),
           //User Pages
           '/user-home': (context) => const UserHomePage(),
           '/user-audit-trail': (context) => const AuditTrailPage(),
@@ -62,6 +62,8 @@ class MyApp extends StatelessWidget {
           '/scanning': (context) => const QRScannerPage(),
           //Location Page
           '/location': (context) => const LocationPage(),
+          // Crop Label Page (image cropping before OCR)
+          '/crop-label': (context) => const CropLabelPage(),
         },
       ),
     );

@@ -5,6 +5,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { createForgotPasswordToken, createToken, verifyToken } from '../../utils/JWT';
 import { UserValidation } from '../../typeorm/entities/user.entity';
 import nodemailer_transporter from '../../utils/nodemailer';
+import { AuditLogService } from '../../services/auditLogService';
 
 export const userSignIn = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -13,6 +14,7 @@ export const userSignIn = async (req: Request, res: Response, next: NextFunction
     // Find the user by email
     const user = await UserRepo.findOne({
       where: { email },
+      select: ['_id', 'email', 'password', 'role', 'approved', 'firstName', 'lastName'],
     });
 
     if (!user) {
@@ -35,16 +37,37 @@ export const userSignIn = async (req: Request, res: Response, next: NextFunction
       return next(error);
     }
 
+    // Check if user is approved
+    if (!user.approved) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account is pending approval. Please wait for an administrator to approve your account.',
+        approved: false,
+        email: user.email,
+      });
+    }
+
     const token = createToken({
       sub: user._id,
       isAdmin: user.role === 'ADMIN' ? true : false,
       iat: Date.now()
     });
 
+    // Log the login action
+    await AuditLogService.logLogin(user._id, req, 'WEB');
+
     return res.status(200).json({
       success: true,
       message: 'User signed in successfully',
       token,
+      user: {
+        _id: user._id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        approved: user.approved,
+      },
     });
   } catch (error: any) {
     return res.status(500).json({
@@ -59,7 +82,10 @@ export const userSignIn = async (req: Request, res: Response, next: NextFunction
 export const userSignUp = async (req: Request, res: Response, next: NextFunction) => {
   const newUser = UserValidation.safeParse(req.body);
   if (!newUser || !newUser.success) {
-    return next(new CustomError(400, "Parsing failed, incomplete information"));
+    console.error('Validation errors:', newUser.error?.issues);
+    return next(new CustomError(400, "Parsing failed, incomplete information", { 
+      errors: newUser.error?.issues 
+    }));
   }
 
   if (await UserRepo.findOneBy({ email: newUser.data?.email }) != null) {
@@ -68,8 +94,23 @@ export const userSignUp = async (req: Request, res: Response, next: NextFunction
 
   const hashPassword = bcryptjs.hashSync(newUser.data.password, bcryptjs.genSaltSync(10));
   newUser.data.password = hashPassword;
-  UserRepo.save(newUser.data);
-  return res.status(200).json({ message: "User successfully registered", user: newUser.data });
+  
+  // Set approved to false by default
+  newUser.data.approved = false;
+  
+  await UserRepo.save(newUser.data);
+  
+  return res.status(200).json({ 
+    success: true,
+    message: "Registration successful! Your account is pending approval. You will be notified once an administrator approves your account.",
+    user: {
+      email: newUser.data.email,
+      firstName: newUser.data.firstName,
+      lastName: newUser.data.lastName,
+      approved: false,
+    },
+    pendingApproval: true,
+  });
 };
 
 export const logout = async (req: Request, res: Response, next: NextFunction) => {
@@ -89,7 +130,7 @@ export const me = async (req: Request, res: Response, next: NextFunction) => {
   }
   const User = await UserRepo.findOne({
     where: { _id: decoded.data?.sub },
-    select: ['_id', 'firstName', 'middleName', 'lastName', 'email', 'phoneNumber', 'location']
+    select: ['_id', 'firstName', 'middleName', 'lastName', 'email', 'phoneNumber', 'location', 'role', 'badgeId']
   });
   return res.send(User);
 }

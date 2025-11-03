@@ -7,7 +7,6 @@ import {
   User,
   LogOut,
   ChevronDown,
-  Settings,
   Bell,
   Building2,
   Sliders,
@@ -41,6 +40,7 @@ export function Sidebar() {
     setLoading(true)
     try {
       const user = await AuthService.getCurrentUser()
+      console.log('Fetched user data:', user) // Debug log
       if (user) {
         setCurrentUser(user)
       }
@@ -63,13 +63,15 @@ export function Sidebar() {
   }
 
   const getRoleName = (): string => {
-    if (!currentUser?.role) return 'User'
+    if (!currentUser) return 'Loading...'
+    if (currentUser.role === undefined || currentUser.role === null) return 'Agent'
+    
     const roleMap: { [key: number]: string } = {
       1: "Agent",
       2: "Admin",
       3: "Super Admin"
     }
-    return roleMap[currentUser.role] || "User"
+    return roleMap[currentUser.role] || "Agent"
   }
   
   const menuItems = [
@@ -84,7 +86,6 @@ export function Sidebar() {
 
   const profileMenuItems = [
     { path: '/profile', label: 'View Profile', icon: User },
-    { path: '/settings', label: 'Settings', icon: Settings },
     { path: '/notifications', label: 'Notifications', icon: Bell },
   ]
 

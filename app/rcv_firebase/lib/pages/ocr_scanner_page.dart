@@ -24,12 +24,14 @@ class OcrScannerPage extends StatefulWidget {
 
 class _OcrScannerPageState extends State<OcrScannerPage> {
   final OcrService _ocrService = OcrService();
-  
+
   bool _isProcessing = false;
   File? _selectedImage;
   OcrResult? _result;
   String? _errorMessage;
   List<String> _history = [];
+  // Default to combined English + Filipino + Tagalog
+  String _selectedLangs = 'eng+fil+tgl';
 
   @override
   void initState() {
@@ -74,17 +76,36 @@ class _OcrScannerPageState extends State<OcrScannerPage> {
         return;
       }
 
+      // Redirect to crop page first
+      String? croppedPath;
+      try {
+        croppedPath =
+            await Navigator.pushNamed(
+                  context,
+                  '/crop-label',
+                  arguments: {'imagePath': imageFile.path},
+                )
+                as String?;
+      } catch (_) {}
+
+      final File finalImage = (croppedPath != null && croppedPath.isNotEmpty)
+          ? File(croppedPath)
+          : imageFile;
+
       setState(() {
-        _selectedImage = imageFile;
+        _selectedImage = finalImage;
       });
 
       // Step 2: Preprocess image
-      final File preprocessedImage = await _ocrService.preprocessImage(imageFile);
+      final File preprocessedImage = await _ocrService.preprocessImage(
+        finalImage,
+      );
 
       // Step 3: Extract text
       final OcrResult result = await _ocrService.extractText(
         preprocessedImage,
-        language: 'en', // Default to English, can be made configurable
+        language:
+            _selectedLangs, // Supports 'eng', 'fil', 'tgl', or combos like 'eng+fil+tgl'
       );
 
       // Step 4: Save result
@@ -174,6 +195,8 @@ class _OcrScannerPageState extends State<OcrScannerPage> {
 
               // Action buttons
               _buildActionButtons(),
+              const SizedBox(height: 16),
+              _buildLanguageSelector(),
               const SizedBox(height: 30),
 
               // Processing indicator
@@ -223,10 +246,7 @@ class _OcrScannerPageState extends State<OcrScannerPage> {
           SizedBox(height: 10),
           Text(
             'Select an image from your camera or gallery to extract text.\n\nSupported formats: JPG, PNG',
-            style: TextStyle(
-              color: AppColors.white,
-              fontSize: 14,
-            ),
+            style: TextStyle(color: AppColors.white, fontSize: 14),
             textAlign: TextAlign.center,
           ),
         ],
@@ -239,7 +259,9 @@ class _OcrScannerPageState extends State<OcrScannerPage> {
       children: [
         Expanded(
           child: ElevatedButton.icon(
-            onPressed: _isProcessing ? null : () => _processImage(ImageSource.camera),
+            onPressed: _isProcessing
+                ? null
+                : () => _processImage(ImageSource.camera),
             icon: const Icon(Icons.camera_alt),
             label: const Text('Camera'),
             style: ElevatedButton.styleFrom(
@@ -255,7 +277,9 @@ class _OcrScannerPageState extends State<OcrScannerPage> {
         const SizedBox(width: 15),
         Expanded(
           child: ElevatedButton.icon(
-            onPressed: _isProcessing ? null : () => _processImage(ImageSource.gallery),
+            onPressed: _isProcessing
+                ? null
+                : () => _processImage(ImageSource.gallery),
             icon: const Icon(Icons.photo_library),
             label: const Text('Gallery'),
             style: ElevatedButton.styleFrom(
@@ -264,6 +288,54 @@ class _OcrScannerPageState extends State<OcrScannerPage> {
               padding: const EdgeInsets.symmetric(vertical: 15),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLanguageSelector() {
+    final options = <String>[
+      'eng',
+      'fil',
+      'tgl',
+      'eng+fil',
+      'eng+tgl',
+      'fil+tgl',
+      'eng+fil+tgl',
+    ];
+
+    return Row(
+      children: [
+        const Text(
+          'Language(s):',
+          style: TextStyle(color: AppColors.white, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: _selectedLangs,
+                items: options
+                    .map(
+                      (v) => DropdownMenuItem(
+                        value: v,
+                        child: Text(v.toUpperCase()),
+                      ),
+                    )
+                    .toList(),
+                onChanged: _isProcessing
+                    ? null
+                    : (v) =>
+                          setState(() => _selectedLangs = v ?? 'eng+fil+tgl'),
               ),
             ),
           ),
@@ -365,13 +437,16 @@ class _OcrScannerPageState extends State<OcrScannerPage> {
           ),
           const Divider(),
           const SizedBox(height: 10),
-          
+
           // Metadata
           _buildMetadataRow('Language:', _result!.language.toUpperCase()),
-          _buildMetadataRow('Confidence:', '${(_result!.confidence * 100).toStringAsFixed(1)}%'),
+          _buildMetadataRow(
+            'Confidence:',
+            '${(_result!.confidence * 100).toStringAsFixed(1)}%',
+          ),
           _buildMetadataRow('Characters:', '${_result!.text.length}'),
           const SizedBox(height: 15),
-          
+
           // Extracted text
           Container(
             width: double.infinity,
@@ -408,10 +483,7 @@ class _OcrScannerPageState extends State<OcrScannerPage> {
             ),
           ),
           const SizedBox(width: 10),
-          Text(
-            value,
-            style: const TextStyle(color: AppColors.primary),
-          ),
+          Text(value, style: const TextStyle(color: AppColors.primary)),
         ],
       ),
     );
