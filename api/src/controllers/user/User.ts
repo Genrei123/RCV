@@ -8,6 +8,7 @@ import {
   buildLinks,
   buildPaginationMeta,
 } from "../../utils/pagination";
+import { AuditLogService } from "../../services/auditLogService";
 
 const IdSchema = z.string().uuid();
 
@@ -328,6 +329,13 @@ export const approveUser = async (
     }
     
     const saved = await UserRepo.save(user);
+
+    // Log the approval action
+    const currentUserId = req.user?._id;
+    if (currentUserId) {
+      await AuditLogService.logApproveUser(currentUserId, user._id, req);
+    }
+
     return res.status(200).json({
       success: true,
       user: saved,
@@ -364,6 +372,13 @@ export const rejectUser = async (
     }
     
     const saved = await UserRepo.save(user);
+
+    // Log the rejection action
+    const currentUserId = req.user?._id;
+    if (currentUserId) {
+      await AuditLogService.logRejectUser(currentUserId, user._id, req);
+    }
+
     return res.status(200).json({
       success: true,
       user: saved,
@@ -403,10 +418,130 @@ export const toggleUserApproval = async (
     }
     
     const saved = await UserRepo.save(user);
+
+    // Log the toggle action
+    const currentUserId = req.user?._id;
+    if (currentUserId) {
+      if (user.approved) {
+        await AuditLogService.logApproveUser(currentUserId, user._id, req);
+      } else {
+        await AuditLogService.logRevokeAccess(currentUserId, user._id, req);
+      }
+    }
+
     return res.status(200).json({
       success: true,
       user: saved,
       message: `User ${user.approved ? 'approved' : 'unapproved'} successfully`,
+    });
+  } catch (error) {
+    return next(CustomError.security(500, "Server Error"));
+  }
+};
+
+// Update user's own profile
+export const updateUserProfile = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = req.user?._id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const user = await UserRepo.findOneBy({ _id: userId });
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    // Only allow updating certain fields
+    const allowedFields = [
+      'firstName',
+      'middleName', 
+      'lastName',
+      'dateOfBirth',
+      'phoneNumber',
+      'location',
+      'badgeId',
+      'email'
+    ];
+
+    const updates: any = {};
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        updates[field] = req.body[field];
+      }
+    }
+
+    // Update fullName if name fields changed
+    if (updates.firstName || updates.middleName || updates.lastName) {
+      const firstName = updates.firstName || user.firstName;
+      const middleName = updates.middleName || user.middleName || '';
+      const lastName = updates.lastName || user.lastName;
+      updates.fullName = `${firstName} ${middleName} ${lastName}`.replace(/\s+/g, ' ').trim();
+    }
+
+    Object.assign(user, updates);
+    const saved = await UserRepo.save(user);
+
+    // Log profile update
+    await AuditLogService.createLog({
+      action: 'User updated their profile',
+      actionType: 'UPDATE_PROFILE',
+      userId,
+      platform: 'WEB',
+      metadata: { updatedFields: Object.keys(updates) },
+      req,
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: saved,
+      message: "Profile updated successfully"
+    });
+  } catch (error) {
+    return next(CustomError.security(500, "Server Error"));
+  }
+};
+
+// Archive user's own account
+export const archiveUserAccount = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = req.user?._id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const user = await UserRepo.findOneBy({ _id: userId });
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    // Set account to archived status
+    user.status = 'Archived';
+    user.approved = false;
+    
+    const saved = await UserRepo.save(user);
+
+    // Log account archive
+    await AuditLogService.createLog({
+      action: 'User archived their account',
+      actionType: 'ARCHIVE_ACCOUNT',
+      userId,
+      platform: 'WEB',
+      req,
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: saved,
+      message: "Account archived successfully"
     });
   } catch (error) {
     return next(CustomError.security(500, "Server Error"));

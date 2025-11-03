@@ -1,4 +1,3 @@
-import { Badge } from "lucide-react";
 import { DataTable, type Column } from "@/components/DataTable";
 import { PageContainer } from "@/components/PageContainer";
 import { useState, useEffect } from "react";
@@ -73,21 +72,35 @@ export function Dashboard(props: DashboardProps) {
       label: "Email",
     },
     {
-      key: "role",
-      label: "Role",
-      render: (value: number) => {
-        const roleMap: {
-          [key: number]: {
+      key: "status",
+      label: "Status",
+      sortable: true,
+      render: (value: 'Archived' | 'Active' | 'Pending') => {
+        const statusConfig: {
+          [key: string]: {
             label: string;
-            variant: "default" | "secondary" | "destructive";
+            className: string;
           };
         } = {
-          1: { label: "Agent", variant: "default" },
-          2: { label: "Admin", variant: "secondary" },
-          3: { label: "Super Admin", variant: "destructive" },
+          Pending: { 
+            label: "Pending", 
+            className: "border-amber-500 text-amber-700 bg-amber-50 hover:bg-amber-100" 
+          },
+          Active: { 
+            label: "Active", 
+            className: "border-green-500 text-green-700 bg-green-50 hover:bg-green-100" 
+          },
+          Archived: { 
+            label: "Archived", 
+            className: "border-gray-500 text-gray-700 bg-gray-50 hover:bg-gray-100" 
+          },
         };
-        const role = roleMap[value] || { label: "Unknown", variant: "default" };
-        return <Badge>{role.label}</Badge>;
+        const config = statusConfig[value] || statusConfig['Pending'];
+        return (
+          <span className={`inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium border min-w-[80px] ${config.className}`}>
+            {config.label}
+          </span>
+        );
       },
     },
     {
@@ -188,11 +201,24 @@ export function Dashboard(props: DashboardProps) {
     (Array.isArray(u.data) || typeof u.pagination !== "undefined");
 
   // Prefer local fetched users first, then parent paginated payload, then legacy parent array
+  // Filter out the current user from the list
   const usersArray: User[] = (() => {
-    if (users && users.length > 0) return users;
-    if (isPaginatedPayload(props.users)) return props.users.data || [];
-    if (Array.isArray(props.users)) return props.users as User[];
-    return [];
+    let allUsers: User[] = [];
+    
+    if (users && users.length > 0) {
+      allUsers = users;
+    } else if (isPaginatedPayload(props.users)) {
+      allUsers = props.users.data || [];
+    } else if (Array.isArray(props.users)) {
+      allUsers = props.users as User[];
+    }
+
+    // Filter out the current user
+    if (currentUser && currentUser._id) {
+      return allUsers.filter(user => user._id !== currentUser._id);
+    }
+
+    return allUsers;
   })();
 
   const totalItems = (() => {

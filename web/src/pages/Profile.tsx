@@ -1,21 +1,23 @@
-import { User, Mail, MapPin, Calendar, Phone, Badge as BadgeIcon } from "lucide-react"
+import { User, Mail, MapPin, Calendar, Phone, Badge as BadgeIcon, Archive, Eye } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { DataTable, type Column } from "@/components/DataTable"
 import { Pagination } from "@/components/Pagination"
 import { PageContainer } from "@/components/PageContainer"
+import { EditProfileModal } from "@/components/EditProfileModal"
+import { ArchiveAccountModal } from "@/components/ArchiveAccountModal"
 import { useEffect, useState } from "react"
-import { UserPageService } from "@/services/userPageService"
-
-// Define activity data type
-export interface Activity {
-  id: string;
-  action: string;
-  type: 'Logged Out' | 'Removed' | 'Archived' | 'Logged In';
-  date: string;
-  time: string;
-}
+import { UserPageService, type UserProfile } from "@/services/userPageService"
+import { AuditLogService, type AuditLog } from "@/services/auditLogService"
+import { toast } from "react-toastify"
+import { useNavigate } from "react-router-dom"
+import { AuthService } from "@/services/authService"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 export interface ProfileUser {
   _id?: string;
@@ -35,31 +37,30 @@ export interface ProfileUser {
 
 interface ProfileProps {
   user?: ProfileUser;
-  activities?: Activity[];
   loading?: boolean;
-  onEdit?: () => void;
-  onActivityView?: (activity: Activity) => void;
-  currentPage?: number;
-  totalPages?: number;
-  totalItems?: number;
-  itemsPerPage?: number;
-  onPageChange?: (page: number) => void;
 }
 
 export function Profile({
   user: propUser,
-  activities: propActivities,
   loading: propLoading = false,
-  onEdit,
-  onActivityView,
-  currentPage = 1,
-  totalPages = 4,
-  totalItems = 40,
-  itemsPerPage = 10,
-  onPageChange
 }: ProfileProps) {
+  const navigate = useNavigate()
   const [user, setUser] = useState<ProfileUser | null>(propUser || null);
   const [loading, setLoading] = useState(propLoading);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
+  
+  // Audit logs state
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logsPagination, setLogsPagination] = useState({
+    current_page: 1,
+    per_page: 10,
+    total_pages: 1,
+    total_items: 0,
+  });
 
   // Fetch profile data on mount
   useEffect(() => {
@@ -68,6 +69,7 @@ export function Profile({
     } else {
       setUser(propUser);
     }
+    fetchAuditLogs(1);
   }, [propUser]);
 
   const fetchProfile = async () => {
@@ -79,8 +81,72 @@ export function Profile({
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
+      toast.error('Failed to load profile data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAuditLogs = async (page: number = 1) => {
+    setLogsLoading(true);
+    try {
+      const response = await AuditLogService.getMyLogs(page, 10);
+      setAuditLogs(response.data || []);
+      if (response.pagination) {
+        setLogsPagination(response.pagination);
+      }
+    } catch (error) {
+      console.error('Error fetching audit logs:', error);
+      toast.error('Failed to load activity logs');
+    } finally {
+      setLogsLoading(false);
+    }
+  };
+
+  const handleEditProfile = () => {
+    setShowEditModal(true);
+  };
+
+  const handleSaveProfile = async (updatedUser: Partial<ProfileUser>) => {
+    try {
+      // Convert ProfileUser to UserProfile format
+      const profileData: Partial<UserProfile> = {
+        firstName: updatedUser.firstName,
+        lastName: updatedUser.lastName,
+        middleName: updatedUser.middleName,
+        email: updatedUser.email,
+        phoneNumber: updatedUser.phoneNumber,
+        dateOfBirth: updatedUser.dateOfBirth,
+        location: updatedUser.location,
+        badgeId: updatedUser.badgeId,
+      };
+      
+      await UserPageService.updateProfile(profileData);
+      toast.success('Profile updated successfully!');
+      await fetchProfile(); // Refresh profile data
+      await fetchAuditLogs(logsPagination.current_page); // Refresh audit logs
+      setShowEditModal(false);
+    } catch (error) {
+      console.error('Failed to update profile:', error);
+      toast.error('Failed to update profile');
+    }
+  };
+
+  const handleArchiveAccount = () => {
+    setShowArchiveModal(true);
+  };
+
+  const handleConfirmArchive = async () => {
+    try {
+      await UserPageService.archiveAccount();
+      toast.success('Account archived. Logging out...');
+      setShowArchiveModal(false);
+      // Logout and redirect
+      await AuthService.logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Failed to archive account:', error);
+      toast.error('Failed to archive account');
     }
   };
 
@@ -107,147 +173,85 @@ export function Profile({
     return parts.join(' ') || "User";
   };
 
-  // Default activities data
-  const defaultActivities: Activity[] = [
-    {
-      id: "1",
-      action: "You has been Logged Out",
-      type: "Logged Out",
-      date: "2024-01-15",
-      time: "14:30"
-    },
-    {
-      id: "2", 
-      action: "You successfully removed UserID 18",
-      type: "Removed",
-      date: "2024-01-15",
-      time: "13:45"
-    },
-    {
-      id: "3",
-      action: "You archived UserID 18",
-      type: "Archived", 
-      date: "2024-01-15",
-      time: "13:30"
-    },
-    {
-      id: "4",
-      action: "You logged in",
-      type: "Logged In",
-      date: "2024-01-15",
-      time: "09:00"
-    },
-    {
-      id: "5",
-      action: "You successfully removed UserID 18",
-      type: "Removed",
-      date: "2024-01-14",
-      time: "16:20"
-    },
-    {
-      id: "6",
-      action: "You has been Logged Out",
-      type: "Logged Out",
-      date: "2024-01-14",
-      time: "18:00"
-    },
-    {
-      id: "7",
-      action: "You archived UserID 18",
-      type: "Archived",
-      date: "2024-01-14",
-      time: "15:45"
-    },
-    {
-      id: "8",
-      action: "You logged in",
-      type: "Logged In",
-      date: "2024-01-14",
-      time: "08:30"
-    },
-    {
-      id: "9",
-      action: "You successfully removed UserID 18",
-      type: "Removed",
-      date: "2024-01-13",
-      time: "14:15"
-    },
-    {
-      id: "10",
-      action: "You has been Logged Out", 
-      type: "Logged Out",
-      date: "2024-01-13",
-      time: "17:30"
-    },
-    {
-      id: "11",
-      action: "You archived UserID 18",
-      type: "Archived",
-      date: "2024-01-13", 
-      time: "12:00"
-    },
-    {
-      id: "12",
-      action: "You logged in",
-      type: "Logged In",
-      date: "2024-01-13",
-      time: "08:45"
-    }
-  ];
-
-  // Activity table columns
+  // Activity table columns for audit logs
   const activityColumns: Column[] = [
-    { key: 'action', label: 'Action' },
     { 
-      key: 'type', 
-      label: 'Type',
+      key: 'action', 
+      label: 'Action',
       render: (value) => {
-        const getVariant = (type: string) => {
-          switch(type) {
-            case 'Logged Out': return 'destructive';
-            case 'Removed': return 'default';  // Black background
-            case 'Archived': return 'secondary'; // Orange-ish
-            case 'Logged In': return 'default';
-            default: return 'secondary';
-          }
-        };
-        
-        const getCustomClass = (type: string) => {
-          switch(type) {
-            case 'Removed': return 'bg-black text-white hover:bg-gray-800';
-            case 'Archived': return 'bg-orange-500 text-white hover:bg-orange-600';
-            case 'Logged In': return 'bg-green-500 text-white hover:bg-green-600';
-            default: return '';
-          }
-        };
-
+        return <span className="font-medium text-gray-900">{value}</span>;
+      }
+    },
+    { 
+      key: 'platform', 
+      label: 'Platform',
+      render: (value: string) => {
+        const icon = value === 'WEB' ? '🖥️' : '📱';
         return (
-          <Badge 
-            variant={getVariant(value)} 
-            className={getCustomClass(value)}
-          >
-            {value}
-          </Badge>
+          <span className="text-sm text-gray-600">
+            {icon} {value}
+          </span>
         );
       }
     },
     { 
-      key: 'view', 
-      label: 'Action',
-      render: (_, row) => (
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={() => onActivityView?.(row)}
-          className="text-xs"
-        >
-          View
-        </Button>
-      )
+      key: 'createdAt', 
+      label: 'Date & Time',
+      render: (value: string) => {
+        if (!value) return 'N/A';
+        try {
+          const date = new Date(value);
+          if (isNaN(date.getTime())) return 'Invalid Date';
+          
+          const dateStr = date.toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          });
+          const timeStr = date.toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+          
+          return (
+            <div className="flex flex-col">
+              <span className="text-sm font-medium text-gray-900">{dateStr}</span>
+              <span className="text-xs text-gray-500">{timeStr}</span>
+            </div>
+          );
+        } catch (error) {
+          return 'Invalid Date';
+        }
+      }
+    },
+    {
+      key: '_id',
+      label: 'Actions',
+      render: (_value: string, row: any) => {
+        return (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleViewDetails(row as AuditLog)}
+            className="flex items-center gap-2"
+          >
+            <Eye className="w-4 h-4" />
+            View Details
+          </Button>
+        );
+      }
     }
   ];
 
-  const activityData = propActivities || defaultActivities;
+  const handleViewDetails = async (log: AuditLog) => {
+    try {
+      setSelectedLog(log);
+      setShowDetailsModal(true);
+    } catch (error) {
+      console.error('Error opening details:', error);
+      toast.error('Failed to load log details');
+    }
+  };
 
   if (loading) {
     return (
@@ -266,12 +270,22 @@ export function Profile({
   return (
     <PageContainer title="Profile" description="Manage your personal account information and activity"
       headerAction={
-        <Button 
-          onClick={onEdit}
-          className="bg-teal-600 hover:bg-teal-700 text-white"
-        >
-          Edit Profile
-        </Button>
+        <div className="flex gap-3">
+          <Button 
+            onClick={handleEditProfile}
+            className="bg-teal-600 hover:bg-teal-700 text-white"
+          >
+            Edit Profile
+          </Button>
+          <Button 
+            onClick={handleArchiveAccount}
+            variant="destructive"
+            className="bg-red-600 hover:bg-red-700 text-white"
+          >
+            <Archive className="h-4 w-4 mr-2" />
+            Archive Account
+          </Button>
+        </div>
       }
     >
 
@@ -378,27 +392,170 @@ export function Profile({
               <DataTable
                 title=""
                 columns={activityColumns}
-                data={activityData}
-                loading={loading}
+                data={auditLogs}
+                loading={logsLoading}
                 emptyStateTitle="No Activities Found"
                 emptyStateDescription="Your recent activities will appear here."
                 showSearch={false}
-                showSort={false}
               />
             </div>
 
             {/* Pagination */}
             <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              totalItems={totalItems}
-              itemsPerPage={itemsPerPage}
-              onPageChange={onPageChange}
-              showingText={`Showing ${Math.min(activityData.length, itemsPerPage)} out of ${totalItems} activities`}
+              currentPage={logsPagination.current_page}
+              totalPages={logsPagination.total_pages}
+              totalItems={logsPagination.total_items}
+              itemsPerPage={logsPagination.per_page}
+              onPageChange={(page) => fetchAuditLogs(page)}
+              showingText={`Showing ${auditLogs.length} out of ${logsPagination.total_items} activities`}
             />
           </CardContent>
         </Card>
       </div>
+
+      {/* Modals */}
+      <EditProfileModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        user={user}
+        onSave={handleSaveProfile}
+      />
+      <ArchiveAccountModal
+        isOpen={showArchiveModal}
+        onClose={() => setShowArchiveModal(false)}
+        userEmail={user?.email || ''}
+        onConfirm={handleConfirmArchive}
+      />
+
+      {/* Audit Log Details Modal */}
+      <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Activity Details</DialogTitle>
+          </DialogHeader>
+          
+          {selectedLog && (
+            <div className="space-y-4">
+              {/* Action */}
+              <div className="border-b pb-3">
+                <p className="text-sm font-medium text-gray-500 mb-1">Action</p>
+                <p className="text-base font-semibold text-gray-900">{selectedLog.action}</p>
+              </div>
+
+              {/* Action Type */}
+              <div className="border-b pb-3">
+                <p className="text-sm font-medium text-gray-500 mb-1">Type</p>
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${AuditLogService.getActionTypeBadge(selectedLog.actionType).className}`}>
+                  {AuditLogService.getActionTypeBadge(selectedLog.actionType).label}
+                </span>
+              </div>
+
+              {/* Platform */}
+              <div className="border-b pb-3">
+                <p className="text-sm font-medium text-gray-500 mb-1">Platform</p>
+                <p className="text-base text-gray-900">
+                  {selectedLog.platform === 'WEB' ? '🖥️ Web' : '📱 Mobile'}
+                </p>
+              </div>
+
+              {/* Date & Time */}
+              <div className="border-b pb-3">
+                <p className="text-sm font-medium text-gray-500 mb-1">Date & Time</p>
+                <p className="text-base text-gray-900">
+                  {new Date(selectedLog.createdAt).toLocaleString("en-US", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
+                  })}
+                </p>
+              </div>
+
+              {/* IP Address */}
+              {selectedLog.ipAddress && (
+                <div className="border-b pb-3">
+                  <p className="text-sm font-medium text-gray-500 mb-1">IP Address</p>
+                  <p className="text-base text-gray-900 font-mono">{selectedLog.ipAddress}</p>
+                </div>
+              )}
+
+              {/* User Agent */}
+              {selectedLog.userAgent && (
+                <div className="border-b pb-3">
+                  <p className="text-sm font-medium text-gray-500 mb-1">User Agent</p>
+                  <p className="text-sm text-gray-700 break-words">{selectedLog.userAgent}</p>
+                </div>
+              )}
+
+              {/* Location */}
+              {selectedLog.location && (
+                <div className="border-b pb-3">
+                  <p className="text-sm font-medium text-gray-500 mb-1">Location</p>
+                  <div className="space-y-1">
+                    {selectedLog.location.latitude && selectedLog.location.longitude && (
+                      <p className="text-sm text-gray-700">
+                        📍 Coordinates: {selectedLog.location.latitude}, {selectedLog.location.longitude}
+                      </p>
+                    )}
+                    {selectedLog.location.address && (
+                      <p className="text-sm text-gray-700">
+                        📫 Address: {selectedLog.location.address}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Metadata */}
+              {selectedLog.metadata && Object.keys(selectedLog.metadata).length > 0 && (
+                <div className="border-b pb-3">
+                  <p className="text-sm font-medium text-gray-500 mb-2">Additional Information</p>
+                  <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                    {Object.entries(selectedLog.metadata).map(([key, value]) => (
+                      <div key={key} className="flex justify-between items-start">
+                        <span className="text-sm font-medium text-gray-600 capitalize">
+                          {key.replace(/([A-Z])/g, ' $1').trim()}:
+                        </span>
+                        <span className="text-sm text-gray-900 text-right ml-4">
+                          {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Target User */}
+              {selectedLog.targetUser && (
+                <div className="border-b pb-3">
+                  <p className="text-sm font-medium text-gray-500 mb-1">Target User</p>
+                  <p className="text-base text-gray-900">
+                    {selectedLog.targetUser.firstName} {selectedLog.targetUser.lastName}
+                    <span className="text-sm text-gray-500 ml-2">({selectedLog.targetUser.email})</span>
+                  </p>
+                </div>
+              )}
+
+              {/* Log ID */}
+              <div>
+                <p className="text-sm font-medium text-gray-500 mb-1">Log ID</p>
+                <p className="text-xs text-gray-600 font-mono">{selectedLog._id}</p>
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-end mt-6">
+            <Button
+              variant="outline"
+              onClick={() => setShowDetailsModal(false)}
+            >
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </PageContainer>
   );
 }

@@ -8,6 +8,7 @@ import {
   buildPaginationMeta,
   buildLinks,
 } from "../../utils/pagination";
+import { AuditLogService } from "../../services/auditLogService";
 
 export const getAllProducts = async (
   req: Request,
@@ -117,6 +118,24 @@ export const createProduct = async (
     const savedProduct = await ProductRepo.save(validatedProduct.data);
     
     console.log('Product created successfully:', savedProduct._id);
+
+    // Log product creation
+    await AuditLogService.createLog({
+      action: `Created product: ${savedProduct.productName} (${savedProduct.CFPRNumber})`,
+      actionType: 'CREATE_PRODUCT',
+      userId: currentUser._id,
+      targetProductId: savedProduct._id,
+      platform: 'WEB',
+      metadata: {
+        productName: savedProduct.productName,
+        CFPRNumber: savedProduct.CFPRNumber,
+        companyId: savedProduct.companyId,
+        productClassification: savedProduct.productClassification,
+        productSubClassification: savedProduct.productSubClassification,
+        brandName: savedProduct.brandName,
+      },
+      req,
+    });
 
     return res.status(201).json({
       success: true,

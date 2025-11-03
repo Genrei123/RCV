@@ -5,6 +5,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { createForgotPasswordToken, createToken, verifyToken } from '../../utils/JWT';
 import { UserValidation } from '../../typeorm/entities/user.entity';
 import nodemailer_transporter from '../../utils/nodemailer';
+import { AuditLogService } from '../../services/auditLogService';
 
 export const userSignIn = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -51,6 +52,9 @@ export const userSignIn = async (req: Request, res: Response, next: NextFunction
       isAdmin: user.role === 'ADMIN' ? true : false,
       iat: Date.now()
     });
+
+    // Log the login action
+    await AuditLogService.logLogin(user._id, req, 'WEB');
 
     return res.status(200).json({
       success: true,
@@ -126,7 +130,7 @@ export const me = async (req: Request, res: Response, next: NextFunction) => {
   }
   const User = await UserRepo.findOne({
     where: { _id: decoded.data?.sub },
-    select: ['_id', 'firstName', 'middleName', 'lastName', 'email', 'phoneNumber', 'location']
+    select: ['_id', 'firstName', 'middleName', 'lastName', 'email', 'phoneNumber', 'location', 'role', 'badgeId']
   });
   return res.send(User);
 }

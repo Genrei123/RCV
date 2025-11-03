@@ -57,4 +57,23 @@ export class UserPageService {
             throw error;
         }
     }
+
+    static async updateProfile(data: Partial<UserProfile>): Promise<UserProfile> {
+        try {
+            const response = await apiClient.patch<UserProfile>('/user/profile', data);
+            return response.data;
+        } catch (error) {
+            console.error('Error updating profile:', error);
+            throw error;
+        }
+    }
+
+    static async archiveAccount(): Promise<void> {
+        try {
+            await apiClient.patch('/user/archive');
+        } catch (error) {
+            console.error('Error archiving account:', error);
+            throw error;
+        }
+    }
 }

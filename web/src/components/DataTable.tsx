@@ -9,13 +9,14 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Search } from "lucide-react"
+import { Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
 import type { ReactNode } from "react"
 import { useState, useMemo } from "react"
 
 export interface Column {
   key: string;
   label: string;
+  sortable?: boolean;
   render?: (value: any, row: any) => ReactNode;
 }
 
@@ -53,6 +54,10 @@ export function DataTable({
   showSearch = true
 }: DataTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortConfig, setSortConfig] = useState<{
+    key: string;
+    direction: 'asc' | 'desc';
+  } | null>(null);
 
   // Handle search
   const handleSearch = (value: string) => {
@@ -60,6 +65,22 @@ export function DataTable({
     if (onSearch) {
       onSearch(value);
     }
+  };
+
+  // Handle sorting
+  const handleSort = (columnKey: string) => {
+    setSortConfig((currentSort) => {
+      if (currentSort?.key === columnKey) {
+        // Toggle direction
+        if (currentSort.direction === 'asc') {
+          return { key: columnKey, direction: 'desc' };
+        } else {
+          return null; // Reset sorting
+        }
+      }
+      // New sort
+      return { key: columnKey, direction: 'asc' };
+    });
   };
 
   // Filter and sort data
@@ -85,8 +106,28 @@ export function DataTable({
       });
     }
 
+    // Apply sorting
+    if (sortConfig) {
+      filtered.sort((a, b) => {
+        const aValue = a[sortConfig.key];
+        const bValue = b[sortConfig.key];
+
+        if (aValue === null || aValue === undefined) return 1;
+        if (bValue === null || bValue === undefined) return -1;
+
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+          const comparison = aValue.localeCompare(bValue);
+          return sortConfig.direction === 'asc' ? comparison : -comparison;
+        }
+
+        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
     return filtered;
-  }, [data, searchQuery, columns]);
+  }, [data, searchQuery, columns, sortConfig]);
 
   const renderCellContent = (column: Column, row: any) => {
     const value = row[column.key];
@@ -154,9 +195,27 @@ export function DataTable({
                 {columns.map((column) => (
                   <TableHead 
                     key={column.key} 
-                    className="text-left font-medium text-gray-600"
+                    className={`text-left font-medium text-gray-600 ${
+                      column.sortable ? 'cursor-pointer select-none hover:bg-gray-50' : ''
+                    }`}
+                    onClick={() => column.sortable && handleSort(column.key)}
                   >
-                    {column.label}
+                    <div className="flex items-center gap-2">
+                      {column.label}
+                      {column.sortable && (
+                        <span className="inline-flex">
+                          {sortConfig?.key === column.key ? (
+                            sortConfig.direction === 'asc' ? (
+                              <ArrowUp className="h-4 w-4 text-teal-600" />
+                            ) : (
+                              <ArrowDown className="h-4 w-4 text-teal-600" />
+                            )
+                          ) : (
+                            <ArrowUpDown className="h-4 w-4 text-gray-400" />
+                          )}
+                        </span>
+                      )}
+                    </div>
                   </TableHead>
                 ))}
               </TableRow>
