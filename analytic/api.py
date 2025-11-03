@@ -96,8 +96,11 @@ class AnalyticsProcessor:
         
         # Analyze each cluster
         cluster_stats = []
+        noise_points = []
+        
         for label in unique_labels:
             if label == -1:  # Noise points
+                noise_points = self.data[self.data['cluster'] == label].to_dict('records')
                 continue
                 
             cluster_points = self.data[self.data['cluster'] == label]
@@ -138,6 +141,7 @@ class AnalyticsProcessor:
                 'noise_percentage': (n_noise / len(coordinates)) * 100 if len(coordinates) > 0 else 0
             },
             'clusters': cluster_stats,
+            'noise_points': noise_points,
             'timestamp': datetime.now().isoformat()
         }
         
