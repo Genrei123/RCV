@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'token_service.dart';
-import '../config/api_constants.dart';
 import 'dart:developer' as developer;
+import '../config/api_constants.dart';
+import 'token_service.dart';
 
 class UserProfileService {
   static String get baseUrl => ApiConstants.baseUrl;
@@ -33,6 +33,7 @@ class UserProfileService {
             Uri.parse('$baseUrl/auth/me'),
             headers: {
               'Content-Type': 'application/json',
+              'Accept': 'application/json',
               'Authorization': 'Bearer $token',
             },
           )
@@ -42,7 +43,13 @@ class UserProfileService {
       developer.log('Profile Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
-        return json.decode(response.body);
+        final contentType = response.headers['content-type'] ?? '';
+        if (contentType.contains('application/json')) {
+          final data = json.decode(response.body);
+          return data is Map<String, dynamic> ? data : null;
+        }
+        developer.log('Unexpected content-type for /auth/me: $contentType');
+        return null;
       }
 
       return null;

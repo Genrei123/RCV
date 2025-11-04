@@ -9,7 +9,7 @@ import 'dart:developer' as developer;
 class AuditLogService {
   static String get baseUrl => ApiConstants.baseUrl;
 
-  // Get JWT token from SharedPreferences
+  // Get JWT token via TokenService
   static Future<String?> _getToken() async {
     try {
       return await TokenService.getAccessToken();
@@ -58,6 +58,7 @@ class AuditLogService {
         Uri.parse('$baseUrl/audit/log'),
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
           'Authorization': 'Bearer $token',
         },
         body: json.encode(body),
@@ -152,6 +153,7 @@ class AuditLogService {
         Uri.parse('$baseUrl/audit/logs/$logId'),
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
           'Authorization': 'Bearer $token',
         },
       ).timeout(const Duration(seconds: 10));
