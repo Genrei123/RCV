@@ -1,17 +1,16 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'token_service.dart';
+import '../config/api_constants.dart';
 import 'dart:developer' as developer;
 
 class UserProfileService {
-  static const String baseUrl =
-      'https://rcv-production-cbd6.up.railway.app/api/v1';
+  static String get baseUrl => ApiConstants.baseUrl;
 
-  // Get stored JWT token
+  // Get stored JWT access token via TokenService (authoritative store)
   static Future<String?> _getToken() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      return prefs.getString('auth_token');
+      return await TokenService.getAccessToken();
     } catch (e) {
       developer.log('Error getting token: $e');
       return null;
