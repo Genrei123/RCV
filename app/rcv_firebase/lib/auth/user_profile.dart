@@ -276,31 +276,65 @@ class _UserProfilePageState extends State<UserProfilePage> {
               GestureDetector(
                 onTap: isEditing ? openImageCropModal : null,
                 child: Stack(
+                  clipBehavior: Clip.none,
                   children: [
-                    CircleAvatar(
-                      radius: 48,
-                      backgroundImage: selectedImagePath != null
-                          ? FileImage(File(selectedImagePath!))
-                          : AssetImage(avatarPath) as ImageProvider,
+                    Builder(
+                      builder: (context) {
+                        // Decide what to display: file image, asset image, or placeholder icon
+                        final bool hasLocalFile = selectedImagePath != null;
+                        final bool hasCustomAsset =
+                            avatarPath.startsWith('assets/') &&
+                            avatarPath != 'assets/avatar.png';
+                        ImageProvider? bgImage;
+                        if (hasLocalFile) {
+                          bgImage = FileImage(File(selectedImagePath!));
+                        } else if (hasCustomAsset) {
+                          bgImage = AssetImage(avatarPath);
+                        } else {
+                          bgImage = null; // use placeholder icon
+                        }
+                        return CircleAvatar(
+                          radius: 48,
+                          backgroundColor: app_colors.AppColors.neutral
+                              .withOpacity(0.2),
+                          backgroundImage: bgImage,
+                          child: bgImage == null
+                              ? Icon(
+                                  Icons.person,
+                                  size: 42,
+                                  color: app_colors.AppColors.darkNeutral,
+                                )
+                              : null,
+                        );
+                      },
                     ),
-                    if (isEditing)
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: app_colors.AppColors.primary,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
-                          ),
-                          child: const Icon(
-                            Icons.camera_alt,
-                            size: 16,
-                            color: Colors.white,
+                    // Always show a camera icon on the right side for quick access
+                    Positioned(
+                      right: -8,
+                      top: 0,
+                      bottom: 0,
+                      child: Material(
+                        color: Colors.transparent,
+                        shape: const CircleBorder(),
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: openImageCropModal,
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: app_colors.AppColors.primary,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt,
+                              size: 16,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ),
+                    ),
                   ],
                 ),
               ),
@@ -418,6 +452,28 @@ class _UserProfilePageState extends State<UserProfilePage> {
                   ),
                 ),
               ] else ...[
+                const SizedBox(height: 12),
+                // Prominent control in edit mode to change profile picture
+                SizedBox(
+                  width: 200,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: app_colors.AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 12,
+                        horizontal: 16,
+                      ),
+                    ),
+                    icon: const Icon(Icons.camera_alt),
+                    label: const Text('Select Profile Picture'),
+                    onPressed: openImageCropModal,
+                  ),
+                ),
+                const SizedBox(height: 8),
                 // Edit Mode
                 Padding(
                   padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
@@ -447,6 +503,89 @@ class _UserProfilePageState extends State<UserProfilePage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Profile picture selector within edit form
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Builder(
+                            builder: (context) {
+                              final bool hasLocalFile =
+                                  selectedImagePath != null;
+                              final bool hasCustomAsset =
+                                  avatarPath.startsWith('assets/') &&
+                                  avatarPath != 'assets/avatar.png';
+                              ImageProvider? bgImage;
+                              if (hasLocalFile) {
+                                bgImage = FileImage(File(selectedImagePath!));
+                              } else if (hasCustomAsset) {
+                                bgImage = AssetImage(avatarPath);
+                              } else {
+                                bgImage = null;
+                              }
+                              return CircleAvatar(
+                                radius: 28,
+                                backgroundColor: app_colors.AppColors.neutral
+                                    .withOpacity(0.2),
+                                backgroundImage: bgImage,
+                                child: bgImage == null
+                                    ? Icon(
+                                        Icons.person,
+                                        size: 26,
+                                        color: app_colors.AppColors.darkNeutral,
+                                      )
+                                    : null,
+                              );
+                            },
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Profile Picture',
+                                  style: AppFonts.labelStyle.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                SizedBox(
+                                  height: 36,
+                                  child: OutlinedButton.icon(
+                                    style: OutlinedButton.styleFrom(
+                                      side: BorderSide(
+                                        color: app_colors.AppColors.primary,
+                                        width: 1.2,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 8,
+                                      ),
+                                    ),
+                                    icon: Icon(
+                                      Icons.photo_camera_back_outlined,
+                                      size: 18,
+                                      color: app_colors.AppColors.primary,
+                                    ),
+                                    label: Text(
+                                      'Select Profile Picture',
+                                      style: AppFonts.labelStyle.copyWith(
+                                        color: app_colors.AppColors.primary,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    onPressed: openImageCropModal,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
                       CustomTextField(
                         controller: nameController,
                         label: 'Full Name',

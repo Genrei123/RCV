@@ -17,6 +17,7 @@ import 'user_page/agent_Reports.dart';
 import 'pages/location_page.dart';
 import 'widgets/connectivity_check_screen.dart';
 import 'pages/crop_label.dart';
+import 'pages/splash_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -42,9 +43,10 @@ class MyApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF005440)),
           primarySwatch: Colors.green,
         ),
-        // Start with the landing page
-        initialRoute: '/',
+        // Start with a splash page
+        initialRoute: '/splash',
         routes: {
+          '/splash': (context) => const SplashPage(),
           //authentication
           '/': (context) => const LandingPage(),
           '/login': (context) => const LoginPage(),

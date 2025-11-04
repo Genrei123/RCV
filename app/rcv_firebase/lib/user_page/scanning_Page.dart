@@ -13,6 +13,7 @@ import '../services/audit_log_service.dart';
 import '../models/product.dart';
 import '../services/remote_config_service.dart';
 import '../widgets/feature_disabled_screen.dart';
+import '../utils/tab_history.dart';
 
 class QRScannerPage extends StatefulWidget {
   const QRScannerPage({super.key});
@@ -216,15 +217,12 @@ class _QRScannerPageState extends State<QRScannerPage> {
           setState(() {
             result = scannedData;
           });
-          
+
           // Log scan to audit trail
           AuditLogService.logScanProduct(
-            scanData: {
-              'scannedData': scannedData,
-              'scanType': 'QR',
-            },
+            scanData: {'scannedData': scannedData, 'scanType': 'QR'},
           );
-          
+
           // Show QR Code result in modal
           _showQRCodeModal(scannedData);
         }
@@ -1434,29 +1432,35 @@ Registered: ${_formatDate(product.dateOfRegistration)}
       // Check if extraction was successful
       if (response['success'] == true && response['extractedInfo'] != null) {
         final extractedInfo = response['extractedInfo'];
-        
+
         // Log OCR scan to audit trail
         AuditLogService.logScanProduct(
           scanData: {
-            'scannedText': combinedText.substring(0, combinedText.length > 500 ? 500 : combinedText.length),
+            'scannedText': combinedText.substring(
+              0,
+              combinedText.length > 500 ? 500 : combinedText.length,
+            ),
             'scanType': 'OCR',
             'extractionSuccess': true,
             'extractedInfo': extractedInfo,
           },
         );
-        
+
         // Show extracted information to user with "Search Product" button
         _showExtractedInfoModal(extractedInfo, combinedText);
       } else {
         // Log failed OCR scan
         AuditLogService.logScanProduct(
           scanData: {
-            'scannedText': combinedText.substring(0, combinedText.length > 500 ? 500 : combinedText.length),
+            'scannedText': combinedText.substring(
+              0,
+              combinedText.length > 500 ? 500 : combinedText.length,
+            ),
             'scanType': 'OCR',
             'extractionSuccess': false,
           },
         );
-        
+
         // Extraction failed - show OCR text only
         _showOCRModal(combinedText);
       }
@@ -1509,84 +1513,94 @@ Registered: ${_formatDate(product.dateOfRegistration)}
       );
     }
 
-    return Scaffold(
-      appBar: GradientHeaderAppBar(
-        showBackButton: false,
-        showBranding: true, // Show simplified branding
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            flex: 5,
-            child: Container(
-              width: double.infinity,
-              margin: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+    return WillPopScope(
+      onWillPop: () async {
+        final prev = TabHistory.instance.popAndGetPrevious();
+        if (prev != null && prev >= 0 && prev < AppBottomNavBar.routes.length) {
+          Navigator.pushReplacementNamed(context, AppBottomNavBar.routes[prev]);
+          return false;
+        }
+        return true;
+      },
+      child: Scaffold(
+        appBar: GradientHeaderAppBar(
+          showBackButton: false,
+          showBranding: true, // Show simplified branding
+        ),
+        body: Column(
+          children: [
+            Expanded(
+              flex: 5,
+              child: Container(
+                width: double.infinity,
+                margin: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: _buildQrView(context),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      isFlashOn ? Icons.flash_on : Icons.flash_off,
+                      color: const Color(0xFF005440),
+                    ),
+                    onPressed: _toggleFlash,
+                    tooltip: 'Toggle Flash',
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        isOCRMode = !isOCRMode;
+                      });
+                    },
+                    icon: Icon(
+                      Icons.text_fields,
+                      color: isOCRMode ? Colors.white : const Color(0xFF005440),
+                    ),
+                    label: Text(isOCRMode ? 'Exit OCR' : 'OCR Mode'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isOCRMode
+                          ? const Color(0xFF005440)
+                          : Colors.white,
+                      foregroundColor: isOCRMode
+                          ? Colors.white
+                          : const Color(0xFF005440),
+                      side: BorderSide(color: const Color(0xFF005440)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                   ),
                 ],
               ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: _buildQrView(context),
-              ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                IconButton(
-                  icon: Icon(
-                    isFlashOn ? Icons.flash_on : Icons.flash_off,
-                    color: const Color(0xFF005440),
-                  ),
-                  onPressed: _toggleFlash,
-                  tooltip: 'Toggle Flash',
-                ),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    setState(() {
-                      isOCRMode = !isOCRMode;
-                    });
-                  },
-                  icon: Icon(
-                    Icons.text_fields,
-                    color: isOCRMode ? Colors.white : const Color(0xFF005440),
-                  ),
-                  label: Text(isOCRMode ? 'Exit OCR' : 'OCR Mode'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isOCRMode
-                        ? const Color(0xFF005440)
-                        : Colors.white,
-                    foregroundColor: isOCRMode
-                        ? Colors.white
-                        : const Color(0xFF005440),
-                    side: BorderSide(color: const Color(0xFF005440)),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Result display removed - now using modals instead
-        ],
-      ),
-      bottomNavigationBar: AppBottomNavBar(
-        selectedIndex: 2,
-        role: NavBarRole.user, // Simplified to always use user role
+            // Result display removed - now using modals instead
+          ],
+        ),
+        bottomNavigationBar: AppBottomNavBar(
+          selectedIndex: 2,
+          role: NavBarRole.user, // Simplified to always use user role
+        ),
       ),
     );
   }
