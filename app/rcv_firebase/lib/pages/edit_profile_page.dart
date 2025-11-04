@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:rcv_firebase/themes/app_colors.dart';
 import '../services/user_profile_service.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+import 'dart:typed_data';
+import 'dart:convert' show base64Encode;
+import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../widgets/crop_image_widget.dart';
 
 class EditProfilePage extends StatefulWidget {
   final Map<String, dynamic> userData;
@@ -23,24 +30,53 @@ class _EditProfilePageState extends State<EditProfilePage> {
   late TextEditingController _dateOfBirthController;
 
   // Password change fields
-  final TextEditingController _currentPasswordController = TextEditingController();
+  final TextEditingController _currentPasswordController =
+      TextEditingController();
   final TextEditingController _newPasswordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
 
   bool _isLoading = false;
   bool _showPasswordSection = false;
+  final ImagePicker _picker = ImagePicker();
+  String? _localAvatarPath;
 
   @override
   void initState() {
     super.initState();
-    _firstNameController = TextEditingController(text: widget.userData['firstName'] ?? '');
-    _middleNameController = TextEditingController(text: widget.userData['middleName'] ?? '');
-    _lastNameController = TextEditingController(text: widget.userData['lastName'] ?? '');
-    _extNameController = TextEditingController(text: widget.userData['extName'] ?? '');
-    _emailController = TextEditingController(text: widget.userData['email'] ?? '');
-    _phoneNumberController = TextEditingController(text: widget.userData['phoneNumber'] ?? '');
-    _locationController = TextEditingController(text: widget.userData['location'] ?? '');
-    _dateOfBirthController = TextEditingController(text: widget.userData['dateOfBirth'] ?? '');
+    _firstNameController = TextEditingController(
+      text: widget.userData['firstName'] ?? '',
+    );
+    _middleNameController = TextEditingController(
+      text: widget.userData['middleName'] ?? '',
+    );
+    _lastNameController = TextEditingController(
+      text: widget.userData['lastName'] ?? '',
+    );
+    _extNameController = TextEditingController(
+      text: widget.userData['extName'] ?? '',
+    );
+    _emailController = TextEditingController(
+      text: widget.userData['email'] ?? '',
+    );
+    _phoneNumberController = TextEditingController(
+      text: widget.userData['phoneNumber'] ?? '',
+    );
+    _locationController = TextEditingController(
+      text: widget.userData['location'] ?? '',
+    );
+    _dateOfBirthController = TextEditingController(
+      text: widget.userData['dateOfBirth'] ?? '',
+    );
+    // Build a per-user storage key to avoid sharing avatars across accounts
+    final userId = (widget.userData['_id'] ?? widget.userData['id'])
+        ?.toString();
+    final email = widget.userData['email']?.toString();
+    final userKey = userId?.isNotEmpty == true
+        ? userId
+        : (email?.isNotEmpty == true ? email : 'default');
+    _avatarLocalKey = 'profile_avatar_path_${userKey}';
+    _loadLocalAvatar();
   }
 
   @override
@@ -59,6 +95,150 @@ class _EditProfilePageState extends State<EditProfilePage> {
     super.dispose();
   }
 
+  late final String _avatarLocalKey;
+
+  Future<void> _loadLocalAvatar() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedPath = prefs.getString(_avatarLocalKey);
+      if (savedPath != null && savedPath.isNotEmpty) {
+        final f = File(savedPath);
+        if (await f.exists()) {
+          if (!mounted) return;
+          setState(() {
+            _localAvatarPath = savedPath;
+          });
+        }
+      }
+    } catch (_) {}
+  }
+
+  void _openImageSourcePicker() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            height: 180,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    final XFile? image = await _picker.pickImage(
+                      source: ImageSource.camera,
+                    );
+                    if (image != null) {
+                      await _showAvatarCropDialog(image.path);
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                  icon: const Icon(Icons.camera_alt),
+                  label: const Text('Camera'),
+                ),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    final XFile? image = await _picker.pickImage(
+                      source: ImageSource.gallery,
+                    );
+                    if (image != null) {
+                      await _showAvatarCropDialog(image.path);
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                  icon: const Icon(Icons.photo_library),
+                  label: const Text('Gallery'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showAvatarCropDialog(String imagePath) async {
+    try {
+      final file = File(imagePath);
+      if (!await file.exists()) return;
+      final Uint8List bytes = await file.readAsBytes();
+
+      final Uint8List? cropped = await showImageCropperDialog(
+        context,
+        imageBytes: bytes,
+        title: 'Crop Avatar',
+        withCircleUi: true,
+        aspectRatio: 1,
+        headerColor: AppColors.primary,
+      );
+
+      if (cropped != null) {
+        final docsDir = await getApplicationDocumentsDirectory();
+        final avatarDir = Directory('${docsDir.path}/avatars');
+        if (!await avatarDir.exists()) {
+          await avatarDir.create(recursive: true);
+        }
+        final prefs = await SharedPreferences.getInstance();
+        final prevPath = prefs.getString(_avatarLocalKey);
+        final newPath =
+            '${avatarDir.path}/profile_avatar_${DateTime.now().millisecondsSinceEpoch}.png';
+        final out = File(newPath);
+        await out.writeAsBytes(cropped, flush: true);
+        if (prevPath != null && prevPath.isNotEmpty && prevPath != newPath) {
+          final prevFile = File(prevPath);
+          if (await prevFile.exists()) {
+            try {
+              await prevFile.delete();
+            } catch (_) {}
+          }
+        }
+        await prefs.setString(_avatarLocalKey, out.path);
+        if (!mounted) return;
+        setState(() {
+          _localAvatarPath = out.path;
+        });
+
+        // Also upload to API so avatar is tied to the account
+        final base64 = 'data:image/png;base64,' + base64Encode(cropped);
+        final upload = await UserProfileService.uploadProfileAvatar(base64);
+        if (upload['success'] == true) {
+          // Optionally, we could refresh profile data here
+          // but Profile page will reload on return
+          // ignore
+        } else {
+          // Show non-blocking error if upload failed
+          // but keep local avatar so user still sees the change offline
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(upload['message'] ?? 'Failed to upload avatar'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Image error: $e'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
+
   Future<void> _handleSaveProfile() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -70,18 +250,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
       // Update profile data
       final profileData = {
         'firstName': _firstNameController.text.trim(),
-        'middleName': _middleNameController.text.trim().isEmpty 
-            ? null 
+        'middleName': _middleNameController.text.trim().isEmpty
+            ? null
             : _middleNameController.text.trim(),
         'lastName': _lastNameController.text.trim(),
-        'extName': _extNameController.text.trim().isEmpty 
-            ? null 
+        'extName': _extNameController.text.trim().isEmpty
+            ? null
             : _extNameController.text.trim(),
         'email': _emailController.text.trim(),
         'phoneNumber': _phoneNumberController.text.trim(),
         'location': _locationController.text.trim(),
-        'dateOfBirth': _dateOfBirthController.text.trim().isEmpty 
-            ? null 
+        'dateOfBirth': _dateOfBirthController.text.trim().isEmpty
+            ? null
             : _dateOfBirthController.text.trim(),
       };
 
@@ -92,17 +272,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
       }
 
       // Handle password change if requested
-      if (_showPasswordSection && 
+      if (_showPasswordSection &&
           _currentPasswordController.text.isNotEmpty &&
           _newPasswordController.text.isNotEmpty) {
-        
         final passwordResult = await UserProfileService.changePassword(
           _currentPasswordController.text,
           _newPasswordController.text,
         );
 
         if (!passwordResult['success']) {
-          throw Exception(passwordResult['message'] ?? 'Failed to change password');
+          throw Exception(
+            passwordResult['message'] ?? 'Failed to change password',
+          );
         }
       }
 
@@ -119,7 +300,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: ${e.toString().replaceAll('Exception: ', '')}'),
+            content: Text(
+              'Error: ${e.toString().replaceAll('Exception: ', '')}',
+            ),
             backgroundColor: AppColors.error,
           ),
         );
@@ -148,6 +331,58 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Avatar selector
+                    Center(
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        alignment: Alignment.center,
+                        children: [
+                          CircleAvatar(
+                            radius: 48,
+                            backgroundColor: Colors.grey.shade300,
+                            backgroundImage: _localAvatarPath != null
+                                ? FileImage(File(_localAvatarPath!))
+                                : null,
+                            child: _localAvatarPath == null
+                                ? const Icon(
+                                    Icons.person,
+                                    size: 42,
+                                    color: Colors.black54,
+                                  )
+                                : null,
+                          ),
+                          Positioned(
+                            right: 0,
+                            bottom: 0,
+                            child: Material(
+                              color: Colors.transparent,
+                              shape: const CircleBorder(),
+                              child: InkWell(
+                                customBorder: const CircleBorder(),
+                                onTap: _openImageSourcePicker,
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.white,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.camera_alt,
+                                    size: 16,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     // Personal Information Section
                     const Text(
                       'Personal Information',
@@ -223,7 +458,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         if (value == null || value.trim().isEmpty) {
                           return 'Email is required';
                         }
-                        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                        if (!RegExp(
+                          r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                        ).hasMatch(value)) {
                           return 'Enter a valid email';
                         }
                         return null;
@@ -301,7 +538,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         ),
                         obscureText: true,
                         validator: (value) {
-                          if (_showPasswordSection && 
+                          if (_showPasswordSection &&
                               (value == null || value.isEmpty)) {
                             return 'Current password is required';
                           }
@@ -319,7 +556,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         ),
                         obscureText: true,
                         validator: (value) {
-                          if (_showPasswordSection && 
+                          if (_showPasswordSection &&
                               (value == null || value.isEmpty)) {
                             return 'New password is required';
                           }
@@ -340,7 +577,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         ),
                         obscureText: true,
                         validator: (value) {
-                          if (_showPasswordSection && 
+                          if (_showPasswordSection &&
                               value != _newPasswordController.text) {
                             return 'Passwords do not match';
                           }
@@ -355,7 +592,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       children: [
                         Expanded(
                           child: OutlinedButton(
-                            onPressed: _isLoading ? null : () => Navigator.pop(context),
+                            onPressed: _isLoading
+                                ? null
+                                : () => Navigator.pop(context),
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               side: BorderSide(color: AppColors.primary),

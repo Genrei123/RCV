@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
+import '../utils/tab_history.dart';
 
 enum NavBarRole { admin, user }
 
@@ -28,9 +29,10 @@ class AppBottomNavBar extends StatelessWidget {
     if (index >= 0 && index < routes.length) {
       final targetRoute = routes[index];
       final currentRoute = ModalRoute.of(context)?.settings.name;
-      
+
       // Only navigate if we're not already on the target route
       if (currentRoute != targetRoute) {
+        TabHistory.instance.visit(index);
         Navigator.pushReplacementNamed(context, targetRoute);
       }
     }
@@ -38,6 +40,8 @@ class AppBottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Keep a simple history of visited tabs for back button handling
+    TabHistory.instance.visit(selectedIndex);
     return BottomNavigationBar(
       type: BottomNavigationBarType.fixed,
       selectedItemColor: app_colors.AppColors.primary,

@@ -5,6 +5,7 @@ import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
 import '../services/audit_log_service.dart';
 import '../services/remote_config_service.dart';
 import '../widgets/feature_disabled_screen.dart';
+import '../utils/tab_history.dart';
 
 // Audit Log model
 class AuditLog {
@@ -122,9 +123,11 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
       'Sep',
       'Oct',
       'Nov',
-      'Dec'
+      'Dec',
     ];
-    final hour = date.hour > 12 ? date.hour - 12 : (date.hour == 0 ? 12 : date.hour);
+    final hour = date.hour > 12
+        ? date.hour - 12
+        : (date.hour == 0 ? 12 : date.hour);
     final period = date.hour >= 12 ? 'PM' : 'AM';
     return '${months[date.month - 1]} ${date.day}, ${hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')} $period';
   }
@@ -245,7 +248,10 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
                         const Divider(height: 24),
                         _buildDetailRow('Platform', log.platform),
                         const Divider(height: 24),
-                        _buildDetailRow('Date & Time', _formatDate(log.createdAt)),
+                        _buildDetailRow(
+                          'Date & Time',
+                          _formatDate(log.createdAt),
+                        ),
                         if (log.ipAddress != null) ...[
                           const Divider(height: 24),
                           _buildDetailRow('IP Address', log.ipAddress!),
@@ -255,7 +261,8 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
                           const Divider(height: 24),
                           _buildDetailRow('Location', log.location!['address']),
                         ],
-                        if (log.metadata != null && log.metadata!.isNotEmpty) ...[
+                        if (log.metadata != null &&
+                            log.metadata!.isNotEmpty) ...[
                           const Divider(height: 24),
                           const Text(
                             'Additional Details:',
@@ -336,182 +343,193 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
       );
     }
 
-    return Scaffold(
-      appBar: GradientHeaderAppBar(
-        showBackButton: false,
-        showBranding: true,
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _hasError
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Failed to load audit logs',
-                        style: TextStyle(fontSize: 18, color: Colors.grey[600]),
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: () => _loadAuditLogs(),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: app_colors.AppColors.primary,
-                          foregroundColor: Colors.white,
-                        ),
-                        child: const Text('Retry'),
-                      ),
-                    ],
-                  ),
-                )
-              : _auditLogs.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.history, size: 80, color: Colors.grey[300]),
-                          const SizedBox(height: 16),
-                          Text(
-                            'No audit logs yet',
-                            style: TextStyle(fontSize: 18, color: Colors.grey[600]),
-                          ),
-                        ],
-                      ),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: () => _loadAuditLogs(),
-                      child: NotificationListener<ScrollNotification>(
-                        onNotification: (ScrollNotification scrollInfo) {
-                          if (scrollInfo.metrics.pixels ==
-                                  scrollInfo.metrics.maxScrollExtent &&
-                              !_isLoadingMore) {
-                            _loadAuditLogs(loadMore: true);
-                          }
-                          return false;
-                        },
-                        child: ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: _auditLogs.length + (_isLoadingMore ? 1 : 0),
-                          itemBuilder: (context, index) {
-                            if (index == _auditLogs.length) {
-                              return const Center(
-                                child: Padding(
-                                  padding: EdgeInsets.all(16.0),
-                                  child: CircularProgressIndicator(),
-                                ),
-                              );
-                            }
-
-                            final log = _auditLogs[index];
-                            final color = _getColorForActionType(log.actionType);
-
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              elevation: 2,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: ListTile(
-                                contentPadding: const EdgeInsets.all(12),
-                                leading: Container(
-                                  width: 50,
-                                  height: 50,
-                                  decoration: BoxDecoration(
-                                    color: color.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Icon(
-                                    _getIconForActionType(log.actionType),
-                                    color: color,
-                                    size: 28,
-                                  ),
-                                ),
-                                title: Text(
-                                  log.actionType.replaceAll('_', ' '),
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      log.action,
-                                      style: TextStyle(
-                                        color: Colors.grey[700],
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          Icons.access_time,
-                                          size: 14,
-                                          color: Colors.grey[600],
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          _formatDate(log.createdAt),
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey[600],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          log.platform == 'MOBILE'
-                                              ? Icons.phone_android
-                                              : Icons.computer,
-                                          size: 14,
-                                          color: Colors.grey[600],
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          log.platform,
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey[600],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                                trailing: ElevatedButton(
-                                  onPressed: () => _showLogDetails(log),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: color,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 8,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ),
-                                  child: const Text('View'),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
+    return WillPopScope(
+      onWillPop: () async {
+        final prev = TabHistory.instance.popAndGetPrevious();
+        if (prev != null && prev >= 0 && prev < AppBottomNavBar.routes.length) {
+          Navigator.pushReplacementNamed(context, AppBottomNavBar.routes[prev]);
+          return false;
+        }
+        return true;
+      },
+      child: Scaffold(
+        appBar: GradientHeaderAppBar(showBackButton: false, showBranding: true),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _hasError
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: Colors.grey[400],
                     ),
-      bottomNavigationBar: AppBottomNavBar(
-        selectedIndex: 1,
-        role: NavBarRole.user,
+                    const SizedBox(height: 16),
+                    Text(
+                      'Failed to load audit logs',
+                      style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () => _loadAuditLogs(),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: app_colors.AppColors.primary,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              )
+            : _auditLogs.isEmpty
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.history, size: 80, color: Colors.grey[300]),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No audit logs yet',
+                      style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+              )
+            : RefreshIndicator(
+                onRefresh: () => _loadAuditLogs(),
+                child: NotificationListener<ScrollNotification>(
+                  onNotification: (ScrollNotification scrollInfo) {
+                    if (scrollInfo.metrics.pixels ==
+                            scrollInfo.metrics.maxScrollExtent &&
+                        !_isLoadingMore) {
+                      _loadAuditLogs(loadMore: true);
+                    }
+                    return false;
+                  },
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _auditLogs.length + (_isLoadingMore ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (index == _auditLogs.length) {
+                        return const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(16.0),
+                            child: CircularProgressIndicator(),
+                          ),
+                        );
+                      }
+
+                      final log = _auditLogs[index];
+                      final color = _getColorForActionType(log.actionType);
+
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.all(12),
+                          leading: Container(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: color.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(
+                              _getIconForActionType(log.actionType),
+                              color: color,
+                              size: 28,
+                            ),
+                          ),
+                          title: Text(
+                            log.actionType.replaceAll('_', ' '),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 4),
+                              Text(
+                                log.action,
+                                style: TextStyle(
+                                  color: Colors.grey[700],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.access_time,
+                                    size: 14,
+                                    color: Colors.grey[600],
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    _formatDate(log.createdAt),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  Icon(
+                                    log.platform == 'MOBILE'
+                                        ? Icons.phone_android
+                                        : Icons.computer,
+                                    size: 14,
+                                    color: Colors.grey[600],
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    log.platform,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          trailing: ElevatedButton(
+                            onPressed: () => _showLogDetails(log),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: color,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: const Text('View'),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+        bottomNavigationBar: AppBottomNavBar(
+          selectedIndex: 1,
+          role: NavBarRole.user,
+        ),
       ),
     );
   }

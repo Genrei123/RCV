@@ -9,6 +9,7 @@ import 'dart:async';
 import 'dart:io';
 import '../services/remote_config_service.dart';
 import '../widgets/feature_disabled_screen.dart';
+import '../utils/tab_history.dart';
 
 class UserHomePage extends StatefulWidget {
   const UserHomePage({super.key});
@@ -23,9 +24,7 @@ class _UserHomePageState extends State<UserHomePage> {
   final List<Widget> _pages = [const HomeContent()];
 
   @override
-  
   Widget build(BuildContext context) {
-
     //Feature disable checker
     if (RemoteConfigService.isFeatureDisabled('disable_home_page')) {
       return FeatureDisabledScreen(
@@ -35,15 +34,25 @@ class _UserHomePageState extends State<UserHomePage> {
         navBarRole: NavBarRole.user,
       );
     }
-    return Scaffold(
-      appBar: GradientHeaderAppBar(
-        showBackButton: false,
-        showBranding: true, // Show simplified branding
-      ),
-      body: _pages[_selectedIndex],
-      bottomNavigationBar: AppBottomNavBar(
-        selectedIndex: _selectedIndex,
-        role: NavBarRole.user,
+    return WillPopScope(
+      onWillPop: () async {
+        final prev = TabHistory.instance.popAndGetPrevious();
+        if (prev != null && prev >= 0 && prev < AppBottomNavBar.routes.length) {
+          Navigator.pushReplacementNamed(context, AppBottomNavBar.routes[prev]);
+          return false;
+        }
+        return true;
+      },
+      child: Scaffold(
+        appBar: GradientHeaderAppBar(
+          showBackButton: false,
+          showBranding: true, // Show simplified branding
+        ),
+        body: _pages[_selectedIndex],
+        bottomNavigationBar: AppBottomNavBar(
+          selectedIndex: _selectedIndex,
+          role: NavBarRole.user,
+        ),
       ),
     );
   }
@@ -60,7 +69,7 @@ class HomeContent extends StatefulWidget {
 class _HomeContentState extends State<HomeContent> {
   final GpsService _gpsService = GpsService();
   GoogleMapController? _mapController;
-  
+
   // Location state
   LocationData? _currentLocation;
   bool _isConnected = true;
@@ -75,10 +84,11 @@ class _HomeContentState extends State<HomeContent> {
 
   Future<void> _checkInternetConnection() async {
     setState(() => _isChecking = true);
-    
+
     try {
-      final result = await InternetAddress.lookup('google.com')
-          .timeout(const Duration(seconds: 5));
+      final result = await InternetAddress.lookup(
+        'google.com',
+      ).timeout(const Duration(seconds: 5));
       setState(() {
         _isConnected = result.isNotEmpty && result[0].rawAddress.isNotEmpty;
         _isChecking = false;
@@ -96,15 +106,17 @@ class _HomeContentState extends State<HomeContent> {
     try {
       print('📍 [HomePage] Getting current location...');
       LocationData? location = await _gpsService.getCurrentLocation();
-      
+
       if (location != null) {
         print('✅ [HomePage] Location received: lat=${location.latitude}, lng=${location.longitude}');
         setState(() {
           _currentLocation = location;
         });
-        
+
         // Move map to current location
-        if (_mapController != null && location.latitude != null && location.longitude != null) {
+        if (_mapController != null &&
+            location.latitude != null &&
+            location.longitude != null) {
           _mapController!.animateCamera(
             CameraUpdate.newCameraPosition(
               CameraPosition(
@@ -114,7 +126,7 @@ class _HomeContentState extends State<HomeContent> {
             ),
           );
         }
-        
+
         // Save location to Firestore
         if (location.latitude != null && location.longitude != null) {
           print('💾 [HomePage] Saving location to Firestore...');
@@ -159,15 +171,15 @@ class _HomeContentState extends State<HomeContent> {
               color: _isChecking
                   ? Colors.grey[200]
                   : _isConnected
-                      ? Colors.green[50]
-                      : Colors.red[50],
+                  ? Colors.green[50]
+                  : Colors.red[50],
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: _isChecking
                     ? Colors.grey[300]!
                     : _isConnected
-                        ? Colors.green
-                        : Colors.red,
+                    ? Colors.green
+                    : Colors.red,
                 width: 1,
               ),
             ),
@@ -177,13 +189,13 @@ class _HomeContentState extends State<HomeContent> {
                   _isChecking
                       ? Icons.wifi_find
                       : _isConnected
-                          ? Icons.wifi
-                          : Icons.wifi_off,
+                      ? Icons.wifi
+                      : Icons.wifi_off,
                   color: _isChecking
                       ? Colors.grey[600]
                       : _isConnected
-                          ? Colors.green
-                          : Colors.red,
+                      ? Colors.green
+                      : Colors.red,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -191,15 +203,15 @@ class _HomeContentState extends State<HomeContent> {
                     _isChecking
                         ? 'Checking connection...'
                         : _isConnected
-                            ? 'Connected to Internet'
-                            : 'No Internet Connection',
+                        ? 'Connected to Internet'
+                        : 'No Internet Connection',
                     style: TextStyle(
                       fontWeight: FontWeight.w500,
                       color: _isChecking
                           ? Colors.grey[700]
                           : _isConnected
-                              ? Colors.green[800]
-                              : Colors.red[800],
+                          ? Colors.green[800]
+                          : Colors.red[800],
                     ),
                   ),
                 ),
@@ -220,7 +232,7 @@ class _HomeContentState extends State<HomeContent> {
             ),
           ),
         ),
-        
+
         // Google Maps Widget
         Expanded(
           child: Padding(
@@ -229,15 +241,18 @@ class _HomeContentState extends State<HomeContent> {
               borderRadius: BorderRadius.circular(12),
               child: GoogleMap(
                 initialCameraPosition: const CameraPosition(
-                  target: LatLng(14.5995, 120.9842), // Default to Philippines center
+                  target: LatLng(
+                    14.5995,
+                    120.9842,
+                  ), // Default to Philippines center
                   zoom: 6.0,
                 ),
                 onMapCreated: (GoogleMapController controller) {
                   _mapController = controller;
-                  
+
                   // If we already have location when map is created, move to it
-                  if (_currentLocation != null && 
-                      _currentLocation!.latitude != null && 
+                  if (_currentLocation != null &&
+                      _currentLocation!.latitude != null &&
                       _currentLocation!.longitude != null) {
                     Future.delayed(const Duration(milliseconds: 500), () {
                       controller.animateCamera(
@@ -254,9 +269,10 @@ class _HomeContentState extends State<HomeContent> {
                     });
                   }
                 },
-                markers: _currentLocation != null &&
-                    _currentLocation!.latitude != null &&
-                    _currentLocation!.longitude != null
+                markers:
+                    _currentLocation != null &&
+                        _currentLocation!.latitude != null &&
+                        _currentLocation!.longitude != null
                     ? {
                         Marker(
                           markerId: const MarkerId('current_location'),
@@ -266,7 +282,8 @@ class _HomeContentState extends State<HomeContent> {
                           ),
                           infoWindow: InfoWindow(
                             title: 'Your Location',
-                            snippet: 'Lat: ${_currentLocation!.latitude?.toStringAsFixed(6)}, Lng: ${_currentLocation!.longitude?.toStringAsFixed(6)}',
+                            snippet:
+                                'Lat: ${_currentLocation!.latitude?.toStringAsFixed(6)}, Lng: ${_currentLocation!.longitude?.toStringAsFixed(6)}',
                           ),
                           icon: BitmapDescriptor.defaultMarkerWithHue(
                             BitmapDescriptor.hueGreen,
