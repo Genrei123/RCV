@@ -8,7 +8,7 @@
 // - Integration with AuthService
 // =========================================================================
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -52,6 +52,22 @@ export function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
+
+  // Check if user has remember me enabled and pre-fill email
+  useEffect(() => {
+    const storedRememberMe = localStorage.getItem('rememberMe');
+    const tokenExpiration = localStorage.getItem('tokenExpiration');
+    
+    if (storedRememberMe === 'true' && tokenExpiration) {
+      const expirationTime = parseInt(tokenExpiration);
+      const currentTime = Date.now();
+      
+      // If token is still valid, redirect user
+      if (currentTime <= expirationTime) {
+        setRememberMe(true);
+      }
+    }
+  }, []);
 
   const [loginData, setLoginData] = useState<LoginFormData>({
     email: '',
@@ -156,6 +172,25 @@ export function AuthPage() {
   };
 
   // =========================================================================
+  // REMEMBER ME HELPER FUNCTIONS
+  // =========================================================================
+
+  const setTokenWithExpiration = (token: string, rememberMe: boolean) => {
+    localStorage.setItem('token', token);
+    
+    if (rememberMe) {
+      // Remember me: 30 days
+      const expirationTime = Date.now() + (30 * 24 * 60 * 60 * 1000);
+      localStorage.setItem('tokenExpiration', expirationTime.toString());
+      localStorage.setItem('rememberMe', 'true');
+    } else {
+      // Regular session: 24 hours
+      const expirationTime = Date.now() + (24 * 60 * 60 * 1000);
+      localStorage.setItem('tokenExpiration', expirationTime.toString());
+    }
+  };
+
+  // =========================================================================
   // FORM HANDLERS
   // =========================================================================
 
@@ -182,11 +217,8 @@ export function AuthPage() {
       });
 
       if (response?.data.token) {
-        localStorage.setItem('token', response.data.token);
-        
-        if (rememberMe) {
-          localStorage.setItem('rememberMe', 'true');
-        }
+        // Use the new helper function to set token with proper expiration
+        setTokenWithExpiration(response.data.token, rememberMe);
         
         toast.success('Login successful! Redirecting...');
         

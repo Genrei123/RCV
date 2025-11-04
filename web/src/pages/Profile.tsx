@@ -233,7 +233,7 @@ export function Profile({
       key: "platform",
       label: "Platform",
       render: (value: string) => {
-        const icon = value === "WEB" ? "🖥️" : "📱";
+        const icon = value === "WEB" ? "" : ""; // blank lang since tanggal emoji
         return (
           <span className="text-sm text-gray-600">
             {icon} {value}
@@ -545,7 +545,7 @@ export function Profile({
                   Platform
                 </p>
                 <p className="text-base text-gray-900">
-                  {selectedLog.platform === "WEB" ? "🖥️ Web" : "📱 Mobile"}
+                  {selectedLog.platform === "WEB" ? "Web" : "Mobile"}
                 </p>
               </div>
 
@@ -600,13 +600,13 @@ export function Profile({
                     {selectedLog.location.latitude &&
                       selectedLog.location.longitude && (
                         <p className="text-sm text-gray-700">
-                          📍 Coordinates: {selectedLog.location.latitude},{" "}
+                          Coordinates: {selectedLog.location.latitude},{" "}
                           {selectedLog.location.longitude}
                         </p>
                       )}
                     {selectedLog.location.address && (
                       <p className="text-sm text-gray-700">
-                        📫 Address: {selectedLog.location.address}
+                        Address: {selectedLog.location.address}
                       </p>
                     )}
                   </div>
