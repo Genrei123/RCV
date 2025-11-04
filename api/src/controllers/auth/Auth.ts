@@ -14,11 +14,19 @@ export const userSignIn = async (req: Request, res: Response, next: NextFunction
     // Find the user by email
     const user = await UserRepo.findOne({
       where: { email },
-      select: ['_id', 'email', 'password', 'role', 'approved', 'firstName', 'lastName'],
+      select: [
+        "_id",
+        "email",
+        "password",
+        "role",
+        "approved",
+        "firstName",
+        "lastName",
+      ],
     });
 
     if (!user) {
-      const error = new CustomError(401, 'Invalid email or password', {
+      const error = new CustomError(401, "Invalid email or password", {
         success: false,
         token: null,
         user: null,
@@ -29,7 +37,7 @@ export const userSignIn = async (req: Request, res: Response, next: NextFunction
     // Verify the password
     const isPasswordValid = bcryptjs.compareSync(password, user.password);
     if (!isPasswordValid) {
-      const error = new CustomError(401, 'Invalid email or password', {
+      const error = new CustomError(401, "Invalid email or password", {
         success: false,
         token: null,
         user: null,
@@ -41,7 +49,8 @@ export const userSignIn = async (req: Request, res: Response, next: NextFunction
     if (!user.approved) {
       return res.status(403).json({
         success: false,
-        message: 'Your account is pending approval. Please wait for an administrator to approve your account.',
+        message:
+          "Your account is pending approval. Please wait for an administrator to approve your account.",
         approved: false,
         email: user.email,
       });
@@ -49,16 +58,16 @@ export const userSignIn = async (req: Request, res: Response, next: NextFunction
 
     const token = createToken({
       sub: user._id,
-      isAdmin: user.role === 'ADMIN' ? true : false,
-      iat: Date.now()
+      isAdmin: user.role === "ADMIN" ? true : false,
+      iat: Date.now(),
     });
 
     // Log the login action
-    await AuditLogService.logLogin(user._id, req, 'WEB');
+    await AuditLogService.logLogin(user._id, req, "WEB");
 
     return res.status(200).json({
       success: true,
-      message: 'User signed in successfully',
+      message: "User signed in successfully",
       token,
       user: {
         _id: user._id,
@@ -79,144 +88,44 @@ export const userSignIn = async (req: Request, res: Response, next: NextFunction
   }
 };
 
-// Mobile login - includes full user data in JWT token
-export const mobileSignIn = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { email, password } = req.body;
-
-    // Find the user by email - select all fields needed for JWT
-    const user = await UserRepo.findOne({
-      where: { email },
-      select: [
-        '_id', 
-        'email', 
-        'password', 
-        'role', 
-        'approved', 
-        'status',
-        'firstName', 
-        'middleName',
-        'lastName',
-        'extName',
-        'fullName',
-        'badgeId',
-        'location',
-        'phoneNumber',
-        'dateOfBirth',
-        'avatarUrl'
-      ],
-    });
-
-    if (!user) {
-      const error = new CustomError(401, 'Invalid email or password', {
-        success: false,
-        token: null,
-        user: null,
-      });
-      return next(error);
-    }
-
-    // Verify the password
-    const isPasswordValid = bcryptjs.compareSync(password, user.password);
-    if (!isPasswordValid) {
-      const error = new CustomError(401, 'Invalid email or password', {
-        success: false,
-        token: null,
-        user: null,
-      });
-      return next(error);
-    }
-
-    // Check if user is approved
-    if (!user.approved) {
-      return res.status(403).json({
-        success: false,
-        message: 'Your account is pending approval. Please wait for an administrator to approve your account.',
-        approved: false,
-        email: user.email,
-      });
-    }
-
-    // Create mobile token with all user information
-    const token = createMobileToken({
-      sub: user._id,
-      email: user.email,
-      firstName: user.firstName,
-      middleName: user.middleName,
-      lastName: user.lastName,
-      extName: user.extName,
-      fullName: user.fullName,
-      role: user.role,
-      status: user.status,
-      badgeId: user.badgeId,
-      location: user.location,
-      phoneNumber: user.phoneNumber,
-      dateOfBirth: user.dateOfBirth,
-      avatarUrl: user.avatarUrl,
-      isAdmin: user.role === 'ADMIN',
-      iat: Date.now()
-    });
-
-    // Log the login action
-    await AuditLogService.logLogin(user._id, req, 'MOBILE');
-
-    return res.status(200).json({
-      success: true,
-      message: 'User signed in successfully',
-      token,
-      refreshToken: token, // Using same token for now, can implement refresh token later
-      expiresIn: 604800, // 7 days in seconds
-      user: {
-        _id: user._id,
-        email: user.email,
-        firstName: user.firstName,
-        middleName: user.middleName,
-        lastName: user.lastName,
-        fullName: user.fullName,
-        role: user.role,
-        approved: user.approved,
-        status: user.status,
-        badgeId: user.badgeId,
-        location: user.location,
-        phoneNumber: user.phoneNumber,
-        dateOfBirth: user.dateOfBirth,
-        avatarUrl: user.avatarUrl,
-      },
-    });
-  } catch (error: any) {
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-      token: null,
-      user: null,
-    });
-  }
-};
-
-export const userSignUp = async (req: Request, res: Response, next: NextFunction) => {
+export const userSignUp = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   const newUser = UserValidation.safeParse(req.body);
   if (!newUser || !newUser.success) {
-    console.error('Validation errors:', newUser.error?.issues);
-    return next(new CustomError(400, "Parsing failed, incomplete information", { 
-      errors: newUser.error?.issues 
-    }));
+    console.error("Validation errors:", newUser.error?.issues);
+    return next(
+      new CustomError(400, "Parsing failed, incomplete information", {
+        errors: newUser.error?.issues,
+      })
+    );
   }
 
-  if (await UserRepo.findOneBy({ email: newUser.data?.email }) != null) {
-    return next(new CustomError(400, "Email already exists", { email: newUser.data.email }));
+  if ((await UserRepo.findOneBy({ email: newUser.data?.email })) != null) {
+    return next(
+      new CustomError(400, "Email already exists", {
+        email: newUser.data.email,
+      })
+    );
   }
 
-  const hashPassword = bcryptjs.hashSync(newUser.data.password, bcryptjs.genSaltSync(10));
+  const hashPassword = bcryptjs.hashSync(
+    newUser.data.password,
+    bcryptjs.genSaltSync(10)
+  );
   newUser.data.password = hashPassword;
-  
+
   // Set approved to false by default
   newUser.data.approved = false;
-  
+
   await UserRepo.save(newUser.data);
-  
-  return res.status(200).json({ 
+
+  return res.status(200).json({
     success: true,
-    message: "Registration successful! Your account is pending approval. You will be notified once an administrator approves your account.",
+    message:
+      "Registration successful! Your account is pending approval. You will be notified once an administrator approves your account.",
     user: {
       email: newUser.data.email,
       firstName: newUser.data.firstName,
@@ -227,48 +136,63 @@ export const userSignUp = async (req: Request, res: Response, next: NextFunction
   });
 };
 
-export const logout = async (req: Request, res: Response, next: NextFunction) => {
+export const logout = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // Log logout
-  return res.status(500).json({ success: false, message: 'Logout not implemented' });
-}
+  return res
+    .status(500)
+    .json({ success: false, message: "Logout not implemented" });
+};
 
-export const refreshToken = async (req: Request, res: Response, next: NextFunction) => {
+export const refreshToken = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   // Refresh token
-  return res.status(500).json({ success: false, message: 'Refresh token not implemented' });
-}
+  return res
+    .status(500)
+    .json({ success: false, message: "Refresh token not implemented" });
+};
 
 export const me = async (req: Request, res: Response, next: NextFunction) => {
   const decoded = verifyToken(req.headers.authorization as string);
   if (!decoded) {
-    return next(new CustomError(400, "Token is invalid", { token: req.headers.authorization }));
+    return next(
+      new CustomError(400, "Token is invalid", {
+        token: req.headers.authorization,
+      })
+    );
   }
   const User = await UserRepo.findOne({
     where: { _id: decoded.data?.sub },
     select: [
-      '_id', 
-      'firstName', 
-      'middleName', 
-      'lastName', 
-      'extName',
-      'fullName',
-      'email', 
-      'phoneNumber', 
-      'location', 
-      'role', 
-      'status',
-      'badgeId',
-      'dateOfBirth',
-      'avatarUrl',
-      'approved'
-    ]
+      "_id",
+      "firstName",
+      "middleName",
+      "lastName",
+      "email",
+      "phoneNumber",
+      "location",
+      "role",
+      "badgeId",
+      "avatarUrl",
+    ],
   });
   return res.send(User);
-}
+};
 
-export const requestPasswordReset = async (req: Request, res: Response, next: NextFunction) => {
+export const requestPasswordReset = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { email } = req.body;
-    
+
     if (!email) {
       return next(new CustomError(400, "Email is required"));
     }
@@ -281,21 +205,22 @@ export const requestPasswordReset = async (req: Request, res: Response, next: Ne
     const user = await UserRepo.findOneBy({ email: email });
     if (!user) {
       // Return success even if user not found (security best practice)
-      return res.status(200).json({ 
-        success: true, 
-        message: "If an account exists with this email, a reset code has been sent." 
+      return res.status(200).json({
+        success: true,
+        message:
+          "If an account exists with this email, a reset code has been sent.",
       });
     }
 
     // Generate 6-digit code
     const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-    
+
     // Hash the code before storing
     const hashedCode = bcryptjs.hashSync(resetCode, bcryptjs.genSaltSync(10));
-    
+
     // Delete any existing reset requests for this user
     await ForgotPasswordRepo.delete({ requestedBy: { _id: user._id } });
-    
+
     // Save new reset request with expiration (15 minutes)
     const resetRequest = ForgotPasswordRepo.create({
       requestedBy: user,
@@ -306,7 +231,7 @@ export const requestPasswordReset = async (req: Request, res: Response, next: Ne
     // Send email with 6-digit code
     try {
       await nodemailer_transporter.sendMail({
-        from: 'RCV Systems <genreycristobal03@gmail.com>',
+        from: "RCV Systems <genreycristobal03@gmail.com>",
         to: email,
         subject: "Password Reset Code - RCV System",
         html: `
@@ -331,21 +256,28 @@ export const requestPasswordReset = async (req: Request, res: Response, next: Ne
         `,
       });
     } catch (emailError) {
-      console.error('Error sending email:', emailError);
+      console.error("Error sending email:", emailError);
       return next(new CustomError(500, "Failed to send reset code email"));
     }
 
-    return res.status(200).json({ 
-      success: true, 
-      message: "If an account exists with this email, a reset code has been sent." 
+    return res.status(200).json({
+      success: true,
+      message:
+        "If an account exists with this email, a reset code has been sent.",
     });
   } catch (error) {
-    console.error('Password reset request error:', error);
-    return next(new CustomError(500, "Failed to process password reset request"));
+    console.error("Password reset request error:", error);
+    return next(
+      new CustomError(500, "Failed to process password reset request")
+    );
   }
 };
 
-export const verifyResetCode = async (req: Request, res: Response, next: NextFunction) => {
+export const verifyResetCode = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { email, code } = req.body;
 
@@ -365,7 +297,7 @@ export const verifyResetCode = async (req: Request, res: Response, next: NextFun
     // Find the reset request
     const resetRequest = await ForgotPasswordRepo.findOne({
       where: { requestedBy: { _id: user._id } },
-      relations: ['requestedBy'],
+      relations: ["requestedBy"],
     });
 
     if (!resetRequest) {
@@ -377,23 +309,34 @@ export const verifyResetCode = async (req: Request, res: Response, next: NextFun
 
     return res.status(200).json({ valid: isCodeValid });
   } catch (error: any) {
-    console.error('Verify reset code error:', error);
+    console.error("Verify reset code error:", error);
     return next(new CustomError(500, "Failed to verify reset code"));
   }
 };
 
-export const resetPassword = async (req: Request, res: Response, next: NextFunction) => {
+export const resetPassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { email, code, newPassword } = req.body;
 
     if (!email || !code || !newPassword) {
-      return next(new CustomError(400, "Email, code, and new password are required"));
+      return next(
+        new CustomError(400, "Email, code, and new password are required")
+      );
     }
 
     // Validate password strength
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
     if (!passwordRegex.test(newPassword)) {
-      return next(new CustomError(400, "Password must be at least 8 characters with uppercase, lowercase, and number"));
+      return next(
+        new CustomError(
+          400,
+          "Password must be at least 8 characters with uppercase, lowercase, and number"
+        )
+      );
     }
 
     const user = await UserRepo.findOneBy({ email: email });
@@ -404,7 +347,7 @@ export const resetPassword = async (req: Request, res: Response, next: NextFunct
     // Find and verify the reset request
     const resetRequest = await ForgotPasswordRepo.findOne({
       where: { requestedBy: { _id: user._id } },
-      relations: ['requestedBy'],
+      relations: ["requestedBy"],
     });
 
     if (!resetRequest) {
@@ -418,7 +361,10 @@ export const resetPassword = async (req: Request, res: Response, next: NextFunct
     }
 
     // Hash the new password
-    const hashedPassword = bcryptjs.hashSync(newPassword, bcryptjs.genSaltSync(10));
+    const hashedPassword = bcryptjs.hashSync(
+      newPassword,
+      bcryptjs.genSaltSync(10)
+    );
 
     // Update user password
     user.password = hashedPassword;
@@ -430,7 +376,7 @@ export const resetPassword = async (req: Request, res: Response, next: NextFunct
     // Send confirmation email
     try {
       await nodemailer_transporter.sendMail({
-        from: 'RCV Systems <genreycristobal03@gmail.com>',
+        from: "RCV Systems <genreycristobal03@gmail.com>",
         to: email,
         subject: "Password Successfully Reset - RCV System",
         html: `
@@ -449,21 +395,25 @@ export const resetPassword = async (req: Request, res: Response, next: NextFunct
         `,
       });
     } catch (emailError) {
-      console.error('Error sending confirmation email:', emailError);
+      console.error("Error sending confirmation email:", emailError);
       // Don't fail the request if email fails
     }
 
-    return res.status(200).json({ 
-      success: true, 
-      message: "Password has been successfully reset" 
+    return res.status(200).json({
+      success: true,
+      message: "Password has been successfully reset",
     });
   } catch (error: any) {
-    console.error('Reset password error:', error);
+    console.error("Reset password error:", error);
     return next(new CustomError(500, "Failed to reset password"));
   }
 };
 
-export const generateForgotPassword = async (req: Request, res: Response, next: NextFunction) => {
+export const generateForgotPassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   const { email } = req.body;
   if (!email) {
     return next(new CustomError(400, "No email field", { data: req.body }));
@@ -474,7 +424,7 @@ export const generateForgotPassword = async (req: Request, res: Response, next: 
     return next(new CustomError(400, "Invalid email", { data: req.body }));
   }
 
-  const User = await UserRepo.findOneBy({ email: email })
+  const User = await UserRepo.findOneBy({ email: email });
   if (!User) {
     return next(new CustomError(200, "User not found"));
   }
@@ -483,66 +433,85 @@ export const generateForgotPassword = async (req: Request, res: Response, next: 
   ForgotPasswordRepo.save({ requestedBy: User, key: hashKey });
 
   nodemailer_transporter.sendMail({
-    from: 'RCV Systems <genreycristobal03@gmail.com>',
+    from: "RCV Systems <genreycristobal03@gmail.com>",
     to: "genreycristobal03@gmail.com",
     subject: "Hello ✔",
     text: "Hello world?",
     html: `<a href=${process.env.BACKEND_URL}/api/v1/auth/forgotPassword/${hashKey}>Link to reset your password</a>`,
   });
-  return res.status(200).json({ message: "Forgot password key sent",  email: email, hashKey: hashKey });
-}
+  return res
+    .status(200)
+    .json({
+      message: "Forgot password key sent",
+      email: email,
+      hashKey: hashKey,
+    });
+};
 
-export const forgotPassword = async (req: Request, res: Response, next: NextFunction) => {
+export const forgotPassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   const token = req.params;
-  return res.redirect(`${process.env.FRONTEND_URL}/resetPassword?token=${token}`);
-}
+  return res.redirect(
+    `${process.env.FRONTEND_URL}/resetPassword?token=${token}`
+  );
+};
 
 // Change password for authenticated user
-export const changePassword = async (req: Request, res: Response, next: NextFunction) => {
+export const changePassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const userId = req.user?._id;
     if (!userId) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Unauthorized' 
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
       });
     }
 
     const { currentPassword, newPassword } = req.body;
 
     if (!currentPassword || !newPassword) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Current password and new password are required' 
+      return res.status(400).json({
+        success: false,
+        message: "Current password and new password are required",
       });
     }
 
     if (newPassword.length < 6) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'New password must be at least 6 characters long' 
+      return res.status(400).json({
+        success: false,
+        message: "New password must be at least 6 characters long",
       });
     }
 
     // Find user with password field
     const user = await UserRepo.findOne({
       where: { _id: userId },
-      select: ['_id', 'email', 'password', 'firstName', 'lastName'],
+      select: ["_id", "email", "password", "firstName", "lastName"],
     });
 
     if (!user) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'User not found' 
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
       });
     }
 
     // Verify current password
-    const isPasswordValid = bcryptjs.compareSync(currentPassword, user.password);
+    const isPasswordValid = bcryptjs.compareSync(
+      currentPassword,
+      user.password
+    );
     if (!isPasswordValid) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Current password is incorrect' 
+      return res.status(401).json({
+        success: false,
+        message: "Current password is incorrect",
       });
     }
 
@@ -553,24 +522,23 @@ export const changePassword = async (req: Request, res: Response, next: NextFunc
 
     // Log password change
     await AuditLogService.createLog({
-      action: 'User changed their password',
-      actionType: 'CHANGE_PASSWORD',
+      action: "User changed their password",
+      actionType: "CHANGE_PASSWORD",
       userId,
-      platform: 'WEB',
+      platform: "WEB",
       metadata: { email: user.email },
       req,
     });
 
-    return res.status(200).json({ 
-      success: true, 
-      message: 'Password changed successfully' 
+    return res.status(200).json({
+      success: true,
+      message: "Password changed successfully",
     });
   } catch (error) {
     next(error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Server error while changing password' 
+    return res.status(500).json({
+      success: false,
+      message: "Server error while changing password",
     });
   }
-}
-
+};

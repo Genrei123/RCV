@@ -87,7 +87,15 @@ export const getUserById = async (
   try {
     const user = await UserRepo.findOne({
       where: { _id: req.params.id },
-      select: ["_id", "email", "role", "approved", "status", "createdAt", "updatedAt"],
+      select: [
+        "_id",
+        "email",
+        "role",
+        "approved",
+        "status",
+        "createdAt",
+        "updatedAt",
+      ],
     });
     if (!user) {
       return res
@@ -162,13 +170,11 @@ export const updateEntireUser = async (
 
     UserRepo.merge(user, parsed.data);
     const saved = await UserRepo.save(user);
-    return res
-      .status(200)
-      .json({
-        success: true,
-        user: saved,
-        message: "User updated successfully",
-      });
+    return res.status(200).json({
+      success: true,
+      user: saved,
+      message: "User updated successfully",
+    });
   } catch (error) {
     return next(CustomError.security(500, "Server Error"));
   }
@@ -324,10 +330,10 @@ export const approveUser = async (
 
     user.approved = true;
     // Optionally set status to Active when approved
-    if (user.status === 'Pending') {
-      user.status = 'Active';
+    if (user.status === "Pending") {
+      user.status = "Active";
     }
-    
+
     const saved = await UserRepo.save(user);
 
     // Log the approval action
@@ -367,10 +373,10 @@ export const rejectUser = async (
 
     user.approved = false;
     // Optionally set status back to Pending when rejected
-    if (user.status === 'Active') {
-      user.status = 'Pending';
+    if (user.status === "Active") {
+      user.status = "Pending";
     }
-    
+
     const saved = await UserRepo.save(user);
 
     // Log the rejection action
@@ -409,14 +415,14 @@ export const toggleUserApproval = async (
     }
 
     user.approved = !user.approved;
-    
+
     // Update status based on approval
-    if (user.approved && user.status === 'Pending') {
-      user.status = 'Active';
-    } else if (!user.approved && user.status === 'Active') {
-      user.status = 'Pending';
+    if (user.approved && user.status === "Pending") {
+      user.status = "Active";
+    } else if (!user.approved && user.status === "Active") {
+      user.status = "Pending";
     }
-    
+
     const saved = await UserRepo.save(user);
 
     // Log the toggle action
@@ -432,7 +438,7 @@ export const toggleUserApproval = async (
     return res.status(200).json({
       success: true,
       user: saved,
-      message: `User ${user.approved ? 'approved' : 'unapproved'} successfully`,
+      message: `User ${user.approved ? "approved" : "unapproved"} successfully`,
     });
   } catch (error) {
     return next(CustomError.security(500, "Server Error"));
@@ -453,19 +459,22 @@ export const updateUserProfile = async (
 
     const user = await UserRepo.findOneBy({ _id: userId });
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
     // Only allow updating certain fields
     const allowedFields = [
-      'firstName',
-      'middleName', 
-      'lastName',
-      'dateOfBirth',
-      'phoneNumber',
-      'location',
-      'badgeId',
-      'email'
+      "firstName",
+      "middleName",
+      "lastName",
+      "dateOfBirth",
+      "phoneNumber",
+      "location",
+      "badgeId",
+      "email",
+      "avatarUrl",
     ];
 
     const updates: any = {};
@@ -478,9 +487,11 @@ export const updateUserProfile = async (
     // Update fullName if name fields changed
     if (updates.firstName || updates.middleName || updates.lastName) {
       const firstName = updates.firstName || user.firstName;
-      const middleName = updates.middleName || user.middleName || '';
+      const middleName = updates.middleName || user.middleName || "";
       const lastName = updates.lastName || user.lastName;
-      updates.fullName = `${firstName} ${middleName} ${lastName}`.replace(/\s+/g, ' ').trim();
+      updates.fullName = `${firstName} ${middleName} ${lastName}`
+        .replace(/\s+/g, " ")
+        .trim();
     }
 
     Object.assign(user, updates);
@@ -488,10 +499,10 @@ export const updateUserProfile = async (
 
     // Log profile update
     await AuditLogService.createLog({
-      action: 'User updated their profile',
-      actionType: 'UPDATE_PROFILE',
+      action: "User updated their profile",
+      actionType: "UPDATE_PROFILE",
       userId,
-      platform: 'WEB',
+      platform: "WEB",
       metadata: { updatedFields: Object.keys(updates) },
       req,
     });
@@ -499,8 +510,77 @@ export const updateUserProfile = async (
     return res.status(200).json({
       success: true,
       data: saved,
-      message: "Profile updated successfully"
+      message: "Profile updated successfully",
     });
+  } catch (error) {
+    return next(CustomError.security(500, "Server Error"));
+  }
+};
+
+// Upload and set user's profile avatar (expects base64 image string in body.image)
+import fs from "fs";
+import path from "path";
+
+export const uploadProfileAvatar = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = req.user?._id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const { image } = req.body as { image?: string };
+    if (!image || typeof image !== "string") {
+      return res
+        .status(400)
+        .json({ success: false, message: "Missing image data" });
+    }
+
+    // Strip data URI prefix if present
+    const base64 = image.replace(/^data:image\/[^;]+;base64,/, "");
+    const buffer = Buffer.from(base64, "base64");
+
+    // Ensure uploads/avatars directory exists (at project root)
+    const uploadsRoot = path.resolve(process.cwd(), "uploads");
+    const avatarsDir = path.join(uploadsRoot, "avatars");
+    fs.mkdirSync(avatarsDir, { recursive: true });
+
+    // Save as PNG named by user id
+    const filePath = path.join(avatarsDir, `${userId}.png`);
+    fs.writeFileSync(
+      filePath,
+      Buffer.from(base64, "base64") as unknown as NodeJS.ArrayBufferView
+    );
+
+    // Compute public URL (served by static /uploads)
+    const publicUrl = `/uploads/avatars/${userId}.png`;
+
+    // Update user record
+    const user = await UserRepo.findOneBy({ _id: userId });
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+    user.avatarUrl = publicUrl;
+    const saved = await UserRepo.save(user);
+
+    // Log profile update
+    await AuditLogService.createLog({
+      action: "User updated their avatar",
+      actionType: "UPDATE_PROFILE",
+      userId,
+      platform: "WEB",
+      metadata: { avatarUrl: publicUrl },
+      req,
+    });
+
+    return res
+      .status(200)
+      .json({ success: true, data: saved, avatarUrl: publicUrl });
   } catch (error) {
     return next(CustomError.security(500, "Server Error"));
   }
@@ -520,28 +600,30 @@ export const archiveUserAccount = async (
 
     const user = await UserRepo.findOneBy({ _id: userId });
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
     // Set account to archived status
-    user.status = 'Archived';
+    user.status = "Archived";
     user.approved = false;
-    
+
     const saved = await UserRepo.save(user);
 
     // Log account archive
     await AuditLogService.createLog({
-      action: 'User archived their account',
-      actionType: 'ARCHIVE_ACCOUNT',
+      action: "User archived their account",
+      actionType: "ARCHIVE_ACCOUNT",
       userId,
-      platform: 'WEB',
+      platform: "WEB",
       req,
     });
 
     return res.status(200).json({
       success: true,
       data: saved,
-      message: "Account archived successfully"
+      message: "Account archived successfully",
     });
   } catch (error) {
     return next(CustomError.security(500, "Server Error"));

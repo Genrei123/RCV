@@ -25,8 +25,8 @@ export interface CreateProductRequest {
   lotNumber: string;
   brandName: string;
   productName: string;
-  productClassification: number;
-  productSubClassification: number;
+  productClassification: string;
+  productSubClassification: string;
   expirationDate: Date;
   dateOfRegistration: Date;
   companyId: string;

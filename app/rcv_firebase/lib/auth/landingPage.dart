@@ -5,6 +5,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:rcv_firebase/widgets/app_buttons.dart';
 import 'package:rcv_firebase/services/remote_config_service.dart';
 import 'package:rcv_firebase/widgets/app_disabled_screen.dart';
+import 'package:rcv_firebase/services/auth_service.dart';
 
 class LandingPage extends StatefulWidget {
   const LandingPage({super.key});
@@ -14,15 +15,29 @@ class LandingPage extends StatefulWidget {
 }
 
 class _LandingPageState extends State<LandingPage> {
+  final _authService = AuthService();
+
   @override
   void initState() {
     super.initState();
     RemoteConfigService.addRealtimeListener(() {
       if (mounted) {
-        setState(() {
-        });
+        setState(() {});
       }
     });
+    _redirectIfLoggedIn();
+  }
+
+  Future<void> _redirectIfLoggedIn() async {
+    final loggedIn = await _authService.isLoggedIn();
+    if (!mounted) return;
+    if (loggedIn) {
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/user-home',
+        (route) => false,
+      );
+    }
   }
 
   @override
@@ -31,7 +46,7 @@ class _LandingPageState extends State<LandingPage> {
     if (RemoteConfigService.getDisableApplication()) {
       return const AppDisabledScreen();
     }
-    
+
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(

@@ -271,9 +271,10 @@ class _LoginPageState extends State<LoginPage> {
                             if (ok) {
                               // Direct navigation without status modal
                               if (mounted) {
-                                Navigator.pushReplacementNamed(
+                                Navigator.pushNamedAndRemoveUntil(
                                   context,
                                   '/user-home',
+                                  (route) => false,
                                 );
                               }
                             } else {
