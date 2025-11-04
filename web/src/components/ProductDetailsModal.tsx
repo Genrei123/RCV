@@ -14,24 +14,6 @@ interface ProductDetailsModalProps {
 export function ProductDetailsModal({ isOpen, onClose, product }: ProductDetailsModalProps) {
   if (!isOpen || !product) return null
 
-  const getClassificationName = (classification: number): string => {
-    const classMap: { [key: number]: string } = {
-      1: 'Class 1',
-      2: 'Class 2',
-      3: 'Class 3'
-    }
-    return classMap[classification] || 'Unknown'
-  }
-
-  const getSubClassificationName = (subClassification: number): string => {
-    const subClassMap: { [key: number]: string } = {
-      1: 'Sub-Class 1',
-      2: 'Sub-Class 2',
-      3: 'Sub-Class 3'
-    }
-    return subClassMap[subClassification] || 'Unknown'
-  }
-
   const formatDate = (date: Date | string): string => {
     return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -144,14 +126,14 @@ export function ProductDetailsModal({ isOpen, onClose, product }: ProductDetails
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-gray-500">Product Classification</label>
                   <div>
-                    <Badge variant="default">{getClassificationName(product.productClassification)}</Badge>
+                    <Badge variant="default">{product.productClassification || 'Not specified'}</Badge>
                   </div>
                 </div>
 
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-gray-500">Product Sub-Classification</label>
                   <div>
-                    <Badge variant="secondary">{getSubClassificationName(product.productSubClassification)}</Badge>
+                    <Badge variant="secondary">{product.productSubClassification || 'Not specified'}</Badge>
                   </div>
                 </div>
               </div>

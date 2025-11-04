@@ -49,6 +49,9 @@ export function Products(props: ProductsProps) {
   };
 
   const handleAddSuccess = () => {
+    // Refresh the product list after successful addition
+    fetchProductsPage(currentPage);
+    
     if (props.onRefresh) {
       props.onRefresh();
     }
@@ -122,7 +125,7 @@ export function Products(props: ProductsProps) {
       },
     },
     {
-      key: "companyId",
+      key: "company",
       label: "Company",
       render: (value: any) => value?.name || "N/A",
     },

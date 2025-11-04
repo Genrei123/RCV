@@ -21,8 +21,8 @@ export function AddProductModal({ isOpen, onClose, onSuccess, companies }: AddPr
     lotNumber: '',
     brandName: '',
     productName: '',
-    productClassification: 1,
-    productSubClassification: 1,
+    productClassification: '',
+    productSubClassification: '',
     expirationDate: '',
     dateOfRegistration: new Date().toISOString().split('T')[0],
     companyId: ''
@@ -62,6 +62,14 @@ export function AddProductModal({ isOpen, onClose, onSuccess, companies }: AddPr
       newErrors.productName = 'Product Name is required'
     }
 
+    if (!formData.productClassification.trim()) {
+      newErrors.productClassification = 'Product Classification is required'
+    }
+
+    if (!formData.productSubClassification.trim()) {
+      newErrors.productSubClassification = 'Product Sub-Classification is required'
+    }
+
     if (!formData.expirationDate) {
       newErrors.expirationDate = 'Expiration Date is required'
     }
@@ -93,8 +101,8 @@ export function AddProductModal({ isOpen, onClose, onSuccess, companies }: AddPr
         lotNumber: formData.lotNumber,
         brandName: formData.brandName,
         productName: formData.productName,
-        productClassification: Number(formData.productClassification),
-        productSubClassification: Number(formData.productSubClassification),
+        productClassification: formData.productClassification,
+        productSubClassification: formData.productSubClassification,
         expirationDate: new Date(formData.expirationDate),
         dateOfRegistration: new Date(formData.dateOfRegistration),
         companyId: formData.companyId
@@ -114,8 +122,8 @@ export function AddProductModal({ isOpen, onClose, onSuccess, companies }: AddPr
         lotNumber: '',
         brandName: '',
         productName: '',
-        productClassification: 1,
-        productSubClassification: 1,
+        productClassification: '',
+        productSubClassification: '',
         expirationDate: '',
         dateOfRegistration: new Date().toISOString().split('T')[0],
         companyId: ''
@@ -140,8 +148,8 @@ export function AddProductModal({ isOpen, onClose, onSuccess, companies }: AddPr
         lotNumber: '',
         brandName: '',
         productName: '',
-        productClassification: 1,
-        productSubClassification: 1,
+        productClassification: '',
+        productSubClassification: '',
         expirationDate: '',
         dateOfRegistration: new Date().toISOString().split('T')[0],
         companyId: ''
@@ -299,34 +307,40 @@ export function AddProductModal({ isOpen, onClose, onSuccess, companies }: AddPr
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Product Classification *
                 </label>
-                <select
-                  name="productClassification"
-                  value={formData.productClassification}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
-                  disabled={loading}
-                >
-                  <option value={1}>Class 1</option>
-                  <option value={2}>Class 2</option>
-                  <option value={3}>Class 3</option>
-                </select>
+                <div className="relative">
+                  <Package className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    name="productClassification"
+                    value={formData.productClassification}
+                    onChange={handleChange}
+                    placeholder="e.g., Raw Product, Processed Product"
+                    className={`pl-10 ${errors.productClassification ? 'border-red-500' : ''}`}
+                    disabled={loading}
+                  />
+                </div>
+                {errors.productClassification && (
+                  <p className="text-red-500 text-xs mt-1">{errors.productClassification}</p>
+                )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Product Sub-Classification *
                 </label>
-                <select
-                  name="productSubClassification"
-                  value={formData.productSubClassification}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
-                  disabled={loading}
-                >
-                  <option value={1}>Sub-Class 1</option>
-                  <option value={2}>Sub-Class 2</option>
-                  <option value={3}>Sub-Class 3</option>
-                </select>
+                <div className="relative">
+                  <Package className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    name="productSubClassification"
+                    value={formData.productSubClassification}
+                    onChange={handleChange}
+                    placeholder="e.g., Layer Feeds, Gamecock Feeds"
+                    className={`pl-10 ${errors.productSubClassification ? 'border-red-500' : ''}`}
+                    disabled={loading}
+                  />
+                </div>
+                {errors.productSubClassification && (
+                  <p className="text-red-500 text-xs mt-1">{errors.productSubClassification}</p>
+                )}
               </div>
             </div>
 

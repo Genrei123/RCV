@@ -58,8 +58,8 @@ export const initializeProductBlockchain = async () => {
   //     lotNumber: "LOT123456",
   //     brandName: "Sample Brand",
   //     productName: "Sample Product",
-  //     productClassification: 0,
-  //     productSubClassification: 0,
+  //     productClassification: "Processed Product",
+  //     productSubClassification: "Gamecock Feeds",
   //     expirationDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
   //     dateOfRegistration: new Date(),
   //     registeredAt: new Date(),
@@ -184,8 +184,8 @@ export const searchScannedProduct = async (
       newProduct.LTONumber = LTONumber || "LTO-2024-" + Math.floor(Math.random() * 100000);
       newProduct.CFPRNumber = CFPRNumber || "CFPR-2024-" + Math.floor(Math.random() * 100000);
       newProduct.lotNumber = req.body.lotNumber || "LOT-" + Math.floor(Math.random() * 1000000);
-      newProduct.productClassification = 0;
-      newProduct.productSubClassification = 0;
+      newProduct.productClassification = req.body.productClassification || "Unclassified";
+      newProduct.productSubClassification = req.body.productSubClassification || "General";
       newProduct.dateOfRegistration = new Date();
       newProduct.expirationDate = req.body.expirationDate 
         ? new Date(req.body.expirationDate)
