@@ -11,7 +11,9 @@ import {
   Building2,
   Sliders,
   Activity,
-  BarChart3
+  BarChart3,
+  Verified,
+  ShieldCheck
 } from 'lucide-react'
 import { LogoutModal } from './LogoutModal'
 import { AuthService } from '@/services/authService'
@@ -117,6 +119,8 @@ export function Sidebar() {
     { path: '/remote-config', label: 'Mobile Config', icon: Sliders },
     { path: '/kiosk-monitor', label: 'Kiosk Monitor', icon: Activity },
     // { path: '/users', label: 'Users', icon: Users },
+    { path: '/blockchain', label: 'Blockchain', icon: Verified },
+    { path: '/verify-certificate', label: 'Verify Certificate', icon: ShieldCheck },
   ];
 
   const profileMenuItems = [

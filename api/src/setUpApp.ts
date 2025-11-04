@@ -22,6 +22,7 @@ import ProductRouter from "./routes/v1/product";
 import CompanyRouter from "./routes/v1/company";
 import FirebaseRouter from "./routes/v1/firebase";
 import AuditLogRouter from "./routes/v1/auditLog";
+import CertificateBlockchainRouter from "./routes/v1/certificateBlockchain";
 
 // Instantiate the express app
 const setUpApp = async () => {
@@ -34,7 +35,7 @@ const setUpApp = async () => {
   app.use(express.urlencoded({ extended: true }));
 
   // Security Middlewares
-  // app.use(rateLimit);
+  app.use(rateLimit);
   // app.use(validateToken);
 
   // API VERSIONING - Version 1.0
@@ -47,6 +48,7 @@ const setUpApp = async () => {
   app.use("/api/v1/company", CompanyRouter);
   app.use("/api/v1/firebase", FirebaseRouter);
   app.use("/api/v1/audit", AuditLogRouter);
+  app.use("/api/v1/certificate-blockchain", CertificateBlockchainRouter);
 
   // Serve static uploads (avatars, etc.)
   const uploadsPath = path.resolve(process.cwd(), "uploads");

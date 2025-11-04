@@ -3,12 +3,73 @@ import jsPDF from 'jspdf';
 import QRCode from 'qrcode';
 import type { Company } from '@/typeorm/entities/company.entity';
 import type { Product } from '@/typeorm/entities/product.entity';
+import CryptoJS from 'crypto-js';
+import { apiClient } from './axiosConfig';
 
 export class PDFGenerationService {
   /**
+   * Calculate SHA-256 hash of PDF blob
+   */
+  private static async calculatePDFHash(pdfBlob: Blob): Promise<string> {
+    // Read blob as array buffer
+    const arrayBuffer = await pdfBlob.arrayBuffer();
+    
+    // Convert to WordArray for CryptoJS
+    const wordArray = CryptoJS.lib.WordArray.create(arrayBuffer as any);
+    
+    // Calculate SHA-256 hash
+    const hash = CryptoJS.SHA256(wordArray).toString();
+    
+    return hash;
+  }
+
+  /**
+   * Add certificate to blockchain
+   */
+  private static async addToBlockchain(
+    certificateId: string,
+    certificateType: 'company' | 'product',
+    pdfHash: string,
+    entityId: string,
+    entityName: string,
+    licenseNumber?: string,
+    ltoNumber?: string,
+    cfprNumber?: string
+  ): Promise<{ success: boolean; blockIndex?: number; message?: string }> {
+    try {
+      const response = await apiClient.post('/certificate-blockchain/add', {
+        certificateId,
+        certificateType,
+        pdfHash,
+        entityId,
+        entityName,
+        licenseNumber,
+        ltoNumber,
+        cfprNumber,
+        metadata: {
+          generatedAt: new Date().toISOString(),
+          source: 'web-admin'
+        }
+      });
+
+      return {
+        success: true,
+        blockIndex: response.data.certificate.blockIndex,
+        message: response.data.message
+      };
+    } catch (error: any) {
+      console.error('Failed to add certificate to blockchain:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to add to blockchain'
+      };
+    }
+  }
+
+  /**
    * Generate a Company Registration Certificate PDF with QR Code
    */
-  static async generateCompanyCertificate(company: Company): Promise<Blob> {
+  static async generateCompanyCertificate(company: Company, certificateId?: string): Promise<Blob> {
     // Create new PDF document (A4 size: 210mm x 297mm)
     const pdf = new jsPDF({
       orientation: 'portrait',
@@ -100,6 +161,7 @@ export class PDFGenerationService {
 
     // Generate QR Code containing company data as JSON
     const companyData = {
+      certificateId: certificateId || `CERT-COMP-${company._id}-${Date.now()}`,
       id: company._id,
       name: company.name,
       licenseNumber: company.licenseNumber,
@@ -170,7 +232,34 @@ export class PDFGenerationService {
    */
   static async generateAndDownloadCompanyCertificate(company: Company) {
     try {
-      const pdfBlob = await this.generateCompanyCertificate(company);
+      // Generate unique certificate ID
+      const certificateId = `CERT-COMP-${company._id}-${Date.now()}`;
+      
+      // Generate PDF blob
+      const pdfBlob = await this.generateCompanyCertificate(company, certificateId);
+      
+      // Calculate PDF hash
+      const pdfHash = await this.calculatePDFHash(pdfBlob);
+      
+      // Add to blockchain
+      const blockchainResult = await this.addToBlockchain(
+        certificateId,
+        'company',
+        pdfHash,
+        company._id,
+        company.name,
+        company.licenseNumber
+      );
+
+      if (blockchainResult.success) {
+        console.log(`✅ Certificate added to blockchain at block ${blockchainResult.blockIndex}`);
+        console.log(`📄 Certificate ID: ${certificateId}`);
+        console.log(`🔐 PDF Hash: ${pdfHash}`);
+      } else {
+        console.warn('⚠️ Failed to add certificate to blockchain:', blockchainResult.message);
+      }
+      
+      // Download PDF
       const filename = `Company_Certificate_${company.name.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.pdf`;
       this.downloadPDF(pdfBlob, filename);
       return true;
@@ -183,7 +272,7 @@ export class PDFGenerationService {
   /**
    * Generate a Product Registration Certificate PDF with QR Code
    */
-  static async generateProductCertificate(product: Product): Promise<Blob> {
+  static async generateProductCertificate(product: Product, certificateId?: string): Promise<Blob> {
     // Create new PDF document (A4 size: 210mm x 297mm)
     const pdf = new jsPDF({
       orientation: 'portrait',
@@ -285,6 +374,7 @@ export class PDFGenerationService {
 
     // Generate QR Code containing product data as JSON
     const productData = {
+      certificateId: certificateId || `CERT-PROD-${product._id}-${Date.now()}`,
       id: product._id,
       ltoNumber: product.LTONumber,
       cfprNumber: product.CFPRNumber,
@@ -344,7 +434,39 @@ export class PDFGenerationService {
    */
   static async generateAndDownloadProductCertificate(product: Product) {
     try {
-      const pdfBlob = await this.generateProductCertificate(product);
+      // Generate unique certificate ID
+      const certificateId = `CERT-PROD-${product._id}-${Date.now()}`;
+      
+      // Generate PDF blob
+      const pdfBlob = await this.generateProductCertificate(product, certificateId);
+      
+      // Calculate PDF hash
+      const pdfHash = await this.calculatePDFHash(pdfBlob);
+      
+      // Get company name for blockchain
+      const companyName = typeof product.company === 'object' ? product.company.name : 'Unknown Company';
+      
+      // Add to blockchain
+      const blockchainResult = await this.addToBlockchain(
+        certificateId,
+        'product',
+        pdfHash,
+        product._id || 'unknown',
+        `${product.productName} by ${companyName}`,
+        undefined, // licenseNumber
+        product.LTONumber,
+        product.CFPRNumber
+      );
+
+      if (blockchainResult.success) {
+        console.log(`✅ Product certificate added to blockchain at block ${blockchainResult.blockIndex}`);
+        console.log(`📄 Certificate ID: ${certificateId}`);
+        console.log(`🔐 PDF Hash: ${pdfHash}`);
+      } else {
+        console.warn('⚠️ Failed to add certificate to blockchain:', blockchainResult.message);
+      }
+      
+      // Download PDF
       const filename = `Product_Certificate_${product.productName.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.pdf`;
       this.downloadPDF(pdfBlob, filename);
       return true;

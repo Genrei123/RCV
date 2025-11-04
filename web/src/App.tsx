@@ -6,6 +6,7 @@ import { Maps } from './pages/Maps';
 import { Analytics } from './pages/Analytics';
 import { Profile } from './pages/Profile';
 import { Blockchain } from './pages/Blockchain';
+import { CertificateVerifier } from './pages/CertificateVerifier';
 import { ScanHistory } from './pages/ScanHistory';
 import { RemoteConfig } from './pages/RemoteConfig';
 import { KioskMonitor } from './pages/KioskMonitor';
@@ -222,6 +223,11 @@ function App() {
               <Route path="/blockchain" element={
                 <ProtectedRoutes>
                   <Blockchain />
+                </ProtectedRoutes>
+              } />
+              <Route path="/verify-certificate" element={
+                <ProtectedRoutes>
+                  <CertificateVerifier />
                 </ProtectedRoutes>
               } />
               <Route path="/scan-history" element={
