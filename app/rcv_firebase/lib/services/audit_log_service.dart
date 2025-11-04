@@ -2,17 +2,17 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:async';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:developer' as developer;
+import '../config/api_constants.dart';
+import 'token_service.dart';
 
 class AuditLogService {
-  static const String baseUrl = 'https://rcv-production-cbd6.up.railway.app/api/v1';
+  static String get baseUrl => ApiConstants.baseUrl;
 
-  // Get JWT token from SharedPreferences
+  // Get JWT token via TokenService
   static Future<String?> _getToken() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      return prefs.getString('auth_token');
+      return await TokenService.getAccessToken();
     } catch (e) {
       developer.log('Error getting token: $e');
       return null;
@@ -58,6 +58,7 @@ class AuditLogService {
         Uri.parse('$baseUrl/audit/log'),
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
           'Authorization': 'Bearer $token',
         },
         body: json.encode(body),
@@ -102,6 +103,7 @@ class AuditLogService {
         url,
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
           'Authorization': 'Bearer $token',
         },
       ).timeout(const Duration(seconds: 10));
@@ -141,6 +143,7 @@ class AuditLogService {
         Uri.parse('$baseUrl/audit/logs/$logId'),
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
           'Authorization': 'Bearer $token',
         },
       ).timeout(const Duration(seconds: 10));

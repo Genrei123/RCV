@@ -1,17 +1,16 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:developer' as developer;
+import '../config/api_constants.dart';
+import 'token_service.dart';
 
 class UserProfileService {
-  static const String baseUrl =
-      'https://rcv-production-cbd6.up.railway.app/api/v1';
+  static String get baseUrl => ApiConstants.baseUrl;
 
   // Get stored JWT token
   static Future<String?> _getToken() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      return prefs.getString('auth_token');
+      return await TokenService.getAccessToken();
     } catch (e) {
       developer.log('Error getting token: $e');
       return null;
@@ -34,6 +33,7 @@ class UserProfileService {
             Uri.parse('$baseUrl/auth/me'),
             headers: {
               'Content-Type': 'application/json',
+              'Accept': 'application/json',
               'Authorization': 'Bearer $token',
             },
           )
@@ -43,7 +43,13 @@ class UserProfileService {
       developer.log('Profile Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
-        return json.decode(response.body);
+        final contentType = response.headers['content-type'] ?? '';
+        if (contentType.contains('application/json')) {
+          final data = json.decode(response.body);
+          return data is Map<String, dynamic> ? data : null;
+        }
+        developer.log('Unexpected content-type for /auth/me: $contentType');
+        return null;
       }
 
       return null;
