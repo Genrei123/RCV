@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { 
   userSignIn,
+  mobileSignIn,
+  mobileSignUp,
   logout, 
   me, 
   refreshToken, 
@@ -16,10 +18,15 @@ import { verifyUser } from '../../middleware/verifyUser';
 
 const AuthRouter = Router();
 
-// Authentication
+// Web Authentication
 AuthRouter.post('/login', userSignIn);
-// AuthRouter.post('/mobile-login', mobileSignIn); // Mobile login with full JWT data
 AuthRouter.post('/register', userSignUp);
+
+// Mobile Authentication (includes full user data in JWT)
+AuthRouter.post('/mobile-login', mobileSignIn);
+AuthRouter.post('/mobile-register', mobileSignUp);
+
+// Common Auth Routes
 AuthRouter.post('/logout', logout);
 AuthRouter.post('/refreshToken', refreshToken);
 AuthRouter.get('/me', me);

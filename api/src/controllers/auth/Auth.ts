@@ -88,6 +88,178 @@ export const userSignIn = async (req: Request, res: Response, next: NextFunction
   }
 };
 
+/**
+ * Mobile Sign In - Returns full user data in JWT for offline access
+ * POST /api/v1/auth/mobile-login
+ */
+export const mobileSignIn = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email, password } = req.body;
+
+    // Find the user by email with all necessary fields
+    const user = await UserRepo.findOne({
+      where: { email },
+      select: [
+        "_id",
+        "email",
+        "password",
+        "role",
+        "approved",
+        "firstName",
+        "middleName",
+        "lastName",
+        "extName",
+        "status",
+        "badgeId",
+        "location",
+        "phoneNumber",
+        "dateOfBirth",
+        "avatarUrl",
+      ],
+    });
+
+    if (!user) {
+      const error = new CustomError(401, "Invalid email or password", {
+        success: false,
+        token: null,
+        user: null,
+      });
+      return next(error);
+    }
+
+    // Verify the password
+    const isPasswordValid = bcryptjs.compareSync(password, user.password);
+    if (!isPasswordValid) {
+      const error = new CustomError(401, "Invalid email or password", {
+        success: false,
+        token: null,
+        user: null,
+      });
+      return next(error);
+    }
+
+    // Check if user is approved
+    if (!user.approved) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "Your account is pending approval. Please wait for an administrator to approve your account.",
+        approved: false,
+        email: user.email,
+      });
+    }
+
+    // Create mobile token with full user data
+    const fullName = `${user.firstName} ${user.middleName ? user.middleName + ' ' : ''}${user.lastName}${user.extName ? ' ' + user.extName : ''}`.trim();
+    
+    const mobileToken = createMobileToken({
+      sub: user._id,
+      email: user.email,
+      firstName: user.firstName,
+      middleName: user.middleName || null,
+      lastName: user.lastName,
+      extName: user.extName || null,
+      fullName: fullName,
+      role: user.role,
+      status: user.status || "active",
+      badgeId: user.badgeId || null,
+      location: user.location || null,
+      phoneNumber: user.phoneNumber || null,
+      dateOfBirth: user.dateOfBirth || null,
+      avatarUrl: user.avatarUrl || null,
+      isAdmin: user.role === "ADMIN",
+      iat: Date.now(),
+    });
+
+    // Log the login action
+    await AuditLogService.logLogin(user._id, req, "MOBILE");
+
+    return res.status(200).json({
+      success: true,
+      message: "Mobile sign in successful",
+      token: mobileToken,
+      user: {
+        _id: user._id,
+        email: user.email,
+        firstName: user.firstName,
+        middleName: user.middleName,
+        lastName: user.lastName,
+        extName: user.extName,
+        fullName: fullName,
+        role: user.role,
+        status: user.status,
+        badgeId: user.badgeId,
+        location: user.location,
+        phoneNumber: user.phoneNumber,
+        dateOfBirth: user.dateOfBirth,
+        avatarUrl: user.avatarUrl,
+        approved: user.approved,
+      },
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+      token: null,
+      user: null,
+    });
+  }
+};
+
+/**
+ * Mobile Sign Up - Registration for mobile users
+ * POST /api/v1/auth/mobile-register
+ */
+export const mobileSignUp = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const newUser = UserValidation.safeParse(req.body);
+  if (!newUser || !newUser.success) {
+    console.error("Validation errors:", newUser.error?.issues);
+    return next(
+      new CustomError(400, "Parsing failed, incomplete information", {
+        errors: newUser.error?.issues,
+      })
+    );
+  }
+
+  if ((await UserRepo.findOneBy({ email: newUser.data?.email })) != null) {
+    return next(
+      new CustomError(400, "Email already exists", {
+        email: newUser.data.email,
+      })
+    );
+  }
+
+  const hashPassword = bcryptjs.hashSync(
+    newUser.data.password,
+    bcryptjs.genSaltSync(10)
+  );
+  newUser.data.password = hashPassword;
+
+  // Set approved to false by default
+  newUser.data.approved = false;
+
+  await UserRepo.save(newUser.data);
+
+  return res.status(200).json({
+    success: true,
+    message:
+      "Registration successful! Your account is pending approval. You will be notified once an administrator approves your account.",
+    user: {
+      email: newUser.data.email,
+      firstName: newUser.data.firstName,
+      middleName: newUser.data.middleName,
+      lastName: newUser.data.lastName,
+      extName: newUser.data.extName,
+      approved: false,
+    },
+    pendingApproval: true,
+  });
+};
+
 export const userSignUp = async (
   req: Request,
   res: Response,
