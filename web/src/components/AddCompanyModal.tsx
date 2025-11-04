@@ -8,10 +8,13 @@
 // =========================================================================
 
 import { useState } from 'react';
-import { X, Building2, MapPin, FileText, AlertCircle } from 'lucide-react';
+import { X, Building2, MapPin, FileText, AlertCircle, Download, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CompanyService, type CreateCompanyRequest } from '@/services/companyService';
+import { PDFGenerationService } from '@/services/pdfGenerationService';
+import type { Company } from '@/typeorm/entities/company.entity';
+import { toast } from 'react-toastify';
 
 interface AddCompanyModalProps {
   isOpen: boolean;
@@ -41,6 +44,8 @@ export function AddCompanyModal({ isOpen, onClose, onSuccess }: AddCompanyModalP
   const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState('');
+  const [showSuccessScreen, setShowSuccessScreen] = useState(false);
+  const [createdCompany, setCreatedCompany] = useState<Company | null>(null);
 
   if (!isOpen) return null;
 
@@ -86,18 +91,12 @@ export function AddCompanyModal({ isOpen, onClose, onSuccess }: AddCompanyModalP
         licenseNumber: formData.licenseNumber.trim()
       };
 
-      await CompanyService.createCompany(companyData);
+      const result = await CompanyService.createCompany(companyData);
       
-      // Reset form
-      setFormData({
-        name: '',
-        address: '',
-        licenseNumber: ''
-      });
-      setErrors({});
+      // Show success screen with certificate download option
+      setCreatedCompany(result.company);
+      setShowSuccessScreen(true);
       
-      onSuccess();
-      onClose();
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 
                           error.response?.data?.error ||
@@ -107,6 +106,36 @@ export function AddCompanyModal({ isOpen, onClose, onSuccess }: AddCompanyModalP
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDownloadCertificate = async () => {
+    if (!createdCompany) return;
+    
+    try {
+      toast.info('Generating certificate PDF...', { autoClose: 1000 });
+      await PDFGenerationService.generateAndDownloadCompanyCertificate(createdCompany);
+      toast.success('Certificate downloaded successfully!');
+    } catch (error) {
+      console.error('Error generating certificate:', error);
+      toast.error('Failed to generate certificate. Please try again.');
+    }
+  };
+
+  const handleFinalClose = () => {
+    // Reset everything
+    setFormData({
+      name: '',
+      address: '',
+      licenseNumber: ''
+    });
+    setErrors({});
+    setApiError('');
+    setShowSuccessScreen(false);
+    setCreatedCompany(null);
+    
+    // Call parent success handler and close
+    onSuccess();
+    onClose();
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -131,7 +160,7 @@ export function AddCompanyModal({ isOpen, onClose, onSuccess }: AddCompanyModalP
   };
 
   const handleClose = () => {
-    if (!loading) {
+    if (!loading && !showSuccessScreen) {
       setFormData({
         name: '',
         address: '',
@@ -139,10 +168,76 @@ export function AddCompanyModal({ isOpen, onClose, onSuccess }: AddCompanyModalP
       });
       setErrors({});
       setApiError('');
+      setShowSuccessScreen(false);
+      setCreatedCompany(null);
       onClose();
     }
   };
 
+  // Success Screen
+  if (showSuccessScreen && createdCompany) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
+        {/* Backdrop */}
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+
+        {/* Modal */}
+        <div className="relative bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+          {/* Header */}
+          <div className="p-6 border-b">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-green-100 rounded-full">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Company Created Successfully!</h2>
+                <p className="text-sm text-gray-500">Your company has been registered</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="p-6 space-y-4">
+            <div className="space-y-2">
+              <p className="text-sm text-gray-600">
+                <span className="font-medium">Company Name:</span> {createdCompany.name}
+              </p>
+              <p className="text-sm text-gray-600">
+                <span className="font-medium">License Number:</span> {createdCompany.licenseNumber}
+              </p>
+            </div>
+
+            <div className="p-4 bg-teal-50 border border-teal-200 rounded-lg">
+              <p className="text-sm text-teal-800">
+                <strong>Download your company registration certificate</strong> - This document contains
+                a QR code for easy verification and includes all company details.
+              </p>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="p-6 border-t space-y-3">
+            <Button
+              onClick={handleDownloadCertificate}
+              className="w-full bg-teal-600 hover:bg-teal-700"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Download Certificate
+            </Button>
+            <Button
+              onClick={handleFinalClose}
+              variant="outline"
+              className="w-full"
+            >
+              Done
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Form Screen
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
