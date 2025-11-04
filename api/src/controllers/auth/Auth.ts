@@ -2,7 +2,7 @@ import bcryptjs from 'bcryptjs';
 import CustomError from '../../utils/CustomError';
 import { ForgotPasswordRepo, UserRepo } from '../../typeorm/data-source';
 import type { NextFunction, Request, Response } from 'express';
-import { createForgotPasswordToken, createToken, verifyToken } from '../../utils/JWT';
+import { createForgotPasswordToken, createToken, createMobileToken, verifyToken } from '../../utils/JWT';
 import { UserValidation } from '../../typeorm/entities/user.entity';
 import nodemailer_transporter from '../../utils/nodemailer';
 import { AuditLogService } from '../../services/auditLogService';
@@ -79,6 +79,120 @@ export const userSignIn = async (req: Request, res: Response, next: NextFunction
   }
 };
 
+// Mobile login - includes full user data in JWT token
+export const mobileSignIn = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email, password } = req.body;
+
+    // Find the user by email - select all fields needed for JWT
+    const user = await UserRepo.findOne({
+      where: { email },
+      select: [
+        '_id', 
+        'email', 
+        'password', 
+        'role', 
+        'approved', 
+        'status',
+        'firstName', 
+        'middleName',
+        'lastName',
+        'extName',
+        'fullName',
+        'badgeId',
+        'location',
+        'phoneNumber',
+        'dateOfBirth',
+        'avatarUrl'
+      ],
+    });
+
+    if (!user) {
+      const error = new CustomError(401, 'Invalid email or password', {
+        success: false,
+        token: null,
+        user: null,
+      });
+      return next(error);
+    }
+
+    // Verify the password
+    const isPasswordValid = bcryptjs.compareSync(password, user.password);
+    if (!isPasswordValid) {
+      const error = new CustomError(401, 'Invalid email or password', {
+        success: false,
+        token: null,
+        user: null,
+      });
+      return next(error);
+    }
+
+    // Check if user is approved
+    if (!user.approved) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account is pending approval. Please wait for an administrator to approve your account.',
+        approved: false,
+        email: user.email,
+      });
+    }
+
+    // Create mobile token with all user information
+    const token = createMobileToken({
+      sub: user._id,
+      email: user.email,
+      firstName: user.firstName,
+      middleName: user.middleName,
+      lastName: user.lastName,
+      extName: user.extName,
+      fullName: user.fullName,
+      role: user.role,
+      status: user.status,
+      badgeId: user.badgeId,
+      location: user.location,
+      phoneNumber: user.phoneNumber,
+      dateOfBirth: user.dateOfBirth,
+      avatarUrl: user.avatarUrl,
+      isAdmin: user.role === 'ADMIN',
+      iat: Date.now()
+    });
+
+    // Log the login action
+    await AuditLogService.logLogin(user._id, req, 'MOBILE');
+
+    return res.status(200).json({
+      success: true,
+      message: 'User signed in successfully',
+      token,
+      refreshToken: token, // Using same token for now, can implement refresh token later
+      expiresIn: 604800, // 7 days in seconds
+      user: {
+        _id: user._id,
+        email: user.email,
+        firstName: user.firstName,
+        middleName: user.middleName,
+        lastName: user.lastName,
+        fullName: user.fullName,
+        role: user.role,
+        approved: user.approved,
+        status: user.status,
+        badgeId: user.badgeId,
+        location: user.location,
+        phoneNumber: user.phoneNumber,
+        dateOfBirth: user.dateOfBirth,
+        avatarUrl: user.avatarUrl,
+      },
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+      token: null,
+      user: null,
+    });
+  }
+};
+
 export const userSignUp = async (req: Request, res: Response, next: NextFunction) => {
   const newUser = UserValidation.safeParse(req.body);
   if (!newUser || !newUser.success) {
@@ -130,7 +244,23 @@ export const me = async (req: Request, res: Response, next: NextFunction) => {
   }
   const User = await UserRepo.findOne({
     where: { _id: decoded.data?.sub },
-    select: ['_id', 'firstName', 'middleName', 'lastName', 'email', 'phoneNumber', 'location', 'role', 'badgeId']
+    select: [
+      '_id', 
+      'firstName', 
+      'middleName', 
+      'lastName', 
+      'extName',
+      'fullName',
+      'email', 
+      'phoneNumber', 
+      'location', 
+      'role', 
+      'status',
+      'badgeId',
+      'dateOfBirth',
+      'avatarUrl',
+      'approved'
+    ]
   });
   return res.send(User);
 }

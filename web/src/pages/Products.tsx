@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Grid, List, Search } from "lucide-react";
+import { Plus, Grid, List, Search, Download } from "lucide-react";
 import { PageContainer } from "@/components/PageContainer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,8 @@ import { ProductCard } from "@/components/ProductCard";
 import { AddProductModal } from "@/components/AddProductModal";
 import { ProductDetailsModal } from "@/components/ProductDetailsModal";
 import type { Company } from "@/typeorm/entities/company.entity";
+import { PDFGenerationService } from "@/services/pdfGenerationService";
+import { toast } from "react-toastify";
 
 export interface ProductsProps {
   products?: Product[];
@@ -49,6 +51,19 @@ export function Products(props: ProductsProps) {
   const handleAddSuccess = () => {
     if (props.onRefresh) {
       props.onRefresh();
+    }
+  };
+
+  // Handle PDF certificate download
+  const handleDownloadCertificate = async (product: Product, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent row click
+    try {
+      toast.info('Generating certificate PDF...', { autoClose: 1000 });
+      await PDFGenerationService.generateAndDownloadProductCertificate(product);
+      toast.success('Certificate downloaded successfully!');
+    } catch (error) {
+      console.error('Error generating certificate:', error);
+      toast.error('Failed to generate certificate. Please try again.');
     }
   };
 
@@ -119,9 +134,21 @@ export function Products(props: ProductsProps) {
           <Button
             size="sm"
             variant="outline"
-            onClick={() => handleProductClick(row)}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleProductClick(row);
+            }}
           >
             View Details
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={(e) => handleDownloadCertificate(row, e)}
+            className="text-teal-600 hover:text-teal-700 hover:bg-teal-50"
+          >
+            <Download className="h-4 w-4 mr-1" />
+            Certificate
           </Button>
         </div>
       ),

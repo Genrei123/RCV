@@ -1,7 +1,9 @@
-import { X, Package, Hash, Calendar, Building2, User, MapPin } from 'lucide-react'
+import { X, Package, Hash, Calendar, Building2, User, MapPin, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import type { Product } from '@/typeorm/entities/product.entity'
+import { PDFGenerationService } from '@/services/pdfGenerationService'
+import { toast } from 'react-toastify'
 
 interface ProductDetailsModalProps {
   isOpen: boolean
@@ -43,6 +45,19 @@ export function ProductDetailsModal({ isOpen, onClose, product }: ProductDetails
     const parts = [user.firstName, user.middleName, user.lastName].filter(Boolean)
     return parts.join(' ') || 'N/A'
   }
+
+  const handleDownloadCertificate = async () => {
+    if (!product) return;
+    
+    try {
+      toast.info('Generating certificate PDF...', { autoClose: 1000 });
+      await PDFGenerationService.generateAndDownloadProductCertificate(product);
+      toast.success('Certificate downloaded successfully!');
+    } catch (error) {
+      console.error('Error generating certificate:', error);
+      toast.error('Failed to generate certificate. Please try again.');
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
@@ -245,9 +260,34 @@ export function ProductDetailsModal({ isOpen, onClose, product }: ProductDetails
             )}
           </div>
 
+          {/* Certificate Download Section */}
+          <div className="pt-6 border-t mt-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Certificate</h3>
+            <div className="p-4 bg-teal-50 border border-teal-200 rounded-lg">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-teal-900 mb-1">
+                    Product Registration Certificate
+                  </p>
+                  <p className="text-xs text-teal-700">
+                    Download an official certificate with QR code for verification
+                  </p>
+                </div>
+                <Button
+                  onClick={handleDownloadCertificate}
+                  className="bg-teal-600 hover:bg-teal-700 shrink-0"
+                  size="sm"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download
+                </Button>
+              </div>
+            </div>
+          </div>
+
           {/* Close Button */}
-          <div className="flex justify-end pt-6 border-t mt-6">
-            <Button onClick={onClose} className="bg-teal-600 hover:bg-teal-700 text-white">
+          <div className="flex justify-end pt-6">
+            <Button onClick={onClose} variant="outline">
               Close
             </Button>
           </div>
