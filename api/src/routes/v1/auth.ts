@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { 
-  userSignIn, 
+  userSignIn,
+  mobileSignIn,
   logout, 
   me, 
   refreshToken, 
@@ -18,6 +19,7 @@ const AuthRouter = Router();
 
 // Authentication
 AuthRouter.post('/login', userSignIn);
+AuthRouter.post('/mobile-login', mobileSignIn); // Mobile login with full JWT data
 AuthRouter.post('/register', userSignUp);
 AuthRouter.post('/logout', logout);
 AuthRouter.post('/refreshToken', refreshToken);

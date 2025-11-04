@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:developer' as developer;
+import 'token_service.dart';
 
 class AuthService {
   // Backend API configuration
@@ -47,46 +47,13 @@ class AuthService {
     );
   }
 
-  // Store JWT token
-  Future<void> _storeToken(String token) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('auth_token', token);
-      developer.log('Token stored successfully');
-    } catch (e) {
-      developer.log('Error storing token: $e');
-    }
-  }
-
-  // Get stored JWT token
-  Future<String?> _getToken() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      return prefs.getString('auth_token');
-    } catch (e) {
-      developer.log('Error getting token: $e');
-      return null;
-    }
-  }
-
-  // Clear stored token (for logout)
-  Future<void> _clearToken() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('auth_token');
-      developer.log('Token cleared successfully');
-    } catch (e) {
-      developer.log('Error clearing token: $e');
-    }
-  }
-
   // Login user
   Future<Map<String, dynamic>> login(String email, String password) async {
     try {
-      developer.log('Attempting login for: $email');
+      developer.log('Attempting mobile login for: $email');
       
       final response = await http.post(
-        Uri.parse('$baseUrl/auth/login'),
+        Uri.parse('$baseUrl/auth/mobile-login'), // Use mobile-login endpoint
         headers: {
           'Content-Type': 'application/json',
         },
@@ -102,9 +69,16 @@ class AuthService {
       final responseData = json.decode(response.body);
       
       if (response.statusCode == 200 && responseData['success'] == true) {
-        // Store the JWT token
+        // Store the JWT token using TokenService
         if (responseData['token'] != null) {
-          await _storeToken(responseData['token']);
+          developer.log('🔑 Saving token to TokenService...');
+          // Save with expiry from response or default 7 days
+          await TokenService.saveTokens(
+            responseData['token'],
+            responseData['refreshToken'] ?? responseData['token'], // Use same token if no refresh token
+            responseData['expiresIn'] ?? 604800, // Default 7 days
+          );
+          developer.log('✅ Token saved successfully');
         }
         
         return {
@@ -259,22 +233,22 @@ class AuthService {
   // Logout functionality
   Future<void> logout() async {
     try {
-      developer.log('User logged out successfully');
-      // Clear stored token
-      await _clearToken();
+      developer.log('🚪 Logging out user...');
+      // Clear stored tokens using TokenService
+      await TokenService.clearTokens();
+      developer.log('✅ User logged out successfully');
     } catch (e) {
-      developer.log('Error during logout: $e');
+      developer.log('❌ Error during logout: $e');
     }
   }
 
   // Check if user is logged in
   Future<bool> isLoggedIn() async {
-    final token = await _getToken();
-    return token != null && token.isNotEmpty;
+    return await TokenService.hasAccessToken();
   }
 
   // Get current user token
   Future<String?> getCurrentToken() async {
-    return await _getToken();
+    return await TokenService.getAccessToken();
   }
 }

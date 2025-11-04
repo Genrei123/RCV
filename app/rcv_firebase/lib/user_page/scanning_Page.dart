@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -119,7 +120,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
                         ),
                         const SizedBox(height: 8),
                         const Text(
-                          'Please scan the FRONT and BACK\nof the product label',
+                          'Please take a photo of the FRONT and BACK\nof the product label',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.amber,
@@ -130,11 +131,11 @@ class _QRScannerPageState extends State<QRScannerPage> {
                         ),
                         const SizedBox(height: 20),
                         ElevatedButton.icon(
-                          onPressed: () => _pickImageForOCR(true),
-                          icon: const Icon(Icons.photo_library, size: 20),
+                          onPressed: () => _takePictureForOCR(true),
+                          icon: const Icon(Icons.camera_alt, size: 20),
                           label: Text(
                             _frontImagePath == null
-                                ? 'Select Front Image'
+                                ? 'Take Front Photo'
                                 : 'Front ✓',
                           ),
                           style: ElevatedButton.styleFrom(
@@ -153,11 +154,11 @@ class _QRScannerPageState extends State<QRScannerPage> {
                         ),
                         const SizedBox(height: 12),
                         ElevatedButton.icon(
-                          onPressed: () => _pickImageForOCR(false),
-                          icon: const Icon(Icons.photo_library, size: 20),
+                          onPressed: () => _takePictureForOCR(false),
+                          icon: const Icon(Icons.camera_alt, size: 20),
                           label: Text(
                             _backImagePath == null
-                                ? 'Select Back Image'
+                                ? 'Take Back Photo'
                                 : 'Back ✓',
                           ),
                           style: ElevatedButton.styleFrom(
@@ -297,23 +298,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[100],
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey[300]!),
-                          ),
-                          child: SelectableText(
-                            qrData,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              color: Colors.black87,
-                              height: 1.5,
-                            ),
-                          ),
-                        ),
+                        _buildFormattedContent(qrData),
                         const SizedBox(height: 20),
                         Row(
                           children: [
@@ -555,6 +540,111 @@ class _QRScannerPageState extends State<QRScannerPage> {
           ),
         );
       },
+    );
+  }
+
+  // Helper method to format scanned content
+  Widget _buildFormattedContent(String qrData) {
+    try {
+      // Try to parse as JSON
+      final Map<String, dynamic> data = jsonDecode(qrData);
+      
+      // If successful, display formatted data
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFF005440), width: 1.5),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (data.containsKey('company_name'))
+              _buildInfoRow('Company Name:', data['company_name'] ?? 'N/A'),
+            if (data.containsKey('product_name'))
+              _buildInfoRow('Product Name:', data['product_name'] ?? 'N/A'),
+            if (data.containsKey('brand_name'))
+              _buildInfoRow('Brand Name:', data['brand_name'] ?? 'N/A'),
+            if (data.containsKey('reg_number'))
+              _buildInfoRow('Registration No:', data['reg_number'] ?? 'N/A'),
+            if (data.containsKey('LTONumber'))
+              _buildInfoRow('LTO Number:', data['LTONumber'] ?? 'N/A'),
+            if (data.containsKey('CFPRNumber'))
+              _buildInfoRow('CFPR Number:', data['CFPRNumber'] ?? 'N/A'),
+            if (data.containsKey('expirationDate'))
+              _buildInfoRow('Expiration Date:', data['expirationDate'] ?? 'N/A'),
+            if (data.containsKey('manufacturer'))
+              _buildInfoRow('Manufacturer:', data['manufacturer'] ?? 'N/A'),
+            
+            // Show any other fields
+            ...data.entries
+                .where((entry) => ![
+                      'company_name',
+                      'product_name',
+                      'brand_name',
+                      'reg_number',
+                      'LTONumber',
+                      'CFPRNumber',
+                      'expirationDate',
+                      'manufacturer',
+                      'product_image'
+                    ].contains(entry.key))
+                .map((entry) => _buildInfoRow(
+                      '${entry.key}:',
+                      entry.value?.toString() ?? 'N/A',
+                    )),
+          ],
+        ),
+      );
+    } catch (e) {
+      // If not JSON or parsing fails, show raw text
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[300]!),
+        ),
+        child: SelectableText(
+          qrData,
+          style: const TextStyle(
+            fontSize: 15,
+            color: Colors.black87,
+            height: 1.5,
+          ),
+        ),
+      );
+    }
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1303,8 +1393,8 @@ Registered: ${_formatDate(product.dateOfRegistration)}
     });
   }
 
-  Future<void> _pickImageForOCR(bool isFront) async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+  Future<void> _takePictureForOCR(bool isFront) async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.camera);
     if (image != null) {
       // Navigate to crop page to allow precise label cropping
       String? croppedPath;

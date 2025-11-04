@@ -5,7 +5,6 @@ import {
   PrimaryGeneratedColumn,
   JoinColumn,
 } from 'typeorm';
-import { ProductSubClassification, ProductType } from '../../types/enums';
 import { User } from './user.entity';
 import { Company } from './company.entity';
 import { z } from 'zod';
@@ -23,8 +22,8 @@ export const ProductValidation = z.object({
   lotNumber: z.string().min(2).max(50),
   brandName: z.string().min(2).max(100),
   productName: z.string().min(2).max(100),
-  productClassification: z.nativeEnum(ProductType),
-  productSubClassification: z.nativeEnum(ProductSubClassification),
+  productClassification: z.string().min(1).max(100),
+  productSubClassification: z.string().min(1).max(100),
   expirationDate: z.preprocess(coerceDate, z.date()),
   dateOfRegistration: z.preprocess(coerceDate, z.date()),
   registeredById: z.string().uuid(),
@@ -67,11 +66,11 @@ export class Product {
   @Column()
   productName!: string;
 
-  @Column({ type: 'enum', enum: ProductType })
-  productClassification!: ProductType;
+  @Column()
+  productClassification!: string;
 
-  @Column({ type: 'enum', enum: ProductSubClassification })
-  productSubClassification!: ProductSubClassification;
+  @Column()
+  productSubClassification!: string;
 
   @Column()
   expirationDate!: Date;

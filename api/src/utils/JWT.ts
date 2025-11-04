@@ -10,6 +10,25 @@ interface UserPayload {
     iat: number;
 }
 
+interface MobileUserPayload {
+    sub: string;
+    email: string;
+    firstName: string;
+    middleName?: string | null;
+    lastName: string;
+    extName?: string | null;
+    fullName: string;
+    role: string;
+    status: string;
+    badgeId?: string | null;
+    location?: string | null;
+    phoneNumber?: string | null;
+    dateOfBirth?: string | null;
+    avatarUrl?: string | null;
+    isAdmin: boolean;
+    iat: number;
+}
+
 interface ForgotPasswordPayload {
     email: string;
     iat: number;
@@ -17,6 +36,24 @@ interface ForgotPasswordPayload {
 
 export const JWT_USERPAYLOAD = z.object({
     sub: z.string(),
+    isAdmin: z.boolean(),
+});
+
+export const JWT_MOBILE_USERPAYLOAD = z.object({
+    sub: z.string(),
+    email: z.string(),
+    firstName: z.string(),
+    middleName: z.string().nullable().optional(),
+    lastName: z.string(),
+    extName: z.string().nullable().optional(),
+    fullName: z.string(),
+    role: z.string(),
+    status: z.string(),
+    badgeId: z.string().nullable().optional(),
+    location: z.string().nullable().optional(),
+    phoneNumber: z.string().nullable().optional(),
+    dateOfBirth: z.string().nullable().optional(),
+    avatarUrl: z.string().nullable().optional(),
     isAdmin: z.boolean(),
 });
 
@@ -28,6 +65,13 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN as any;
 const JWT_ALGORITHM = process.env.JWT_ALGORITHM as any;
 
 export function createToken(User: UserPayload): string {
+    return jwt.sign(User, JWT_SECRET, {
+        algorithm: JWT_ALGORITHM,
+        expiresIn: JWT_EXPIRES_IN,
+    });
+}
+
+export function createMobileToken(User: MobileUserPayload): string {
     return jwt.sign(User, JWT_SECRET, {
         algorithm: JWT_ALGORITHM,
         expiresIn: JWT_EXPIRES_IN,

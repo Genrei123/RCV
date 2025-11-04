@@ -1,21 +1,13 @@
-import bcryptjs from "bcryptjs";
-import CustomError from "../../utils/CustomError";
-import { ForgotPasswordRepo, UserRepo } from "../../typeorm/data-source";
-import type { NextFunction, Request, Response } from "express";
-import {
-  createForgotPasswordToken,
-  createToken,
-  verifyToken,
-} from "../../utils/JWT";
-import { UserValidation } from "../../typeorm/entities/user.entity";
-import nodemailer_transporter from "../../utils/nodemailer";
-import { AuditLogService } from "../../services/auditLogService";
+import bcryptjs from 'bcryptjs';
+import CustomError from '../../utils/CustomError';
+import { ForgotPasswordRepo, UserRepo } from '../../typeorm/data-source';
+import type { NextFunction, Request, Response } from 'express';
+import { createForgotPasswordToken, createToken, createMobileToken, verifyToken } from '../../utils/JWT';
+import { UserValidation } from '../../typeorm/entities/user.entity';
+import nodemailer_transporter from '../../utils/nodemailer';
+import { AuditLogService } from '../../services/auditLogService';
 
-export const userSignIn = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const userSignIn = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email, password } = req.body;
 

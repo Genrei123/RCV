@@ -8,16 +8,21 @@ class FirestoreService {
   
   static Future<bool> writeUserData(String userId, Map<String, dynamic> userData) async {
     try {
+      print('📝 [Firestore] Writing user data for ID: $userId');
+      print('📄 [Firestore] Collection: users');
+      print('🔑 [Firestore] Document ID: $userId');
+      
       // Write to users collection with userId as document ID
       await _firestore.collection('users').doc(userId).set({
         ...userData,
         'timestamp': FieldValue.serverTimestamp(),
-      });
+      }, SetOptions(merge: true)); // Use merge to update existing data
       
-      print('User data written successfully for ID: $userId');
+      print('✅ [Firestore] User data written successfully for ID: $userId');
       return true;
-    } catch (e) {
-      print('Failed to write user data: $e');
+    } catch (e, stackTrace) {
+      print('❌ [Firestore] Failed to write user data: $e');
+      print('📚 [Firestore] Stack trace: $stackTrace');
       return false;
     }
   }
@@ -46,53 +51,74 @@ class FirestoreService {
   /// Firestore saving
   static Future<bool> saveUserLocation(double latitude, double longitude) async {
     try {
-      print(' Attempting to save location: lat=$latitude, lng=$longitude');
+      print('🗺️ [Firestore] Attempting to save location: lat=$latitude, lng=$longitude');
       
       // Get current user ID
       String? userId = await TokenService.getUserId();
-      print(' Current user ID: $userId');
+      print('🔑 [Firestore] Current user ID: $userId');
       
-      if (userId == null) {
-        print(' No user logged in - cannot save location');
+      if (userId == null || userId.isEmpty) {
+        print('❌ [Firestore] No user logged in - cannot save location');
         return false;
       }
 
       // Get user data from JWT token
       String? token = await TokenService.getAccessToken();
-      Map<String, dynamic>? tokenData = token != null ? TokenService.decodeTokenPayload(token) : null;
+      print('🎫 [Firestore] Access token exists: ${token != null}');
+      
+      if (token == null) {
+        print('❌ [Firestore] No access token found');
+        return false;
+      }
+      
+      Map<String, dynamic>? tokenData = TokenService.decodeTokenPayload(token);
+      print('📋 [Firestore] Token data decoded: ${tokenData != null}');
+      
+      if (tokenData == null) {
+        print('❌ [Firestore] Failed to decode token data');
+        return false;
+      }
+
+      print('👤 [Firestore] User info - Name: ${tokenData['fullName']}, Email: ${tokenData['email']}, Role: ${tokenData['role']}');
 
       Map<String, dynamic> userData = {
-        if (tokenData != null) ...{
-          '_id': tokenData['sub'],
-          'role': tokenData['role'],
-          'status': tokenData['status'],
-          'avatarUrl': 'assets/avatar.png',
-          'firstName': tokenData['firstName'],
-          'middleName': null,
-          'lastName': tokenData['lastName'],
-          'extName': null,
-          'fullName': tokenData['fullName'],
-          'email': tokenData['email'],
-          'location': null,
-          'currentLocation': {
-            'latitude': latitude,
-            'longitude': longitude,
-          },
-          'dateOfBirth': null,
-          'phoneNumber': null,
-          'badgeId': tokenData['badgeId'],
-          'createdAt': DateTime.now().toIso8601String(),
-          'updatedAt': DateTime.now().toIso8601String(),
-        }
+        '_id': tokenData['sub'],
+        'role': tokenData['role'],
+        'status': tokenData['status'],
+        'avatarUrl': tokenData['avatarUrl'] ?? 'assets/avatar.png',
+        'firstName': tokenData['firstName'],
+        'middleName': tokenData['middleName'],
+        'lastName': tokenData['lastName'],
+        'extName': tokenData['extName'],
+        'fullName': tokenData['fullName'],
+        'email': tokenData['email'],
+        'location': tokenData['location'],
+        'currentLocation': {
+          'latitude': latitude,
+          'longitude': longitude,
+        },
+        'dateOfBirth': tokenData['dateOfBirth'],
+        'phoneNumber': tokenData['phoneNumber'],
+        'badgeId': tokenData['badgeId'],
+        'createdAt': tokenData['createdAt'] ?? DateTime.now().toIso8601String(),
+        'updatedAt': DateTime.now().toIso8601String(),
       };
 
-      print('Saving user data to Firestore...');
+      print('💾 [Firestore] Saving user data to Firestore...');
+      print('📍 [Firestore] Location: ${userData['currentLocation']}');
+      
       bool result = await writeUserData(userId, userData);
-      print('User data save result: $result');
+      
+      if (result) {
+        print('✅ [Firestore] User location saved successfully!');
+      } else {
+        print('❌ [Firestore] Failed to save user location');
+      }
       
       return result;
-    } catch (e) {
-      print('Failed to save user location: $e');
+    } catch (e, stackTrace) {
+      print('❌ [Firestore] Error saving user location: $e');
+      print('📚 [Firestore] Stack trace: $stackTrace');
       return false;
     }
   }

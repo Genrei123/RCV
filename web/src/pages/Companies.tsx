@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
-import { Plus, Building2 } from "lucide-react";
+import { Plus, Building2, Download } from "lucide-react";
 import { PageContainer } from "@/components/PageContainer";
 import { Button } from "@/components/ui/button";
 import { DataTable, type Column } from "@/components/DataTable";
 import type { Company } from "@/typeorm/entities/company.entity";
 import { AddCompanyModal } from "@/components/AddCompanyModal";
+import { CompanyDetailsModal } from "@/components/CompanyDetailsModal";
 import { CompanyService } from "@/services/companyService";
 import { Pagination } from "@/components/Pagination";
+import { PDFGenerationService } from "@/services/pdfGenerationService";
+import { toast } from "react-toastify";
 
 export interface CompaniesProps {
   companies?: Company[];
@@ -17,6 +20,8 @@ export interface CompaniesProps {
 
 export function Companies(props: CompaniesProps) {
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [companies, setCompanies] = useState<Company[]>(props.companies || []);
   const [loading, setLoading] = useState(props.loading || false);
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -66,6 +71,28 @@ export function Companies(props: CompaniesProps) {
     }
   };
 
+  // Handle PDF certificate download
+  const handleDownloadCertificate = async (company: Company, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent row click
+    try {
+      toast.info('Generating certificate PDF...', { autoClose: 1000 });
+      await PDFGenerationService.generateAndDownloadCompanyCertificate(company);
+      toast.success('Certificate downloaded successfully!');
+    } catch (error) {
+      console.error('Error generating certificate:', error);
+      toast.error('Failed to generate certificate. Please try again.');
+    }
+  };
+
+  // Handle view company details
+  const handleCompanyClick = (company: Company) => {
+    setSelectedCompany(company);
+    setShowDetailsModal(true);
+    if (props.onCompanyClick) {
+      props.onCompanyClick(company);
+    }
+  };
+
   const columns: Column[] = [
     {
       key: "name",
@@ -112,9 +139,21 @@ export function Companies(props: CompaniesProps) {
           <Button
             size="sm"
             variant="outline"
-            onClick={() => props.onCompanyClick?.(row)}
+            onClick={(e) => {
+              e.stopPropagation(); // Prevent row click
+              handleCompanyClick(row);
+            }}
           >
             View Details
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={(e) => handleDownloadCertificate(row, e)}
+            className="text-teal-600 hover:text-teal-700 hover:bg-teal-50"
+          >
+            <Download className="h-4 w-4 mr-1" />
+            Certificate
           </Button>
         </div>
       ),
@@ -201,6 +240,13 @@ export function Companies(props: CompaniesProps) {
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         onSuccess={handleAddSuccess}
+      />
+
+      {/* Company Details Modal */}
+      <CompanyDetailsModal
+        isOpen={showDetailsModal}
+        onClose={() => setShowDetailsModal(false)}
+        company={selectedCompany}
       />
     </>
   );
