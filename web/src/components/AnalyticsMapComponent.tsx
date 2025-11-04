@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { BarChart3, RefreshCw, MapPin, Activity } from "lucide-react";
+import { BarChart3, RefreshCw, MapPin, Activity, Layers } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import analyticsService from "../services/analyticsService";
@@ -18,20 +18,9 @@ export function AnalyticsMapComponent() {
   const [error, setError] = useState<string | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState(false);
-  
-  // Layer visibility controls - easily extensible
-  const [visibleLayers, setVisibleLayers] = useState({
-    markers: true,
-    heatmap: true,
-    noisePoints: true,
-    clusterCenters: true
-  });
-  
   const mapRef = useRef<HTMLDivElement>(null);
   const googleMapRef = useRef<any>(null);
-  const markersRef = useRef<any[]>([]);
-  const infoWindowRef = useRef<any>(null);
-  const deckOverlayRef = useRef<any>(null); // For deck.gl overlay
+  const deckOverlayRef = useRef<any>(null);
 
   const callDBSCANAPI = async () => {
     setLoading(true);
@@ -160,299 +149,183 @@ export function AnalyticsMapComponent() {
       styles: mapStyles,
     });
 
-    infoWindowRef.current = new window.google.maps.InfoWindow();
-    
-    // Initialize deck.gl overlay
+    // Initialize deck.gl overlay - simple version
     deckOverlayRef.current = new GoogleMapsOverlay({
-      interleaved: true,
+      getTooltip: ({ object }: any) => {
+        if (!object) return null;
+        
+        return {
+          html: object.tooltip,
+          style: {
+            backgroundColor: 'white',
+            color: 'black',
+            fontSize: '12px',
+            padding: '8px',
+            borderRadius: '4px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+            border: '1px solid #ccc'
+          }
+        };
+      }
     });
     deckOverlayRef.current.setMap(googleMapRef.current);
   }, [mapLoaded]);
 
-  // Create markers when API response changes
+  // Simple visualization effect
   useEffect(() => {
     if (!googleMapRef.current || !mapLoaded || !apiResponse) return;
 
-    // Clear existing markers
-    markersRef.current.forEach(marker => marker.setMap(null));
-    markersRef.current = [];
-
-    // Define cluster colors array, might change later idk
-    const clusterColors = ['#3b82f6', '#8b5cf6', '#ef4444', '#22c55e', '#f59e0b', '#06b6d4', '#f97316', '#84cc16', '#06b6d4', '#8b5cf6'];
-
-    // Create markers for each point in clusters
-    apiResponse.results.clusters.forEach((cluster, clusterIndex) => {
-      const clusterColor = clusterColors[clusterIndex % clusterColors.length];
+    // Generate simple red variations based on number of clusters
+    const generateRedHues = (numClusters: number) => {
+      const colors = [];
+      for (let i = 0; i < numClusters; i++) {
       
-      cluster.points.forEach((point) => {
-        // Ensure coordinates are properly converted to numbers
-        const latitude = typeof point.lat === 'string' ? parseFloat(point.lat) : point.latitude;
-        const longitude = typeof point.long === 'string' ? parseFloat(point.long) : point.longitude;
+        const baseRed = 220;
+        const green = Math.min(255, i * 40); 
+        const blue = Math.min(255, i * 20);
         
-        const position = {
-          lat: latitude,
-          lng: longitude
-        };
+        colors.push(`rgb(${baseRed}, ${green}, ${blue})`);
+      }
+      return colors;
+    };
 
-        console.log(`Placing marker at: ${latitude}, ${longitude} for ${point.product}`); // Debug log
-
-        // Create simple colored circle marker
-        const marker = new window.google.maps.Marker({
-          position,
-          map: googleMapRef.current,
-          title: point.product,
-          icon: {
-            path: window.google.maps.SymbolPath.CIRCLE,
-            scale: 8,
-            fillColor: clusterColor,
-            fillOpacity: 0.8,
-            strokeColor: 'white',
-            strokeWeight: 2,
-          }
+    const clusterColors = generateRedHues(apiResponse.results.clusters.length);
+    
+    // Prepare data for visualization
+    const clusterPoints: any[] = [];
+    const noisePoints: any[] = [];
+    
+    // Process cluster points with colors
+    apiResponse.results.clusters.forEach((cluster, index) => {
+      const color = clusterColors[index % clusterColors.length];
+      cluster.points.forEach((point) => {
+        const lat = typeof point.lat === 'string' ? parseFloat(point.lat) : point.latitude;
+        const lng = typeof point.long === 'string' ? parseFloat(point.long) : point.longitude;
+        
+        clusterPoints.push({
+          position: [lng, lat],
+          product: point.product,
+          scannedBy: point.scannedBy,
+          clusterId: cluster.cluster_id,
+          color: color,
+          tooltip: `<strong>${point.product}</strong><br/>Cluster: ${cluster.cluster_id}<br/>Scanned by: ${point.scannedBy}<br/>Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}`
         });
-
-        // Create info window for scan points
-        marker.addListener('click', () => {
-          infoWindowRef.current.setContent(`
-            <div class="p-4 font-sans min-w-[250px] rounded-lg">
-              <div class="flex items-center gap-2 mb-3">
-                <div class="w-3 h-3 rounded-full" style="background-color: ${clusterColor};"></div>
-                <h3 class="m-0 text-base font-semibold text-gray-800">${point.product}</h3>
-              </div>
-              <div class="space-y-2 text-sm">
-                <div class="flex justify-between">
-                  <span class="text-gray-600">Cluster:</span>
-                  <span class="font-medium" style="color: ${clusterColor};">#${cluster.cluster_id}</span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="text-gray-600">Scanned by:</span>
-                  <span class="font-medium text-gray-800">${point.scannedBy}</span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="text-gray-600">Date:</span>
-                  <span class="text-gray-700">${new Date(point.scannedAt).toLocaleDateString()}</span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="text-gray-600">Coordinates:</span>
-                  <span class="text-gray-700">${latitude.toFixed(4)}, ${longitude.toFixed(4)}</span>
-                </div>
-                <div class="pt-2 border-t">
-                  <p class="text-xs text-gray-600"><strong>Remarks:</strong> ${point.remarks}</p>
-                </div>
-              </div>
-            </div>
-          `);
-          infoWindowRef.current.open(googleMapRef.current, marker);
-        });
-
-        markersRef.current.push(marker);
       });
-
-      // Create cluster center marker
-      const centerMarker = new window.google.maps.Marker({
-        position: {
-          lat: cluster.center.latitude,
-          lng: cluster.center.longitude
-        },
-        map: googleMapRef.current,
-        title: `Cluster ${cluster.cluster_id} Center`,
-        icon: {
-          path: window.google.maps.SymbolPath.CIRCLE,
-          scale: 6,
-          fillColor: clusterColor,
-          fillOpacity: 1,
-          strokeColor: 'white',
-          strokeWeight: 3,
-        }
-      });
-
-      // Cluster center info window, not sur eif needed but just edit whenever
-      centerMarker.addListener('click', () => {
-        infoWindowRef.current.setContent(`
-          <div class="p-4 font-sans min-w-[200px] rounded-lg">
-            <h3 class="m-0 text-base font-semibold text-gray-800 mb-3">Cluster ${cluster.cluster_id} Center</h3>
-            <div class="space-y-2 text-sm">
-              <div class="flex justify-between">
-                <span class="text-gray-600">Points:</span>
-                <span class="font-medium text-gray-800">${cluster.size}</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-gray-600">Radius:</span>
-                <span class="font-medium text-gray-800">${cluster.radius_km.toFixed(1)} km</span>
-              </div>
-              <div class="pt-2 border-t">
-                <p class="text-xs text-gray-600">Center coordinates:</p>
-                <p class="text-xs text-gray-700">${cluster.center.latitude.toFixed(4)}, ${cluster.center.longitude.toFixed(4)}</p>
-              </div>
-            </div>
-          </div>
-        `);
-        infoWindowRef.current.open(googleMapRef.current, centerMarker);
-      });
-
-      markersRef.current.push(centerMarker);
     });
 
-    // Create markers for noise points (if any)
-    if (apiResponse.results.noise_points && apiResponse.results.noise_points.length > 0) {
+    // Process noise points
+    if (apiResponse.results.noise_points) {
       apiResponse.results.noise_points.forEach((point) => {
-        // Ensure coordinates are properly converted to numbers
-        const latitude = typeof point.lat === 'string' ? parseFloat(point.lat) : point.latitude;
-        const longitude = typeof point.long === 'string' ? parseFloat(point.long) : point.longitude;
+        const lat = typeof point.lat === 'string' ? parseFloat(point.lat) : point.latitude;
+        const lng = typeof point.long === 'string' ? parseFloat(point.long) : point.longitude;
         
-        const position = {
-          lat: latitude,
-          lng: longitude
-        };
-
-        console.log(`Placing NOISE marker at: ${latitude}, ${longitude} for ${point.product}`); // Debug log
-
-        // Create noise marker
-        const noiseMarker = new window.google.maps.Marker({
-          position,
-          map: googleMapRef.current,
-          title: `${point.product} (Noise Point)`,
-          icon: {
-            path: window.google.maps.SymbolPath.CIRCLE,
-            scale: 8,
-            fillColor: '#6b7280',
-            fillOpacity: 0.8,
-            strokeColor: 'white',
-            strokeWeight: 2,
-          }
+        noisePoints.push({
+          position: [lng, lat],
+          product: point.product,
+          scannedBy: point.scannedBy,
+          tooltip: `<strong>${point.product}</strong><br/>Noise Point<br/>Scanned by: ${point.scannedBy}<br/>Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}`
         });
-
-        // Create info window for noise points
-        noiseMarker.addListener('click', () => {
-          infoWindowRef.current.setContent(`
-            <div class="p-4 font-sans min-w-[250px] rounded-lg">
-              <div class="flex items-center gap-2 mb-3">
-                <div class="w-3 h-3 rounded-full bg-gray-500"></div>
-                <h3 class="m-0 text-base font-semibold text-gray-800">${point.product}</h3>
-              </div>
-              <div class="space-y-2 text-sm">
-                <div class="flex justify-between">
-                  <span class="text-gray-600">Type:</span>
-                  <span class="font-medium text-gray-600">Noise Point</span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="text-gray-600">Scanned by:</span>
-                  <span class="font-medium text-gray-800">${point.scannedBy}</span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="text-gray-600">Date:</span>
-                  <span class="text-gray-700">${new Date(point.scannedAt).toLocaleDateString()}</span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="text-gray-600">Coordinates:</span>
-                  <span class="text-gray-700">${latitude.toFixed(4)}, ${longitude.toFixed(4)}</span>
-                </div>
-                <div class="pt-2 border-t">
-                  <p class="text-xs text-gray-600"><strong>Remarks:</strong> ${point.remarks}</p>
-                  <p class="text-xs text-gray-500 mt-1"><em>This point doesn't belong to any cluster</em></p>
-                </div>
-              </div>
-            </div>
-          `);
-          infoWindowRef.current.open(googleMapRef.current, noiseMarker);
-        });
-
-        markersRef.current.push(noiseMarker);
       });
     }
 
-    // Adjust map bounds to show all markers (including noise points)
-    if (apiResponse.results.clusters.length > 0 || (apiResponse.results.noise_points && apiResponse.results.noise_points.length > 0)) {
-      const bounds = new window.google.maps.LatLngBounds();
-      
-      // Add cluster points to bounds
-      apiResponse.results.clusters.forEach(cluster => {
-        cluster.points.forEach(point => {
-          // Use the same coordinate conversion logic
-          const latitude = typeof point.lat === 'string' ? parseFloat(point.lat) : point.latitude;
-          const longitude = typeof point.long === 'string' ? parseFloat(point.long) : point.longitude;
-          
-          bounds.extend({
-            lat: latitude,
-            lng: longitude
-          });
-        });
-        // Also include cluster centers
-        bounds.extend({
-          lat: cluster.center.latitude,
-          lng: cluster.center.longitude
-        });
-      });
-      
-      // Add noise points to bounds
-      if (apiResponse.results.noise_points) {
-        apiResponse.results.noise_points.forEach(point => {
-          const latitude = typeof point.lat === 'string' ? parseFloat(point.lat) : point.latitude;
-          const longitude = typeof point.long === 'string' ? parseFloat(point.long) : point.longitude;
-          
-          bounds.extend({
-            lat: latitude,
-            lng: longitude
-          });
-        });
-      }
-      
-      // Clear existing hotspot circles
-      
-      // Create deck.gl heatmap layer
-      const createDeckHeatmap = () => {
-        const heatmapData: any[] = [];
-        
-        // Add all cluster points to heatmap data (excluding noise points)
-        apiResponse.results.clusters.forEach((cluster) => {
-          cluster.points.forEach(point => {
-            const latitude = typeof point.lat === 'string' ? parseFloat(point.lat) : point.latitude;
-            const longitude = typeof point.long === 'string' ? parseFloat(point.long) : point.longitude;
-            
-            heatmapData.push({
-              coordinates: [longitude, latitude], // deck.gl uses [lng, lat] format
-              weight: 1, // You could use cluster size or other weight
-            });
-          });
-        });
-        
-        const heatmapLayer = new ScatterplotLayer({
-          id: 'geographic-heatmap-layer',
-          data: heatmapData,
-          getPosition: (d: any) => d.coordinates,
-          getRadius: () => apiResponse.results.clustering_params.eps_km * 1000,
-          getFillColor: (d: any) => {
+    const layers = [];
 
-            const intensity = d.weight || 1;
-            const alpha = Math.min(255, intensity * 100);
-            return [240, 59, 32, alpha];
-          },
-          radiusUnits: 'meters', 
-          radiusScale: 1,
-          stroked: false,
-          filled: true,
-          radiusMinPixels: 0,
-          radiusMaxPixels: 1000,
-          updateTriggers: {
-            getRadius: [apiResponse.results.clustering_params.eps_km],
-            getFillColor: heatmapData,
-            getPosition: heatmapData
+    // EPS Radius visualization
+    if (clusterPoints.length > 0) {
+      // Convert EPS from km to meters for radius calculation
+      const epsMeters = apiResponse.results.clustering_params.eps_km * 1000;
+      
+      layers.push(new ScatterplotLayer({
+        id: 'cluster-radius',
+        data: clusterPoints,
+        getPosition: (d: any) => d.position,
+        getRadius: epsMeters, // Use EPS distance as radius
+        getFillColor: (d: any) => {
+          // Parse RGB color string for radius transparency
+          const match = d.color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+          if (match) {
+            const r = parseInt(match[1]);
+            const g = parseInt(match[2]);
+            const b = parseInt(match[3]);
+            return [r, g, b, 30]; // Very transparent
           }
-        });
-        
-        // Update deck overlay with heatmap
-        if (deckOverlayRef.current) {
-          deckOverlayRef.current.setProps({
-            layers: [heatmapLayer],
-          });
-        }
-        
-        console.log('Deck.gl heatmap created with data points:', heatmapData.length);
-      };
-      
-      // Create the deck.gl heatmap
-      createDeckHeatmap();
-      
+          return [255, 0, 0, 30]; // Fallback to red
+        },
+        stroked: true,
+        getLineColor: (d: any) => {
+          // Parse RGB color string for border
+          const match = d.color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+          if (match) {
+            const r = parseInt(match[1]);
+            const g = parseInt(match[2]);
+            const b = parseInt(match[3]);
+            return [r, g, b, 100]; // Semi-transparent border
+          }
+          return [255, 0, 0, 100]; // Fallback to red
+        },
+        getLineWidth: 2,
+        pickable: false,
+        radiusUnits: 'meters'
+      }));
+    }
+
+    // Cluster points layer
+    if (clusterPoints.length > 0) {
+      layers.push(new ScatterplotLayer({
+        id: 'cluster-points',
+        data: clusterPoints,
+        getPosition: (d: any) => d.position,
+        getRadius: 120,
+        getFillColor: (d: any) => {
+          // Parse RGB color string like "rgb(255, 0, 0)" to [r, g, b, alpha]
+          const match = d.color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+          if (match) {
+            const r = parseInt(match[1]);
+            const g = parseInt(match[2]);
+            const b = parseInt(match[3]);
+            return [r, g, b, 220];
+          }
+          // Fallback to red if parsing fails
+          return [255, 0, 0, 220];
+        },
+        pickable: true,
+        radiusMinPixels: 8,
+        radiusMaxPixels: 20,
+        stroked: true,
+        getLineColor: [255, 255, 255, 180],
+        getLineWidth: 1
+      }));
+    }
+
+    // Noise points layer
+    if (noisePoints.length > 0) {
+      layers.push(new ScatterplotLayer({
+        id: 'noise-points',
+        data: noisePoints,
+        getPosition: (d: any) => d.position,
+        getRadius: 120,
+        getFillColor: [107, 114, 128, 220], // Gray for noise
+        pickable: true,
+        radiusMinPixels: 8,
+        radiusMaxPixels: 20,
+        stroked: true,
+        getLineColor: [255, 255, 255, 180],
+        getLineWidth: 1
+      }));
+    }
+
+    // Update deck overlay
+    if (deckOverlayRef.current) {
+      deckOverlayRef.current.setProps({ layers });
+    }
+
+    // Fit bounds to show all points
+    const allPoints = [...clusterPoints, ...noisePoints];
+    if (allPoints.length > 0) {
+      const bounds = new window.google.maps.LatLngBounds();
+      allPoints.forEach(point => {
+        bounds.extend({ lat: point.position[1], lng: point.position[0] });
+      });
       googleMapRef.current.fitBounds(bounds);
     }
   }, [apiResponse, mapLoaded]);
@@ -568,21 +441,29 @@ export function AnalyticsMapComponent() {
         </div>
       )}
 
-      {/* Legend */}
+      {/* Cluster Legend */}
       {apiResponse && (
         <div className="absolute bottom-4 right-4 z-10">
           <Card className="shadow-lg p-4 bg-white border border-gray-200">
             <div className="text-sm">
-              <p className="font-medium mb-2">Legend</p>
+              <p className="font-medium mb-3 flex items-center gap-2">
+                <Activity className="h-4 w-4 text-green-600" />
+                Cluster Visualization
+              </p>
+              
               <div className="space-y-2 text-xs">
-                {/* Dynamically generate cluster legend based on actual clusters */}
+                {/* Show each cluster with its color */}
                 {apiResponse.results.clusters.map((cluster, index) => {
-                  const clusterColors = ['#3b82f6', '#8b5cf6', '#ef4444', '#22c55e', '#f59e0b', '#06b6d4', '#f97316', '#84cc16', '#06b6d4', '#8b5cf6'];
-                  const color = clusterColors[index % clusterColors.length];
+                  
+                  const baseRed = 220;
+                  const green = Math.min(255, index * 40);
+                  const blue = Math.min(255, index * 20);
+                  const color = `rgb(${baseRed}, ${green}, ${blue})`;
+                  
                   return (
                     <div key={cluster.cluster_id} className="flex items-center gap-2">
-                      <div className="w-4 h-4 rounded-full border-2 border-white" style={{ backgroundColor: color }}></div>
-                      <span>Cluster {cluster.cluster_id} ({cluster.size} points)</span>
+                      <div className="w-3 h-3 rounded-full border border-white" style={{ backgroundColor: color }}></div>
+                      <span>Cluster {cluster.cluster_id} ({cluster.size} reports)</span>
                     </div>
                   );
                 })}
@@ -590,15 +471,14 @@ export function AnalyticsMapComponent() {
                 {/* Show noise points if any */}
                 {apiResponse.results.summary.n_noise_points > 0 && (
                   <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded-full border-2 border-white bg-gray-500"></div>
+                    <div className="w-3 h-3 rounded-full border border-white bg-gray-500"></div>
                     <span>Noise Points ({apiResponse.results.summary.n_noise_points})</span>
                   </div>
                 )}
                 
-                <hr className="my-2" />
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full border-2 border-white bg-blue-500"></div>
-                  <span>Cluster Centers</span>
+                <div className="pt-2 border-t text-xs text-gray-500">
+                  <p>Total: {apiResponse.results.summary.total_points} reports</p>
+                  <p>EPS Radius: {apiResponse.results.clustering_params.eps_km} km</p>
                 </div>
               </div>
             </div>
