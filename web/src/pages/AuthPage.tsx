@@ -352,16 +352,7 @@ export function AuthPage() {
             <p className="text-xl text-gray-600">
               Secure Product Verification & Management
             </p>
-            <div className="grid grid-cols-2 gap-4 mt-8">
-              <div className="p-4 bg-white rounded-lg shadow-sm">
-                <div className="text-2xl font-bold text-[#00B087]">10K+</div>
-                <div className="text-sm text-gray-600">Products Verified</div>
-              </div>
-              <div className="p-4 bg-white rounded-lg shadow-sm">
-                <div className="text-2xl font-bold text-[#00B087]">500+</div>
-                <div className="text-sm text-gray-600">Active Users</div>
-              </div>
-            </div>
+            
           </div>
         </div>
 
