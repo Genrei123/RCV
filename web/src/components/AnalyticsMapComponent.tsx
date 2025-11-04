@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { BarChart3, RefreshCw, MapPin, Activity, Layers } from "lucide-react";
+import { BarChart3, RefreshCw, MapPin, Activity } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import analyticsService from "../services/analyticsService";
