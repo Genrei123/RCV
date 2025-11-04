@@ -420,14 +420,14 @@ export function KioskMonitor() {
               {!health.isOnline && health.timeSinceLastPoll !== null && (
                 <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded">
                   <p className="text-sm text-red-700">
-                    ⚠️ Device is offline because time since last poll ({(health.timeSinceLastPoll / 1000).toFixed(1)}s) exceeds 30 seconds threshold.
+                    Device is offline because time since last poll ({(health.timeSinceLastPoll / 1000).toFixed(1)}s) exceeds 30 seconds threshold.
                   </p>
                 </div>
               )}
               {!health.isOnline && health.lastPoll === null && (
                 <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded">
                   <p className="text-sm text-orange-700">
-                    ⚠️ Device has never polled the server. Make sure your ESP32 is running and configured to poll <code className="bg-orange-100 px-1 rounded">/kiosk/command</code>
+                    Device has never polled the server. Make sure your ESP32 is running and configured to poll <code className="bg-orange-100 px-1 rounded">/kiosk/command</code>
                   </p>
                 </div>
               )}

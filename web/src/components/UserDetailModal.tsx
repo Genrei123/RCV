@@ -238,7 +238,7 @@ export function UserDetailModal({ isOpen, onClose, user, onApprove, onReject }: 
                   {/* Pending Approval Section */}
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
                     <p className="text-sm text-amber-800">
-                      ⚠️ This user account is pending approval. Review the information above and take action below.
+                      This user account is pending approval. Review the information above and take action below.
                     </p>
                   </div>
                   <div className="flex gap-3">
@@ -264,7 +264,7 @@ export function UserDetailModal({ isOpen, onClose, user, onApprove, onReject }: 
                   {/* Already Approved Section */}
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
                     <p className="text-sm text-green-800">
-                      ✓ This user account is approved and has access to the system.
+                      This user account is approved and has access to the system.
                     </p>
                   </div>
                   <div className="flex justify-end">

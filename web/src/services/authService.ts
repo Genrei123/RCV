@@ -41,19 +41,37 @@ export class AuthService {
     
     static async initializeAuthenticaiton(): Promise<boolean> {
         const token = localStorage.getItem('token');
+        const tokenExpiration = localStorage.getItem('tokenExpiration');
+        
         if (!token) {
             console.log("No token!");
             return false;
         }
+        
+        // Token checkin is mainly locally di na connected inside the database itself
+        // Check if token has expiration time set
+        if (tokenExpiration) {
+            const expirationTime = parseInt(tokenExpiration);
+            const currentTime = Date.now();
+            
+            if (currentTime > expirationTime) {
+                console.log("Token expired, clearing storage");
+                localStorage.removeItem('token');
+                localStorage.removeItem('tokenExpiration');
+                localStorage.removeItem('rememberMe');
+                return false;
+            }
+        }
 
-        // For now, just check if token exists
-        // TODO: Implement proper token expiration and verification with backend
+
         try {
             // Simple check - token exists
             return true;
         } catch (error) {
             console.error(error);
             localStorage.removeItem('token');
+            localStorage.removeItem('tokenExpiration');
+            localStorage.removeItem('rememberMe');
             return false;
         }
     }
@@ -72,6 +90,7 @@ export class AuthService {
         try {
             // Clear local storage
             localStorage.removeItem('token');
+            localStorage.removeItem('tokenExpiration');
             localStorage.removeItem('rememberMe');
             
             // Redirect to login
@@ -80,6 +99,7 @@ export class AuthService {
             console.error('Logout error:', error);
             // Still clear token and redirect even if there's an error
             localStorage.removeItem('token');
+            localStorage.removeItem('tokenExpiration');
             localStorage.removeItem('rememberMe');
             window.location.href = '/login';
         }
@@ -116,6 +136,27 @@ export class AuthService {
     static async verifyToken(_token: string): Promise<boolean> {
         // TODO: Implement token verification
         return false;
+    }
+
+    static getTokenExpirationInfo() {
+        const tokenExpiration = localStorage.getItem('tokenExpiration');
+        const rememberMe = localStorage.getItem('rememberMe');
+        
+        if (!tokenExpiration) {
+            return null;
+        }
+        
+        const expirationTime = parseInt(tokenExpiration);
+        const currentTime = Date.now();
+        const timeLeft = expirationTime - currentTime;
+        
+        return {
+            expirationTime,
+            timeLeft,
+            isExpired: timeLeft <= 0,
+            rememberMe: rememberMe === 'true',
+            formattedTimeLeft: timeLeft > 0 ? Math.ceil(timeLeft / (1000 * 60 * 60)) + ' hours' : 'Expired'
+        };
     }
 
     static async requestPasswordReset(email: string): Promise<PasswordResetResponse> {

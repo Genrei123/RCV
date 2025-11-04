@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:async';
 import 'package:http/http.dart' as http;
-import 'dart:developer' as developer;
-import '../config/api_constants.dart';
 import 'token_service.dart';
+import '../config/api_constants.dart';
+import 'dart:developer' as developer;
 
 class AuditLogService {
   static String get baseUrl => ApiConstants.baseUrl;
@@ -99,21 +99,31 @@ class AuditLogService {
       developer.log('Fetching user audit logs (page $page, limit $limit)...');
       developer.log('URL: $url');
 
-      final response = await http.get(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      ).timeout(const Duration(seconds: 10));
+      final response = await http
+          .get(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(const Duration(seconds: 12));
 
       developer.log('Audit Logs Response Status: ${response.statusCode}');
       developer.log('Audit Logs Response Body: ${response.body}');
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        return data;
+      final ct = response.headers['content-type'] ?? '';
+      final isJson = ct.contains('application/json');
+
+      if (response.statusCode == 200 && isJson) {
+        try {
+          final data = json.decode(response.body);
+          return data as Map<String, dynamic>;
+        } catch (e) {
+          developer.log('JSON decode error: $e');
+          return null;
+        }
       } else {
         developer.log('Failed to fetch audit logs: ${response.body}');
         return null;

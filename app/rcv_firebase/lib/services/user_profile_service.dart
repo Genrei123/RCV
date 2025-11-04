@@ -7,7 +7,7 @@ import 'token_service.dart';
 class UserProfileService {
   static String get baseUrl => ApiConstants.baseUrl;
 
-  // Get stored JWT token
+  // Get stored JWT access token via TokenService (authoritative store)
   static Future<String?> _getToken() async {
     try {
       return await TokenService.getAccessToken();
