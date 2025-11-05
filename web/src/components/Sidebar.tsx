@@ -7,7 +7,6 @@ import {
   User,
   LogOut,
   ChevronDown,
-  Bell,
   Building2,
   Sliders,
   Activity,
@@ -125,7 +124,7 @@ export function Sidebar() {
 
   const profileMenuItems = [
     { path: "/profile", label: "View Profile", icon: User },
-    { path: "/notifications", label: "Notifications", icon: Bell },
+    // { path: "/notifications", label: "Notifications", icon: Bell },
   ];
 
   const handleLogout = async () => {
