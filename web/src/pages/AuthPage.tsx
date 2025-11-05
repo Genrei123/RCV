@@ -377,7 +377,7 @@ export function AuthPage() {
           <div className="text-center space-y-6">
             <div className="inline-block p-6 bg-white rounded-2xl shadow-lg">
               <div className="w-24 h-24 bg-gradient-to-br from-[#005440] to-[#00B087] rounded-xl flex items-center justify-center">
-                <BadgeCheck className="w-16 h-16 text-white" />
+                <img src="/logo.svg" alt="RCV Logo" className="w-16 h-16 object-contain" />
               </div>
             </div>
             <h1 className="text-4xl font-bold text-[#005440]">RCV System</h1>
@@ -392,7 +392,7 @@ export function AuthPage() {
         <Card className="p-8 shadow-2xl bg-white">
           <div className="mb-8 text-center lg:hidden">
             <div className="inline-block p-4 bg-gradient-to-br from-[#005440] to-[#00B087] rounded-xl mb-4">
-              <BadgeCheck className="w-12 h-12 text-white" />
+              <img src="/logo.svg" alt="RCV Logo" className="w-12 h-12 object-contain" />
             </div>
           </div>
 
