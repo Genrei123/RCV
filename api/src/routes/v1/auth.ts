@@ -4,7 +4,7 @@ import {
   mobileSignIn,
   mobileSignUp,
   logout, 
-  me, 
+  me,
   refreshToken, 
   userSignUp, 
   forgotPassword, 

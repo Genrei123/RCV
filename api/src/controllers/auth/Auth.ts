@@ -106,7 +106,7 @@ export const userSignIn = async (req: Request, res: Response, next: NextFunction
 
 export const mobileSignIn = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, rememberMe } = req.body;
 
     // Find the user by email with all necessary fields
     const user = await UserRepo.findOne({
@@ -186,10 +186,23 @@ export const mobileSignIn = async (req: Request, res: Response, next: NextFuncti
     // Log the login action
     await AuditLogService.logLogin(user._id, req, "MOBILE");
 
+    // Set cookie with proper options based on rememberMe (same as web login)
+    const cookieMaxAge = rememberMe ? 30 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000; // 30 days or 24 hours
+    const encryptedCookie = CryptoJS.DES.encrypt(mobileToken, process.env.COOKIE_SECRET || 'key').toString();
+
+    res.cookie('token', encryptedCookie, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: cookieMaxAge,
+      path: '/'
+    });
+
     return res.status(200).json({
       success: true,
       message: "Mobile sign in successful",
       token: mobileToken,
+      rememberMe: rememberMe || false,
       user: {
         _id: user._id,
         email: user.email,
@@ -395,6 +408,71 @@ export const me = async (req: Request, res: Response, next: NextFunction) => {
         "role",
         "badgeId",
         "avatarUrl",
+      ],
+    });
+    
+    return res.send(User);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const meMobile = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    // Try to get token from Authorization header first, then from cookie
+    let token: string | undefined;
+    
+    if (req.headers.authorization) {
+      // Remove 'Bearer ' prefix if present
+      token = req.headers.authorization.replace('Bearer ', '');
+    } else if (req.cookies && req.cookies.token) {
+      // Decrypt the cookie for mobile clients
+      try {
+        const decrypted = CryptoJS.DES.decrypt(req.cookies.token, process.env.COOKIE_SECRET || 'key');
+        token = decrypted.toString(CryptoJS.enc.Utf8);
+      } catch (decryptError) {
+        console.error('Cookie decryption error:', decryptError);
+        return next(
+          new CustomError(400, "Invalid cookie", {
+            token: null,
+          })
+        );
+      }
+    }
+    
+    if (!token) {
+      return next(
+        new CustomError(400, "No token provided", {
+          token: null,
+        })
+      );
+    }
+    
+    const decoded = verifyToken(token);
+    if (!decoded || !decoded.success) {
+      return next(
+        new CustomError(400, "Token is invalid", {
+          token: token,
+        })
+      );
+    }
+    
+    const User = await UserRepo.findOne({
+      where: { _id: decoded.data?.sub },
+      select: [
+        "_id",
+        "firstName",
+        "middleName",
+        "lastName",
+        "email",
+        "phoneNumber",
+        "location",
+        "role",
+        "badgeId",
+        "avatarUrl",
+        "status",
+        "dateOfBirth",
+        "extName",
       ],
     });
     

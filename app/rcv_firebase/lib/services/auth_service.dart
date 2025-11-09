@@ -100,7 +100,7 @@ class AuthService {
     try {
       developer.log('Attempting mobile login for: $email');
 
-      final uri = Uri.parse('$baseUrl/auth/mobile-login');
+      final uri = Uri.parse('$baseUrl/mobile/login');
       final response = await http.post(
         uri,
         headers: {
@@ -190,7 +190,7 @@ class AuthService {
 
       final response = await http
           .post(
-            Uri.parse('$baseUrl/auth/reset-password'),
+            Uri.parse('$baseUrl/mobile/forgot-password'),
             headers: {'Content-Type': 'application/json'},
             body: json.encode({'email': email}),
           )
@@ -238,7 +238,7 @@ class AuthService {
 
       final response = await http
           .post(
-            Uri.parse('$baseUrl/auth/verify-otp'),
+            Uri.parse('$baseUrl/mobile/verify-reset-code'),
             headers: {'Content-Type': 'application/json'},
             body: json.encode({'email': email, 'otp': otp}),
           )
@@ -265,7 +265,7 @@ class AuthService {
 
       final response = await http
           .post(
-            Uri.parse('$baseUrl/auth/confirm-reset-password'),
+            Uri.parse('$baseUrl/mobile/reset-password'),
             headers: {'Content-Type': 'application/json'},
             body: json.encode({
               'email': email,

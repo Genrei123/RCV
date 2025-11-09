@@ -29,7 +29,7 @@ class ApiClient {
       connectTimeout: Duration(milliseconds: ApiConstants.connectTimeout),
       receiveTimeout: Duration(milliseconds: ApiConstants.receiveTimeout),
       sendTimeout: Duration(milliseconds: ApiConstants.sendTimeout),
-      
+
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -137,7 +137,11 @@ class ApiClient {
       '/auth/login',
       '/auth/register',
       '/auth/forgot-password',
-      '/auth/reset-password',
+      '/mobile/login',
+      '/mobile/register',
+      '/mobile/forgot-password',
+      '/mobile/verify-reset-code',
+      '/mobile/reset-password',
     ];
     return authEndpoints.any((endpoint) => path.contains(endpoint));
   }
@@ -149,7 +153,7 @@ class ApiClient {
       if (refreshToken == null) return false;
 
       final response = await _dio.post(
-        '/auth/refresh',
+        '/mobile/refresh-token',
         data: {'refreshToken': refreshToken},
         options: Options(
           headers: {'Authorization': null}, // Remove expired token

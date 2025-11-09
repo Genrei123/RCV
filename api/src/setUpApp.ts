@@ -11,6 +11,7 @@ const { COOKIE_SECRET } = process.env;
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import AuthRouter from "./routes/v1/auth";
+import MobileRouter from "./routes/v1/mobile";
 import ConnectDatabase from "./typeorm/connectDB";
 import customErrorHandler from "./middleware/customErrorHandler";
 import { rateLimit } from "./middleware/securityConfig";
@@ -22,6 +23,7 @@ import FirebaseRouter from "./routes/v1/firebase";
 import AuditLogRouter from "./routes/v1/auditLog";
 import CertificateBlockchainRouter from "./routes/v1/certificateBlockchain";
 import { verifyUser } from "./middleware/verifyUser";
+import { verifyMobileUser } from "./middleware/verifyMobileUser";
 import helmet from "helmet";
 
 // Instantiate the express app
@@ -40,6 +42,7 @@ const setUpApp = async () => {
 
   // API VERSIONING - Version 1.0
   app.use("/api/v1/auth", AuthRouter);
+  app.use("/api/v1/mobile", MobileRouter);  // Mobile-specific routes (no cookies)
   app.use("/api/v1/scan", verifyUser, ScanRouter);
   app.use("/api/v1/user", verifyUser, UserRouter);
   app.use("/api/v1/product", verifyUser, ProductRouter);

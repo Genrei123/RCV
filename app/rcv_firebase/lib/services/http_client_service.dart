@@ -78,7 +78,7 @@ class HttpClientService {
   /// Check if we have a valid session cookie
   static Future<bool> hasValidSession() async {
     try {
-      final uri = Uri.parse('${ApiConstants.baseUrl}/api/v1/auth/me');
+      final uri = Uri.parse('${ApiConstants.baseUrl}/api/v1/mobile/me');
       final cookies = await getCookies(uri);
       
       // Check if we have a 'token' cookie

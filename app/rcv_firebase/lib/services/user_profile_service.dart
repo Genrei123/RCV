@@ -157,7 +157,7 @@ class UserProfileService {
 
       final response = await http
           .post(
-            Uri.parse('$baseUrl/auth/change-password'),
+            Uri.parse('$baseUrl/mobile/change-password'),
             headers: await _getHeaders(),
             body: json.encode({
               'currentPassword': currentPassword,
