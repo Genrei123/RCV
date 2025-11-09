@@ -2,7 +2,6 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { UserRepo } from '../typeorm/data-source';
 import CustomError from '../utils/CustomError';
-import { verifyToken } from '../utils/JWT';
 
 /**
  * Middleware to verify mobile user authentication using JWT from Authorization header only.
@@ -34,15 +33,22 @@ export const verifyMobileUser = async (
 
     const token = authHeader.split(' ')[1];
 
-    // Verify the token
-    const decoded = verifyToken(token);
-    if (!decoded || !decoded.success || !decoded.data) {
-      throw new CustomError(401, 'Invalid token', { success: false });
+    // Verify the JWT token directly (no decryption needed for mobile tokens)
+    const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+    const JWT_ALGORITHM = (process.env.JWT_ALGORITHM as jwt.Algorithm) || 'HS256';
+    
+    const decoded = jwt.verify(token, JWT_SECRET, { algorithms: [JWT_ALGORITHM] }) as any;
+    
+    if (!decoded || !decoded.sub) {
+      throw new CustomError(401, 'Invalid token payload', { success: false });
     }
 
-    const userId = decoded.data.sub;
+    const userId = decoded.sub;
     const user = await UserRepo.findOne({ where: { _id: userId } });
-    if (!user) throw new CustomError(404, 'User not found', { success: false });
+    
+    if (!user) {
+      throw new CustomError(404, 'User not found', { success: false });
+    }
 
     // Add the user to the request object
     req.user = user;
@@ -57,7 +63,7 @@ export const verifyMobileUser = async (
         )
       );
     }
-    if (error instanceof jwt.JsonWebTokenError)
+    if (error instanceof jwt.JsonWebTokenError) {
       return next(
         new CustomError(
           401,
@@ -65,6 +71,7 @@ export const verifyMobileUser = async (
           { success: false }
         )
       );
+    }
     return next(error);
   }
 };
