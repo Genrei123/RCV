@@ -5,51 +5,50 @@ import 'dart:developer' as developer;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_constants.dart';
 
-/// Authentication Service with Cookie Support
+/// Authentication Service using JWT Tokens
 /// 
-/// This service handles authentication with the backend using httpOnly cookies.
-/// Since Flutter's http package doesn't automatically handle cookies,
-/// we manually extract and store the Set-Cookie header.
+/// This service handles authentication with the backend using JWT tokens
+/// stored in SharedPreferences and sent via Authorization headers.
 class AuthService {
   // Backend API configuration
   static String get baseUrl => ApiConstants.baseUrl;
 
-  // Cookie storage keys
-  static const String _cookieKey = 'session_cookies';
+  // Token storage key
+  static const String _tokenKey = 'access_token';
 
-  /// Save cookies from response headers
-  static Future<void> _saveCookies(http.Response response) async {
-    final cookies = response.headers['set-cookie'];
-    if (cookies != null) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_cookieKey, cookies);
-      developer.log('✅ Cookies saved: ${cookies.substring(0, 50)}...');
-    }
-  }
-
-  /// Get stored cookies for requests
-  static Future<String?> _getCookies() async {
+  /// Save JWT token to SharedPreferences
+  static Future<void> _saveToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_cookieKey);
+    await prefs.setString(_tokenKey, token);
+    developer.log('✅ Token saved to SharedPreferences');
   }
 
-  /// Clear stored cookies (logout)
-  static Future<void> clearCookies() async {
+  /// Get stored JWT token
+  static Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_cookieKey);
-    developer.log('🗑️ Cookies cleared');
+    return prefs.getString(_tokenKey);
   }
 
-  /// Get headers with cookies included
+  /// Clear stored token (logout)
+  static Future<void> clearToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_tokenKey);
+    developer.log('🗑️ Token cleared');
+  }
+
+  /// Get headers with Authorization token
   static Future<Map<String, String>> _getHeaders() async {
     final headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     };
 
-    final cookies = await _getCookies();
-    if (cookies != null) {
-      headers['Cookie'] = cookies;
+    final token = await _getToken();
+    if (token != null) {
+      headers['Authorization'] = 'Bearer $token';
+      developer.log('📤 Sending Authorization header with token');
+    } else {
+      developer.log('⚠️ No token found to send');
     }
 
     return headers;
@@ -96,7 +95,7 @@ class AuthService {
     );
   }
 
-  // Login user with cookie support
+  // Login user with JWT token
   Future<Map<String, dynamic>> login(String email, String password, {bool rememberMe = false}) async {
     try {
       developer.log('Attempting mobile login for: $email');
@@ -117,9 +116,6 @@ class AuthService {
 
       developer.log('Login status: ${response.statusCode}');
       
-      // Save cookies from response (backend now sends httpOnly cookies)
-      await _saveCookies(response);
-      
       Map<String, dynamic>? responseData = _tryDecodeJson(response.body);
 
       if (response.statusCode == 200 &&
@@ -128,10 +124,10 @@ class AuthService {
         
         developer.log('✅ Login successful');
         
-        // Also save the JWT token for backward compatibility (optional)
+        // Save the JWT token from response
         if (responseData?['token'] != null) {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('jwt_token', responseData!['token']);
+          await _saveToken(responseData!['token']);
+          developer.log('💾 JWT token saved');
         }
         
         return {
@@ -291,46 +287,51 @@ class AuthService {
     }
   }
 
-  // Logout functionality with cookie clearing
+  // Logout functionality
   Future<void> logout() async {
     try {
       developer.log('🚪 Logging out user...');
       
-      // Call backend logout endpoint to clear server-side session
-      final uri = Uri.parse('$baseUrl/auth/logout');
-      await http.post(
-        uri,
-        headers: await _getHeaders(),
-      ).timeout(const Duration(seconds: 5));
-      
-      // Clear local cookies
-      await clearCookies();
+      // Clear local token
+      await clearToken();
       developer.log('✅ User logged out successfully');
     } catch (e) {
       developer.log('❌ Error during logout: $e');
-      // Still clear local cookies even if server request fails
-      await clearCookies();
+      // Still clear local token even if there's an error
+      await clearToken();
     }
   }
 
-  // Check if user is authenticated (has valid session cookie)
+  // Check if user is authenticated (has valid JWT token)
   Future<bool> isLoggedIn() async {
     try {
-      final cookies = await _getCookies();
-      if (cookies == null || cookies.isEmpty) {
+      final token = await _getToken();
+      if (token == null || token.isEmpty) {
+        developer.log('❌ No token stored - user not logged in');
         return false;
       }
       
-      // Verify with backend by calling /me-mobile endpoint (handles encrypted cookies)
-      final uri = Uri.parse('$baseUrl/auth/me-mobile');
+      developer.log('🔍 Checking authentication with /mobile/me...');
+      
+      // Verify with backend by calling /mobile/me endpoint
+      final uri = Uri.parse('$baseUrl/mobile/me');
+      final headers = await _getHeaders();
+      
+      developer.log('📤 Request headers: $headers');
+      
       final response = await http.get(
         uri,
-        headers: await _getHeaders(),
+        headers: headers,
       ).timeout(const Duration(seconds: 5));
+      
+      developer.log('📥 Auth check response: ${response.statusCode}');
+      if (response.statusCode != 200) {
+        developer.log('❌ Auth check body: ${response.body}');
+      }
       
       return response.statusCode == 200;
     } catch (e) {
-      developer.log('Auth check error: $e');
+      developer.log('❌ Auth check error: $e');
       return false;
     }
   }
@@ -338,7 +339,7 @@ class AuthService {
   // Get current user info from backend
   Future<Map<String, dynamic>?> getCurrentUser() async {
     try {
-      final uri = Uri.parse('$baseUrl/auth/me');
+      final uri = Uri.parse('$baseUrl/mobile/me');
       final response = await http.get(
         uri,
         headers: await _getHeaders(),
@@ -354,8 +355,8 @@ class AuthService {
     }
   }
 
-  // Get current user token (compatibility method - returns cookie header)
+  // Get current user token
   Future<String?> getCurrentToken() async {
-    return await _getCookies();
+    return await _getToken();
   }
 }

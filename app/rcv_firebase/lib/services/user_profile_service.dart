@@ -7,27 +7,27 @@ import '../config/api_constants.dart';
 class UserProfileService {
   static String get baseUrl => ApiConstants.baseUrl;
 
-  /// Get stored cookies
-  static Future<String?> _getCookies() async {
+  /// Get stored JWT token
+  static Future<String?> _getToken() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      return prefs.getString('session_cookies');
+      return prefs.getString('access_token');
     } catch (e) {
-      developer.log('Error getting cookies: $e');
+      developer.log('Error getting token: $e');
       return null;
     }
   }
 
-  /// Get headers with cookies
+  /// Get headers with Authorization token
   static Future<Map<String, String>> _getHeaders() async {
     final headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     };
 
-    final cookies = await _getCookies();
-    if (cookies != null) {
-      headers['Cookie'] = cookies;
+    final token = await _getToken();
+    if (token != null) {
+      headers['Authorization'] = 'Bearer $token';
     }
 
     return headers;
@@ -36,9 +36,9 @@ class UserProfileService {
   // Get current user profile
   static Future<Map<String, dynamic>?> getUserProfile() async {
     try {
-      final cookies = await _getCookies();
-      if (cookies == null) {
-        developer.log('No cookies found');
+      final token = await _getToken();
+      if (token == null) {
+        developer.log('No token found');
         return null;
       }
 
@@ -46,7 +46,7 @@ class UserProfileService {
 
       final response = await http
           .get(
-            Uri.parse('$baseUrl/auth/me-mobile'),
+            Uri.parse('$baseUrl/mobile/me'),
             headers: await _getHeaders(),
           )
           .timeout(const Duration(seconds: 10));
@@ -60,7 +60,7 @@ class UserProfileService {
           final data = json.decode(response.body);
           return data is Map<String, dynamic> ? data : null;
         }
-        developer.log('Unexpected content-type for /auth/me: $contentType');
+        developer.log('Unexpected content-type for /mobile/me: $contentType');
         return null;
       }
 
@@ -76,8 +76,8 @@ class UserProfileService {
     Map<String, dynamic> profileData,
   ) async {
     try {
-      final cookies = await _getCookies();
-      if (cookies == null) {
+      final token = await _getToken();
+      if (token == null) {
         return {'success': false, 'message': 'Not authenticated'};
       }
 
@@ -150,8 +150,8 @@ class UserProfileService {
     String newPassword,
   ) async {
     try {
-      final cookies = await _getCookies();
-      if (cookies == null) {
+      final token = await _getToken();
+      if (token == null) {
         return {'success': false, 'message': 'Not authenticated'};
       }
 
@@ -190,8 +190,8 @@ class UserProfileService {
     String base64Data,
   ) async {
     try {
-      final cookies = await _getCookies();
-      if (cookies == null) {
+      final token = await _getToken();
+      if (token == null) {
         return {'success': false, 'message': 'Not authenticated'};
       }
 
