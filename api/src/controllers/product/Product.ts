@@ -57,7 +57,6 @@ export const createProduct = async (
   next: NextFunction
 ) => {
   try {
-    // Get authenticated user from request (set by verifyUser middleware)
     const currentUser = req.user;
     if (!currentUser) {
       return next(new CustomError(401, "User not authenticated"));

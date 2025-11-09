@@ -73,8 +73,7 @@ export function Sidebar() {
   const fetchCurrentUser = async () => {
     setLoading(true);
     try {
-      const user = await AuthService.getCurrentUser();
-      console.log("Fetched user data:", user); // Debug log
+      const user = await AuthService.getCurrentUser();      
       if (user) {
         setCurrentUser(user);
       }

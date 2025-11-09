@@ -1,3 +1,5 @@
+import { apiClient } from "./axiosConfig";
+
 interface RemoteConfigParameter {
   key: string;
   value: string | boolean | number;
@@ -6,26 +8,12 @@ interface RemoteConfigParameter {
 }
 
 export class RemoteConfigService {
-  private static baseURL = import.meta.env.VITE_API_BASE_URL?.replace('/api/v1', '') || 'http://localhost:3001';
-
   static async getAllParameters(): Promise<RemoteConfigParameter[]> {
     try {
-      const response = await fetch(`${this.baseURL}/api/v1/firebase/getConfig`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        cache: 'no-cache' // Prevent browser caching
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
+      const data = (await apiClient.get('/firebase/getConfig'));
       
       // The API returns { parameters: [...] }
-      const parameters = data.parameters || [];
+      const parameters = data.data?.parameters || [];
       
       // Return parameters as-is from the API
       return parameters;
@@ -60,17 +48,7 @@ export class RemoteConfigService {
   // Publish Remote Config changes
   static async publishConfig(parameters: RemoteConfigParameter[]): Promise<void> {
     try {
-      const response = await fetch(`${this.baseURL}/api/v1/firebase/publishConfig`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ parameters }),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      const response = (await apiClient.get('/firebase/getConfig')).data;
       
       const data = await response.json();
       console.log('Remote Config published:', data);

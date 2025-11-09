@@ -13,42 +13,40 @@ import cookieParser from "cookie-parser";
 import AuthRouter from "./routes/v1/auth";
 import ConnectDatabase from "./typeorm/connectDB";
 import customErrorHandler from "./middleware/customErrorHandler";
-import { rateLimit, validateToken } from "./middleware/securityConfig";
+import { rateLimit } from "./middleware/securityConfig";
 import ScanRouter from "./routes/v1/scan";
-import AdminRouter from "./routes/v1/admin";
-import BlockchainRouter from "./routes/v1/blockchain";
 import UserRouter from "./routes/v1/user";
 import ProductRouter from "./routes/v1/product";
 import CompanyRouter from "./routes/v1/company";
 import FirebaseRouter from "./routes/v1/firebase";
 import AuditLogRouter from "./routes/v1/auditLog";
 import CertificateBlockchainRouter from "./routes/v1/certificateBlockchain";
+import { verifyUser } from "./middleware/verifyUser";
+import helmet from "helmet";
 
 // Instantiate the express app
 const setUpApp = async () => {
   const app = express();
 
   // Register middlewares on the app
-  app.use(cors({ origin: "http://localhost:5173", credentials: true }));
+  app.use(cors({ origin: process.env.ALLOWED_ORIGINS || 'http://localhost:5173', credentials: true }));
   app.use(cookieParser(COOKIE_SECRET!));
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
   // Security Middlewares
+  app.use(helmet())
   app.use(rateLimit);
-  // app.use(validateToken);
 
   // API VERSIONING - Version 1.0
   app.use("/api/v1/auth", AuthRouter);
-  app.use("/api/v1/scan", ScanRouter);
-  app.use("/api/v1/admin", AdminRouter);
-  app.use("/api/v1/blockchain", BlockchainRouter);
-  app.use("/api/v1/user", UserRouter);
-  app.use("/api/v1/product", ProductRouter);
-  app.use("/api/v1/company", CompanyRouter);
-  app.use("/api/v1/firebase", FirebaseRouter);
-  app.use("/api/v1/audit", AuditLogRouter);
-  app.use("/api/v1/certificate-blockchain", CertificateBlockchainRouter);
+  app.use("/api/v1/scan", verifyUser, ScanRouter);
+  app.use("/api/v1/user", verifyUser, UserRouter);
+  app.use("/api/v1/product", verifyUser, ProductRouter);
+  app.use("/api/v1/company", verifyUser, CompanyRouter);
+  app.use("/api/v1/firebase", verifyUser, FirebaseRouter);
+  app.use("/api/v1/audit", verifyUser, AuditLogRouter);
+  app.use("/api/v1/certificate-blockchain", verifyUser, CertificateBlockchainRouter);
 
   // Serve static uploads (avatars, etc.)
   const uploadsPath = path.resolve(process.cwd(), "uploads");
