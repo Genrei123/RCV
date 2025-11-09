@@ -1,8 +1,3 @@
-/**
- * Cookie utility functions for managing authentication and user data
- * Uses native browser APIs without external dependencies
- */
-
 interface CookieOptions {
   days?: number; // Expiration in days
   path?: string;

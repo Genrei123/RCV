@@ -43,18 +43,12 @@ export class AuthService {
     
     static async initializeAuthenticaiton(): Promise<boolean> {
         try {
-            // Since we're using httpOnly cookies, we can't read the token from JavaScript
-            // Instead, make a request to the /me endpoint which will send the cookie automatically
             const response = await apiClient.get('/auth/me');
-            
             if (response.data && response.data._id) {
-                // User is authenticated
                 return true;
             }
-            
             return false;
         } catch (error: any) {
-            // If we get a 401 or any error, user is not authenticated
             console.log("Auth check failed:", error.response?.status || error.message);
             CookieManager.clearAuthCookies(); // Clear any client-side tracking cookies
             return false;

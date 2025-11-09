@@ -1,7 +1,8 @@
 import jwt, { Jwt } from "jsonwebtoken";
 import * as dotenv from 'dotenv';
-import { Roles } from "../types/enums";
 import z from "zod";
+import bcryptjs from 'bcryptjs';
+import CryptoJS from 'crypto-js'
 dotenv.config();
 
 interface UserPayload {
@@ -87,7 +88,8 @@ export function createForgotPasswordToken(UserEmail: ForgotPasswordPayload): str
 
 export function verifyToken(token: string) {
     try {
-        const decoded = jwt.verify(token.replace("Bearer ", ""), JWT_SECRET, { algorithms: [JWT_ALGORITHM] });
+        const decodedToken = CryptoJS.DES.decrypt(token, process.env.COOKIE_SECRET || 'key').toString(CryptoJS.enc.Utf8);
+        const decoded = jwt.verify(decodedToken.replace("Bearer ", ""), JWT_SECRET, { algorithms: [JWT_ALGORITHM] });
         return JWT_USERPAYLOAD.safeParse(decoded);
     } catch (error) {
         console.error(error);

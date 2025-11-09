@@ -6,6 +6,9 @@ import { createForgotPasswordToken, createToken, createMobileToken, verifyToken 
 import { UserValidation } from '../../typeorm/entities/user.entity';
 import nodemailer_transporter from '../../utils/nodemailer';
 import { AuditLogService } from '../../services/auditLogService';
+import CryptoJS from 'crypto-js';
+import * as dotenv from 'dotenv';
+dotenv.config();
 
 export const userSignIn = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -67,8 +70,9 @@ export const userSignIn = async (req: Request, res: Response, next: NextFunction
 
     // Set cookie with proper options based on rememberMe
     const cookieMaxAge = rememberMe ? 30 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000; // 30 days or 24 hours
-    
-    res.cookie('token', token, {
+    const encryptedCookie = CryptoJS.DES.encrypt(token, process.env.COOKIE_SECRET || 'key').toString();
+
+    res.cookie('token', encryptedCookie, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
@@ -100,10 +104,6 @@ export const userSignIn = async (req: Request, res: Response, next: NextFunction
   }
 };
 
-/**
- * Mobile Sign In - Returns full user data in JWT for offline access
- * POST /api/v1/auth/mobile-login
- */
 export const mobileSignIn = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email, password } = req.body;
@@ -218,10 +218,7 @@ export const mobileSignIn = async (req: Request, res: Response, next: NextFuncti
   }
 };
 
-/**
- * Mobile Sign Up - Registration for mobile users
- * POST /api/v1/auth/mobile-register
- */
+
 export const mobileSignUp = async (
   req: Request,
   res: Response,
@@ -365,7 +362,7 @@ export const me = async (req: Request, res: Response, next: NextFunction) => {
     if (req.headers.authorization) {
       token = req.headers.authorization;
     } else if (req.cookies && req.cookies.token) {
-      token = `Bearer ${req.cookies.token}`;
+      token = req.cookies.token;
     }
     
     if (!token) {
