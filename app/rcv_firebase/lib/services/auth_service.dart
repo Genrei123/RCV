@@ -2,16 +2,58 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:developer' as developer;
-import 'token_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_constants.dart';
 
+/// Authentication Service with Cookie Support
+/// 
+/// This service handles authentication with the backend using httpOnly cookies.
+/// Since Flutter's http package doesn't automatically handle cookies,
+/// we manually extract and store the Set-Cookie header.
 class AuthService {
   // Backend API configuration
   static String get baseUrl => ApiConstants.baseUrl;
 
-  // For local development use: 'http://10.0.2.2:3000/api/v1' (Android emulator)
-  // For iOS Simulator use: 'http://localhost:3000/api/v1'
-  // For Physical Device use: 'http://YOUR_COMPUTER_IP:3000/api/v1'
+  // Cookie storage keys
+  static const String _cookieKey = 'session_cookies';
+
+  /// Save cookies from response headers
+  static Future<void> _saveCookies(http.Response response) async {
+    final cookies = response.headers['set-cookie'];
+    if (cookies != null) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_cookieKey, cookies);
+      developer.log('✅ Cookies saved: ${cookies.substring(0, 50)}...');
+    }
+  }
+
+  /// Get stored cookies for requests
+  static Future<String?> _getCookies() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_cookieKey);
+  }
+
+  /// Clear stored cookies (logout)
+  static Future<void> clearCookies() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_cookieKey);
+    developer.log('🗑️ Cookies cleared');
+  }
+
+  /// Get headers with cookies included
+  static Future<Map<String, String>> _getHeaders() async {
+    final headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+
+    final cookies = await _getCookies();
+    if (cookies != null) {
+      headers['Cookie'] = cookies;
+    }
+
+    return headers;
+  }
 
   // Email validation
   bool isValidEmail(String email) {
@@ -54,67 +96,44 @@ class AuthService {
     );
   }
 
-  // Safely decode JSON; return null if not JSON
-  Map<String, dynamic>? _tryDecodeJson(String body) {
+  // Login user with cookie support
+  Future<Map<String, dynamic>> login(String email, String password, {bool rememberMe = false}) async {
     try {
-      final decoded = json.decode(body);
-      return decoded is Map<String, dynamic> ? decoded : null;
-    } catch (_) {
-      return null;
-    }
-  }
+      developer.log('Attempting mobile login for: $email');
 
-  // Login user (tries /auth/login first, then /auth/mobile-login)
-  Future<Map<String, dynamic>> login(String email, String password) async {
-    try {
-      developer.log('Attempting login for: $email');
+      final uri = Uri.parse('$baseUrl/auth/mobile-login');
+      final response = await http.post(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: json.encode({
+          'email': email,
+          'password': password,
+          'rememberMe': rememberMe,
+        }),
+      ).timeout(const Duration(seconds: 12));
 
-      Future<http.Response> postLogin(String path) {
-        final uri = Uri.parse('$baseUrl$path');
-        return http
-            .post(
-              uri,
-              headers: const {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-              },
-              body: json.encode({'email': email, 'password': password}),
-            )
-            .timeout(const Duration(seconds: 12));
-      }
-
-      // Try standard login first
-      http.Response response = await postLogin('/auth/login');
-      developer.log('Login(web) status: ${response.statusCode}');
+      developer.log('Login status: ${response.statusCode}');
+      
+      // Save cookies from response (backend now sends httpOnly cookies)
+      await _saveCookies(response);
+      
       Map<String, dynamic>? responseData = _tryDecodeJson(response.body);
-
-      // If not found or non-JSON, try mobile-login as fallback
-      if (response.statusCode == 404 || responseData == null) {
-        developer.log(
-          'Web login not available or non-JSON. Trying mobile-login...',
-        );
-        response = await postLogin('/auth/mobile-login');
-        developer.log('Login(mobile) status: ${response.statusCode}');
-        responseData = _tryDecodeJson(response.body);
-      }
 
       if (response.statusCode == 200 &&
           (responseData?['success'] == true ||
               responseData?['token'] != null)) {
-        // Store the JWT token using TokenService
+        
+        developer.log('✅ Login successful');
+        
+        // Also save the JWT token for backward compatibility (optional)
         if (responseData?['token'] != null) {
-          developer.log('🔑 Saving token to TokenService...');
-          // Save with expiry from response or default 7 days
-          await TokenService.saveTokens(
-            responseData!['token'],
-            responseData['refreshToken'] ??
-                responseData['token'], // Use same token if no refresh token
-            responseData['expiresIn'] ?? 604800, // Default 7 days
-          );
-          developer.log('✅ Token saved successfully');
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('jwt_token', responseData!['token']);
         }
-
+        
         return {
           'success': true,
           'message': responseData?['message'] ?? 'Login successful',
@@ -155,6 +174,16 @@ class AuthService {
       }
 
       return {'success': false, 'message': errorMessage};
+    }
+  }
+
+  // Safely decode JSON; return null if not JSON
+  Map<String, dynamic>? _tryDecodeJson(String body) {
+    try {
+      final decoded = json.decode(body);
+      return decoded is Map<String, dynamic> ? decoded : null;
+    } catch (_) {
+      return null;
     }
   }
 
@@ -262,25 +291,71 @@ class AuthService {
     }
   }
 
-  // Logout functionality
+  // Logout functionality with cookie clearing
   Future<void> logout() async {
     try {
       developer.log('🚪 Logging out user...');
-      // Clear stored tokens using TokenService
-      await TokenService.clearTokens();
+      
+      // Call backend logout endpoint to clear server-side session
+      final uri = Uri.parse('$baseUrl/auth/logout');
+      await http.post(
+        uri,
+        headers: await _getHeaders(),
+      ).timeout(const Duration(seconds: 5));
+      
+      // Clear local cookies
+      await clearCookies();
       developer.log('✅ User logged out successfully');
     } catch (e) {
       developer.log('❌ Error during logout: $e');
+      // Still clear local cookies even if server request fails
+      await clearCookies();
     }
   }
 
-  // Check if user is logged in
+  // Check if user is authenticated (has valid session cookie)
   Future<bool> isLoggedIn() async {
-    return await TokenService.hasAccessToken();
+    try {
+      final cookies = await _getCookies();
+      if (cookies == null || cookies.isEmpty) {
+        return false;
+      }
+      
+      // Verify with backend by calling /me-mobile endpoint (handles encrypted cookies)
+      final uri = Uri.parse('$baseUrl/auth/me-mobile');
+      final response = await http.get(
+        uri,
+        headers: await _getHeaders(),
+      ).timeout(const Duration(seconds: 5));
+      
+      return response.statusCode == 200;
+    } catch (e) {
+      developer.log('Auth check error: $e');
+      return false;
+    }
   }
 
-  // Get current user token
+  // Get current user info from backend
+  Future<Map<String, dynamic>?> getCurrentUser() async {
+    try {
+      final uri = Uri.parse('$baseUrl/auth/me');
+      final response = await http.get(
+        uri,
+        headers: await _getHeaders(),
+      ).timeout(const Duration(seconds: 10));
+      
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      }
+      return null;
+    } catch (e) {
+      developer.log('Get current user error: $e');
+      return null;
+    }
+  }
+
+  // Get current user token (compatibility method - returns cookie header)
   Future<String?> getCurrentToken() async {
-    return await TokenService.getAccessToken();
+    return await _getCookies();
   }
 }

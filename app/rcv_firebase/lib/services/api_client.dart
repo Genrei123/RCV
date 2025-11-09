@@ -26,9 +26,9 @@ class ApiClient {
   void _initializeDio() {
     _dio = Dio(BaseOptions(
       baseUrl: ApiConstants.baseUrl,
-      connectTimeout: ApiConstants.connectTimeout,
-      receiveTimeout: ApiConstants.receiveTimeout,
-      sendTimeout: ApiConstants.sendTimeout,
+      connectTimeout: Duration(milliseconds: ApiConstants.connectTimeout),
+      receiveTimeout: Duration(milliseconds: ApiConstants.receiveTimeout),
+      sendTimeout: Duration(milliseconds: ApiConstants.sendTimeout),
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -118,7 +118,7 @@ class ApiClient {
         String errorMessage = _getErrorMessage(error);
         
         // Create a custom exception with user-friendly message
-        final customError = DioError(
+        final customError = DioException(
           requestOptions: error.requestOptions,
           response: error.response,
           error: errorMessage,
@@ -187,15 +187,15 @@ class ApiClient {
     );
   }
 
-  /// Convert DioError to user-friendly message
-  String _getErrorMessage(DioError error) {
+  /// Convert DioException to user-friendly message
+  String _getErrorMessage(DioException error) {
     switch (error.type) {
-      case DioErrorType.connectTimeout:
-      case DioErrorType.sendTimeout:
-      case DioErrorType.receiveTimeout:
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.sendTimeout:
+      case DioExceptionType.receiveTimeout:
         return 'Connection timeout. Please check your internet connection.';
       
-      case DioErrorType.response:
+      case DioExceptionType.badResponse:
         final statusCode = error.response?.statusCode;
         switch (statusCode) {
           case 400:
@@ -214,13 +214,17 @@ class ApiClient {
             return 'Request failed with status $statusCode';
         }
       
-      case DioErrorType.cancel:
+      case DioExceptionType.cancel:
         return 'Request was cancelled';
       
-      case DioErrorType.other:
+      case DioExceptionType.connectionError:
+      case DioExceptionType.unknown:
         if (error.error is SocketException) {
           return 'No internet connection';
         }
+        return 'An unexpected error occurred';
+      
+      default:
         return 'An unexpected error occurred';
     }
   }
@@ -367,9 +371,7 @@ class ApiClient {
 
   /// Cancel all requests
   void cancelAllRequests() {
-    _dio.interceptors.requestLock.clear();
-    _dio.interceptors.responseLock.clear();
-    _dio.interceptors.errorLock.clear();
+    _dio.interceptors.clear();
   }
 
   /// Update base URL (useful for switching environments)

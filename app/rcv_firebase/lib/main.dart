@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'config/firebase_config.dart'; // Updated to use config
+import 'firebase_options.dart'; // Use the generated file from FlutterFire
 import 'services/remote_config_service.dart';
 
 // Import all your pages
@@ -26,8 +26,10 @@ Future<void> main() async {
   // Load environment variables from .env file
   await dotenv.load(fileName: ".env");
   
-  // Initialize Firebase with environment-based configuration
-  await Firebase.initializeApp(options: FirebaseConfig.currentPlatform);
+  // Initialize Firebase with google-services.json configuration
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   // Initialize Remote Config
   await RemoteConfigService.initialize();

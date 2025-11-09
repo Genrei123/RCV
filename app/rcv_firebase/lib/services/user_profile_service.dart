@@ -1,28 +1,44 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'dart:developer' as developer;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_constants.dart';
-import 'token_service.dart';
 
 class UserProfileService {
   static String get baseUrl => ApiConstants.baseUrl;
 
-  // Get stored JWT access token via TokenService (authoritative store)
-  static Future<String?> _getToken() async {
+  /// Get stored cookies
+  static Future<String?> _getCookies() async {
     try {
-      return await TokenService.getAccessToken();
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString('session_cookies');
     } catch (e) {
-      developer.log('Error getting token: $e');
+      developer.log('Error getting cookies: $e');
       return null;
     }
+  }
+
+  /// Get headers with cookies
+  static Future<Map<String, String>> _getHeaders() async {
+    final headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+
+    final cookies = await _getCookies();
+    if (cookies != null) {
+      headers['Cookie'] = cookies;
+    }
+
+    return headers;
   }
 
   // Get current user profile
   static Future<Map<String, dynamic>?> getUserProfile() async {
     try {
-      final token = await _getToken();
-      if (token == null) {
-        developer.log('No token found');
+      final cookies = await _getCookies();
+      if (cookies == null) {
+        developer.log('No cookies found');
         return null;
       }
 
@@ -30,12 +46,8 @@ class UserProfileService {
 
       final response = await http
           .get(
-            Uri.parse('$baseUrl/auth/me'),
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-              'Authorization': 'Bearer $token',
-            },
+            Uri.parse('$baseUrl/auth/me-mobile'),
+            headers: await _getHeaders(),
           )
           .timeout(const Duration(seconds: 10));
 
@@ -64,8 +76,8 @@ class UserProfileService {
     Map<String, dynamic> profileData,
   ) async {
     try {
-      final token = await _getToken();
-      if (token == null) {
+      final cookies = await _getCookies();
+      if (cookies == null) {
         return {'success': false, 'message': 'Not authenticated'};
       }
 
@@ -75,11 +87,7 @@ class UserProfileService {
       final response = await http
           .patch(
             Uri.parse('$baseUrl/user/profile'),
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-              'Authorization': 'Bearer $token',
-            },
+            headers: await _getHeaders(),
             body: json.encode(profileData),
           )
           .timeout(const Duration(seconds: 10));
@@ -142,18 +150,15 @@ class UserProfileService {
     String newPassword,
   ) async {
     try {
-      final token = await _getToken();
-      if (token == null) {
+      final cookies = await _getCookies();
+      if (cookies == null) {
         return {'success': false, 'message': 'Not authenticated'};
       }
 
       final response = await http
           .post(
             Uri.parse('$baseUrl/auth/change-password'),
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer $token',
-            },
+            headers: await _getHeaders(),
             body: json.encode({
               'currentPassword': currentPassword,
               'newPassword': newPassword,
@@ -185,19 +190,15 @@ class UserProfileService {
     String base64Data,
   ) async {
     try {
-      final token = await _getToken();
-      if (token == null) {
+      final cookies = await _getCookies();
+      if (cookies == null) {
         return {'success': false, 'message': 'Not authenticated'};
       }
 
       final response = await http
           .post(
             Uri.parse('$baseUrl/user/profile/avatar'),
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-              'Authorization': 'Bearer $token',
-            },
+            headers: await _getHeaders(),
             body: json.encode({'image': base64Data}),
           )
           .timeout(const Duration(seconds: 15));

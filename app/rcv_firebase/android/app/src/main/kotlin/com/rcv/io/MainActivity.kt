@@ -1,4 +1,4 @@
-package com.rcv.io
+package com.example.rcv_firebase
 
 import io.flutter.embedding.android.FlutterActivity
 
