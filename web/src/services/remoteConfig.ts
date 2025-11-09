@@ -48,10 +48,8 @@ export class RemoteConfigService {
   // Publish Remote Config changes
   static async publishConfig(parameters: RemoteConfigParameter[]): Promise<void> {
     try {
-      const response = (await apiClient.get('/firebase/getConfig')).data;
-      
-      const data = await response.json();
-      console.log('Remote Config published:', data);
+      const response = await apiClient.post('/firebase/publishConfig', { parameters });
+      console.log('Remote Config published:', response);
       
     } catch (error) {
       console.error('Failed to publish Remote Config:', error);
