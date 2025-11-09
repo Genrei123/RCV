@@ -351,38 +351,6 @@ export function Dashboard(props: DashboardProps) {
               </div>
             </CardContent>
           </Card>
-
-          {/* Kiosk Status */}
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Kiosk Status</p>
-                  <p className="text-xl font-bold mt-2">
-                    {statsLoading ? (
-                      <span className="animate-pulse">...</span>
-                    ) : (
-                      <span className={stats?.kioskStatus.isOnline ? "text-green-600" : "text-red-600"}>
-                        {stats?.kioskStatus.isOnline ? "Online" : "Offline"}
-                      </span>
-                    )}
-                  </p>
-                  {stats?.kioskStatus.lastPoll && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      Last ping: {new Date(stats.kioskStatus.lastPoll).toLocaleTimeString()}
-                    </p>
-                  )}
-                </div>
-                <div className={`h-12 w-12 rounded-lg flex items-center justify-center ${
-                  stats?.kioskStatus.isOnline ? "bg-green-100" : "bg-red-100"
-                }`}>
-                  <Activity className={`h-6 w-6 ${
-                    stats?.kioskStatus.isOnline ? "text-green-600" : "text-red-600"
-                  }`} />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
         {/* Users Table */}

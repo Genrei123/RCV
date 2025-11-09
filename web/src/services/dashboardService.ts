@@ -19,11 +19,11 @@ export interface DashboardStats {
   totalUsers: number;
   totalProducts: number;
   totalCompanies: number;
-  kioskStatus: {
-    isOnline: boolean;
-    lastPoll: string | null;
-    pollCount: number;
-  };
+  // kioskStatus: {
+  //   isOnline: boolean;
+  //   lastPoll: string | null;
+  //   pollCount: number;
+  // };
 }
 
 export class DashboardService {
@@ -60,32 +60,32 @@ export class DashboardService {
     try {
       // Fetch all data in parallel
       // Note: kiosk/health is not under /api/v1, so we need a different approach
-      const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1';
-      const kioskURL = baseURL.replace('/api/v1', '');
+      // const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1';
+      // const kioskURL = baseURL.replace('/api/v1', '');
       
-      const [usersResponse, productsResponse, companiesResponse, kioskResponse] = await Promise.all([
+      const [usersResponse, productsResponse, companiesResponse] = await Promise.all([
         apiClient.get<DashboardApiResponse>("/user/users?limit=1"),
         apiClient.get<{ success: boolean; data: any[]; pagination?: any }>("/product/products?limit=1"),
         apiClient.get<{ success: boolean; data: any[]; pagination?: any }>("/company/companies?limit=1"),
-        fetch(`${kioskURL}/kiosk/health`).then(res => res.json()).catch(() => ({ isOnline: false, lastPoll: null, pollCount: 0 })),
+        // fetch(`${kioskURL}/kiosk/health`).then(res => res.json()).catch(() => ({ isOnline: false, lastPoll: null, pollCount: 0 })),
       ]);
 
       // Debug: Log the responses
       console.log('Dashboard Stats - Users Response:', usersResponse.data);
       console.log('Dashboard Stats - Products Response:', productsResponse.data);
       console.log('Dashboard Stats - Companies Response:', companiesResponse.data);
-      console.log('Dashboard Stats - Kiosk Response:', kioskResponse);
+      // console.log('Dashboard Stats - Kiosk Response:', kioskResponse);
 
       // All endpoints now return { success, data, pagination }
       return {
         totalUsers: usersResponse.data.pagination?.total_items || 0,
         totalProducts: productsResponse.data.pagination?.total_items || 0,
         totalCompanies: companiesResponse.data.pagination?.total_items || 0,
-        kioskStatus: {
-          isOnline: kioskResponse?.isOnline || false,
-          lastPoll: kioskResponse?.lastPoll || null,
-          pollCount: kioskResponse?.pollCount || 0,
-        },
+        // kioskStatus: {
+        //   isOnline: kioskResponse?.isOnline || false,
+        //   lastPoll: kioskResponse?.lastPoll || null,
+        //   pollCount: kioskResponse?.pollCount || 0,
+        // },
       };
     } catch (error) {
       console.error("Error fetching dashboard stats:", error);

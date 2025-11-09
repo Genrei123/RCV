@@ -1,12 +1,3 @@
-// =========================================================================
-// FORGOT PASSWORD PAGE
-// =========================================================================
-// This page handles the password reset flow:
-// - Email verification
-// - Reset code validation
-// - New password setup
-// =========================================================================
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -43,10 +34,6 @@ export function ForgotPasswordPage() {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
-  // =========================================================================
-  // VALIDATION FUNCTIONS
-  // =========================================================================
-
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
@@ -72,10 +59,6 @@ export function ForgotPasswordPage() {
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
     return passwordRegex.test(password);
   };
-
-  // =========================================================================
-  // FORM HANDLERS
-  // =========================================================================
 
   const handleSendResetEmail = async (e: React.FormEvent) => {
     e.preventDefault();

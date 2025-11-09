@@ -1,10 +1,12 @@
 import type { User, RegisterResponse } from "@/typeorm/entities/user.entity";
 import { apiClient } from "./axiosConfig";
 import axios from "axios";
+import { CookieManager } from "@/utils/cookies";
 
 export interface LoginRequest {
     email: string;
     password: string;
+    rememberMe?: boolean;
 }
 
 export interface LoginResponse {
@@ -40,38 +42,21 @@ export interface ResetPasswordRequest {
 export class AuthService {
     
     static async initializeAuthenticaiton(): Promise<boolean> {
-        const token = localStorage.getItem('token');
-        const tokenExpiration = localStorage.getItem('tokenExpiration');
-        
-        if (!token) {
-            console.log("No token!");
-            return false;
-        }
-        
-        // Token checkin is mainly locally di na connected inside the database itself
-        // Check if token has expiration time set
-        if (tokenExpiration) {
-            const expirationTime = parseInt(tokenExpiration);
-            const currentTime = Date.now();
-            
-            if (currentTime > expirationTime) {
-                console.log("Token expired, clearing storage");
-                localStorage.removeItem('token');
-                localStorage.removeItem('tokenExpiration');
-                localStorage.removeItem('rememberMe');
-                return false;
-            }
-        }
-
-
         try {
-            // Simple check - token exists
-            return true;
-        } catch (error) {
-            console.error(error);
-            localStorage.removeItem('token');
-            localStorage.removeItem('tokenExpiration');
-            localStorage.removeItem('rememberMe');
+            // Since we're using httpOnly cookies, we can't read the token from JavaScript
+            // Instead, make a request to the /me endpoint which will send the cookie automatically
+            const response = await apiClient.get('/auth/me');
+            
+            if (response.data && response.data._id) {
+                // User is authenticated
+                return true;
+            }
+            
+            return false;
+        } catch (error: any) {
+            // If we get a 401 or any error, user is not authenticated
+            console.log("Auth check failed:", error.response?.status || error.message);
+            CookieManager.clearAuthCookies(); // Clear any client-side tracking cookies
             return false;
         }
     }
@@ -88,27 +73,30 @@ export class AuthService {
 
     static async logout(): Promise<void> {
         try {
-            // Clear local storage
-            localStorage.removeItem('token');
-            localStorage.removeItem('tokenExpiration');
-            localStorage.removeItem('rememberMe');
+            // Call backend to clear httpOnly cookie
+            await apiClient.post('/auth/logout');
+            
+            // Clear any client-side cookies
+            CookieManager.clearAuthCookies();
             
             // Redirect to login
             window.location.href = '/login';
         } catch (error) {
             console.error('Logout error:', error);
-            // Still clear token and redirect even if there's an error
-            localStorage.removeItem('token');
-            localStorage.removeItem('tokenExpiration');
-            localStorage.removeItem('rememberMe');
+            // Still clear cookies and redirect even if there's an error
+            CookieManager.clearAuthCookies();
             window.location.href = '/login';
         }
     }
 
-    static async login(Credentials: LoginRequest) {
+    static async login(credentials: LoginRequest) {
         try {
-            const response = await apiClient.post<LoginResponse>('/auth/login', Credentials);
-            localStorage.setItem('token', response.data.token);
+            const response = await apiClient.post<LoginResponse>('/auth/login', credentials);
+            
+            // Backend sets httpOnly cookie automatically
+            // We don't need to set any client-side cookies since we can't read httpOnly cookies anyway
+            // The browser will automatically send the httpOnly cookie with future requests
+            
             return response;
         } catch (error) {
             console.error('Login error in AuthService:', error);
@@ -139,24 +127,7 @@ export class AuthService {
     }
 
     static getTokenExpirationInfo() {
-        const tokenExpiration = localStorage.getItem('tokenExpiration');
-        const rememberMe = localStorage.getItem('rememberMe');
-        
-        if (!tokenExpiration) {
-            return null;
-        }
-        
-        const expirationTime = parseInt(tokenExpiration);
-        const currentTime = Date.now();
-        const timeLeft = expirationTime - currentTime;
-        
-        return {
-            expirationTime,
-            timeLeft,
-            isExpired: timeLeft <= 0,
-            rememberMe: rememberMe === 'true',
-            formattedTimeLeft: timeLeft > 0 ? Math.ceil(timeLeft / (1000 * 60 * 60)) + ' hours' : 'Expired'
-        };
+        return CookieManager.getTokenExpirationInfo();
     }
 
     static async requestPasswordReset(email: string): Promise<PasswordResetResponse> {

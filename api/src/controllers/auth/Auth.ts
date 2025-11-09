@@ -9,7 +9,7 @@ import { AuditLogService } from '../../services/auditLogService';
 
 export const userSignIn = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, rememberMe } = req.body;
 
     // Find the user by email
     const user = await UserRepo.findOne({
@@ -65,10 +65,22 @@ export const userSignIn = async (req: Request, res: Response, next: NextFunction
     // Log the login action
     await AuditLogService.logLogin(user._id, req, "WEB");
 
+    // Set cookie with proper options based on rememberMe
+    const cookieMaxAge = rememberMe ? 30 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000; // 30 days or 24 hours
+    
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: cookieMaxAge,
+      path: '/'
+    });
+
     return res.status(200).json({
       success: true,
       message: "User signed in successfully",
       token,
+      rememberMe: rememberMe || false,
       user: {
         _id: user._id,
         email: user.email,
@@ -313,10 +325,25 @@ export const logout = async (
   res: Response,
   next: NextFunction
 ) => {
-  // Log logout
-  return res
-    .status(500)
-    .json({ success: false, message: "Logout not implemented" });
+  try {
+    // Clear the httpOnly cookie
+    res.clearCookie('token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/'
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Logged out successfully"
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: "Logout failed"
+    });
+  }
 };
 
 export const refreshToken = async (
@@ -331,30 +358,53 @@ export const refreshToken = async (
 };
 
 export const me = async (req: Request, res: Response, next: NextFunction) => {
-  const decoded = verifyToken(req.headers.authorization as string);
-  if (!decoded) {
-    return next(
-      new CustomError(400, "Token is invalid", {
-        token: req.headers.authorization,
-      })
-    );
+  try {
+    // Try to get token from Authorization header first, then from cookie
+    let token: string | undefined;
+    
+    if (req.headers.authorization) {
+      token = req.headers.authorization;
+    } else if (req.cookies && req.cookies.token) {
+      token = `Bearer ${req.cookies.token}`;
+    }
+    
+    if (!token) {
+      return next(
+        new CustomError(400, "No token provided", {
+          token: null,
+        })
+      );
+    }
+    
+    const decoded = verifyToken(token);
+    if (!decoded || !decoded.success) {
+      return next(
+        new CustomError(400, "Token is invalid", {
+          token: token,
+        })
+      );
+    }
+    
+    const User = await UserRepo.findOne({
+      where: { _id: decoded.data?.sub },
+      select: [
+        "_id",
+        "firstName",
+        "middleName",
+        "lastName",
+        "email",
+        "phoneNumber",
+        "location",
+        "role",
+        "badgeId",
+        "avatarUrl",
+      ],
+    });
+    
+    return res.send(User);
+  } catch (error) {
+    return next(error);
   }
-  const User = await UserRepo.findOne({
-    where: { _id: decoded.data?.sub },
-    select: [
-      "_id",
-      "firstName",
-      "middleName",
-      "lastName",
-      "email",
-      "phoneNumber",
-      "location",
-      "role",
-      "badgeId",
-      "avatarUrl",
-    ],
-  });
-  return res.send(User);
 };
 
 export const requestPasswordReset = async (

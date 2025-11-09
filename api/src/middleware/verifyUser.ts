@@ -29,15 +29,24 @@ export const verifyUser = async (
   next: NextFunction
 ) => {
   try {
+    // Try to get token from Authorization header first, then from cookie
+    let token: string | undefined;
+    
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.split(' ')[1];
+    } else if (req.cookies && req.cookies.token) {
+      // Fallback to cookie if no Authorization header
+      token = req.cookies.token;
+    }
+    
+    if (!token) {
       throw new CustomError(
         401,
-        'No token provided in the Authorization Header',
+        'No token provided in Authorization header or cookies',
         { success: false }
       );
     }
-    const token = authHeader.split(' ')[1];
 
     // Verify the token
     const decoded = verifyToken(token);

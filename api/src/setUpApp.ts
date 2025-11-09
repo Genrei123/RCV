@@ -29,7 +29,7 @@ const setUpApp = async () => {
   const app = express();
 
   // Register middlewares on the app
-  app.use(cors({ origin: "*" }));
+  app.use(cors({ origin: "http://localhost:5173", credentials: true }));
   app.use(cookieParser(COOKIE_SECRET!));
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
@@ -102,21 +102,21 @@ const setUpApp = async () => {
   });
 
   // Command endpoint - ESP32 polls this to get commands
-  app.get("/kiosk/command", (req, res) => {
-    // Update health tracking every time ESP32 polls
-    kioskHealth.lastPoll = new Date();
-    kioskHealth.pollCount++;
+  // app.get("/kiosk/command", (req, res) => {
+  //   // Update health tracking every time ESP32 polls
+  //   kioskHealth.lastPoll = new Date();
+  //   kioskHealth.pollCount++;
 
-    console.log(
-      `[Kiosk] Poll #${
-        kioskHealth.pollCount
-      } at ${kioskHealth.lastPoll.toISOString()}`
-    );
+  //   console.log(
+  //     `[Kiosk] Poll #${
+  //       kioskHealth.pollCount
+  //     } at ${kioskHealth.lastPoll.toISOString()}`
+  //   );
 
-    res.json(currentCommand);
-    // Reset command after sending to ESP32
-    currentCommand = { action: "none", led: 0, state: "off" };
-  });
+  //   res.json(currentCommand);
+  //   // Reset command after sending to ESP32
+  //   currentCommand = { action: "none", led: 0, state: "off" };
+  // });
 
   app.post("/kiosk/led-1", (req, res) => {
     currentCommand = { action: "control", led: 1, state: "on" };

@@ -1,4 +1,4 @@
-import { db } from '../lib/firebase';
+import { db } from '../utils/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 
 export class FirestoreService {

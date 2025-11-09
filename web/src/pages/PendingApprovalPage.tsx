@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Clock, Mail, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
+import { CookieManager } from '@/utils/cookies';
 
 export function PendingApprovalPage() {
   const navigate = useNavigate();
@@ -10,12 +11,12 @@ export function PendingApprovalPage() {
   const [userEmail, setUserEmail] = useState<string>('');
 
   useEffect(() => {
-    // Get email from navigation state or localStorage
-    const email = location.state?.email || localStorage.getItem('pendingApprovalEmail') || '';
+    // Get email from navigation state or cookies
+    const email = location.state?.email || CookieManager.getCookie('pendingApprovalEmail') || '';
     setUserEmail(email);
 
     // Clear any existing tokens since user is not approved
-    localStorage.removeItem('token');
+    CookieManager.deleteCookie('token');
   }, [location]);
 
   return (

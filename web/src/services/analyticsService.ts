@@ -50,7 +50,7 @@ export interface APIResponse {
 }
 
 // Analytics Service Configuration
-const ANALYTICS_API_BASE_URL = "http://localhost:5000";
+const ANALYTICS_API_BASE_URL = import.meta.env.VITE_ANALYTICS_API_BASE_URL;
 
 class AnalyticsService {
   /**

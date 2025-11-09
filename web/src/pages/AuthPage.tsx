@@ -18,6 +18,7 @@ import { AuthService } from '@/services/authService';
 import type { User } from '@/typeorm/entities/user.entity';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { CookieManager } from '@/utils/cookies';
 
 interface LoginFormData {
   email: string;
@@ -55,17 +56,10 @@ export function AuthPage() {
 
   // Check if user has remember me enabled and pre-fill email
   useEffect(() => {
-    const storedRememberMe = localStorage.getItem('rememberMe');
-    const tokenExpiration = localStorage.getItem('tokenExpiration');
+    const tokenInfo = CookieManager.getTokenExpirationInfo();
     
-    if (storedRememberMe === 'true' && tokenExpiration) {
-      const expirationTime = parseInt(tokenExpiration);
-      const currentTime = Date.now();
-      
-      // If token is still valid, redirect user
-      if (currentTime <= expirationTime) {
-        setRememberMe(true);
-      }
+    if (tokenInfo && !tokenInfo.isExpired && tokenInfo.rememberMe) {
+      setRememberMe(true);
     }
   }, []);
 
@@ -172,25 +166,6 @@ export function AuthPage() {
   };
 
   // =========================================================================
-  // REMEMBER ME HELPER FUNCTIONS
-  // =========================================================================
-
-  const setTokenWithExpiration = (token: string, rememberMe: boolean) => {
-    localStorage.setItem('token', token);
-    
-    if (rememberMe) {
-      // Remember me: 30 days
-      const expirationTime = Date.now() + (30 * 24 * 60 * 60 * 1000);
-      localStorage.setItem('tokenExpiration', expirationTime.toString());
-      localStorage.setItem('rememberMe', 'true');
-    } else {
-      // Regular session: 24 hours
-      const expirationTime = Date.now() + (24 * 60 * 60 * 1000);
-      localStorage.setItem('tokenExpiration', expirationTime.toString());
-    }
-  };
-
-  // =========================================================================
   // FORM HANDLERS
   // =========================================================================
 
@@ -213,13 +188,12 @@ export function AuthPage() {
     try {
       const response = await AuthService.login({
         email: loginData.email,
-        password: loginData.password
+        password: loginData.password,
+        rememberMe: rememberMe
       });
 
       if (response?.data.token) {
-        // Use the new helper function to set token with proper expiration
-        setTokenWithExpiration(response.data.token, rememberMe);
-        
+        // Backend has set httpOnly cookie
         toast.success('Login successful! Redirecting...');
         
         // Use setTimeout to ensure state updates before navigation
@@ -247,7 +221,7 @@ export function AuthPage() {
         console.log('Unapproved account detected, redirecting to pending approval page');
         
         // Store email for the pending approval page
-        localStorage.setItem('pendingApprovalEmail', email);
+        CookieManager.setCookie('pendingApprovalEmail', email, { days: 7 });
         
         // Navigate to pending approval page
         navigate('/pending-approval', { 
@@ -301,7 +275,7 @@ export function AuthPage() {
           const email = response.data.user?.email || registerData.email;
           
           // Store email for the pending approval page
-          localStorage.setItem('pendingApprovalEmail', email);
+          CookieManager.setCookie('pendingApprovalEmail', email, { days: 7 });
           
           toast.success(
             'Registration successful! Redirecting to approval status...',
@@ -321,11 +295,12 @@ export function AuthPage() {
           
           const loginResponse = await AuthService.login({
             email: registerData.email,
-            password: registerData.password
+            password: registerData.password,
+            rememberMe: false
           });
 
           if (loginResponse?.data.token) {
-            localStorage.setItem('token', loginResponse.data.token);
+            // Backend has set httpOnly cookie
             
             setTimeout(() => {
               navigate('/dashboard', { replace: true });
