@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'config/firebase_config.dart'; // Updated to use config
 import 'services/remote_config_service.dart';
 
 // Import all your pages
@@ -21,7 +22,12 @@ import 'pages/splash_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  
+  // Load environment variables from .env file
+  await dotenv.load(fileName: ".env");
+  
+  // Initialize Firebase with environment-based configuration
+  await Firebase.initializeApp(options: FirebaseConfig.currentPlatform);
 
   // Initialize Remote Config
   await RemoteConfigService.initialize();

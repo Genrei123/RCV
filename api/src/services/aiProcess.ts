@@ -1,4 +1,6 @@
 import OpenAI from 'openai';
+import * as dotenv from 'dotenv';
+dotenv.config();
 
 interface ProductJSON {
     productName: string;
@@ -10,7 +12,7 @@ interface ProductJSON {
 
 const openai = new OpenAI({
     baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
-    apiKey: "AIzaSyDGKnaSVefE6R4tqNOJ1ia6zcxUDKMjq04"
+    apiKey: process.env.AI_API_KEY || ''
 });
 
 export async function ProcessText(blockofText: string): Promise<ProductJSON> {
