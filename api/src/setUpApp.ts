@@ -43,7 +43,7 @@ const setUpApp = async () => {
   // API VERSIONING - Version 1.0
   app.use("/api/v1/auth", AuthRouter);
   app.use("/api/v1/mobile", MobileRouter);  // Mobile-specific routes (no cookies)
-  app.use("/api/v1/scan", verifyUser, ScanRouter);
+  app.use("/api/v1/scan", verifyMobileUser, ScanRouter);
   app.use("/api/v1/user", verifyUser, UserRouter);
   app.use("/api/v1/product", verifyUser, ProductRouter);
   app.use("/api/v1/company", verifyUser, CompanyRouter);

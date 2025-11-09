@@ -22,7 +22,7 @@ class ApiService {
   // Get authorization headers
   Future<Map<String, String>> _getHeaders() async {
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token');
+    final token = prefs.getString('access_token');  // Use same key as auth_service
 
     Map<String, String> headers = {
       'Content-Type': 'application/json',
@@ -47,7 +47,7 @@ class ApiService {
 
       final response = await http
           .post(
-            Uri.parse('$baseUrl/scan/scanProduct'),
+            Uri.parse('$baseUrl/mobile/scan'),
             headers: await _getHeaders(),
             body: jsonEncode({'blockOfText': ocrText}),
           )
@@ -125,7 +125,7 @@ class ApiService {
 
       final response = await http
           .post(
-            Uri.parse('$baseUrl/scan/searchProduct'),
+            Uri.parse('$baseUrl/mobile/scan/search'),
             headers: await _getHeaders(),
             body: jsonEncode(body),
           )

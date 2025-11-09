@@ -14,6 +14,17 @@ import {
   logout
 } from '../../controllers/auth/Auth';
 
+// Import scan controllers
+import { 
+  scanProduct, 
+  searchScannedProduct, 
+  getScans, 
+  getScansByID 
+} from '../../controllers/scan/Scan';
+
+// Import audit log controllers
+import * as AuditLogController from '../../controllers/auditLog/AuditLog';
+
 const MobileRouter = Router();
 
 // ============================================
@@ -37,12 +48,27 @@ MobileRouter.post('/refresh-token', verifyMobileUser, refreshToken);
 MobileRouter.post('/change-password', verifyMobileUser, changePassword);
 
 // ============================================
+// MOBILE SCAN ROUTES
+// All scan operations require authentication
+// ============================================
+MobileRouter.post('/scan', verifyMobileUser, scanProduct);
+MobileRouter.post('/scan/search', verifyMobileUser, searchScannedProduct);
+MobileRouter.get('/scan/history', verifyMobileUser, getScans);
+MobileRouter.get('/scan/history/:id', verifyMobileUser, getScansByID);
+
+// ============================================
+// MOBILE AUDIT LOG ROUTES
+// Track user actions in the mobile app
+// ============================================
+MobileRouter.post('/audit/log', verifyMobileUser, AuditLogController.createAuditLog);
+MobileRouter.get('/audit/my-logs', verifyMobileUser, AuditLogController.getMyAuditLogs);
+MobileRouter.get('/audit/logs/:id', verifyMobileUser, AuditLogController.getAuditLogById);
+
+// ============================================
 // FUTURE MOBILE ROUTES
 // Add mobile-specific routes here as needed
 // ============================================
 // MobileRouter.get('/profile', verifyMobileUser, getMobileProfile);
 // MobileRouter.patch('/profile', verifyMobileUser, updateMobileProfile);
-// MobileRouter.get('/audit-logs', verifyMobileUser, getMobileAuditLogs);
-// MobileRouter.post('/scan', verifyMobileUser, createMobileScan);
 
 export default MobileRouter;

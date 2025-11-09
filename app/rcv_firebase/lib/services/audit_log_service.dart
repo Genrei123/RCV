@@ -55,7 +55,7 @@ class AuditLogService {
       developer.log('Creating audit log: $action ($actionType)');
 
       final response = await http.post(
-        Uri.parse('$baseUrl/audit/log'),
+        Uri.parse('$baseUrl/mobile/audit/log'),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -94,7 +94,7 @@ class AuditLogService {
         return null;
       }
 
-      final url = Uri.parse('$baseUrl/audit/my-logs?page=$page&limit=$limit');
+      final url = Uri.parse('$baseUrl/mobile/audit/my-logs?page=$page&limit=$limit');
       
       developer.log('Fetching user audit logs (page $page, limit $limit)...');
       developer.log('URL: $url');
@@ -150,7 +150,7 @@ class AuditLogService {
       }
 
       final response = await http.get(
-        Uri.parse('$baseUrl/audit/logs/$logId'),
+        Uri.parse('$baseUrl/mobile/audit/logs/$logId'),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',

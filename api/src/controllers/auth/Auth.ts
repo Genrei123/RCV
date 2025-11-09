@@ -419,46 +419,19 @@ export const me = async (req: Request, res: Response, next: NextFunction) => {
 
 export const meMobile = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // Try to get token from Authorization header first, then from cookie
-    let token: string | undefined;
-    
-    if (req.headers.authorization) {
-      // Remove 'Bearer ' prefix if present
-      token = req.headers.authorization.replace('Bearer ', '');
-    } else if (req.cookies && req.cookies.token) {
-      // Decrypt the cookie for mobile clients
-      try {
-        const decrypted = CryptoJS.DES.decrypt(req.cookies.token, process.env.COOKIE_SECRET || 'key');
-        token = decrypted.toString(CryptoJS.enc.Utf8);
-      } catch (decryptError) {
-        console.error('Cookie decryption error:', decryptError);
-        return next(
-          new CustomError(400, "Invalid cookie", {
-            token: null,
-          })
-        );
-      }
-    }
-    
-    if (!token) {
+    // User is already verified by verifyMobileUser middleware
+    // and attached to req.user
+    if (!req.user) {
       return next(
-        new CustomError(400, "No token provided", {
-          token: null,
+        new CustomError(401, "User not authenticated", {
+          success: false,
         })
       );
     }
-    
-    const decoded = verifyToken(token);
-    if (!decoded || !decoded.success) {
-      return next(
-        new CustomError(400, "Token is invalid", {
-          token: token,
-        })
-      );
-    }
-    
-    const User = await UserRepo.findOne({
-      where: { _id: decoded.data?.sub },
+
+    // Fetch fresh user data from database
+    const user = await UserRepo.findOne({
+      where: { _id: req.user._id },
       select: [
         "_id",
         "firstName",
@@ -476,7 +449,11 @@ export const meMobile = async (req: Request, res: Response, next: NextFunction) 
       ],
     });
     
-    return res.send(User);
+    if (!user) {
+      return next(new CustomError(404, "User not found"));
+    }
+    
+    return res.status(200).json(user);
   } catch (error) {
     return next(error);
   }
