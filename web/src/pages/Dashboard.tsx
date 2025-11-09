@@ -10,7 +10,7 @@ import { UserDetailModal } from "@/components/UserDetailModal";
 import { UserPageService } from "@/services/userPageService";
 import { toast } from "react-toastify";
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, Package, Building2, Activity } from "lucide-react";
+import { Users, Package, Building2 } from "lucide-react";
 
 export interface DashboardProps {
   success?: boolean;
