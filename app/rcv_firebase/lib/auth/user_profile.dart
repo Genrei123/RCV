@@ -3,7 +3,7 @@ import 'package:rcv_firebase/themes/app_fonts.dart';
 import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
 import '../widgets/navigation_bar.dart';
 import '../widgets/app_buttons.dart';
-import '../widgets/gradient_header_app_bar.dart';
+import '../widgets/title_logo_header_app_bar.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
 import '../widgets/custom_text_field.dart';
@@ -260,11 +260,9 @@ class _UserProfilePageState extends State<UserProfilePage> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     return Scaffold(
-      appBar: GradientHeaderAppBar(
-        greeting: 'Welcome back',
-        user: (userData!['fullName'] ?? '').toString().split(' ').first,
-        showBackButton: false, // Remove back button
-        showBranding: true, // Show simplified branding
+      appBar: const TitleLogoHeaderAppBar(
+        title: 'User Profile',
+        showBackButton: false,
       ),
       body: SafeArea(
         child: SingleChildScrollView(

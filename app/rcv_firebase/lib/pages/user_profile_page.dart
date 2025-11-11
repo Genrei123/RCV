@@ -5,7 +5,7 @@ import '../services/user_profile_service.dart';
 import '../services/auth_service.dart';
 import '../services/audit_log_service.dart';
 import '../widgets/navigation_bar.dart';
-import '../widgets/gradient_header_app_bar.dart';
+import '../widgets/title_logo_header_app_bar.dart';
 import 'edit_profile_page.dart';
 import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -154,9 +154,9 @@ class _UserProfilePageState extends State<UserProfilePage> {
           return true;
         },
         child: Scaffold(
-          appBar: GradientHeaderAppBar(
+          appBar: const TitleLogoHeaderAppBar(
+            title: 'User Profile',
             showBackButton: false,
-            showBranding: true,
           ),
           body: const Center(child: CircularProgressIndicator()),
           bottomNavigationBar: AppBottomNavBar(
@@ -169,7 +169,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
 
     if (_userData == null) {
       return Scaffold(
-        appBar: GradientHeaderAppBar(showBackButton: false, showBranding: true),
+        appBar: const TitleLogoHeaderAppBar(
+          title: 'User Profile',
+          showBackButton: false,
+        ),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -228,7 +231,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
         return true;
       },
       child: Scaffold(
-        appBar: GradientHeaderAppBar(showBackButton: false, showBranding: true),
+        appBar: const TitleLogoHeaderAppBar(
+          title: 'User Profile',
+          showBackButton: false,
+        ),
         body: RefreshIndicator(
           onRefresh: _loadUserProfile,
           child: SingleChildScrollView(
