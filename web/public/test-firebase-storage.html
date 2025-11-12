@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase Storage Test - RCV</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .test-section {
+            background: #f5f5f5;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        button {
+            background: #005440;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #003d2e;
+        }
+        #results {
+            margin-top: 20px;
+            padding: 10px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔥 Firebase Storage Test</h1>
+    
+    <div class="test-section">
+        <h2>Current Configuration</h2>
+        <p><strong>Project ID:</strong> <span id="projectId">rcv-flutter</span></p>
+        <p><strong>Storage Bucket:</strong> <span id="storageBucket">rcv-flutter.firebasestorage.app</span></p>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Actions</h2>
+        <button onclick="testConnection()">1. Test Firebase Connection</button>
+        <button onclick="testStorageUpload()">2. Test Upload Avatar</button>
+        <button onclick="testListFiles()">3. List Storage Files</button>
+    </div>
+
+    <div id="results">
+        <p class="info">Click buttons above to test Firebase Storage...</p>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getStorage, ref, uploadBytes, getDownloadURL, listAll } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDdnmKvz8-L6Th-Edx_MhMX2AD2Ek0fptU",
+            authDomain: "rcv-flutter.firebaseapp.com",
+            projectId: "rcv-flutter",
+            storageBucket: "rcv-flutter.firebasestorage.app",
+            messagingSenderId: "94226532407",
+            appId: "1:94226532407:android:19a3c2a4b9af465b2a57b2"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const storage = getStorage(app);
+
+        window.testConnection = async function() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<p class="info">🔄 Testing Firebase connection...</p>';
+            
+            try {
+                results.innerHTML += '<p class="success">✅ Firebase initialized successfully!</p>';
+                results.innerHTML += `<p class="info">Project: ${firebaseConfig.projectId}</p>`;
+                results.innerHTML += `<p class="info">Storage Bucket: ${firebaseConfig.storageBucket}</p>`;
+            } catch (error) {
+                results.innerHTML += `<p class="error">❌ Error: ${error.message}</p>`;
+            }
+        };
+
+        window.testStorageUpload = async function() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<p class="info">🔄 Testing avatar upload...</p>';
+            
+            try {
+                // Create a test image (1x1 red pixel)
+                const canvas = document.createElement('canvas');
+                canvas.width = 100;
+                canvas.height = 100;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#005440';
+                ctx.fillRect(0, 0, 100, 100);
+                ctx.fillStyle = 'white';
+                ctx.font = '16px Arial';
+                ctx.fillText('TEST', 30, 55);
+                
+                // Convert to blob
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg'));
+                
+                // Upload to Firebase Storage
+                const testUserId = 'test-user-' + Date.now();
+                const storageRef = ref(storage, `avatars/${testUserId}.jpg`);
+                
+                results.innerHTML += `<p class="info">📤 Uploading to: gs://rcv-flutterfire.firebasestorage.app/avatars/${testUserId}.jpg</p>`;
+                const snapshot = await uploadBytes(storageRef, blob);
+                
+                results.innerHTML += '<p class="success">✅ Upload successful!</p>';
+                
+                const downloadURL = await getDownloadURL(snapshot.ref);
+                results.innerHTML += `<p class="success">🔗 Download URL: <a href="${downloadURL}" target="_blank">${downloadURL}</a></p>`;
+                results.innerHTML += `<img src="${downloadURL}" style="max-width: 200px; border: 2px solid #005440; border-radius: 8px; margin-top: 10px;">`;
+                
+            } catch (error) {
+                results.innerHTML += `<p class="error">❌ Upload failed: ${error.message}</p>`;
+                results.innerHTML += `<p class="error">Error code: ${error.code}</p>`;
+                results.innerHTML += `<p class="error">Full error: ${JSON.stringify(error, null, 2)}</p>`;
+                
+                if (error.code === 'storage/unauthorized') {
+                    results.innerHTML += '<br><p class="error" style="font-size: 18px; font-weight: bold;">⚠️ FIREBASE STORAGE NOT ENABLED!</p>';
+                    results.innerHTML += '<p class="info" style="background: yellow; padding: 10px; border-radius: 5px;">👉 <strong>ACTION REQUIRED:</strong> Go to <a href="https://console.firebase.google.com/project/rcv-flutterfire/storage" target="_blank" style="color: blue; text-decoration: underline;">Firebase Console → Storage</a></p>';
+                    results.innerHTML += '<p class="info">1. Click "Get Started"</p>';
+                    results.innerHTML += '<p class="info">2. Choose "Production mode"</p>';
+                    results.innerHTML += '<p class="info">3. Click "Next" → "Done"</p>';
+                    results.innerHTML += '<p class="info">4. Add security rules (see WEB_PROFILE_AVATAR_FIX.md)</p>';
+                } else if (error.code === 'storage/object-not-found') {
+                    results.innerHTML += '<p class="error">⚠️ File not found (404)</p>';
+                    results.innerHTML += '<p class="info">This usually means Storage is enabled but the file upload failed.</p>';
+                } else {
+                    results.innerHTML += '<p class="error">⚠️ Unknown error - check console for details</p>';
+                }
+                
+                console.error('Full error object:', error);
+            }
+        };
+
+        window.testListFiles = async function() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<p class="info">🔄 Listing files in avatars/...</p>';
+            
+            try {
+                const avatarsRef = ref(storage, 'avatars/');
+                const listResult = await listAll(avatarsRef);
+                
+                if (listResult.items.length === 0) {
+                    results.innerHTML += '<p class="info">📂 No files found in avatars/ folder</p>';
+                } else {
+                    results.innerHTML += `<p class="success">✅ Found ${listResult.items.length} files:</p>`;
+                    
+                    for (const itemRef of listResult.items) {
+                        const url = await getDownloadURL(itemRef);
+                        results.innerHTML += `<p class="info">📄 ${itemRef.name}</p>`;
+                        results.innerHTML += `<img src="${url}" style="max-width: 100px; border: 1px solid #ddd; margin: 5px;">`;
+                    }
+                }
+            } catch (error) {
+                results.innerHTML += `<p class="error">❌ Error: ${error.message}</p>`;
+                
+                if (error.code === 'storage/unauthorized') {
+                    results.innerHTML += '<p class="error">⚠️ Storage not enabled or rules blocking access</p>';
+                }
+            }
+        };
+    </script>
+</body>
+</html>

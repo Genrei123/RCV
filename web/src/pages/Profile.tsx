@@ -84,7 +84,6 @@ export function Profile({
       setUser(propUser);
     }
     fetchAuditLogs(1);
-    // Load avatar from localStorage override if present
     // Load avatar from localStorage override if present (view-only on Profile page)
     try {
       const saved = localStorage.getItem("profile_avatar_data");
@@ -92,6 +91,25 @@ export function Profile({
     } catch (e) {
       // noop
     }
+
+    // Listen for avatar updates from EditProfileModal
+    const handleAvatarUpdate = () => {
+      try {
+        const saved = localStorage.getItem("profile_avatar_data");
+        if (saved) {
+          console.log('🔄 Avatar updated, refreshing preview');
+          setLocalAvatar(saved);
+        }
+      } catch (e) {
+        console.error('Error updating avatar preview:', e);
+      }
+    };
+
+    window.addEventListener('profile-avatar-updated', handleAvatarUpdate);
+
+    return () => {
+      window.removeEventListener('profile-avatar-updated', handleAvatarUpdate);
+    };
   }, [propUser]);
 
   const fetchProfile = async () => {
@@ -168,15 +186,34 @@ export function Profile({
         badgeId: updatedUser.badgeId,
       };
 
+      // Add avatar if it's a Firebase Storage URL (not base64)
+      if (updatedUser.avatar && updatedUser.avatar.startsWith('http')) {
+        profileData.avatar = updatedUser.avatar;
+        console.log('💾 Saving Firebase Storage URL:', updatedUser.avatar);
+      }
+
+      console.log('💾 Saving profile with data:', profileData);
       await UserPageService.updateProfile(profileData);
-      // Refresh local avatar preview from localStorage if changed in modal
+      
+      toast.success("Profile updated successfully!");
+      
+      // Refresh profile data to get the updated avatar URL from backend
+      await fetchProfile();
+      
+      // Also update local avatar preview from localStorage
       try {
         const saved = localStorage.getItem("profile_avatar_data");
-        if (saved) setLocalAvatar(saved);
-      } catch {}
-      toast.success("Profile updated successfully!");
-      await fetchProfile(); // Refresh profile data
-      await fetchAuditLogs(logsPagination.current_page); // Refresh audit logs
+        if (saved) {
+          console.log('🔄 Updating local avatar preview');
+          setLocalAvatar(saved);
+        }
+      } catch (e) {
+        console.error('Error updating local avatar:', e);
+      }
+      
+      // Refresh audit logs to show the profile update action
+      await fetchAuditLogs(logsPagination.current_page);
+      
       setShowEditModal(false);
     } catch (error) {
       console.error("Failed to update profile:", error);

@@ -60,7 +60,15 @@ export class UserPageService {
 
     static async updateProfile(data: Partial<UserProfile>): Promise<UserProfile> {
         try {
-            const response = await apiClient.patch<UserProfile>('/user/profile', data);
+            // Map avatar to avatarUrl for backend
+            const backendData: any = { ...data };
+            if (backendData.avatar) {
+                backendData.avatarUrl = backendData.avatar;
+                delete backendData.avatar;
+            }
+            
+            console.log('📤 Sending profile update to backend:', backendData);
+            const response = await apiClient.patch<UserProfile>('/user/profile', backendData);
             return response.data;
         } catch (error) {
             console.error('Error updating profile:', error);

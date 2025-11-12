@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { useState, useEffect, useRef } from "react";
 import type { ProfileUser } from "@/pages/Profile";
 import { AvatarCropDialog } from "@/components/AvatarCropDialog";
+import { FirebaseStorageService } from "@/services/firebaseStorageService";
 
 interface EditProfileModalProps {
   isOpen: boolean;
@@ -30,6 +31,7 @@ export function EditProfileModal({
 }: EditProfileModalProps) {
   const [formData, setFormData] = useState<Partial<ProfileUser>>({});
   const [loading, setLoading] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [cropOpen, setCropOpen] = useState(false);
@@ -103,16 +105,47 @@ export function EditProfileModal({
     setCropImageSrc(null);
   };
 
-  const onSaveCropped = (dataUrl: string) => {
+  const onSaveCropped = async (dataUrl: string) => {
+    setUploadingAvatar(true);
     try {
+      // Save to localStorage for immediate preview
       localStorage.setItem("profile_avatar_data", dataUrl);
-      // Notify other components (e.g., Sidebar) to refresh avatar
+      setAvatarPreview(dataUrl);
+      
+      // Upload to Firebase Storage
+      if (user?._id) {
+        console.log('📤 Uploading avatar to Firebase Storage for user:', user._id);
+        
+        // Convert base64 to File
+        const file = FirebaseStorageService.dataUrlToFile(dataUrl, `avatar_${user._id}.jpg`);
+        
+        // Upload to Firebase Storage
+        const firebaseUrl = await FirebaseStorageService.uploadAvatar(user._id, file);
+        
+        if (firebaseUrl) {
+          console.log('✅ Avatar uploaded to Firebase:', firebaseUrl);
+          // Use Firebase URL instead of base64
+          setFormData((prev) => ({ ...prev, avatar: firebaseUrl }));
+        } else {
+          console.warn('⚠️ Firebase upload failed, using base64 fallback');
+          setFormData((prev) => ({ ...prev, avatar: dataUrl }));
+        }
+      } else {
+        console.warn('⚠️ No user ID, using base64 only');
+        setFormData((prev) => ({ ...prev, avatar: dataUrl }));
+      }
+      
+      // Notify other components
       window.dispatchEvent(new CustomEvent('profile-avatar-updated'));
-    } catch {}
-    setAvatarPreview(dataUrl);
-    setFormData((prev) => ({ ...prev, avatar: dataUrl }));
-    setCropOpen(false);
-    setCropImageSrc(null);
+    } catch (error) {
+      console.error('❌ Error processing avatar:', error);
+      // Fallback to base64 if Firebase upload fails
+      setFormData((prev) => ({ ...prev, avatar: dataUrl }));
+    } finally {
+      setUploadingAvatar(false);
+      setCropOpen(false);
+      setCropImageSrc(null);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -181,7 +214,8 @@ export function EditProfileModal({
                 <button
                   type="button"
                   onClick={openFilePicker}
-                  className="group relative w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  disabled={uploadingAvatar}
+                  className="group relative w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Change avatar"
                 >
                   {avatarPreview ? (
@@ -193,8 +227,16 @@ export function EditProfileModal({
                   ) : (
                     <User className="w-10 h-10 text-gray-500" />
                   )}
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors" />
-                  <Camera className="absolute bottom-2 right-2 w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                  {uploadingAvatar ? (
+                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                      <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  ) : (
+                    <>
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors" />
+                      <Camera className="absolute bottom-2 right-2 w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </>
+                  )}
                 </button>
                 <input
                   ref={fileInputRef}
@@ -206,12 +248,20 @@ export function EditProfileModal({
                 />
               </div>
               <div>
-                <p className="text-sm text-gray-600">
-                  Click the avatar to upload and crop a new photo.
-                </p>
-                <p className="text-xs text-gray-400">
-                  PNG/JPG, will be cropped to a circle.
-                </p>
+                {uploadingAvatar ? (
+                  <p className="text-sm text-teal-600 font-medium">
+                    Uploading avatar...
+                  </p>
+                ) : (
+                  <>
+                    <p className="text-sm text-gray-600">
+                      Click the avatar to upload and crop a new photo.
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      PNG/JPG, will be cropped to a circle.
+                    </p>
+                  </>
+                )}
               </div>
             </div>
 
@@ -392,16 +442,16 @@ export function EditProfileModal({
               type="button"
               variant="outline"
               onClick={onClose}
-              disabled={loading}
+              disabled={loading || uploadingAvatar}
             >
               Cancel
             </Button>
             <Button
               type="submit"
               className="bg-teal-600 hover:bg-teal-700 text-white"
-              disabled={loading}
+              disabled={loading || uploadingAvatar}
             >
-              {loading ? "Saving..." : "Save Changes"}
+              {loading ? "Saving..." : uploadingAvatar ? "Uploading..." : "Save Changes"}
             </Button>
           </div>
         </form>
