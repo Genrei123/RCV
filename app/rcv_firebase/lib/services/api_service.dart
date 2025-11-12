@@ -17,7 +17,7 @@ class ApiService {
   // For iOS Simulator use: 'http://localhost:3000/api/v1'
   // For Physical Device use: 'http://YOUR_COMPUTER_IP:3000/api/v1'
   static const String baseUrl =
-      'https://b465b17bc37b.ngrok-free.app/api/v1';
+      'https://rcv-production-cbd6.up.railway.app/api/v1';
 
   // Get authorization headers
   Future<Map<String, String>> _getHeaders() async {
