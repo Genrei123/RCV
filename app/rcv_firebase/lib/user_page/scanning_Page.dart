@@ -363,6 +363,342 @@ class _QRScannerPageState extends State<QRScannerPage> {
     );
   }
 
+  void _showErrorModal({
+    required String title,
+    required String message,
+    String? error,
+  }) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.9,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Colors.red.shade400, Colors.red.shade700],
+                    ),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        color: Colors.white,
+                        size: 32,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                ),
+                // Content
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.warning_amber_rounded,
+                        size: 64,
+                        color: Colors.orange,
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Something went wrong',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        message,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.black54,
+                          height: 1.5,
+                        ),
+                      ),
+                      if (error != null) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.code,
+                                    size: 16,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Technical Details',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.grey.shade700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                error,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey.shade600,
+                                  fontFamily: 'monospace',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 24),
+                      // Action Button
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: const Icon(Icons.refresh, size: 20),
+                          label: const Text('Try Again'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF005440),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 2,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showExtractionFailedModal(String ocrText) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.9,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Colors.orange.shade400, Colors.orange.shade700],
+                    ),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.warning_amber_rounded,
+                        color: Colors.white,
+                        size: 32,
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'Extraction Incomplete',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                ),
+                // Content
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.info_outline,
+                        size: 64,
+                        color: Colors.orange,
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Could not extract product information',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'We were able to scan the text, but could not automatically extract the product details.\n\n'
+                        'This could be because:\n'
+                        '• The label format is non-standard\n'
+                        '• Required information is missing or unclear\n'
+                        '• Text quality needs improvement\n\n'
+                        'You can still view the raw OCR text below.',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.black54,
+                          height: 1.5,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      // Action Buttons
+                      Column(
+                        children: [
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                                _showOCRModal(ocrText);
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF005440),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 2,
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: const [
+                                  Icon(Icons.article_outlined, size: 20),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'View Raw OCR Text',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                                // Reset to allow user to try again
+                                setState(() {
+                                  _frontImagePath = null;
+                                  _backImagePath = null;
+                                });
+                              },
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.grey.shade700,
+                                side: BorderSide(
+                                  color: Colors.grey.shade400,
+                                  width: 1.5,
+                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: const [
+                                  Icon(Icons.refresh, size: 20),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Try Again',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   void _showExtractedInfoModal(
     Map<String, dynamic> extractedInfo,
     String ocrText,
@@ -483,50 +819,111 @@ class _QRScannerPageState extends State<QRScannerPage> {
 
                         const SizedBox(height: 24),
 
-                        // Action Buttons
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                  _showOCRModal(ocrText);
-                                },
-                                icon: const Icon(Icons.text_snippet, size: 18),
-                                label: const Text('View OCR Text'),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: const Color(0xFF005440),
-                                  side: const BorderSide(
-                                    color: Color(0xFF005440),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 14,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                        // Info Message
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.blue.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.info_rounded,
+                                size: 20,
+                                color: Colors.blue.shade700,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Review the extracted info, then search for the product in our database.',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.blue.shade900,
+                                    height: 1.4,
                                   ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: ElevatedButton.icon(
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // Action Buttons
+                        Column(
+                          children: [
+                            // Search Product Button (Primary Action)
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
                                 onPressed: () => _searchProductInDatabase(
                                   extractedInfo,
                                   ocrText,
                                 ),
-                                icon: const Icon(Icons.search, size: 18),
-                                label: const Text('Search Product'),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF005440),
                                   foregroundColor: Colors.white,
                                   padding: const EdgeInsets.symmetric(
-                                    vertical: 14,
+                                    vertical: 16,
                                   ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   elevation: 2,
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: const [
+                                    Icon(Icons.search, size: 20),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'Search Product',
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            // View OCR Text Button (Secondary Action)
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                  _showOCRModal(ocrText);
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: const Color(0xFF005440),
+                                  side: const BorderSide(
+                                    color: Color(0xFF005440),
+                                    width: 1.5,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: const [
+                                    Icon(Icons.article_outlined, size: 20),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'View Raw OCR Text',
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
@@ -763,14 +1160,116 @@ class _QRScannerPageState extends State<QRScannerPage> {
 
       print('Error searching product: $e');
 
-      // Show error message
+      // Show user-friendly error modal with retry option
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error searching product: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
-          ),
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Error Icon
+                    Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade50,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.search_off,
+                        size: 40,
+                        color: Colors.orange.shade700,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    
+                    // Title
+                    const Text(
+                      'Search Failed',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    
+                    // Message
+                    const Text(
+                      'We couldn\'t search for the product at this time.\n\n'
+                      'This might be due to a connection issue. '
+                      'Please check your internet and try again.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Colors.black54,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    
+                    // Buttons
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              side: const BorderSide(color: Color(0xFF005440)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text(
+                              'Cancel',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Color(0xFF005440),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                              // Retry the search
+                              _searchProductInDatabase(extractedInfo, ocrText);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF005440),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text(
+                              'Retry',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
         );
       }
     }
@@ -1516,11 +2015,89 @@ Registered: ${_formatDate(product.dateOfRegistration)}
       String combinedText =
           '--- FRONT OF LABEL ---\n\n$frontText\n\n--- BACK OF LABEL ---\n\n$backText';
 
-      print('Combined OCR Text:\n$combinedText');
+      developer.log('Combined OCR Text length: ${combinedText.length}');
+
+      // Check if we got meaningful text
+      if (combinedText.trim().isEmpty || combinedText.trim().length < 20) {
+        // Close loading dialog
+        if (mounted) Navigator.pop(context);
+
+        // Show error for insufficient text
+        _showErrorModal(
+          title: 'Insufficient Text Detected',
+          message: 'Could not extract enough text from the images.\n\n'
+              'Tips for better results:\n'
+              '• Ensure good lighting\n'
+              '• Hold the camera steady\n'
+              '• Make sure the text is in focus\n'
+              '• Try using flash if needed\n'
+              '• Make sure labels are clearly visible',
+        );
+
+        // Reset image paths
+        setState(() {
+          _frontImagePath = null;
+          _backImagePath = null;
+        });
+        return;
+      }
 
       // Send to backend API for OCR processing (NOT database search yet)
       final apiService = ApiService();
-      final response = await apiService.scanProduct(combinedText);
+      Map<String, dynamic> response;
+      
+      try {
+        response = await apiService.scanProduct(combinedText);
+      } on ApiException catch (apiError) {
+        // Close loading dialog
+        if (mounted) Navigator.pop(context);
+
+        developer.log('❌ API Exception: ${apiError.message}');
+        developer.log('Status Code: ${apiError.statusCode}');
+        developer.log('Details: ${apiError.details}');
+
+        // Show user-friendly error modal (technical details only in logs)
+        _showErrorModal(
+          title: 'Unable to Process Image',
+          message: 'We couldn\'t process the text from your images.\n\n'
+              'This might be because:\n'
+              '• The text wasn\'t clear enough\n'
+              '• The image quality was too low\n'
+              '• Connection issues occurred\n\n'
+              'Please try scanning again with better lighting and focus.',
+        );
+
+        // Reset image paths
+        setState(() {
+          _frontImagePath = null;
+          _backImagePath = null;
+        });
+        return;
+      } catch (apiError) {
+        // Close loading dialog
+        if (mounted) Navigator.pop(context);
+
+        developer.log('❌ General Error: $apiError');
+
+        // Show generic error modal for other exceptions
+        _showErrorModal(
+          title: 'Something Went Wrong',
+          message: 'An unexpected error occurred while processing the images.\n\n'
+              'This could be due to:\n'
+              '• Network connection issues\n'
+              '• Server temporarily unavailable\n'
+              '• Invalid response format\n\n'
+              'Please check your internet connection and try again.',
+          error: apiError.toString(),
+        );
+
+        // Reset image paths
+        setState(() {
+          _frontImagePath = null;
+          _backImagePath = null;
+        });
+        return;
+      }
 
       // Close loading dialog
       if (mounted) Navigator.pop(context);
@@ -1557,8 +2134,8 @@ Registered: ${_formatDate(product.dateOfRegistration)}
           },
         );
 
-        // Extraction failed - show OCR text only
-        _showOCRModal(combinedText);
+        // Extraction failed - show info modal with option to view OCR text
+        _showExtractionFailedModal(combinedText);
       }
 
       setState(() {
@@ -1572,20 +2149,32 @@ Registered: ${_formatDate(product.dateOfRegistration)}
       });
     } catch (e) {
       // Close loading dialog if open
-      if (mounted) Navigator.pop(context);
-
-      print('Error in dual OCR: $e');
-
-      // Show error message
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
-          ),
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+
+      developer.log('❌ Error in dual OCR: $e');
+
+      // Show error modal
+      if (mounted) {
+        _showErrorModal(
+          title: 'OCR Error',
+          message: 'Something went wrong while processing the images.\n\n'
+              'This could be due to:\n'
+              '• Poor image quality\n'
+              '• Insufficient lighting\n'
+              '• Text too small or blurry\n'
+              '• Network connection issues\n\n'
+              'Please try again with clearer images.',
+          error: e.toString(),
         );
       }
+
+      // Reset image paths
+      setState(() {
+        _frontImagePath = null;
+        _backImagePath = null;
+      });
     }
   }
 
