@@ -38,6 +38,18 @@ export function Companies(props: CompaniesProps) {
     }
   }, [props.companies]);
 
+  // Fallback: Sometimes initial response/set doesn't include pagination yet (or parent passed just a single page array)
+  // causing totalPages to evaluate to 1 and hiding the pagination controls until a manual refresh.
+  // If we detect exactly a full page of items (length === pageSize) but no pagination metadata,
+  // optimistically refetch the current page to obtain server pagination info.
+  useEffect(() => {
+    if (!pagination && companies.length === pageSize) {
+      // This ensures we attempt to get pagination metadata once; fetchCompaniesPage will set pagination.
+      fetchCompaniesPage(currentPage || 1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companies, pagination]);
+
   // NOTE: legacy fetchCompanies removed in favor of server-driven fetchCompaniesPage
 
   // Server-driven: fetch a page
@@ -72,15 +84,18 @@ export function Companies(props: CompaniesProps) {
   };
 
   // Handle PDF certificate download
-  const handleDownloadCertificate = async (company: Company, event: React.MouseEvent) => {
+  const handleDownloadCertificate = async (
+    company: Company,
+    event: React.MouseEvent
+  ) => {
     event.stopPropagation(); // Prevent row click
     try {
-      toast.info('Generating certificate PDF...', { autoClose: 1000 });
+      toast.info("Generating certificate PDF...", { autoClose: 1000 });
       await PDFGenerationService.generateAndDownloadCompanyCertificate(company);
-      toast.success('Certificate downloaded successfully!');
+      toast.success("Certificate downloaded successfully!");
     } catch (error) {
-      console.error('Error generating certificate:', error);
-      toast.error('Failed to generate certificate. Please try again.');
+      console.error("Error generating certificate:", error);
+      toast.error("Failed to generate certificate. Please try again.");
     }
   };
 
