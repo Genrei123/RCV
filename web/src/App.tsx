@@ -12,6 +12,7 @@ import { RemoteConfig } from './pages/RemoteConfig';
 import { KioskMonitor } from './pages/KioskMonitor';
 import { Sidebar } from './components/Sidebar';
 import { Footer } from './components/Footer';
+import { GlobalLoadingIndicator } from './components/GlobalLoadingIndicator';
 import { AuthService } from './services/authService';
 import { useEffect, useState, type ReactNode } from 'react';
 import { DashboardService } from './services/dashboardService';
@@ -139,6 +140,10 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* Global Loading Indicator for all API requests */}
+      <GlobalLoadingIndicator />
+      
+      {/* Toast Notifications */}
       <ToastContainer 
         position="top-right"
         autoClose={3000}
@@ -151,6 +156,7 @@ function App() {
         pauseOnHover
         theme="light"
       />
+      
       <div className={`flex-1 ${isLoggedIn ? 'grid grid-cols-1 md:grid-cols-[250px_1fr]' : ''}`}>
         {/* Sidebar - Only show when logged in */}
         {isLoggedIn && (

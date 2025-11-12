@@ -1,6 +1,7 @@
 import axios from 'axios';
 import type { AxiosInstance } from 'axios';
 import { CookieManager } from '@/utils/cookies';
+import { loadingManager } from '@/utils/loadingManager';
 
 // Base URL - change this to your actual API URL
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1';
@@ -21,6 +22,9 @@ export const apiClient: AxiosInstance = axios.create({
 // This is for reading the non-httpOnly tracking cookie
 apiClient.interceptors.request.use(
   (config) => {
+    // Start loading indicator
+    loadingManager.startLoading();
+    
     // Try to get token from non-httpOnly cookie (for client-side token checking)
     const token = CookieManager.getAuthToken();
     if (token) {
@@ -31,6 +35,22 @@ apiClient.interceptors.request.use(
     return config;
   },
   (error) => {
+    // Stop loading on request error
+    loadingManager.stopLoading();
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor to stop loading
+apiClient.interceptors.response.use(
+  (response) => {
+    // Stop loading on successful response
+    loadingManager.stopLoading();
+    return response;
+  },
+  (error) => {
+    // Stop loading on error response
+    loadingManager.stopLoading();
     return Promise.reject(error);
   }
 );
