@@ -674,6 +674,136 @@ export function Profile({
                 </div>
               )}
 
+              {/* Scan Images */}
+              {selectedLog.metadata?.frontImageUrl ||
+              selectedLog.metadata?.backImageUrl ? (
+                <div className="border-b pb-3">
+                  <p className="text-sm font-medium text-gray-500 mb-3">
+                    Scan Images
+                  </p>
+                  <div className="grid grid-cols-2 gap-4">
+                    {selectedLog.metadata.frontImageUrl && (
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-gray-600">
+                          Front Image
+                        </p>
+                        <a
+                          href={selectedLog.metadata.frontImageUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block border rounded-lg overflow-hidden hover:opacity-80 transition-opacity"
+                        >
+                          <img
+                            src={selectedLog.metadata.frontImageUrl}
+                            alt="Front scan"
+                            className="w-full h-48 object-cover"
+                          />
+                        </a>
+                      </div>
+                    )}
+                    {selectedLog.metadata.backImageUrl && (
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-gray-600">
+                          Back Image
+                        </p>
+                        <a
+                          href={selectedLog.metadata.backImageUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block border rounded-lg overflow-hidden hover:opacity-80 transition-opacity"
+                        >
+                          <img
+                            src={selectedLog.metadata.backImageUrl}
+                            alt="Back scan"
+                            className="w-full h-48 object-cover"
+                          />
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : null}
+
+              {/* OCR Extracted Information */}
+              {selectedLog.metadata?.extractedInfo && (
+                <div className="border-b pb-3">
+                  <p className="text-sm font-medium text-gray-500 mb-2">
+                    OCR Extracted Information
+                  </p>
+                  <div className="bg-blue-50 rounded-lg p-3 space-y-2">
+                    {Object.entries(selectedLog.metadata.extractedInfo).map(
+                      ([key, value]) => (
+                        <div
+                          key={key}
+                          className="flex justify-between items-start"
+                        >
+                          <span className="text-sm font-medium text-blue-700 capitalize">
+                            {key.replace(/([A-Z])/g, " $1").trim()}:
+                          </span>
+                          <span className="text-sm text-gray-900 text-right ml-4 font-medium">
+                            {value || "N/A"}
+                          </span>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* OCR Raw Text */}
+              {selectedLog.metadata?.scannedText && (
+                <div className="border-b pb-3">
+                  <p className="text-sm font-medium text-gray-500 mb-2">
+                    OCR Raw Text
+                  </p>
+                  <div className="bg-gray-100 rounded-lg p-3 max-h-48 overflow-y-auto">
+                    <pre className="text-xs text-gray-800 whitespace-pre-wrap font-mono">
+                      {selectedLog.metadata.scannedText}
+                    </pre>
+                  </div>
+                </div>
+              )}
+
+              {/* Scan Type & Status */}
+              {(selectedLog.metadata?.scanType ||
+                selectedLog.metadata?.extractionSuccess !== undefined) && (
+                <div className="border-b pb-3">
+                  <p className="text-sm font-medium text-gray-500 mb-2">
+                    Scan Details
+                  </p>
+                  <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                    {selectedLog.metadata.scanType && (
+                      <div className="flex justify-between items-start">
+                        <span className="text-sm font-medium text-gray-600">
+                          Scan Type:
+                        </span>
+                        <span className="text-sm text-gray-900 font-medium">
+                          {selectedLog.metadata.scanType}
+                        </span>
+                      </div>
+                    )}
+                    {selectedLog.metadata.extractionSuccess !== undefined && (
+                      <div className="flex justify-between items-start">
+                        <span className="text-sm font-medium text-gray-600">
+                          Extraction Status:
+                        </span>
+                        <span
+                          className={`text-sm font-medium ${
+                            selectedLog.metadata.extractionSuccess
+                              ? "text-green-600"
+                              : "text-red-600"
+                          }`}
+                        >
+                          {selectedLog.metadata.extractionSuccess
+                            ? "Success"
+                            : "Failed"}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Metadata */}
               {selectedLog.metadata &&
                 Object.keys(selectedLog.metadata).length > 0 && (
@@ -682,8 +812,17 @@ export function Profile({
                       Additional Information
                     </p>
                     <div className="bg-gray-50 rounded-lg p-3 space-y-2">
-                      {Object.entries(selectedLog.metadata).map(
-                        ([key, value]) => (
+                      {Object.entries(selectedLog.metadata)
+                        .filter(
+                          ([key]) =>
+                            key !== "frontImageUrl" && 
+                            key !== "backImageUrl" &&
+                            key !== "extractedInfo" &&
+                            key !== "scanType" &&
+                            key !== "extractionSuccess" &&
+                            key !== "scannedText"
+                        )
+                        .map(([key, value]) => (
                           <div
                             key={key}
                             className="flex justify-between items-start"
@@ -697,8 +836,7 @@ export function Profile({
                                 : String(value)}
                             </span>
                           </div>
-                        )
-                      )}
+                        ))}
                     </div>
                   </div>
                 )}

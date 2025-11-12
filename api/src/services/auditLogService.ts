@@ -21,7 +21,8 @@ interface CreateAuditLogParams {
     | 'CHANGE_PASSWORD'
     | 'ARCHIVE_ACCOUNT'
     | 'LOCATION_UPDATE'
-    | 'APP_CLOSED';
+    | 'APP_CLOSED'
+    | 'COMPLIANCE_REPORT';
   userId?: string;
   targetUserId?: string;
   targetProductId?: string;
@@ -33,6 +34,8 @@ interface CreateAuditLogParams {
   };
   metadata?: Record<string, any>;
   req?: Request;
+  ipAddress?: string;
+  userAgent?: string;
 }
 
 export class AuditLogService {

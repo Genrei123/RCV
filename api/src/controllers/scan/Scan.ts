@@ -13,6 +13,7 @@ import {
 } from "../../utils/pagination";
 import { OCRBlock } from "../../types/types";
 import { ProcessText } from "../../services/aiProcess";
+import { FirebaseStorageValidator } from "../../utils/FirebaseStorageValidator";
 import { ILike } from "typeorm";
 
 export const scanProduct = async (
@@ -21,11 +22,11 @@ export const scanProduct = async (
   next: NextFunction
 ) => {
   try {
-    // Extract OCR text from request body
-    const OCRText = req.body as OCRBlock;
+    // Extract OCR text and image URLs from request body
+    const { blockOfText, frontImageUrl, backImageUrl } = req.body;
 
     // Validate input
-    if (!OCRText || !OCRText.blockOfText) {
+    if (!blockOfText) {
       return next(
         new CustomError(400, "OCR text is required", {
           data: "Missing blockOfText in request body",
@@ -33,16 +34,36 @@ export const scanProduct = async (
       );
     }
 
-    console.log("Received OCR text length:", OCRText.blockOfText.length);
+    // Validate image URLs if provided
+    if (frontImageUrl && !FirebaseStorageValidator.isValidScanUrl(frontImageUrl)) {
+      return next(
+        new CustomError(400, "Invalid front image URL", {
+          data: "Front image must be from Firebase Storage scans/ folder",
+        })
+      );
+    }
+
+    if (backImageUrl && !FirebaseStorageValidator.isValidScanUrl(backImageUrl)) {
+      return next(
+        new CustomError(400, "Invalid back image URL", {
+          data: "Back image must be from Firebase Storage scans/ folder",
+        })
+      );
+    }
+
+    console.log("Received OCR text length:", blockOfText.length);
+    if (frontImageUrl) console.log("Front image URL:", frontImageUrl);
+    if (backImageUrl) console.log("Back image URL:", backImageUrl);
     console.log("Processing OCR text with AI...");
 
     // Process the OCR text with AI to extract product information
-    const processedOCRText = await ProcessText(OCRText.blockOfText);
+    const processedOCRText = await ProcessText(blockOfText);
 
     console.log("Extracted product information:", processedOCRText);
 
     // Return the extracted information WITHOUT querying the database
     // User will decide whether to search the database or not
+    // Include image URLs in response for audit logging
     res.status(200).json({
       success: true,
       message: "OCR text processed successfully",
@@ -53,7 +74,9 @@ export const scanProduct = async (
         expirationDate: processedOCRText.ExpiryDate || null,
         manufacturer: processedOCRText.ManufacturedBy || null,
       },
-      rawOCRText: OCRText.blockOfText,
+      rawOCRText: blockOfText,
+      frontImageUrl: frontImageUrl || null,
+      backImageUrl: backImageUrl || null,
     });
   } catch (error) {
     console.error("Error in scanProduct:", error);

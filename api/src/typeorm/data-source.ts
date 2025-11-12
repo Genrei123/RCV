@@ -7,6 +7,7 @@ import { Company } from './entities/company.entity';
 import { ScanHistory } from './entities/scanHistory';
 import { ForgotPassword } from './entities/forgotPassword.entity';
 import { AuditLog } from './entities/auditLog.entity';
+import { ComplianceReport } from './entities/complianceReport.entity';
 
 // Initialize the datasource/database connection
 export const DB = new DataSource(config);
@@ -20,5 +21,6 @@ const CompanyRepo = DB.getRepository(Company);
 const ScanRepo = DB.getRepository(ScanHistory);
 const ForgotPasswordRepo = DB.getRepository(ForgotPassword);
 const AuditLogRepo = DB.getRepository(AuditLog);
+const ComplianceReportRepo = DB.getRepository(ComplianceReport);
 
-export { UserRepo, ProductRepo, AuditTrailRepo, CompanyRepo, ScanRepo, ForgotPasswordRepo, AuditLogRepo };
+export { UserRepo, ProductRepo, AuditTrailRepo, CompanyRepo, ScanRepo, ForgotPasswordRepo, AuditLogRepo, ComplianceReportRepo };

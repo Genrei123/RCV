@@ -13,10 +13,13 @@ import '../widgets/title_logo_header_app_bar.dart';
 import '../widgets/navigation_bar.dart';
 import '../services/api_service.dart';
 import '../services/audit_log_service.dart';
+import '../services/firebase_storage_service.dart';
 import '../models/product.dart';
 import '../services/remote_config_service.dart';
 import '../widgets/feature_disabled_screen.dart';
 import '../utils/tab_history.dart';
+import '../pages/product_comparison_page.dart';
+import '../pages/compliance_report_page.dart';
 
 class QRScannerPage extends StatefulWidget {
   const QRScannerPage({super.key});
@@ -39,6 +42,9 @@ class _QRScannerPageState extends State<QRScannerPage> {
   // For dual image OCR
   String? _frontImagePath;
   String? _backImagePath;
+  String? _frontImageUrl;
+  String? _backImageUrl;
+  String? _ocrBlobText; // Store raw OCR text for compliance reports
 
   @override
   void initState() {
@@ -60,6 +66,178 @@ class _QRScannerPageState extends State<QRScannerPage> {
   }
 
   Widget _buildQrView(BuildContext context) {
+    // If in OCR mode, show OCR interface instead of QR scanner
+    if (isOCRMode) {
+      return Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              const Color(0xFF005440),
+              const Color(0xFF00796B),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              // Header section
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.text_fields,
+                      size: 64,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'OCR Mode',
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.3),
+                        ),
+                      ),
+                      child: const Text(
+                        'Please take a photo of the FRONT and BACK\nof the product label',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.amber,
+                          fontWeight: FontWeight.w500,
+                          height: 1.5,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Main content - centered with flex
+              Expanded(
+                child: Center(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Container(
+                      width: double.infinity,
+                      constraints: const BoxConstraints(maxWidth: 500),
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          ElevatedButton.icon(
+                            onPressed: () => _takePictureForOCR(true),
+                            icon: const Icon(Icons.camera_alt, size: 24),
+                            label: Text(
+                              _frontImagePath == null
+                                  ? 'Take Front Photo'
+                                  : 'Front Photo ✓',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _frontImagePath == null
+                                  ? const Color(0xFF005440)
+                                  : Colors.green,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 32,
+                                vertical: 16,
+                              ),
+                              minimumSize: const Size(double.infinity, 56),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton.icon(
+                            onPressed: () => _takePictureForOCR(false),
+                            icon: const Icon(Icons.camera_alt, size: 24),
+                            label: Text(
+                              _backImagePath == null
+                                  ? 'Take Back Photo'
+                                  : 'Back Photo ✓',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _backImagePath == null
+                                  ? const Color(0xFF005440)
+                                  : Colors.green,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 32,
+                                vertical: 16,
+                              ),
+                              minimumSize: const Size(double.infinity, 56),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                          if (_frontImagePath != null && _backImagePath != null) ...[
+                            const SizedBox(height: 24),
+                            const Divider(),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Both photos captured!',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.green,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const Text(
+                              'Processing will start automatically',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Default QR scanner view
     return Stack(
       children: [
         SizedBox(
@@ -68,122 +246,15 @@ class _QRScannerPageState extends State<QRScannerPage> {
           child: MobileScanner(
             controller: cameraController,
             onDetect: (BarcodeCapture capture) {
-              if (!isOCRMode) {
-                _onDetect(capture);
-              }
+              _onDetect(capture);
             },
           ),
         ),
-        if (!isOCRMode)
-          SizedBox(
-            width: double.infinity,
-            height: double.infinity,
-            child: CustomPaint(painter: ScannerOverlayPainter()),
-          ),
-        if (isOCRMode)
-          Container(
-            width: double.infinity,
-            height: double.infinity,
-            color: Colors.black.withOpacity(0.7),
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.text_fields,
-                          size: 48,
-                          color: const Color(0xFF005440),
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'OCR Mode',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Please take a photo of the FRONT and BACK\nof the product label',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.amber,
-                            fontWeight: FontWeight.w500,
-                            height: 1.4,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 20),
-                        ElevatedButton.icon(
-                          onPressed: () => _takePictureForOCR(true),
-                          icon: const Icon(Icons.camera_alt, size: 20),
-                          label: Text(
-                            _frontImagePath == null
-                                ? 'Take Front Photo'
-                                : 'Front ✓',
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _frontImagePath == null
-                                ? const Color(0xFF005440)
-                                : Colors.green,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 12,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        ElevatedButton.icon(
-                          onPressed: () => _takePictureForOCR(false),
-                          icon: const Icon(Icons.camera_alt, size: 20),
-                          label: Text(
-                            _backImagePath == null
-                                ? 'Take Back Photo'
-                                : 'Back ✓',
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _backImagePath == null
-                                ? const Color(0xFF005440)
-                                : Colors.green,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 12,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        if (!isOCRMode)
+        SizedBox(
+          width: double.infinity,
+          height: double.infinity,
+          child: CustomPaint(painter: ScannerOverlayPainter()),
+        ),
           Positioned(
             bottom: 40,
             left: 0,
@@ -1129,25 +1200,43 @@ class _QRScannerPageState extends State<QRScannerPage> {
       );
 
       final apiService = ApiService();
-      final searchResponse = await apiService.searchProduct(
+      final searchResponse = await apiService.searchProductForCompliance(
         productName: extractedInfo['productName'],
-        ltoNumber: extractedInfo['LTONumber'],
-        cfprNumber: extractedInfo['CFPRNumber'],
-        expirationDate: extractedInfo['expirationDate'],
+        LTONumber: extractedInfo['LTONumber'],
+        CFPRNumber: extractedInfo['CFPRNumber'],
+        brandName: extractedInfo['brandName'],
       );
 
       // Close loading dialog
       if (mounted) Navigator.pop(context);
 
-      if (searchResponse.success && searchResponse.products.isNotEmpty) {
-        // Product found - show result modal
-        _showProductResultModal(searchResponse.products, ocrText);
+      if (searchResponse['success'] == true) {
+        // Navigate to product comparison page
+        final result = await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => ProductComparisonPage(
+              scannedData: extractedInfo,
+              databaseProduct: searchResponse['found'] == true 
+                  ? searchResponse['product'] 
+                  : null,
+            ),
+          ),
+        );
+
+        // Handle compliance report action
+        if (result == 'COMPLIANT') {
+          // Navigate to compliance report page with COMPLIANT status
+          await _navigateToComplianceReport(extractedInfo, searchResponse, 'COMPLIANT');
+        } else if (result == 'NON_COMPLIANT') {
+          // Navigate to compliance report page with NON_COMPLIANT status
+          await _navigateToComplianceReport(extractedInfo, searchResponse, 'NON_COMPLIANT');
+        }
       } else {
-        // Product not found
+        // Search failed
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('No matching product found in database'),
+            SnackBar(
+              content: Text(searchResponse['message'] ?? 'Failed to search product'),
               backgroundColor: Colors.orange,
               duration: Duration(seconds: 3),
             ),
@@ -1272,6 +1361,39 @@ class _QRScannerPageState extends State<QRScannerPage> {
           },
         );
       }
+    }
+  }
+
+  Future<void> _navigateToComplianceReport(
+    Map<String, dynamic> extractedInfo,
+    Map<String, dynamic> searchResponse,
+    String initialStatus,
+  ) async {
+    final success = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (context) => ComplianceReportPage(
+          scannedData: extractedInfo,
+          productSearchResult: searchResponse['found'] == true 
+              ? searchResponse['product'] 
+              : null,
+          frontImageUrl: _frontImageUrl,
+          backImageUrl: _backImageUrl,
+          initialStatus: initialStatus,
+          ocrBlobText: _ocrBlobText, // Pass OCR blob text
+        ),
+      ),
+    );
+
+    // If successfully submitted compliance report, show success and reset
+    if (success == true && mounted) {
+      // Reset image URLs and OCR text
+      setState(() {
+        _frontImageUrl = null;
+        _backImageUrl = null;
+        _frontImagePath = null;
+        _backImagePath = null;
+        _ocrBlobText = null;
+      });
     }
   }
 
@@ -2042,12 +2164,53 @@ Registered: ${_formatDate(product.dateOfRegistration)}
         return;
       }
 
-      // Send to backend API for OCR processing (NOT database search yet)
+      // Upload images to Firebase Storage before sending to API
+      developer.log('📤 Uploading scan images to Firebase Storage...');
+      String? frontImageUrl;
+      String? backImageUrl;
+      
+      try {
+        // Generate unique scan ID
+        final scanId = 'scan_${DateTime.now().millisecondsSinceEpoch}';
+        
+        // Upload both images to Firebase Storage
+        final uploadResults = await FirebaseStorageService.uploadScanImages(
+          scanId: scanId,
+          frontImage: File(frontImagePath),
+          backImage: File(backImagePath),
+        );
+        
+        frontImageUrl = uploadResults['frontUrl'];
+        backImageUrl = uploadResults['backUrl'];
+        
+        if (frontImageUrl != null && backImageUrl != null) {
+          developer.log('✅ Images uploaded successfully');
+          developer.log('Front: $frontImageUrl');
+          developer.log('Back: $backImageUrl');
+          
+          // Store URLs in state for compliance reporting
+          setState(() {
+            _frontImageUrl = frontImageUrl;
+            _backImageUrl = backImageUrl;
+          });
+        } else {
+          developer.log('⚠️ Image upload failed, continuing without URLs');
+        }
+      } catch (uploadError) {
+        developer.log('❌ Error uploading images: $uploadError');
+        // Continue without image URLs - images are optional
+      }
+
+      // Send to backend API for OCR processing with image URLs
       final apiService = ApiService();
       Map<String, dynamic> response;
       
       try {
-        response = await apiService.scanProduct(combinedText);
+        response = await apiService.scanProduct(
+          combinedText,
+          frontImageUrl: frontImageUrl,
+          backImageUrl: backImageUrl,
+        );
       } on ApiException catch (apiError) {
         // Close loading dialog
         if (mounted) Navigator.pop(context);
@@ -2106,7 +2269,12 @@ Registered: ${_formatDate(product.dateOfRegistration)}
       if (response['success'] == true && response['extractedInfo'] != null) {
         final extractedInfo = response['extractedInfo'];
 
-        // Log OCR scan to audit trail
+        // Store OCR blob text for compliance reports
+        setState(() {
+          _ocrBlobText = combinedText;
+        });
+
+        // Log OCR scan to audit trail with image URLs
         AuditLogService.logScanProduct(
           scanData: {
             'scannedText': combinedText.substring(
@@ -2116,13 +2284,15 @@ Registered: ${_formatDate(product.dateOfRegistration)}
             'scanType': 'OCR',
             'extractionSuccess': true,
             'extractedInfo': extractedInfo,
+            if (frontImageUrl != null) 'frontImageUrl': frontImageUrl,
+            if (backImageUrl != null) 'backImageUrl': backImageUrl,
           },
         );
 
         // Show extracted information to user with "Search Product" button
         _showExtractedInfoModal(extractedInfo, combinedText);
       } else {
-        // Log failed OCR scan
+        // Log failed OCR scan with image URLs
         AuditLogService.logScanProduct(
           scanData: {
             'scannedText': combinedText.substring(
@@ -2131,6 +2301,8 @@ Registered: ${_formatDate(product.dateOfRegistration)}
             ),
             'scanType': 'OCR',
             'extractionSuccess': false,
+            if (frontImageUrl != null) 'frontImageUrl': frontImageUrl,
+            if (backImageUrl != null) 'backImageUrl': backImageUrl,
           },
         );
 
@@ -2218,10 +2390,10 @@ Registered: ${_formatDate(product.dateOfRegistration)}
               flex: 5,
               child: Container(
                 width: double.infinity,
-                margin: const EdgeInsets.all(16),
+                margin: isOCRMode ? EdgeInsets.zero : const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
+                  borderRadius: isOCRMode ? BorderRadius.zero : BorderRadius.circular(20),
+                  boxShadow: isOCRMode ? [] : [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.1),
                       blurRadius: 10,
@@ -2230,7 +2402,7 @@ Registered: ${_formatDate(product.dateOfRegistration)}
                   ],
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: isOCRMode ? BorderRadius.zero : BorderRadius.circular(20),
                   child: _buildQrView(context),
                 ),
               ),

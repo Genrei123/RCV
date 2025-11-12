@@ -17,7 +17,7 @@ class ApiService {
   // For iOS Simulator use: 'http://localhost:3000/api/v1'
   // For Physical Device use: 'http://YOUR_COMPUTER_IP:3000/api/v1'
   static const String baseUrl =
-      'https://rcv-production-cbd6.up.railway.app/api/v1';
+      'https://b465b17bc37b.ngrok-free.app/api/v1';
 
   // Get authorization headers
   Future<Map<String, String>> _getHeaders() async {
@@ -40,16 +40,29 @@ class ApiService {
   ///
   /// Sends the extracted OCR text to backend for processing
   /// Returns extracted product information WITHOUT querying database
-  Future<Map<String, dynamic>> scanProduct(String ocrText) async {
+  /// Optionally includes Firebase Storage URLs for front and back images
+  Future<Map<String, dynamic>> scanProduct(
+    String ocrText, {
+    String? frontImageUrl,
+    String? backImageUrl,
+  }) async {
     try {
       developer.log('Sending OCR text to backend for processing...');
       developer.log('OCR Text length: ${ocrText.length} characters');
+      if (frontImageUrl != null) developer.log('Front image: $frontImageUrl');
+      if (backImageUrl != null) developer.log('Back image: $backImageUrl');
+
+      final requestBody = {
+        'blockOfText': ocrText,
+        if (frontImageUrl != null) 'frontImageUrl': frontImageUrl,
+        if (backImageUrl != null) 'backImageUrl': backImageUrl,
+      };
 
       final response = await http
           .post(
             Uri.parse('$baseUrl/mobile/scan'),
             headers: await _getHeaders(),
-            body: jsonEncode({'blockOfText': ocrText}),
+            body: jsonEncode(requestBody),
           )
           .timeout(const Duration(seconds: 30));
 
@@ -370,6 +383,106 @@ class ApiService {
       }
     } catch (e) {
       developer.log('Error searching products: $e');
+      return {'success': false, 'message': 'Network error: ${e.toString()}'};
+    }
+  }
+  /// Search for product by extracted information
+  ///
+  /// Searches database for product match using LTO, CFPR, product name, or brand
+  /// Returns found product or null if not found
+  Future<Map<String, dynamic>> searchProductForCompliance({
+    String? productName,
+    String? LTONumber,
+    String? CFPRNumber,
+    String? brandName,
+  }) async {
+    try {
+      developer.log('Searching product for compliance check...');
+
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/mobile/compliance/search-product'),
+            headers: await _getHeaders(),
+            body: json.encode({
+              if (productName != null) 'productName': productName,
+              if (LTONumber != null) 'LTONumber': LTONumber,
+              if (CFPRNumber != null) 'CFPRNumber': CFPRNumber,
+              if (brandName != null) 'brandName': brandName,
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      developer.log('Product Search Response Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        return {
+          'success': true,
+          'found': responseData['found'] ?? false,
+          'product': responseData['product'],
+        };
+      } else {
+        return {'success': false, 'message': 'Failed to search product'};
+      }
+    } catch (e) {
+      developer.log('Error searching product: $e');
+      return {'success': false, 'message': 'Network error: ${e.toString()}'};
+    }
+  }
+
+  /// Submit compliance report for scanned product
+  ///
+  /// Creates compliance report with status, reason, and location data
+  Future<Map<String, dynamic>> submitComplianceReport({
+    required String status,
+    required Map<String, dynamic> scannedData,
+    Map<String, dynamic>? productSearchResult,
+    String? nonComplianceReason,
+    String? additionalNotes,
+    String? frontImageUrl,
+    String? backImageUrl,
+    Map<String, dynamic>? location,
+  }) async {
+    try {
+      developer.log('Submitting compliance report...');
+
+      final body = {
+        'status': status,
+        'scannedData': scannedData,
+        if (productSearchResult != null)
+          'productSearchResult': productSearchResult,
+        if (nonComplianceReason != null)
+          'nonComplianceReason': nonComplianceReason,
+        if (additionalNotes != null) 'additionalNotes': additionalNotes,
+        if (frontImageUrl != null) 'frontImageUrl': frontImageUrl,
+        if (backImageUrl != null) 'backImageUrl': backImageUrl,
+        if (location != null) 'location': location,
+      };
+
+      developer.log('Compliance Report Body: ${json.encode(body)}');
+
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/mobile/compliance/report'),
+            headers: await _getHeaders(),
+            body: json.encode(body),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      developer.log('Compliance Report Response Status: ${response.statusCode}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final responseData = json.decode(response.body);
+        return {'success': true, 'report': responseData['report']};
+      } else {
+        final errorData = json.decode(response.body);
+        return {
+          'success': false,
+          'message': errorData['message'] ?? 'Failed to submit report'
+        };
+      }
+    } catch (e) {
+      developer.log('Error submitting compliance report: $e');
       return {'success': false, 'message': 'Network error: ${e.toString()}'};
     }
   }
