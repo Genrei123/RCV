@@ -112,30 +112,38 @@ export function Profile({
   const fetchAuditLogs = async (page: number = 1) => {
     setLogsLoading(true);
     try {
-      console.log('Fetching audit logs for page:', page);
+      console.log("Fetching audit logs for page:", page);
       const response = await AuditLogService.getMyLogs(page, 10);
-      console.log('Audit logs response:', response);
-      
+      console.log("Audit logs response:", response);
+
       // Check if response has the expected structure
       if (!response) {
-        throw new Error('No response from server');
+        throw new Error("No response from server");
       }
-      
+
       setAuditLogs(response.data || []);
       if (response.pagination) {
         setLogsPagination(response.pagination);
       }
     } catch (error: any) {
-      console.error('Error fetching audit logs:', error);
-      console.error('Error details:', error.response?.data || error.message);
-      
+      console.error("Error fetching audit logs:", error);
+      console.error("Error details:", error.response?.data || error.message);
+
       // More specific error messages
-      if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
-        toast.error('Cannot connect to server. Please make sure the backend is running.');
+      if (
+        error.code === "ERR_NETWORK" ||
+        error.message?.includes("Network Error")
+      ) {
+        toast.error(
+          "Cannot connect to server. Please make sure the backend is running."
+        );
       } else if (error.response?.status === 401) {
-        toast.error('Authentication failed. Please login again.');
+        toast.error("Authentication failed. Please login again.");
       } else {
-        toast.error('Failed to load activity logs: ' + (error.response?.data?.message || error.message));
+        toast.error(
+          "Failed to load activity logs: " +
+            (error.response?.data?.message || error.message)
+        );
       }
     } finally {
       setLogsLoading(false);
@@ -226,7 +234,23 @@ export function Profile({
       key: "action",
       label: "Action",
       render: (value) => {
-        return <span className="font-medium text-gray-900">{value}</span>;
+        if (typeof value !== "string") {
+          return (
+            <span className="font-medium text-gray-900">{String(value)}</span>
+          );
+        }
+        const MAX_LEN = 40;
+        const truncated =
+          value.length > MAX_LEN ? value.slice(0, MAX_LEN) + "…" : value;
+        return (
+          <span
+            className="font-medium text-gray-900"
+            title={value} // native tooltip shows full action
+            data-full-action={value}
+          >
+            {truncated}
+          </span>
+        );
       },
     },
     {
