@@ -1369,6 +1369,12 @@ class _QRScannerPageState extends State<QRScannerPage> {
     Map<String, dynamic> searchResponse,
     String initialStatus,
   ) async {
+    // Debug logging to check state variables
+    developer.log('🔍 Navigating to compliance report...');
+    developer.log('Front Image URL: ${_frontImageUrl ?? "NULL"}');
+    developer.log('Back Image URL: ${_backImageUrl ?? "NULL"}');
+    developer.log('OCR Blob Text length: ${_ocrBlobText?.length ?? 0}');
+    
     final success = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (context) => ComplianceReportPage(
@@ -2183,6 +2189,8 @@ Registered: ${_formatDate(product.dateOfRegistration)}
         frontImageUrl = uploadResults['frontUrl'];
         backImageUrl = uploadResults['backUrl'];
         
+        developer.log('📥 Upload results: frontUrl=${frontImageUrl != null ? "✓" : "✗"}, backUrl=${backImageUrl != null ? "✓" : "✗"}');
+        
         if (frontImageUrl != null && backImageUrl != null) {
           developer.log('✅ Images uploaded successfully');
           developer.log('Front: $frontImageUrl');
@@ -2193,8 +2201,13 @@ Registered: ${_formatDate(product.dateOfRegistration)}
             _frontImageUrl = frontImageUrl;
             _backImageUrl = backImageUrl;
           });
+          
+          developer.log('✅ State updated - _frontImageUrl and _backImageUrl now set');
         } else {
-          developer.log('⚠️ Image upload failed, continuing without URLs');
+          developer.log('⚠️ Image upload incomplete!');
+          developer.log('   frontImageUrl: ${frontImageUrl ?? "NULL"}');
+          developer.log('   backImageUrl: ${backImageUrl ?? "NULL"}');
+          developer.log('   State variables will remain NULL!');
         }
       } catch (uploadError) {
         developer.log('❌ Error uploading images: $uploadError');
