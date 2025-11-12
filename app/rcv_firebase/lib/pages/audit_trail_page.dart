@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../widgets/gradient_header_app_bar.dart';
+// import '../widgets/gradient_header_app_bar.dart';
+import '../widgets/title_logo_header_app_bar.dart';
 import '../widgets/navigation_bar.dart';
 import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
 import '../services/audit_log_service.dart';
@@ -70,8 +71,10 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
   Future<void> _loadAuditLogs({bool loadMore = false}) async {
     if (loadMore) {
       if (_isLoadingMore || _currentPage >= _totalPages) return;
+      if (!mounted) return;
       setState(() => _isLoadingMore = true);
     } else {
+      if (!mounted) return;
       setState(() {
         _isLoading = true;
         _hasError = false;
@@ -83,6 +86,8 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
       page: loadMore ? _currentPage + 1 : 1,
       limit: 20,
     );
+
+    if (!mounted) return;
 
     if (result != null && result['success'] == true) {
       final logs = (result['data'] as List)
@@ -353,7 +358,10 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
         return true;
       },
       child: Scaffold(
-        appBar: GradientHeaderAppBar(showBackButton: false, showBranding: true),
+        appBar: const TitleLogoHeaderAppBar(
+          title: 'Audit Trail',
+          showBackButton: false,
+        ),
         body: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : _hasError

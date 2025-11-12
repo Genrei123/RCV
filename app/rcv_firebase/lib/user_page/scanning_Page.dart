@@ -7,7 +7,8 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/ocr_service.dart';
-import '../widgets/gradient_header_app_bar.dart';
+// import '../widgets/gradient_header_app_bar.dart';
+import '../widgets/title_logo_header_app_bar.dart';
 import '../widgets/navigation_bar.dart';
 import '../services/api_service.dart';
 import '../services/audit_log_service.dart';
@@ -548,7 +549,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
     try {
       // Try to parse as JSON
       final Map<String, dynamic> data = jsonDecode(qrData);
-      
+
       // If successful, display formatted data
       return Container(
         width: double.infinity,
@@ -574,27 +575,34 @@ class _QRScannerPageState extends State<QRScannerPage> {
             if (data.containsKey('CFPRNumber'))
               _buildInfoRow('CFPR Number:', data['CFPRNumber'] ?? 'N/A'),
             if (data.containsKey('expirationDate'))
-              _buildInfoRow('Expiration Date:', data['expirationDate'] ?? 'N/A'),
+              _buildInfoRow(
+                'Expiration Date:',
+                data['expirationDate'] ?? 'N/A',
+              ),
             if (data.containsKey('manufacturer'))
               _buildInfoRow('Manufacturer:', data['manufacturer'] ?? 'N/A'),
-            
+
             // Show any other fields
             ...data.entries
-                .where((entry) => ![
-                      'company_name',
-                      'product_name',
-                      'brand_name',
-                      'reg_number',
-                      'LTONumber',
-                      'CFPRNumber',
-                      'expirationDate',
-                      'manufacturer',
-                      'product_image'
-                    ].contains(entry.key))
-                .map((entry) => _buildInfoRow(
-                      '${entry.key}:',
-                      entry.value?.toString() ?? 'N/A',
-                    )),
+                .where(
+                  (entry) => ![
+                    'company_name',
+                    'product_name',
+                    'brand_name',
+                    'reg_number',
+                    'LTONumber',
+                    'CFPRNumber',
+                    'expirationDate',
+                    'manufacturer',
+                    'product_image',
+                  ].contains(entry.key),
+                )
+                .map(
+                  (entry) => _buildInfoRow(
+                    '${entry.key}:',
+                    entry.value?.toString() ?? 'N/A',
+                  ),
+                ),
           ],
         ),
       );
@@ -1613,9 +1621,9 @@ Registered: ${_formatDate(product.dateOfRegistration)}
         return true;
       },
       child: Scaffold(
-        appBar: GradientHeaderAppBar(
+        appBar: const TitleLogoHeaderAppBar(
+          title: 'Scanning Page',
           showBackButton: false,
-          showBranding: true, // Show simplified branding
         ),
         body: Column(
           children: [

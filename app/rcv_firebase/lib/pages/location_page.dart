@@ -5,7 +5,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../services/gps_service.dart';
 import '../themes/app_colors.dart' as app_colors;
 import '../widgets/app_buttons.dart';
-import '../widgets/gradient_header_app_bar.dart';
+// import '../widgets/gradient_header_app_bar.dart';
+import '../widgets/title_logo_header_app_bar.dart';
 import '../widgets/navigation_bar.dart';
 import '../services/firestore_service.dart';
 import '../services/remote_config_service.dart';
@@ -181,9 +182,9 @@ class _LocationPageState extends State<LocationPage> {
         return true;
       },
       child: Scaffold(
-        appBar: GradientHeaderAppBar(
+        appBar: const TitleLogoHeaderAppBar(
+          title: 'Locator Map',
           showBackButton: false,
-          showBranding: true, // Show simplified branding
         ),
         body: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
