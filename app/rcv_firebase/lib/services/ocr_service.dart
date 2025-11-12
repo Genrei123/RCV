@@ -242,29 +242,141 @@ class OcrService {
   }
 
   // =========================================================================
-  // STEP 3: EXTRACT TEXT
+  // STEP 3: DETECT LANGUAGE
+  // =========================================================================
+  /// Detects the primary language in the image using quick OCR scan
+  /// Returns 'eng' for English, 'tgl' for Tagalog/Filipino, or 'thaii' for Thai
+  Future<String> detectLanguage(File imageFile) async {
+    try {
+      developer.log('🌐 Detecting language...');
+
+      // Ensure English tessdata is ready for initial detection
+      await prepareTesseractForLanguages(['eng']);
+
+      final Directory docs = await getApplicationDocumentsDirectory();
+      final String tessdataDir = '${docs.path}/tessdata';
+
+      // Quick scan with English to get sample text
+      final Map<String, String> args = {
+        'tessdata': tessdataDir,
+        'user_defined_dpi': '150', // Lower DPI for faster detection
+        'psm': '6',
+        'oem': '1',
+      };
+
+      String sampleText = '';
+      try {
+        sampleText = await FlutterTesseractOcr.extractText(
+          imageFile.path,
+          language: 'eng',
+          args: args,
+        );
+      } catch (e) {
+        developer.log('⚠️ Quick scan failed: $e');
+        return 'eng'; // Default to English on error
+      }
+
+      if (sampleText.isEmpty || sampleText.trim().length < 5) {
+        developer.log('⚠️ Insufficient text for language detection, defaulting to English');
+        return 'eng';
+      }
+
+      // Analyze character patterns
+      final String cleanText = sampleText.toLowerCase();
+      
+      // Count Thai characters (Unicode range: 0E00-0E7F)
+      final int thaiChars = RegExp(r'[\u0E00-\u0E7F]').allMatches(cleanText).length;
+      
+      // Count Tagalog-specific patterns and common Filipino words
+      final List<String> tagalogWords = [
+        'ang', 'ng', 'mga', 'sa', 'ay', 'na', 'at', 'kung', 'para', 'hindi',
+        'ako', 'siya', 'tayo', 'kayo', 'sila', 'ito', 'iyan', 'mo', 'ko',
+        'mga', 'lamang', 'naman', 'po', 'opo', 'lang', 'din', 'rin',
+        'talaga', 'kasi', 'pala', 'daw', 'raw', 'kami', 'natin'
+      ];
+      
+      int tagalogScore = 0;
+      for (final word in tagalogWords) {
+        // Use word boundaries to avoid partial matches
+        final pattern = RegExp(r'\b' + word + r'\b', caseSensitive: false);
+        tagalogScore += pattern.allMatches(cleanText).length * 2;
+      }
+
+      // Count Filipino letter patterns (repeated vowels, specific consonant clusters)
+      final int ngPattern = RegExp(r'ng').allMatches(cleanText).length;
+      tagalogScore += ngPattern;
+
+      // Calculate percentages
+      final int totalChars = cleanText.replaceAll(RegExp(r'\s+'), '').length;
+      final double thaiPercentage = totalChars > 0 ? (thaiChars / totalChars) * 100 : 0;
+
+      developer.log('📊 Language detection stats:');
+      developer.log('   Thai characters: $thaiChars ($thaiPercentage%)');
+      developer.log('   Tagalog score: $tagalogScore');
+      developer.log('   Sample text: ${sampleText.substring(0, sampleText.length > 100 ? 100 : sampleText.length)}...');
+
+      // Decision logic
+      String detectedLang;
+      if (thaiPercentage > 20) {
+        detectedLang = 'thaii';
+        developer.log('✅ Detected: Thai (${thaiPercentage.toStringAsFixed(1)}% Thai characters)');
+      } else if (tagalogScore > 3) {
+        detectedLang = 'tgl';
+        developer.log('✅ Detected: Tagalog (score: $tagalogScore)');
+      } else {
+        detectedLang = 'eng';
+        developer.log('✅ Detected: English (default)');
+      }
+
+      return detectedLang;
+    } catch (e, stackTrace) {
+      developer.log(
+        '❌ Error detecting language, defaulting to English',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return 'eng'; // Default to English on error
+    }
+  }
+
+  // =========================================================================
+  // STEP 4: EXTRACT TEXT
+  // =========================================================================
+  // =========================================================================
+  // STEP 4: EXTRACT TEXT
   // =========================================================================
   /// Extracts text from the preprocessed image using Tesseract OCR
-  /// Supports one or more languages present in assets/tessdata.
+  /// If auto-detect is enabled, it will first detect the language and use the appropriate tessdata.
   /// Pass a combined language string like 'eng+fil+tgl' or use [languages].
   Future<OcrResult> extractText(
     File imageFile, {
     String? language, // kept for backward compatibility
     List<String>? languages,
     int dpi = 300,
+    bool autoDetect = true, // NEW: Enable automatic language detection
   }) async {
     try {
-      // Resolve final language set
-      final List<String> langs =
-          (languages ??
-                  ((language ?? 'eng+fil+tgl+thaii+vie+ind')
-                      .split('+')
-                      .map((s) => s.trim())
-                      .where((s) => s.isNotEmpty)
-                      .toList()))
-              // Keep only supported languages to avoid missing assets
-              .where((l) => supportedLanguages.contains(l))
-              .toList();
+      List<String> langs;
+
+      // Auto-detect language if enabled and no specific languages provided
+      if (autoDetect && languages == null && language == null) {
+        developer.log('🔍 Auto-detecting language...');
+        final String detected = await detectLanguage(imageFile);
+        langs = [detected];
+        developer.log('📝 Using detected language: $detected');
+      } else {
+        // Resolve final language set from parameters
+        langs = (languages ??
+                ((language ?? 'eng')
+                    .split('+')
+                    .map((s) => s.trim())
+                    .where((s) => s.isNotEmpty)
+                    .toList()))
+            // Keep only supported languages to avoid missing assets
+            .where((l) => supportedLanguages.contains(l))
+            .toList();
+      }
+
       final String langsParam = langs.join('+');
 
       developer.log(
@@ -338,7 +450,53 @@ class OcrService {
   }
 
   // =========================================================================
-  // STEP 4: SAVE RESULT
+  // CONVENIENCE METHOD: SMART OCR WITH AUTO-DETECTION
+  // =========================================================================
+  /// Performs complete OCR workflow with automatic language detection:
+  /// 1. Preprocesses the image
+  /// 2. Detects the language (English, Tagalog, or Thai)
+  /// 3. Extracts text using the appropriate tessdata
+  /// 4. Optionally saves the result
+  Future<OcrResult> smartOcr(
+    File imageFile, {
+    int dpi = 300,
+    bool saveResult = false,
+  }) async {
+    try {
+      developer.log('🚀 Starting smart OCR with auto-detection...');
+
+      // Step 1: Preprocess
+      developer.log('📸 Step 1/3: Preprocessing image...');
+      final File preprocessed = await preprocessImage(imageFile);
+
+      // Step 2 & 3: Detect language and extract text (auto-detect enabled)
+      developer.log('🌐 Step 2/3: Detecting language and extracting text...');
+      final OcrResult result = await extractText(
+        preprocessed,
+        dpi: dpi,
+        autoDetect: true, // Enable auto-detection
+      );
+
+      // Step 4: Save if requested
+      if (saveResult) {
+        developer.log('💾 Step 3/3: Saving result...');
+        await this.saveResult(result);
+      }
+
+      developer.log('✅ Smart OCR complete! Detected language: ${result.language}');
+      return result;
+    } catch (e, stackTrace) {
+      developer.log(
+        '❌ Error in smart OCR',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
+  // =========================================================================
+  // STEP 5: SAVE RESULT
   // =========================================================================
   /// Saves the OCR result to local storage
   /// Stores both in SharedPreferences (for history) and as a file

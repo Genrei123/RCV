@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'dart:convert';
+import 'dart:developer' as developer;
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -33,7 +34,6 @@ class _QRScannerPageState extends State<QRScannerPage> {
   final ImagePicker _picker = ImagePicker();
   final TextRecognizer _textRecognizer = TextRecognizer();
   final OcrService _ocrService = OcrService();
-  final List<String> _ocrLangs = ['eng', 'fil', 'tgl', 'thai', 'vie', 'ind'];
   bool _useTesseract = true; // Switch engine; default to Tesseract
 
   // For dual image OCR
@@ -1453,32 +1453,30 @@ Registered: ${_formatDate(product.dateOfRegistration)}
       String backText = '';
 
       if (_useTesseract) {
-        // Tesseract path using OcrService with preprocessing
+        // Tesseract path using OcrService with smart auto-detection
         final File frontFile = File(frontImagePath);
         final File backFile = File(backImagePath);
 
-        final File preFront = await _ocrService.preprocessImage(frontFile);
-        final File preBack = await _ocrService.preprocessImage(backFile);
-
-        final ocrFront = await _ocrService.extractText(
-          preFront,
-          languages: _ocrLangs,
+        // Use smart OCR with automatic language detection
+        developer.log('🔍 Processing front image with auto-detection...');
+        final ocrFront = await _ocrService.smartOcr(
+          frontFile,
           dpi: 300,
+          saveResult: false,
         );
-        final ocrBack = await _ocrService.extractText(
-          preBack,
-          languages: _ocrLangs,
+        
+        developer.log('🔍 Processing back image with auto-detection...');
+        final ocrBack = await _ocrService.smartOcr(
+          backFile,
           dpi: 300,
+          saveResult: false,
         );
 
         frontText = ocrFront.text;
         backText = ocrBack.text;
 
-        // Debug lengths for diagnostics
-        // ignore: avoid_print
-        print(
-          'Front OCR length: ${frontText.length}, Back OCR length: ${backText.length}',
-        );
+        developer.log('📊 Front OCR: ${ocrFront.language} - ${frontText.length} chars');
+        developer.log('📊 Back OCR: ${ocrBack.language} - ${backText.length} chars');
 
         // If any side is too short, automatically fall back to ML Kit for that side only
         if (frontText.trim().length < 10) {
