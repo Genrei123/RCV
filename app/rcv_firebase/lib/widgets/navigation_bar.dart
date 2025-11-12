@@ -15,12 +15,13 @@ class AppBottomNavBar extends StatelessWidget {
     required this.role,
   });
 
-  // Simplified to user-only routes with Google Maps
+  // Simplified to user-only routes (Maps temporarily replaced by Reports)
   static const List<String> routes = [
     '/user-home',
     '/user-audit-trail',
     '/scanning',
-    '/location', // Google Maps
+    '/location',
+    '/user-reports', // Reports (replaces Maps)
     '/user-profile',
   ];
 
@@ -82,12 +83,12 @@ class AppBottomNavBar extends StatelessWidget {
         ),
         BottomNavigationBarItem(
           icon: Icon(
-            Icons.map,
+            Icons.bar_chart,
             color: selectedIndex == 3
                 ? app_colors.AppColors.primary
                 : app_colors.AppColors.muted,
           ),
-          label: 'Maps',
+          label: 'Reports',
         ),
         BottomNavigationBarItem(
           icon: Icon(
