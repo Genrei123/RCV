@@ -51,22 +51,25 @@ export function Products(props: ProductsProps) {
   const handleAddSuccess = () => {
     // Refresh the product list after successful addition
     fetchProductsPage(currentPage);
-    
+
     if (props.onRefresh) {
       props.onRefresh();
     }
   };
 
   // Handle PDF certificate download
-  const handleDownloadCertificate = async (product: Product, event: React.MouseEvent) => {
+  const handleDownloadCertificate = async (
+    product: Product,
+    event: React.MouseEvent
+  ) => {
     event.stopPropagation(); // Prevent row click
     try {
-      toast.info('Generating certificate PDF...', { autoClose: 1000 });
+      toast.info("Generating certificate PDF...", { autoClose: 1000 });
       await PDFGenerationService.generateAndDownloadProductCertificate(product);
-      toast.success('Certificate downloaded successfully!');
+      toast.success("Certificate downloaded successfully!");
     } catch (error) {
-      console.error('Error generating certificate:', error);
-      toast.error('Failed to generate certificate. Please try again.');
+      console.error("Error generating certificate:", error);
+      toast.error("Failed to generate certificate. Please try again.");
     }
   };
 
@@ -167,6 +170,13 @@ export function Products(props: ProductsProps) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.products]);
+
+  useEffect(() => {
+    if (!pagination && products.length === pageSize) {
+      fetchProductsPage(currentPage || 1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products, pagination]);
 
   const totalItems = pagination?.total_items ?? products.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
@@ -274,9 +284,12 @@ export function Products(props: ProductsProps) {
             ) : !loading ? (
               <div className="flex flex-col items-center justify-center py-12">
                 <div className="text-center">
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Products Found</h3>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    No Products Found
+                  </h3>
                   <p className="text-gray-500">
-                    Try adjusting your search or add a new product to get started.
+                    Try adjusting your search or add a new product to get
+                    started.
                   </p>
                 </div>
               </div>

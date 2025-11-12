@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:location/location.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import '../widgets/gradient_header_app_bar.dart';
+// import '../widgets/gradient_header_app_bar.dart';
+import '../widgets/title_logo_header_app_bar.dart';
 import '../widgets/navigation_bar.dart';
 import '../services/gps_service.dart';
 import '../services/firestore_service.dart';
@@ -44,9 +45,9 @@ class _UserHomePageState extends State<UserHomePage> {
         return true;
       },
       child: Scaffold(
-        appBar: GradientHeaderAppBar(
+        appBar: const TitleLogoHeaderAppBar(
+          title: 'Home Dashboard',
           showBackButton: false,
-          showBranding: true, // Show simplified branding
         ),
         body: _pages[_selectedIndex],
         bottomNavigationBar: AppBottomNavBar(
@@ -108,7 +109,9 @@ class _HomeContentState extends State<HomeContent> {
       LocationData? location = await _gpsService.getCurrentLocation();
 
       if (location != null) {
-        print('✅ [HomePage] Location received: lat=${location.latitude}, lng=${location.longitude}');
+        print(
+          '✅ [HomePage] Location received: lat=${location.latitude}, lng=${location.longitude}',
+        );
         setState(() {
           _currentLocation = location;
         });
@@ -131,8 +134,8 @@ class _HomeContentState extends State<HomeContent> {
         if (location.latitude != null && location.longitude != null) {
           print('💾 [HomePage] Saving location to Firestore...');
           bool saved = await FirestoreService.saveUserLocation(
-            location.latitude!, 
-            location.longitude!
+            location.latitude!,
+            location.longitude!,
           );
           if (saved) {
             print('✅ [HomePage] Location saved to Firestore successfully');

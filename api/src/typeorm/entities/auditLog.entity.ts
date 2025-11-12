@@ -28,7 +28,8 @@ export const AuditLogValidation = z.object({
     'CHANGE_PASSWORD',
     'ARCHIVE_ACCOUNT',
     'LOCATION_UPDATE',
-    'APP_CLOSED'
+    'APP_CLOSED',
+    'COMPLIANCE_REPORT'
   ]),
   userId: z.string().uuid().optional(),
   targetUserId: z.string().uuid().optional(),

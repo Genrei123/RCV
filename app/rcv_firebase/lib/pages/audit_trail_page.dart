@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../widgets/gradient_header_app_bar.dart';
+// import '../widgets/gradient_header_app_bar.dart';
+import '../widgets/title_logo_header_app_bar.dart';
 import '../widgets/navigation_bar.dart';
 import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
 import '../services/audit_log_service.dart';
@@ -70,8 +71,10 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
   Future<void> _loadAuditLogs({bool loadMore = false}) async {
     if (loadMore) {
       if (_isLoadingMore || _currentPage >= _totalPages) return;
+      if (!mounted) return;
       setState(() => _isLoadingMore = true);
     } else {
+      if (!mounted) return;
       setState(() {
         _isLoading = true;
         _hasError = false;
@@ -83,6 +86,8 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
       page: loadMore ? _currentPage + 1 : 1,
       limit: 20,
     );
+
+    if (!mounted) return;
 
     if (result != null && result['success'] == true) {
       final logs = (result['data'] as List)
@@ -261,11 +266,172 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
                           const Divider(height: 24),
                           _buildDetailRow('Location', log.location!['address']),
                         ],
+                        // Show scan images if available
+                        if (log.metadata != null &&
+                            (log.metadata!['frontImageUrl'] != null ||
+                                log.metadata!['backImageUrl'] != null)) ...[
+                          const Divider(height: 24),
+                          const Text(
+                            'Scanned Images',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: app_colors.AppColors.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          if (log.metadata!['frontImageUrl'] != null) ...[
+                            const Text(
+                              'Front Image:',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black54,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.network(
+                                log.metadata!['frontImageUrl'],
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                loadingBuilder:
+                                    (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return Container(
+                                    height: 200,
+                                    color: Colors.grey[200],
+                                    child: Center(
+                                      child: CircularProgressIndicator(
+                                        value: loadingProgress
+                                                    .expectedTotalBytes !=
+                                                null
+                                            ? loadingProgress
+                                                    .cumulativeBytesLoaded /
+                                                loadingProgress
+                                                    .expectedTotalBytes!
+                                            : null,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    height: 200,
+                                    color: Colors.grey[200],
+                                    child: const Center(
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.error,
+                                              color: Colors.red, size: 40),
+                                          SizedBox(height: 8),
+                                          Text(
+                                            'Failed to load image',
+                                            style: TextStyle(
+                                              color: Colors.red,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                          if (log.metadata!['backImageUrl'] != null) ...[
+                            const Text(
+                              'Back Image:',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black54,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.network(
+                                log.metadata!['backImageUrl'],
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                loadingBuilder:
+                                    (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return Container(
+                                    height: 200,
+                                    color: Colors.grey[200],
+                                    child: Center(
+                                      child: CircularProgressIndicator(
+                                        value: loadingProgress
+                                                    .expectedTotalBytes !=
+                                                null
+                                            ? loadingProgress
+                                                    .cumulativeBytesLoaded /
+                                                loadingProgress
+                                                    .expectedTotalBytes!
+                                            : null,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    height: 200,
+                                    color: Colors.grey[200],
+                                    child: const Center(
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.error,
+                                              color: Colors.red, size: 40),
+                                          SizedBox(height: 8),
+                                          Text(
+                                            'Failed to load image',
+                                            style: TextStyle(
+                                              color: Colors.red,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                        ],
+                        // Show extracted OCR information if available
+                        if (log.metadata != null &&
+                            log.metadata!['extractedInfo'] != null) ...[
+                          const Divider(height: 24),
+                          const Text(
+                            'Extracted OCR Information',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: app_colors.AppColors.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          _buildExtractedInfoCard(
+                            log.metadata!['extractedInfo'],
+                          ),
+                        ],
+                        // Show other metadata if any (excluding images and extractedInfo)
                         if (log.metadata != null &&
                             log.metadata!.isNotEmpty) ...[
                           const Divider(height: 24),
                           const Text(
-                            'Additional Details:',
+                            'Additional Details',
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
@@ -273,18 +439,7 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[100],
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: SelectableText(
-                              log.metadata.toString(),
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                          ),
+                          ..._buildMetadataItems(log.metadata!),
                         ],
                       ],
                     ),
@@ -331,6 +486,162 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
     );
   }
 
+  Widget _buildExtractedInfoCard(Map<String, dynamic> extractedInfo) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            app_colors.AppColors.primary.withOpacity(0.05),
+            app_colors.AppColors.primary.withOpacity(0.02),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: app_colors.AppColors.primary.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (extractedInfo['productName'] != null)
+            _buildExtractedInfoRow(
+              Icons.shopping_bag,
+              'Product Name',
+              extractedInfo['productName'],
+            ),
+          if (extractedInfo['brandName'] != null)
+            _buildExtractedInfoRow(
+              Icons.branding_watermark,
+              'Brand Name',
+              extractedInfo['brandName'],
+            ),
+          if (extractedInfo['LTONumber'] != null)
+            _buildExtractedInfoRow(
+              Icons.confirmation_number,
+              'LTO Number',
+              extractedInfo['LTONumber'],
+            ),
+          if (extractedInfo['CFPRNumber'] != null)
+            _buildExtractedInfoRow(
+              Icons.qr_code,
+              'CFPR Number',
+              extractedInfo['CFPRNumber'],
+            ),
+          if (extractedInfo['lotNumber'] != null)
+            _buildExtractedInfoRow(
+              Icons.numbers,
+              'Lot Number',
+              extractedInfo['lotNumber'],
+            ),
+          if (extractedInfo['expirationDate'] != null)
+            _buildExtractedInfoRow(
+              Icons.calendar_today,
+              'Expiration Date',
+              extractedInfo['expirationDate'],
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExtractedInfoRow(IconData icon, String label, dynamic value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            icon,
+            size: 20,
+            color: app_colors.AppColors.primary,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black54,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value.toString(),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildMetadataItems(Map<String, dynamic> metadata) {
+    final List<Widget> items = [];
+    
+    // Filter out keys we've already displayed or don't need to show
+    final filteredMetadata = Map<String, dynamic>.from(metadata);
+    filteredMetadata.remove('frontImageUrl');
+    filteredMetadata.remove('backImageUrl');
+    filteredMetadata.remove('extractedInfo');
+    filteredMetadata.remove('scanType'); // Internal field
+    filteredMetadata.remove('extractionSuccess'); // Internal field
+    filteredMetadata.remove('scannedText'); // Already shown in extractedInfo
+    
+    if (filteredMetadata.isEmpty) {
+      return [];
+    }
+
+    for (final entry in filteredMetadata.entries) {
+      items.add(
+        Container(
+          margin: const EdgeInsets.only(top: 8),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.grey[100],
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                entry.key,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black54,
+                ),
+              ),
+              const SizedBox(height: 4),
+              SelectableText(
+                entry.value is Map || entry.value is List
+                    ? entry.value.toString()
+                    : entry.value.toString(),
+                style: const TextStyle(fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return items;
+  }
+
   @override
   Widget build(BuildContext context) {
     // Feature disable checker
@@ -353,7 +664,10 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
         return true;
       },
       child: Scaffold(
-        appBar: GradientHeaderAppBar(showBackButton: false, showBranding: true),
+        appBar: const TitleLogoHeaderAppBar(
+          title: 'Audit Trail',
+          showBackButton: false,
+        ),
         body: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : _hasError

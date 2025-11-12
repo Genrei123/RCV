@@ -12,6 +12,7 @@ class AuditEntry {
   final String date;
   final String details;
   final String? userId;
+  final Map<String, dynamic>? metadata;
 
   AuditEntry({
     required this.type,
@@ -19,6 +20,7 @@ class AuditEntry {
     required this.date,
     required this.details,
     this.userId,
+    this.metadata,
   });
 
   factory AuditEntry.fromJson(Map<String, dynamic> json) {
@@ -28,6 +30,7 @@ class AuditEntry {
       date: json['date'] as String,
       details: json['details'] as String,
       userId: json['userId'] as String?,
+      metadata: json['metadata'] as Map<String, dynamic>?,
     );
   }
 
@@ -501,22 +504,132 @@ class _CompleteAuditWidgetState extends State<CompleteAuditWidget> {
     showDialog(
       context: context,
       builder: (BuildContext context) {
+        final hasImages = entry.metadata != null &&
+            (entry.metadata!['frontImageUrl'] != null ||
+                entry.metadata!['backImageUrl'] != null);
+        final extractedInfo = entry.metadata?['extractedInfo'];
+
         return AlertDialog(
           title: Text('${entry.type} Details'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Action: ${entry.action}'),
-              const SizedBox(height: 8),
-              Text('Date: ${entry.date}'),
-              const SizedBox(height: 8),
-              Text('Details: ${entry.details}'),
-              if (entry.userId != null) ...[
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Action: ${entry.action}',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(height: 8),
-                Text('User ID: ${entry.userId}'),
+                Text('Date: ${entry.date}'),
+                const SizedBox(height: 8),
+                Text('Details: ${entry.details}'),
+                if (entry.userId != null) ...[
+                  const SizedBox(height: 8),
+                  Text('User ID: ${entry.userId}'),
+                ],
+
+                // Show scan images if available
+                if (hasImages) ...[
+                  const SizedBox(height: 16),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Scanned Images',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  if (entry.metadata!['frontImageUrl'] != null) ...[
+                    const Text(
+                      'Front Image:',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 4),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        entry.metadata!['frontImageUrl'],
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Center(
+                            child: CircularProgressIndicator(
+                              value: loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded /
+                                      loadingProgress.expectedTotalBytes!
+                                  : null,
+                            ),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            height: 150,
+                            color: Colors.grey.shade200,
+                            child: const Center(
+                              child: Icon(Icons.error, color: Colors.red),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  if (entry.metadata!['backImageUrl'] != null) ...[
+                    const Text(
+                      'Back Image:',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 4),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        entry.metadata!['backImageUrl'],
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Center(
+                            child: CircularProgressIndicator(
+                              value: loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded /
+                                      loadingProgress.expectedTotalBytes!
+                                  : null,
+                            ),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            height: 150,
+                            color: Colors.grey.shade200,
+                            child: const Center(
+                              child: Icon(Icons.error, color: Colors.red),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ],
+
+                // Show extracted OCR information if available
+                if (extractedInfo != null) ...[
+                  const SizedBox(height: 16),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Extracted Information',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildExtractedInfoCard(extractedInfo),
+                ],
               ],
-            ],
+            ),
           ),
           actions: [
             TextButton(
@@ -526,6 +639,61 @@ class _CompleteAuditWidgetState extends State<CompleteAuditWidget> {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildExtractedInfoCard(Map<String, dynamic> extractedInfo) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (extractedInfo['productName'] != null)
+            _buildInfoRow('Product Name', extractedInfo['productName']),
+          if (extractedInfo['brandName'] != null)
+            _buildInfoRow('Brand Name', extractedInfo['brandName']),
+          if (extractedInfo['LTONumber'] != null)
+            _buildInfoRow('LTO Number', extractedInfo['LTONumber']),
+          if (extractedInfo['CFPRNumber'] != null)
+            _buildInfoRow('CFPR Number', extractedInfo['CFPRNumber']),
+          if (extractedInfo['lotNumber'] != null)
+            _buildInfoRow('Lot Number', extractedInfo['lotNumber']),
+          if (extractedInfo['expirationDate'] != null)
+            _buildInfoRow('Expiration Date', extractedInfo['expirationDate']),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, dynamic value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              '$label:',
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value.toString(),
+              style: const TextStyle(fontSize: 13),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

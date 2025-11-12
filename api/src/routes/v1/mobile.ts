@@ -25,6 +25,10 @@ import {
 // Import audit log controllers
 import * as AuditLogController from '../../controllers/auditLog/AuditLog';
 
+// Import compliance controllers
+import { createComplianceReport } from '../../controllers/compliance/CreateComplianceReport';
+import { searchProduct } from '../../controllers/compliance/SearchProduct';
+
 const MobileRouter = Router();
 
 // ============================================
@@ -63,6 +67,13 @@ MobileRouter.get('/scan/history/:id', verifyMobileUser, getScansByID);
 MobileRouter.post('/audit/log', verifyMobileUser, AuditLogController.createAuditLog);
 MobileRouter.get('/audit/my-logs', verifyMobileUser, AuditLogController.getMyAuditLogs);
 MobileRouter.get('/audit/logs/:id', verifyMobileUser, AuditLogController.getAuditLogById);
+
+// ============================================
+// MOBILE COMPLIANCE ROUTES
+// Agent compliance verification and reporting
+// ============================================
+MobileRouter.post('/compliance/search-product', verifyMobileUser, searchProduct);
+MobileRouter.post('/compliance/report', verifyMobileUser, createComplianceReport);
 
 // ============================================
 // FUTURE MOBILE ROUTES

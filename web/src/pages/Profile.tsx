@@ -84,7 +84,6 @@ export function Profile({
       setUser(propUser);
     }
     fetchAuditLogs(1);
-    // Load avatar from localStorage override if present
     // Load avatar from localStorage override if present (view-only on Profile page)
     try {
       const saved = localStorage.getItem("profile_avatar_data");
@@ -92,6 +91,25 @@ export function Profile({
     } catch (e) {
       // noop
     }
+
+    // Listen for avatar updates from EditProfileModal
+    const handleAvatarUpdate = () => {
+      try {
+        const saved = localStorage.getItem("profile_avatar_data");
+        if (saved) {
+          console.log('🔄 Avatar updated, refreshing preview');
+          setLocalAvatar(saved);
+        }
+      } catch (e) {
+        console.error('Error updating avatar preview:', e);
+      }
+    };
+
+    window.addEventListener('profile-avatar-updated', handleAvatarUpdate);
+
+    return () => {
+      window.removeEventListener('profile-avatar-updated', handleAvatarUpdate);
+    };
   }, [propUser]);
 
   const fetchProfile = async () => {
@@ -112,30 +130,38 @@ export function Profile({
   const fetchAuditLogs = async (page: number = 1) => {
     setLogsLoading(true);
     try {
-      console.log('Fetching audit logs for page:', page);
+      console.log("Fetching audit logs for page:", page);
       const response = await AuditLogService.getMyLogs(page, 10);
-      console.log('Audit logs response:', response);
-      
+      console.log("Audit logs response:", response);
+
       // Check if response has the expected structure
       if (!response) {
-        throw new Error('No response from server');
+        throw new Error("No response from server");
       }
-      
+
       setAuditLogs(response.data || []);
       if (response.pagination) {
         setLogsPagination(response.pagination);
       }
     } catch (error: any) {
-      console.error('Error fetching audit logs:', error);
-      console.error('Error details:', error.response?.data || error.message);
-      
+      console.error("Error fetching audit logs:", error);
+      console.error("Error details:", error.response?.data || error.message);
+
       // More specific error messages
-      if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
-        toast.error('Cannot connect to server. Please make sure the backend is running.');
+      if (
+        error.code === "ERR_NETWORK" ||
+        error.message?.includes("Network Error")
+      ) {
+        toast.error(
+          "Cannot connect to server. Please make sure the backend is running."
+        );
       } else if (error.response?.status === 401) {
-        toast.error('Authentication failed. Please login again.');
+        toast.error("Authentication failed. Please login again.");
       } else {
-        toast.error('Failed to load activity logs: ' + (error.response?.data?.message || error.message));
+        toast.error(
+          "Failed to load activity logs: " +
+            (error.response?.data?.message || error.message)
+        );
       }
     } finally {
       setLogsLoading(false);
@@ -160,15 +186,34 @@ export function Profile({
         badgeId: updatedUser.badgeId,
       };
 
+      // Add avatar if it's a Firebase Storage URL (not base64)
+      if (updatedUser.avatar && updatedUser.avatar.startsWith('http')) {
+        profileData.avatar = updatedUser.avatar;
+        console.log('💾 Saving Firebase Storage URL:', updatedUser.avatar);
+      }
+
+      console.log('💾 Saving profile with data:', profileData);
       await UserPageService.updateProfile(profileData);
-      // Refresh local avatar preview from localStorage if changed in modal
+      
+      toast.success("Profile updated successfully!");
+      
+      // Refresh profile data to get the updated avatar URL from backend
+      await fetchProfile();
+      
+      // Also update local avatar preview from localStorage
       try {
         const saved = localStorage.getItem("profile_avatar_data");
-        if (saved) setLocalAvatar(saved);
-      } catch {}
-      toast.success("Profile updated successfully!");
-      await fetchProfile(); // Refresh profile data
-      await fetchAuditLogs(logsPagination.current_page); // Refresh audit logs
+        if (saved) {
+          console.log('🔄 Updating local avatar preview');
+          setLocalAvatar(saved);
+        }
+      } catch (e) {
+        console.error('Error updating local avatar:', e);
+      }
+      
+      // Refresh audit logs to show the profile update action
+      await fetchAuditLogs(logsPagination.current_page);
+      
       setShowEditModal(false);
     } catch (error) {
       console.error("Failed to update profile:", error);
@@ -226,7 +271,23 @@ export function Profile({
       key: "action",
       label: "Action",
       render: (value) => {
-        return <span className="font-medium text-gray-900">{value}</span>;
+        if (typeof value !== "string") {
+          return (
+            <span className="font-medium text-gray-900">{String(value)}</span>
+          );
+        }
+        const MAX_LEN = 40;
+        const truncated =
+          value.length > MAX_LEN ? value.slice(0, MAX_LEN) + "…" : value;
+        return (
+          <span
+            className="font-medium text-gray-900"
+            title={value} // native tooltip shows full action
+            data-full-action={value}
+          >
+            {truncated}
+          </span>
+        );
       },
     },
     {
@@ -613,6 +674,136 @@ export function Profile({
                 </div>
               )}
 
+              {/* Scan Images */}
+              {selectedLog.metadata?.frontImageUrl ||
+              selectedLog.metadata?.backImageUrl ? (
+                <div className="border-b pb-3">
+                  <p className="text-sm font-medium text-gray-500 mb-3">
+                    Scan Images
+                  </p>
+                  <div className="grid grid-cols-2 gap-4">
+                    {selectedLog.metadata.frontImageUrl && (
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-gray-600">
+                          Front Image
+                        </p>
+                        <a
+                          href={selectedLog.metadata.frontImageUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block border rounded-lg overflow-hidden hover:opacity-80 transition-opacity"
+                        >
+                          <img
+                            src={selectedLog.metadata.frontImageUrl}
+                            alt="Front scan"
+                            className="w-full h-48 object-cover"
+                          />
+                        </a>
+                      </div>
+                    )}
+                    {selectedLog.metadata.backImageUrl && (
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-gray-600">
+                          Back Image
+                        </p>
+                        <a
+                          href={selectedLog.metadata.backImageUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block border rounded-lg overflow-hidden hover:opacity-80 transition-opacity"
+                        >
+                          <img
+                            src={selectedLog.metadata.backImageUrl}
+                            alt="Back scan"
+                            className="w-full h-48 object-cover"
+                          />
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : null}
+
+              {/* OCR Extracted Information */}
+              {selectedLog.metadata?.extractedInfo && (
+                <div className="border-b pb-3">
+                  <p className="text-sm font-medium text-gray-500 mb-2">
+                    OCR Extracted Information
+                  </p>
+                  <div className="bg-blue-50 rounded-lg p-3 space-y-2">
+                    {Object.entries(selectedLog.metadata.extractedInfo).map(
+                      ([key, value]) => (
+                        <div
+                          key={key}
+                          className="flex justify-between items-start"
+                        >
+                          <span className="text-sm font-medium text-blue-700 capitalize">
+                            {key.replace(/([A-Z])/g, " $1").trim()}:
+                          </span>
+                          <span className="text-sm text-gray-900 text-right ml-4 font-medium">
+                            {value || "N/A"}
+                          </span>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* OCR Raw Text */}
+              {selectedLog.metadata?.scannedText && (
+                <div className="border-b pb-3">
+                  <p className="text-sm font-medium text-gray-500 mb-2">
+                    OCR Raw Text
+                  </p>
+                  <div className="bg-gray-100 rounded-lg p-3 max-h-48 overflow-y-auto">
+                    <pre className="text-xs text-gray-800 whitespace-pre-wrap font-mono">
+                      {selectedLog.metadata.scannedText}
+                    </pre>
+                  </div>
+                </div>
+              )}
+
+              {/* Scan Type & Status */}
+              {(selectedLog.metadata?.scanType ||
+                selectedLog.metadata?.extractionSuccess !== undefined) && (
+                <div className="border-b pb-3">
+                  <p className="text-sm font-medium text-gray-500 mb-2">
+                    Scan Details
+                  </p>
+                  <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                    {selectedLog.metadata.scanType && (
+                      <div className="flex justify-between items-start">
+                        <span className="text-sm font-medium text-gray-600">
+                          Scan Type:
+                        </span>
+                        <span className="text-sm text-gray-900 font-medium">
+                          {selectedLog.metadata.scanType}
+                        </span>
+                      </div>
+                    )}
+                    {selectedLog.metadata.extractionSuccess !== undefined && (
+                      <div className="flex justify-between items-start">
+                        <span className="text-sm font-medium text-gray-600">
+                          Extraction Status:
+                        </span>
+                        <span
+                          className={`text-sm font-medium ${
+                            selectedLog.metadata.extractionSuccess
+                              ? "text-green-600"
+                              : "text-red-600"
+                          }`}
+                        >
+                          {selectedLog.metadata.extractionSuccess
+                            ? "Success"
+                            : "Failed"}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Metadata */}
               {selectedLog.metadata &&
                 Object.keys(selectedLog.metadata).length > 0 && (
@@ -621,8 +812,17 @@ export function Profile({
                       Additional Information
                     </p>
                     <div className="bg-gray-50 rounded-lg p-3 space-y-2">
-                      {Object.entries(selectedLog.metadata).map(
-                        ([key, value]) => (
+                      {Object.entries(selectedLog.metadata)
+                        .filter(
+                          ([key]) =>
+                            key !== "frontImageUrl" && 
+                            key !== "backImageUrl" &&
+                            key !== "extractedInfo" &&
+                            key !== "scanType" &&
+                            key !== "extractionSuccess" &&
+                            key !== "scannedText"
+                        )
+                        .map(([key, value]) => (
                           <div
                             key={key}
                             className="flex justify-between items-start"
@@ -636,8 +836,7 @@ export function Profile({
                                 : String(value)}
                             </span>
                           </div>
-                        )
-                      )}
+                        ))}
                     </div>
                   </div>
                 )}

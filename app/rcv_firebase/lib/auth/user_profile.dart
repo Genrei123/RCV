@@ -3,10 +3,9 @@ import 'package:rcv_firebase/themes/app_fonts.dart';
 import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
 import '../widgets/navigation_bar.dart';
 import '../widgets/app_buttons.dart';
-import '../widgets/gradient_header_app_bar.dart';
+import '../widgets/title_logo_header_app_bar.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
-import '../widgets/custom_text_field.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'dart:typed_data';
@@ -25,25 +24,12 @@ class UserProfilePage extends StatefulWidget {
 }
 
 class _UserProfilePageState extends State<UserProfilePage> {
-  bool isEditing = false;
   String avatarPath = 'assets/avatar.png';
   String? selectedImagePath; // For uploaded avatar
   final ImagePicker _picker = ImagePicker();
 
-  // Password visibility toggles
-  bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
-
   // User data loaded from JSON
   Map<String, dynamic>? userData;
-
-  // Form controllers
-  final nameController = TextEditingController();
-  final emailController = TextEditingController();
-  final phoneController = TextEditingController();
-  final dobController = TextEditingController();
-  final passwordController = TextEditingController();
-  final confirmPasswordController = TextEditingController();
 
   @override
   void initState() {
@@ -61,10 +47,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
         : {};
     setState(() {
       userData = data;
-      nameController.text = userData?['fullName'] ?? '';
-      emailController.text = userData?['email'] ?? '';
-      phoneController.text = userData?['phoneNumber'] ?? '';
-      dobController.text = userData?['dateOfBirth'] ?? '';
       avatarPath = userData?['avatarUrl'] ?? avatarPath;
     });
   }
@@ -260,11 +242,9 @@ class _UserProfilePageState extends State<UserProfilePage> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     return Scaffold(
-      appBar: GradientHeaderAppBar(
-        greeting: 'Welcome back',
-        user: (userData!['fullName'] ?? '').toString().split(' ').first,
-        showBackButton: false, // Remove back button
-        showBranding: true, // Show simplified branding
+      appBar: const TitleLogoHeaderAppBar(
+        title: 'User Profile',
+        showBackButton: false,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -274,7 +254,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
               const SizedBox(height: 16),
               // Avatar
               GestureDetector(
-                onTap: isEditing ? openImageCropModal : null,
+                onTap: openImageCropModal,
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
@@ -338,429 +318,112 @@ class _UserProfilePageState extends State<UserProfilePage> {
                   ],
                 ),
               ),
-              // Replacing the avatar is done by tapping the camera overlay (avatar area)
-              if (!isEditing) ...[
-                // Preview Mode
-                const SizedBox(height: 16),
-                Text(
-                  userData!['fullName'] ?? '',
-                  style: AppFonts.titleStyle.copyWith(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
+              const SizedBox(height: 16),
+              Text(
+                userData!['fullName'] ?? '',
+                style: AppFonts.titleStyle.copyWith(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
                 ),
-                const SizedBox(height: 12),
-                AppButtons(
-                  text: 'Edit Profile',
-                  size: 44,
-                  textColor: Colors.white,
-                  backgroundColor: app_colors.AppColors.primary,
-                  borderColor: app_colors.AppColors.primary,
-                  icon: const Icon(Icons.edit, color: Colors.white),
-                  onPressed: () => setState(() => isEditing = true),
-                  textStyle: AppFonts.labelStyle.copyWith(
-                    fontSize: 16,
-                    color: Colors.white,
-                  ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Tap the camera icon to change your profile picture',
+                style: AppFonts.labelStyle.copyWith(
+                  fontSize: 12,
+                  color: app_colors.AppColors.darkNeutral,
+                  fontStyle: FontStyle.italic,
                 ),
-                const SizedBox(height: 16),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: app_colors.AppColors.neutral.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: app_colors.AppColors.neutral.withOpacity(0.25),
-                        blurRadius: 8,
-                        spreadRadius: 2,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                    border: Border.all(
-                      color: app_colors.AppColors.primary,
-                      width: 1.5,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: app_colors.AppColors.neutral.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: app_colors.AppColors.neutral.withOpacity(0.25),
+                      blurRadius: 8,
+                      spreadRadius: 2,
+                      offset: const Offset(0, 4),
                     ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Location',
-                        style: AppFonts.labelStyle.copyWith(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
-                      ),
-                      Text(
-                        userData!['location'] ?? '',
-                        style: AppFonts.contentStyle.copyWith(fontSize: 16),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Date of Birth',
-                        style: AppFonts.labelStyle.copyWith(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
-                      ),
-                      Text(
-                        userData!['dateOfBirth'] ?? '',
-                        style: AppFonts.contentStyle.copyWith(fontSize: 16),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Email',
-                        style: AppFonts.labelStyle.copyWith(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
-                      ),
-                      Text(
-                        userData!['email'] ?? '',
-                        style: AppFonts.contentStyle.copyWith(fontSize: 16),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Phone Number',
-                        style: AppFonts.labelStyle.copyWith(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
-                      ),
-                      Text(
-                        userData!['phoneNumber'] ?? '',
-                        style: AppFonts.contentStyle.copyWith(fontSize: 16),
-                      ),
-                    ],
+                  ],
+                  border: Border.all(
+                    color: app_colors.AppColors.primary,
+                    width: 1.5,
                   ),
                 ),
-                const SizedBox(height: 16),
-                AppButtons(
-                  text: 'Log Out',
-                  size: 44,
-                  textColor: Colors.white,
-                  backgroundColor: Colors.redAccent,
-                  borderColor: Colors.redAccent,
-                  icon: const Icon(Icons.logout, color: Colors.white),
-                  onPressed: _logout,
-                  textStyle: AppFonts.labelStyle.copyWith(
-                    fontSize: 16,
-                    color: Colors.white,
-                  ),
-                ),
-              ] else ...[
-                const SizedBox(height: 12),
-                // Prominent control in edit mode to change profile picture
-                SizedBox(
-                  width: 200,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: app_colors.AppColors.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 12,
-                        horizontal: 16,
-                      ),
-                    ),
-                    icon: const Icon(Icons.camera_alt),
-                    label: const Text('Select Profile Picture'),
-                    onPressed: openImageCropModal,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                // Edit Mode
-                Padding(
-                  padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
-                  child: Text(
-                    'Set up your personal status',
-                    style: AppFonts.labelStyle.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: app_colors.AppColors.primary,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
-                        blurRadius: 8,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Profile picture selector within edit form
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Builder(
-                            builder: (context) {
-                              final bool hasLocalFile =
-                                  selectedImagePath != null;
-                              final bool hasCustomAsset =
-                                  avatarPath.startsWith('assets/') &&
-                                  avatarPath != 'assets/avatar.png';
-                              ImageProvider? bgImage;
-                              if (hasLocalFile) {
-                                bgImage = FileImage(File(selectedImagePath!));
-                              } else if (hasCustomAsset) {
-                                bgImage = AssetImage(avatarPath);
-                              } else {
-                                bgImage = null;
-                              }
-                              return CircleAvatar(
-                                radius: 28,
-                                backgroundColor: app_colors.AppColors.neutral
-                                    .withOpacity(0.2),
-                                backgroundImage: bgImage,
-                                child: bgImage == null
-                                    ? Icon(
-                                        Icons.person,
-                                        size: 26,
-                                        color: app_colors.AppColors.darkNeutral,
-                                      )
-                                    : null,
-                              );
-                            },
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Profile Picture',
-                                  style: AppFonts.labelStyle.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                SizedBox(
-                                  height: 36,
-                                  child: OutlinedButton.icon(
-                                    style: OutlinedButton.styleFrom(
-                                      side: BorderSide(
-                                        color: app_colors.AppColors.primary,
-                                        width: 1.2,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 8,
-                                      ),
-                                    ),
-                                    icon: Icon(
-                                      Icons.photo_camera_back_outlined,
-                                      size: 18,
-                                      color: app_colors.AppColors.primary,
-                                    ),
-                                    label: Text(
-                                      'Select Profile Picture',
-                                      style: AppFonts.labelStyle.copyWith(
-                                        color: app_colors.AppColors.primary,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                    onPressed: openImageCropModal,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      CustomTextField(
-                        controller: nameController,
-                        label: 'Full Name',
-                        hint: 'Enter your name...',
-                      ),
-                      const SizedBox(height: 16),
-                      CustomTextField(
-                        controller: emailController,
-                        label: 'Email Address',
-                        hint: 'Enter your email...',
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: CustomTextField(
-                              controller: phoneController,
-                              label: 'Phone Number',
-                              hint: 'Enter no.',
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: CustomTextField(
-                              controller: dobController,
-                              label: 'Date of birth',
-                              hint: 'MM/DD/YYYY',
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: passwordController,
-                        obscureText: _obscurePassword,
-                        decoration: InputDecoration(
-                          labelText: 'Password',
-                          hintText: 'Enter your password',
-                          filled: true,
-                          fillColor: Colors.white,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color: app_colors.AppColors.darkNeutral,
-                              width: 1.5,
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color: app_colors.AppColors.primary,
-                              width: 2,
-                            ),
-                          ),
-                          labelStyle: AppFonts.labelStyle.copyWith(
-                            color: app_colors.AppColors.darkNeutral,
-                          ),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscurePassword
-                                  ? Icons.visibility
-                                  : Icons.visibility_off,
-                              color: app_colors.AppColors.darkNeutral,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _obscurePassword = !_obscurePassword;
-                              });
-                            },
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: confirmPasswordController,
-                        obscureText: _obscureConfirmPassword,
-                        decoration: InputDecoration(
-                          labelText: 'Confirm Password',
-                          hintText: 'Enter your password',
-                          filled: true,
-                          fillColor: Colors.white,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color: app_colors.AppColors.darkNeutral,
-                              width: 1.5,
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color: app_colors.AppColors.primary,
-                              width: 2,
-                            ),
-                          ),
-                          labelStyle: AppFonts.labelStyle.copyWith(
-                            color: app_colors.AppColors.darkNeutral,
-                          ),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscureConfirmPassword
-                                  ? Icons.visibility
-                                  : Icons.visibility_off,
-                              color: app_colors.AppColors.darkNeutral,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _obscureConfirmPassword =
-                                    !_obscureConfirmPassword;
-                              });
-                            },
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          side: BorderSide(
-                            color: app_colors.AppColors.error,
-                            width: 1.5,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                        onPressed: () => setState(() => isEditing = false),
-                        child: Text(
-                          'Cancel',
-                          style: AppFonts.labelStyle.copyWith(
-                            color: app_colors.AppColors.error,
-                            fontSize: 12,
-                          ),
-                        ),
+                    Text(
+                      'Location',
+                      style: AppFonts.labelStyle.copyWith(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: app_colors.AppColors.primary,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                        onPressed: () {
-                          setState(() => isEditing = false);
-                        },
-                        child: Text(
-                          'Confirm',
-                          style: AppFonts.labelStyle.copyWith(
-                            color: Colors.white,
-                            fontSize: 12,
-                          ),
-                        ),
+                    Text(
+                      userData!['location'] ?? '',
+                      style: AppFonts.contentStyle.copyWith(fontSize: 16),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Date of Birth',
+                      style: AppFonts.labelStyle.copyWith(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
                       ),
+                    ),
+                    Text(
+                      userData!['dateOfBirth'] ?? '',
+                      style: AppFonts.contentStyle.copyWith(fontSize: 16),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Email',
+                      style: AppFonts.labelStyle.copyWith(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                    Text(
+                      userData!['email'] ?? '',
+                      style: AppFonts.contentStyle.copyWith(fontSize: 16),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Phone Number',
+                      style: AppFonts.labelStyle.copyWith(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                    Text(
+                      userData!['phoneNumber'] ?? '',
+                      style: AppFonts.contentStyle.copyWith(fontSize: 16),
                     ),
                   ],
                 ),
-              ],
+              ),
+              const SizedBox(height: 16),
+              AppButtons(
+                text: 'Log Out',
+                size: 44,
+                textColor: Colors.white,
+                backgroundColor: Colors.redAccent,
+                borderColor: Colors.redAccent,
+                icon: const Icon(Icons.logout, color: Colors.white),
+                onPressed: _logout,
+                textStyle: AppFonts.labelStyle.copyWith(
+                  fontSize: 16,
+                  color: Colors.white,
+                ),
+              ),
             ],
           ),
         ),
