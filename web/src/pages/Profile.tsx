@@ -741,7 +741,11 @@ export function Profile({
                             {key.replace(/([A-Z])/g, " $1").trim()}:
                           </span>
                           <span className="text-sm text-gray-900 text-right ml-4 font-medium">
-                            {value || "N/A"}
+                            {(value === undefined || value === null || value === "") 
+                              ? "N/A" 
+                              : typeof value === "object" 
+                              ? JSON.stringify(value) 
+                              : String(value)}
                           </span>
                         </div>
                       )
