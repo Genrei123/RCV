@@ -32,6 +32,8 @@ export function Products(props: ProductsProps) {
   const [products, setProducts] = useState<Product[]>(props.products || []);
   const [pagination, setPagination] = useState<any | null>(null);
   const pageSize = 10;
+  // Unified search term (server-side for both list & grid views)
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Disable body scroll when a modal is open
   useEffect(() => {
@@ -85,59 +87,41 @@ export function Products(props: ProductsProps) {
     }
   };
 
-  // Server-driven: fetch a page of products
+  // Server-driven: fetch a page of products (uses current searchQuery state)
   const fetchProductsPage = async (page: number) => {
     setLoading(true);
     try {
       const resp = await (
         await import("@/services/productService")
-      ).ProductService.getProductsPage(page, pageSize);
-      // resp may contain { products, data, pagination }
+      ).ProductService.getProductsPage(page, pageSize, searchQuery);
       const items = resp.products || resp.data || [];
       setProducts(items);
       setPagination(resp.pagination || null);
       setCurrentPage(Number(resp.pagination?.current_page) || page);
-      // debug
       // eslint-disable-next-line no-console
       console.debug("Products.fetchProductsPage response:", resp);
-    } catch (err) {
-      console.error("Error fetching products page:", err);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error("Error fetching products page:", error);
     } finally {
       setLoading(false);
     }
   };
 
+  // Column definitions for list view table
   const columns: Column[] = [
-    {
-      key: "LTONumber",
-      label: "LTO Number",
-    },
-    {
-      key: "CFPRNumber",
-      label: "CFPR Number",
-    },
-    {
-      key: "brandName",
-      label: "Brand Name",
-    },
-    {
-      key: "productName",
-      label: "Product Name",
-    },
-    {
-      key: "lotNumber",
-      label: "Lot Number",
-    },
+    { key: "brandName", label: "Brand Name" },
+    { key: "productName", label: "Product Name" },
+    { key: "lotNumber", label: "Lot Number" },
     {
       key: "expirationDate",
       label: "Expiration Date",
-      render: (value: Date) => {
-        return new Date(value).toLocaleDateString("en-US", {
+      render: (value: Date) =>
+        new Date(value).toLocaleDateString("en-US", {
           year: "numeric",
           month: "short",
           day: "numeric",
-        });
-      },
+        }),
     },
     {
       key: "company",
@@ -147,7 +131,7 @@ export function Products(props: ProductsProps) {
     {
       key: "actions",
       label: "Actions",
-      render: (_, row: Product) => (
+      render: (_: any, row: Product) => (
         <div className="flex gap-2">
           <Button
             size="sm"
@@ -173,7 +157,7 @@ export function Products(props: ProductsProps) {
     },
   ];
 
-  // Prefer server-provided pagination when available, otherwise fall back to props.products
+  // Initial load (or use provided products)
   useEffect(() => {
     if (props.products && props.products.length > 0) {
       setProducts(props.products);
@@ -189,6 +173,16 @@ export function Products(props: ProductsProps) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [products, pagination]);
+
+  // Debounce search query changes (server-side fetch)
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      fetchProductsPage(1);
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
 
   const totalItems = pagination?.total_items ?? products.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
@@ -240,6 +234,7 @@ export function Products(props: ProductsProps) {
             columns={columns}
             data={pagedProducts}
             searchPlaceholder="Search products..."
+            onSearch={(v) => setSearchQuery(v)}
             loading={loading}
             emptyStateTitle="No Products Found"
             emptyStateDescription="Try adjusting your search or add a new product to get started."
@@ -275,6 +270,8 @@ export function Products(props: ProductsProps) {
                 type="text"
                 placeholder="Search products..."
                 className="pl-10"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
           </div>

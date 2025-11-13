@@ -44,10 +44,17 @@ export class ProductService {
     }
   }
 
-  static async getProductsPage(page = 1, limit = 10) {
+  static async getProductsPage(page = 1, limit = 10, search?: string) {
     try {
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(limit),
+      });
+      if (search && search.trim().length > 0) {
+        params.append("search", search.trim());
+      }
       const response = await apiClient.get<ProductApiResponse>(
-        `/product/products?page=${page}&limit=${limit}`
+        `/product/products?${params.toString()}`
       );
       return response.data;
     } catch (error) {
@@ -67,15 +74,17 @@ export class ProductService {
       return response.data;
     } catch (error: any) {
       console.error("Error creating product:", error);
-      
+
       // Handle specific error cases
       if (error.response?.status === 401) {
         throw new Error("You must be logged in to create a product");
       }
       if (error.response?.status === 400) {
-        throw new Error(error.response?.data?.message || "Invalid product data");
+        throw new Error(
+          error.response?.data?.message || "Invalid product data"
+        );
       }
-      
+
       throw error;
     }
   }
