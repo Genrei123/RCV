@@ -33,6 +33,18 @@ export function Products(props: ProductsProps) {
   const [pagination, setPagination] = useState<any | null>(null);
   const pageSize = 10;
 
+  // Disable body scroll when a modal is open
+  useEffect(() => {
+    const body = document.body;
+    const previousOverflow = body.style.overflow;
+    if (showAddModal || showDetailsModal) {
+      body.style.overflow = "hidden";
+    }
+    return () => {
+      body.style.overflow = previousOverflow;
+    };
+  }, [showAddModal, showDetailsModal]);
+
   const handleProductClick = (product: Product) => {
     setSelectedProduct(product);
     setShowDetailsModal(true);
