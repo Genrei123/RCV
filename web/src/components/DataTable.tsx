@@ -93,15 +93,16 @@ export function DataTable({
         return columns.some((column) => {
           const value = row[column.key];
           if (value === null || value === undefined) return false;
+          // yung searchbar monggi pati pala nested values chinecheck
+          // hahah kaya pala lumalabas kahit wala sa table
+          const searchTerm = searchQuery.toLowerCase();
           
-          // Handle nested objects (like company.name)
           if (typeof value === 'object' && value !== null) {
-            return Object.values(value).some((nestedValue) =>
-              String(nestedValue).toLowerCase().includes(searchQuery.toLowerCase())
-            );
+            return false;
           }
           
-          return String(value).toLowerCase().includes(searchQuery.toLowerCase());
+          const fieldValue = String(value).toLowerCase();
+          return fieldValue.includes(searchTerm);
         });
       });
     }
