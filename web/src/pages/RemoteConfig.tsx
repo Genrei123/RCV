@@ -1,26 +1,32 @@
-import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
-import { RemoteConfigService } from '../services/remoteConfig';
-import { Settings, Save } from 'lucide-react';
-import { toast } from 'react-toastify';
+import { useState, useEffect } from "react";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
+import { useLocation } from "react-router-dom";
+import { RemoteConfigService } from "../services/remoteConfig";
+import { Settings, Save } from "lucide-react";
+import { toast } from "react-toastify";
 
 interface RemoteConfigParameter {
   key: string;
   value: string | boolean | number;
-  type: 'string' | 'boolean' | 'number';
+  type: "string" | "boolean" | "number";
   description?: string;
 }
 
 export function RemoteConfig() {
-  const [publishedParameters, setPublishedParameters] = useState<RemoteConfigParameter[]>([]);
-  const [draftParameters, setDraftParameters] = useState<RemoteConfigParameter[]>([]);
+  const [publishedParameters, setPublishedParameters] = useState<
+    RemoteConfigParameter[]
+  >([]);
+  const [draftParameters, setDraftParameters] = useState<
+    RemoteConfigParameter[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
 
   const location = useLocation();
 
   // Check if there are unsaved changes
-  const hasChanges = JSON.stringify(publishedParameters) !== JSON.stringify(draftParameters);
+  const hasChanges =
+    JSON.stringify(publishedParameters) !== JSON.stringify(draftParameters);
 
   useEffect(() => {
     loadParameters();
@@ -33,18 +39,19 @@ export function RemoteConfig() {
       setPublishedParameters(params);
       setDraftParameters([...params]); // Create a copy for drafts
     } catch (error) {
-      console.error('Error loading Remote Config parameters:', error);
-      toast.error('Failed to load Remote Config parameters');
+      console.error("Error loading Remote Config parameters:", error);
+      toast.error("Failed to load Remote Config parameters");
     } finally {
       setLoading(false);
     }
   };
 
-
-
-  const handleValueChange = (key: string, newValue: string | boolean | number) => {
-    setDraftParameters(prev => 
-      prev.map(param => 
+  const handleValueChange = (
+    key: string,
+    newValue: string | boolean | number
+  ) => {
+    setDraftParameters((prev) =>
+      prev.map((param) =>
         param.key === key ? { ...param, value: newValue } : param
       )
     );
@@ -55,28 +62,21 @@ export function RemoteConfig() {
       setPublishing(true);
       await RemoteConfigService.publishConfig(draftParameters);
       setPublishedParameters([...draftParameters]);
-      toast.success('Remote Config published successfully!');
+      toast.success("Remote Config published successfully!");
     } catch (error) {
-      console.error('Error publishing Remote Config:', error);
-      toast.error('Failed to publish Remote Config');
+      console.error("Error publishing Remote Config:", error);
+      toast.error("Failed to publish Remote Config");
     } finally {
       setPublishing(false);
     }
   };
-
-
-
-
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 p-6">
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center justify-center h-64">
-            <div className="text-center">
-              <div className="animate-spin h-12 w-12 border-4 border-gray-200 border-t-teal-600 rounded-full mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading Remote Config...</p>
-            </div>
+            <LoadingSpinner size="lg" text="Loading Remote Config..." />
           </div>
         </div>
       </div>
@@ -88,9 +88,12 @@ export function RemoteConfig() {
       <div className="max-w-6xl mx-auto">
         {/* Page Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Mobile App Settings</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            Mobile App Settings
+          </h1>
           <p className="text-gray-600">
-            Control which features are available in the mobile application. Changes are applied instantly to all connected devices.
+            Control which features are available in the mobile application.
+            Changes are applied instantly to all connected devices.
           </p>
         </div>
 
@@ -106,7 +109,7 @@ export function RemoteConfig() {
                   Toggle features on or off for the mobile application
                 </p>
               </div>
-              
+
               <div className="flex items-center gap-3">
                 {hasChanges && (
                   <button
@@ -119,17 +122,19 @@ export function RemoteConfig() {
                     ) : (
                       <Save className="h-4 w-4" />
                     )}
-                    {publishing ? 'Saving...' : 'Save Changes'}
+                    {publishing ? "Saving..." : "Save Changes"}
                   </button>
                 )}
               </div>
             </div>
           </div>
-          
+
           {draftParameters.length === 0 ? (
             <div className="p-12 text-center">
               <Settings className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No Settings Found</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                No Settings Found
+              </h3>
               <p className="text-gray-600">
                 No mobile app settings are currently configured.
               </p>
@@ -137,65 +142,108 @@ export function RemoteConfig() {
           ) : (
             <div className="divide-y divide-gray-200">
               {draftParameters.map((param) => {
-                const isChanged = publishedParameters.find(p => p.key === param.key)?.value !== param.value;
+                const isChanged =
+                  publishedParameters.find((p) => p.key === param.key)
+                    ?.value !== param.value;
                 const getFeatureName = (key: string) => {
                   switch (key) {
-                    case 'disable_application': return 'Application Access';
-                    case 'disable_audit_page': return 'Audit History';
-                    case 'disable_maps_page': return 'Maps & Location';
-                    case 'disable_home_page': return 'Home Dashboard';
-                    case 'disable_profile_page': return 'User Profile';
-                    case 'disable_scanning_page': return 'QR Code Scanning';
-                    default: return key.replace(/disable_|_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    case "disable_application":
+                      return "Application Access";
+                    case "disable_audit_page":
+                      return "Audit History";
+                    case "disable_maps_page":
+                      return "Maps & Location";
+                    case "disable_home_page":
+                      return "Home Dashboard";
+                    case "disable_profile_page":
+                      return "User Profile";
+                    case "disable_scanning_page":
+                      return "QR Code Scanning";
+                    default:
+                      return key
+                        .replace(/disable_|_/g, " ")
+                        .replace(/\b\w/g, (l) => l.toUpperCase());
                   }
                 };
-                
+
                 const getFeatureDescription = (key: string) => {
                   switch (key) {
-                    case 'disable_application': return 'Controls whether users can access the mobile application';
-                    case 'disable_audit_page': return 'Shows or hides the audit trail and history page';
-                    case 'disable_maps_page': return 'Controls access to maps and location tracking features';
-                    case 'disable_home_page': return 'Shows or hides the main dashboard and statistics';
-                    case 'disable_profile_page': return 'Controls access to user profile and account settings';
-                    case 'disable_scanning_page': return 'Enables or disables QR code scanning functionality';
-                    default: return `Controls the ${key.replace(/disable_|_/g, ' ')} feature`;
+                    case "disable_application":
+                      return "Controls whether users can access the mobile application";
+                    case "disable_audit_page":
+                      return "Shows or hides the audit trail and history page";
+                    case "disable_maps_page":
+                      return "Controls access to maps and location tracking features";
+                    case "disable_home_page":
+                      return "Shows or hides the main dashboard and statistics";
+                    case "disable_profile_page":
+                      return "Controls access to user profile and account settings";
+                    case "disable_scanning_page":
+                      return "Enables or disables QR code scanning functionality";
+                    default:
+                      return `Controls the ${key.replace(
+                        /disable_|_/g,
+                        " "
+                      )} feature`;
                   }
                 };
-                
+
                 return (
-                  <div key={param.key} className={`p-6 ${isChanged ? 'bg-orange-50 border-l-4 border-orange-400' : ''}`}>
+                  <div
+                    key={param.key}
+                    className={`p-6 ${
+                      isChanged
+                        ? "bg-orange-50 border-l-4 border-orange-400"
+                        : ""
+                    }`}
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <h3 className="font-semibold text-gray-900">{getFeatureName(param.key)}</h3>
+                          <h3 className="font-semibold text-gray-900">
+                            {getFeatureName(param.key)}
+                          </h3>
                           {isChanged && (
                             <span className="px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800">
                               Unsaved
                             </span>
                           )}
                         </div>
-                        
-                        <p className="text-gray-600 text-sm mb-3">{getFeatureDescription(param.key)}</p>
-                        
+
+                        <p className="text-gray-600 text-sm mb-3">
+                          {getFeatureDescription(param.key)}
+                        </p>
+
                         <div className="flex items-center gap-3">
                           <span className="text-sm text-gray-500">
-                            Status: <span className={param.value ? 'text-red-600 font-medium' : 'text-green-600 font-medium'}>
-                              {param.value ? 'Disabled' : 'Enabled'}
+                            Status:{" "}
+                            <span
+                              className={
+                                param.value
+                                  ? "text-red-600 font-medium"
+                                  : "text-green-600 font-medium"
+                              }
+                            >
+                              {param.value ? "Disabled" : "Enabled"}
                             </span>
                           </span>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center">
                         <button
-                          onClick={() => handleValueChange(param.key, !param.value)}
+                          onClick={() =>
+                            handleValueChange(param.key, !param.value)
+                          }
                           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 ${
-                            param.value ? 'bg-red-600' : 'bg-green-600'
+                            param.value ? "bg-red-600" : "bg-green-600"
                           }`}
                         >
-                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                            param.value ? 'translate-x-1' : 'translate-x-6'
-                          }`} />
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                              param.value ? "translate-x-1" : "translate-x-6"
+                            }`}
+                          />
                         </button>
                       </div>
                     </div>

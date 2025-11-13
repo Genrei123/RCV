@@ -15,14 +15,13 @@ class AppBottomNavBar extends StatelessWidget {
     required this.role,
   });
 
-  // Simplified to user-only routes (Maps temporarily replaced by Reports)
+  // Simplified to user-only routes
   static const List<String> routes = [
     '/user-home',
     '/user-audit-trail',
     '/scanning',
-    '/location',
-    '/user-reports', // Reports (replaces Maps)
-    '/user-profile',
+    '/user-reports', // Reports
+    '/user-profile', // Profile
   ];
 
   void _onTabSelected(BuildContext context, int index) {

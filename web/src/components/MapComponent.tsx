@@ -206,7 +206,7 @@ export function MapComponent({
   if (loading)
     return (
       <div className="w-full h-full flex items-center justify-center">
-        <div className="animate-spin h-12 w-12 border-b-2 border-teal-600"></div>
+        <div className="animate-spin h-12 w-12 rounded-full border-4 border-gray-200 border-t-teal-600"></div>
       </div>
     );
   if (mapError)
@@ -223,7 +223,7 @@ export function MapComponent({
   return (
     <div className="relative w-full h-full">
       <div ref={mapRef} className="w-full h-full" />
-      <div className="absolute top-24 left-4 z-10 w-96">
+      <div className="absolute top-15 left-2 z-10 w-96">
         <Card className="bg-white rounded-lg border-0 shadow-none">
           <div className="relative p-2">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />

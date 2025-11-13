@@ -2,6 +2,7 @@ import { MapComponent } from "@/components/MapComponent";
 import type { Inspector } from "@/components/MapComponent";
 import { FirestoreService } from "@/services/firestore";
 import { useEffect, useState } from "react";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 
 export function Maps() {
   const [inspectors, setInspectors] = useState<Inspector[]>([]);
@@ -79,10 +80,7 @@ export function Maps() {
   if (loading) {
     return (
       <div className="h-full w-full flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin h-12 w-12 border-4 border-gray-200 border-t-teal-600 rounded-full mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading Map...</p>
-        </div>
+        <LoadingSpinner size="lg" text="Loading Map..." />
       </div>
     );
   }

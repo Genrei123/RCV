@@ -34,6 +34,7 @@ export const ComplianceReportValidation = z.object({
   additionalNotes: z.string().max(500).optional().nullable(),
   frontImageUrl: z.string().url(), // Required - always must have front image
   backImageUrl: z.string().url(), // Required - always must have back image
+  ocrBlobText: z.string().optional().nullable(), // Raw OCR text blob
   location: z.object({
     latitude: z.number().optional(),
     longitude: z.number().optional(),
@@ -80,6 +81,10 @@ export class ComplianceReport {
   // Additional notes from agent
   @Column({ type: 'text', nullable: true })
   additionalNotes?: string | null;
+
+  // Raw OCR text blob (automatically saved, read-only)
+  @Column({ type: 'text', nullable: true })
+  ocrBlobText?: string | null;
 
   // Firebase Storage URLs for scanned images (REQUIRED - always must have both)
   @Column({ type: 'varchar', length: 500 })

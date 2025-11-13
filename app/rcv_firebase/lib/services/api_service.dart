@@ -442,9 +442,12 @@ class ApiService {
     String? frontImageUrl,
     String? backImageUrl,
     Map<String, dynamic>? location,
+    String? ocrBlobText, // Add OCR blob text parameter
   }) async {
     try {
       developer.log('Submitting compliance report...');
+      developer.log('Front Image URL: $frontImageUrl');
+      developer.log('Back Image URL: $backImageUrl');
 
       final body = {
         'status': status,
@@ -457,6 +460,7 @@ class ApiService {
         if (frontImageUrl != null) 'frontImageUrl': frontImageUrl,
         if (backImageUrl != null) 'backImageUrl': backImageUrl,
         if (location != null) 'location': location,
+        if (ocrBlobText != null) 'ocrBlobText': ocrBlobText, // Include OCR text
       };
 
       developer.log('Compliance Report Body: ${json.encode(body)}');

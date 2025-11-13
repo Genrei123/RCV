@@ -17,17 +17,42 @@ export const getAllProducts = async (
 ) => {
   try {
     const { page, limit, skip } = parsePageParams(req, 10);
-    const [products, total] = await ProductRepo.findAndCount({
-      skip,
-      take: limit,
-      order: { dateOfRegistration: "DESC" },
-      relations: ["company", "registeredBy"],
-    });
+    const search =
+      typeof req.query.search === "string" ? req.query.search.trim() : "";
+
+    let products: any[] = [];
+    let total = 0;
+
+    if (search) {
+      const qb = ProductRepo.createQueryBuilder("product")
+        .leftJoinAndSelect("product.company", "company")
+        .leftJoinAndSelect("product.registeredBy", "registeredBy")
+        .where("LOWER(product.productName) LIKE LOWER(:q)", {
+          q: `%${search}%`,
+        })
+        .orWhere("LOWER(product.brandName) LIKE LOWER(:q)", {
+          q: `%${search}%`,
+        })
+        .orderBy("product.dateOfRegistration", "DESC")
+        .skip(skip)
+        .take(limit);
+      [products, total] = await qb.getManyAndCount();
+    } else {
+      [products, total] = await ProductRepo.findAndCount({
+        skip,
+        take: limit,
+        order: { dateOfRegistration: "DESC" },
+        relations: ["company", "registeredBy"],
+      });
+    }
+
     const meta = buildPaginationMeta(page, limit, total);
     const links = buildLinks(req, page, limit, meta.total_pages);
-    res.status(200).json({ success: true, data: products, pagination: meta, links });
+    res
+      .status(200)
+      .json({ success: true, data: products, pagination: meta, links });
   } catch (error) {
-    console.error('Error fetching products:', error);
+    console.error("Error fetching products:", error);
     return next(new CustomError(500, "Failed to retrieve products"));
   }
 };
@@ -41,7 +66,7 @@ export const getProductById = async (
     return new CustomError(400, "Invalid Product ID");
   }
   try {
-    // Logic to get a product by ID
+    // Logic to get a product by ID (placeholder)
     res.status(200).json({
       message: `Product with ID ${req.params.id} retrieved successfully`,
     });
@@ -62,7 +87,7 @@ export const createProduct = async (
       return next(new CustomError(401, "User not authenticated"));
     }
 
-    console.log('Creating product, authenticated user:', currentUser._id);
+    console.log("Creating product, authenticated user:", currentUser._id);
 
     // Prepare product data with registeredById from JWT
     const productData = {
@@ -74,7 +99,7 @@ export const createProduct = async (
     // Validate product data
     const validatedProduct = ProductValidation.safeParse(productData);
     if (!validatedProduct.success) {
-      console.error('Validation errors:', validatedProduct.error);
+      console.error("Validation errors:", validatedProduct.error);
       return next(
         new CustomError(400, "Invalid Product Data or missing parameters", {
           errors: validatedProduct.error.issues,
@@ -84,10 +109,10 @@ export const createProduct = async (
     }
 
     // Check if product already exists
-    const existingProduct = await ProductRepo.findOneBy({ 
-      CFPRNumber: validatedProduct.data.CFPRNumber 
+    const existingProduct = await ProductRepo.findOneBy({
+      CFPRNumber: validatedProduct.data.CFPRNumber,
     });
-    
+
     if (existingProduct) {
       return next(
         new CustomError(400, "Product with this CFPR Number already exists", {
@@ -101,8 +126,8 @@ export const createProduct = async (
     }
 
     // Verify company exists
-    const company = await ProductRepo.manager.findOne('Company', {
-      where: { _id: validatedProduct.data.companyId }
+    const company = await ProductRepo.manager.findOne("Company", {
+      where: { _id: validatedProduct.data.companyId },
     });
 
     if (!company) {
@@ -115,16 +140,16 @@ export const createProduct = async (
 
     // Save product
     const savedProduct = await ProductRepo.save(validatedProduct.data);
-    
-    console.log('Product created successfully:', savedProduct._id);
+
+    console.log("Product created successfully:", savedProduct._id);
 
     // Log product creation
     await AuditLogService.createLog({
       action: `Created product: ${savedProduct.productName} (${savedProduct.CFPRNumber})`,
-      actionType: 'CREATE_PRODUCT',
+      actionType: "CREATE_PRODUCT",
       userId: currentUser._id,
       targetProductId: savedProduct._id,
-      platform: 'WEB',
+      platform: "WEB",
       metadata: {
         productName: savedProduct.productName,
         CFPRNumber: savedProduct.CFPRNumber,
@@ -147,7 +172,7 @@ export const createProduct = async (
       },
     });
   } catch (error) {
-    console.error('Error creating product:', error);
+    console.error("Error creating product:", error);
     return next(new CustomError(500, "Failed to create product"));
   }
 };

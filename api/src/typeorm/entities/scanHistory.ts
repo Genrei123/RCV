@@ -24,26 +24,26 @@ export class ScanHistory {
     @PrimaryGeneratedColumn('uuid')
     _id!: string;
 
-    @Column()
-    lat!: string;
+    @Column({ nullable: true })
+    lat?: string;
 
-    @Column()
-    long!: string;
+    @Column({ nullable: true })
+    long?: string;
 
-    @ManyToOne(() => Product, product => product._id)
-    product!: Product;
+    @ManyToOne(() => Product, product => product._id, { nullable: true })
+    product?: Product;
 
-    @ManyToOne(() => User, user => user._id)
-    scannedBy!: User;
+    @ManyToOne(() => User, user => user._id, { nullable: true })
+    scannedBy?: User;
 
-    @Column()
-    scannedAt!: Date;
+    @Column({ nullable: true })
+    scannedAt?: Date;
 
-    @Column({ type: 'enum', enum: ScanResult })
-    scanResult!: ScanResult;
+    @Column({ type: 'enum', enum: ScanResult, nullable: true })
+    scanResult?: ScanResult;
 
-    @Column()
-    remarks!: string;
+    @Column({ nullable: true })
+    remarks?: string;
 
     // New fields for Firebase Storage integration
     @Column({ nullable: true })

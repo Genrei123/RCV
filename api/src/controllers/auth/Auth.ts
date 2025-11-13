@@ -340,7 +340,7 @@ export const logout = async (
     res.clearCookie('token', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', //para sa pag deployed na yung signout
       path: '/'
     });
 

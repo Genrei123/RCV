@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:rcv_firebase/themes/app_colors.dart';
 import 'package:rcv_firebase/services/api_service.dart';
 import 'package:location/location.dart';
+import 'dart:developer' as developer;
 
 class ComplianceReportPage extends StatefulWidget {
   final Map<String, dynamic> scannedData;
@@ -45,10 +46,14 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
     super.initState();
     selectedStatus = widget.initialStatus;
     
-    // Prepopulate additional notes with OCR blob text if available
-    if (widget.ocrBlobText != null && widget.ocrBlobText!.isNotEmpty) {
-      notesController.text = 'OCR Raw Text:\n${widget.ocrBlobText}';
-    }
+    // Debug logging to check received parameters
+    developer.log('🔍 ComplianceReportPage initialized');
+    developer.log('Front Image URL received: ${widget.frontImageUrl ?? "NULL"}');
+    developer.log('Back Image URL received: ${widget.backImageUrl ?? "NULL"}');
+    developer.log('OCR Blob Text received: ${widget.ocrBlobText != null ? "${widget.ocrBlobText!.length} chars" : "NULL"}');
+    
+    // Don't prepopulate notes - let agent write their own observations
+    // OCR text is automatically saved in backend
   }
 
   @override
@@ -125,6 +130,7 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
         frontImageUrl: widget.frontImageUrl,
         backImageUrl: widget.backImageUrl,
         location: locationJson,
+        ocrBlobText: widget.ocrBlobText, // Pass OCR blob text to backend
       );
 
       if (mounted) {
@@ -348,7 +354,7 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Additional Notes & OCR Text',
+                          'Agent Notes',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -357,7 +363,7 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
                         ),
                         const SizedBox(height: 4),
                         const Text(
-                          'Optional - Includes raw OCR text and any additional observations',
+                          'Optional - Add your observations or comments (OCR text is saved automatically)',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey,
@@ -369,7 +375,7 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
                           maxLines: 5,
                           maxLength: 500,
                           decoration: InputDecoration(
-                            hintText: 'Enter additional notes or observations...',
+                            hintText: 'Enter your observations or notes...',
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
@@ -429,6 +435,121 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
                       ],
                     ),
                   ),
+
+                  const SizedBox(height: 16),
+
+                  // Captured Product Images
+                  if (widget.frontImageUrl != null || widget.backImageUrl != null)
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.2),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.camera_alt, color: AppColors.primary, size: 20),
+                              SizedBox(width: 8),
+                              Text(
+                                'Captured Product',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              if (widget.frontImageUrl != null)
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'Front',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Image.network(
+                                          widget.frontImageUrl!,
+                                          height: 150,
+                                          width: double.infinity,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) {
+                                            return Container(
+                                              height: 150,
+                                              color: Colors.grey[300],
+                                              child: const Center(
+                                                child: Icon(Icons.error),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              if (widget.frontImageUrl != null && widget.backImageUrl != null)
+                                const SizedBox(width: 12),
+                              if (widget.backImageUrl != null)
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'Back',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Image.network(
+                                          widget.backImageUrl!,
+                                          height: 150,
+                                          width: double.infinity,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) {
+                                            return Container(
+                                              height: 150,
+                                              color: Colors.grey[300],
+                                              child: const Center(
+                                                child: Icon(Icons.error),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
 
                   const SizedBox(height: 100), // Space for button
                 ],
