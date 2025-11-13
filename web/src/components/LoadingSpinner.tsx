@@ -1,5 +1,3 @@
-import React from "react";
-
 type SpinnerSize = "sm" | "md" | "lg";
 
 export interface LoadingSpinnerProps {
