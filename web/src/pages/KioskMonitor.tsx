@@ -1,7 +1,20 @@
-import { useState, useEffect } from 'react';
-import { KioskService, type KioskHealth, type KioskCommand } from '../services/kioskService';
-import { Activity, Wifi, WifiOff, Lightbulb, Power, RefreshCcw, Zap, Clock } from 'lucide-react';
-import { toast } from 'react-toastify';
+import { useState, useEffect } from "react";
+import {
+  KioskService,
+  type KioskHealth,
+  type KioskCommand,
+} from "../services/kioskService";
+import {
+  Activity,
+  Wifi,
+  WifiOff,
+  Lightbulb,
+  Power,
+  RefreshCcw,
+  Zap,
+  Clock,
+} from "lucide-react";
+import { toast } from "react-toastify";
 
 export function KioskMonitor() {
   const [health, setHealth] = useState<KioskHealth>({
@@ -10,12 +23,12 @@ export function KioskMonitor() {
     pollCount: 0,
     uptime: 0,
     timeSinceLastPoll: null,
-    serverTime: '',
+    serverTime: "",
   });
   const [currentCommand, setCurrentCommand] = useState<KioskCommand>({
-    action: 'none',
+    action: "none",
     led: 0,
-    state: 'off',
+    state: "off",
   });
   const [loading, setLoading] = useState(true);
   const [controlLoading, setControlLoading] = useState<number | null>(null);
@@ -25,14 +38,14 @@ export function KioskMonitor() {
   const loadHealth = async () => {
     try {
       const healthData = await KioskService.getKioskHealth();
-      console.log('[Kiosk Monitor] Health data received:', healthData);
+      console.log("[Kiosk Monitor] Health data received:", healthData);
       setHealth(healthData);
-      
+
       const command = await KioskService.getCurrentCommand();
-      console.log('[Kiosk Monitor] Current command:', command);
+      console.log("[Kiosk Monitor] Current command:", command);
       setCurrentCommand(command);
     } catch (error) {
-      console.error('Error loading kiosk health:', error);
+      console.error("Error loading kiosk health:", error);
     } finally {
       setLoading(false);
     }
@@ -41,7 +54,7 @@ export function KioskMonitor() {
   // Auto-refresh every 5 seconds
   useEffect(() => {
     loadHealth();
-    
+
     if (autoRefresh) {
       const interval = setInterval(loadHealth, 5000);
       return () => clearInterval(interval);
@@ -56,17 +69,17 @@ export function KioskMonitor() {
   const handleLEDControl = async (ledNumber: 1 | 2 | 3) => {
     try {
       setControlLoading(ledNumber);
-      
+
       let result;
       switch (ledNumber) {
         case 1:
-          result = await KioskService.controlLED1('on');
+          result = await KioskService.controlLED1("on");
           break;
         case 2:
-          result = await KioskService.controlLED2('on');
+          result = await KioskService.controlLED2("on");
           break;
         case 3:
-          result = await KioskService.controlLED3('on');
+          result = await KioskService.controlLED3("on");
           break;
       }
 
@@ -87,7 +100,7 @@ export function KioskMonitor() {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
-    
+
     if (hours > 0) {
       return `${hours}h ${minutes}m ${secs}s`;
     } else if (minutes > 0) {
@@ -97,23 +110,23 @@ export function KioskMonitor() {
   };
 
   const formatLastPoll = (lastPoll: Date | null): string => {
-    if (!lastPoll) return 'Never';
-    
+    if (!lastPoll) return "Never";
+
     const now = new Date();
     const diff = Math.floor((now.getTime() - lastPoll.getTime()) / 1000);
-    
-    if (diff < 10) return 'Just now';
+
+    if (diff < 10) return "Just now";
     if (diff < 60) return `${diff}s ago`;
     if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
     return lastPoll.toLocaleTimeString();
   };
 
   const getStatusColor = (isOnline: boolean): string => {
-    return isOnline ? 'text-green-600' : 'text-red-600';
+    return isOnline ? "text-green-600" : "text-red-600";
   };
 
   const getStatusBgColor = (isOnline: boolean): string => {
-    return isOnline ? 'bg-green-100' : 'bg-red-100';
+    return isOnline ? "bg-green-100" : "bg-red-100";
   };
 
   return (
@@ -131,7 +144,7 @@ export function KioskMonitor() {
                 Monitor ESP32 device status and control LEDs remotely
               </p>
             </div>
-            
+
             <div className="flex items-center gap-3">
               <label className="flex items-center gap-2 text-sm text-gray-700">
                 <input
@@ -142,13 +155,15 @@ export function KioskMonitor() {
                 />
                 Auto-refresh (5s)
               </label>
-              
+
               <button
                 onClick={handleManualRefresh}
                 disabled={loading}
                 className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
               >
-                <RefreshCcw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                <RefreshCcw
+                  className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
+                />
                 Refresh
               </button>
             </div>
@@ -160,17 +175,29 @@ export function KioskMonitor() {
           {/* Online Status */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-4">
-              <div className={`p-3 rounded-lg ${getStatusBgColor(health.isOnline)}`}>
+              <div
+                className={`p-3 rounded-lg ${getStatusBgColor(
+                  health.isOnline
+                )}`}
+              >
                 {health.isOnline ? (
-                  <Wifi className={`h-6 w-6 ${getStatusColor(health.isOnline)}`} />
+                  <Wifi
+                    className={`h-6 w-6 ${getStatusColor(health.isOnline)}`}
+                  />
                 ) : (
-                  <WifiOff className={`h-6 w-6 ${getStatusColor(health.isOnline)}`} />
+                  <WifiOff
+                    className={`h-6 w-6 ${getStatusColor(health.isOnline)}`}
+                  />
                 )}
               </div>
             </div>
             <h3 className="text-sm font-medium text-gray-600 mb-1">Status</h3>
-            <p className={`text-2xl font-bold ${getStatusColor(health.isOnline)}`}>
-              {health.isOnline ? 'Online' : 'Offline'}
+            <p
+              className={`text-2xl font-bold ${getStatusColor(
+                health.isOnline
+              )}`}
+            >
+              {health.isOnline ? "Online" : "Offline"}
             </p>
           </div>
 
@@ -181,7 +208,9 @@ export function KioskMonitor() {
                 <Clock className="h-6 w-6 text-blue-600" />
               </div>
             </div>
-            <h3 className="text-sm font-medium text-gray-600 mb-1">Last Poll</h3>
+            <h3 className="text-sm font-medium text-gray-600 mb-1">
+              Last Poll
+            </h3>
             <p className="text-2xl font-bold text-gray-900">
               {formatLastPoll(health.lastPoll)}
             </p>
@@ -194,7 +223,9 @@ export function KioskMonitor() {
                 <Zap className="h-6 w-6 text-purple-600" />
               </div>
             </div>
-            <h3 className="text-sm font-medium text-gray-600 mb-1">Poll Count</h3>
+            <h3 className="text-sm font-medium text-gray-600 mb-1">
+              Poll Count
+            </h3>
             <p className="text-2xl font-bold text-gray-900">
               {health.pollCount.toLocaleString()}
             </p>
@@ -245,9 +276,9 @@ export function KioskMonitor() {
                   className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {controlLoading === 1 ? (
-                    <div className="animate-spin h-4 w-4 border-b-2 border-white rounded-full"></div>
+                    <div className="animate-spin h-4 w-4 rounded-full border-2 border-white/50 border-t-white"></div>
                   ) : (
-                    'Turn On'
+                    "Turn On"
                   )}
                 </button>
               </div>
@@ -269,9 +300,9 @@ export function KioskMonitor() {
                   className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {controlLoading === 2 ? (
-                    <div className="animate-spin h-4 w-4 border-b-2 border-white rounded-full"></div>
+                    <div className="animate-spin h-4 w-4 rounded-full border-2 border-white/50 border-t-white"></div>
                   ) : (
-                    'Turn On'
+                    "Turn On"
                   )}
                 </button>
               </div>
@@ -293,9 +324,9 @@ export function KioskMonitor() {
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {controlLoading === 3 ? (
-                    <div className="animate-spin h-4 w-4 border-b-2 border-white rounded-full"></div>
+                    <div className="animate-spin h-4 w-4 rounded-full border-2 border-white/50 border-t-white"></div>
                   ) : (
-                    'Turn On'
+                    "Turn On"
                   )}
                 </button>
               </div>
@@ -319,7 +350,13 @@ export function KioskMonitor() {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <span className="text-gray-400">Action:</span>
-                    <span className={`font-semibold ${currentCommand.action === 'none' ? 'text-gray-400' : 'text-green-400'}`}>
+                    <span
+                      className={`font-semibold ${
+                        currentCommand.action === "none"
+                          ? "text-gray-400"
+                          : "text-green-400"
+                      }`}
+                    >
                       "{currentCommand.action}"
                     </span>
                   </div>
@@ -329,7 +366,13 @@ export function KioskMonitor() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-gray-400">State:</span>
-                    <span className={`font-semibold ${currentCommand.state === 'on' ? 'text-green-400' : 'text-red-400'}`}>
+                    <span
+                      className={`font-semibold ${
+                        currentCommand.state === "on"
+                          ? "text-green-400"
+                          : "text-red-400"
+                      }`}
+                    >
                       "{currentCommand.state}"
                     </span>
                   </div>
@@ -340,24 +383,33 @@ export function KioskMonitor() {
                 <div className="flex items-start gap-2">
                   <Activity className="h-5 w-5 text-blue-600 mt-0.5" />
                   <div>
-                    <h4 className="font-semibold text-blue-900 mb-1">Polling Mechanism</h4>
+                    <h4 className="font-semibold text-blue-900 mb-1">
+                      Polling Mechanism
+                    </h4>
                     <p className="text-sm text-blue-700">
-                      The ESP32 device polls the <code className="bg-blue-100 px-1 py-0.5 rounded">/kiosk/command</code> endpoint 
-                      regularly. When you click a button above, the command is set and will be executed on the next poll.
-                      The command is reset to "none" after being sent to the device.
+                      The ESP32 device polls the{" "}
+                      <code className="bg-blue-100 px-1 py-0.5 rounded">
+                        /kiosk/command
+                      </code>{" "}
+                      endpoint regularly. When you click a button above, the
+                      command is set and will be executed on the next poll. The
+                      command is reset to "none" after being sent to the device.
                     </p>
                   </div>
                 </div>
               </div>
 
-              {currentCommand.action !== 'none' && (
+              {currentCommand.action !== "none" && (
                 <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                   <div className="flex items-start gap-2">
                     <Zap className="h-5 w-5 text-yellow-600 mt-0.5" />
                     <div>
-                      <h4 className="font-semibold text-yellow-900 mb-1">Command Pending</h4>
+                      <h4 className="font-semibold text-yellow-900 mb-1">
+                        Command Pending
+                      </h4>
                       <p className="text-sm text-yellow-700">
-                        A command is waiting to be picked up by the ESP32 device. It will be executed on the next poll.
+                        A command is waiting to be picked up by the ESP32
+                        device. It will be executed on the next poll.
                       </p>
                     </div>
                   </div>
@@ -374,10 +426,22 @@ export function KioskMonitor() {
             <div className="flex-1">
               <h3 className="font-semibold text-teal-900 mb-1">How It Works</h3>
               <ul className="text-sm text-teal-700 space-y-1">
-                <li>• The ESP32 device polls the backend at regular intervals to check for commands</li>
-                <li>• Health status is tracked based on polling activity (online if polled within last 30 seconds)</li>
-                <li>• Click LED buttons to queue commands that will be executed on the next poll</li>
-                <li>• Auto-refresh is enabled by default to show real-time status updates</li>
+                <li>
+                  • The ESP32 device polls the backend at regular intervals to
+                  check for commands
+                </li>
+                <li>
+                  • Health status is tracked based on polling activity (online
+                  if polled within last 30 seconds)
+                </li>
+                <li>
+                  • Click LED buttons to queue commands that will be executed on
+                  the next poll
+                </li>
+                <li>
+                  • Auto-refresh is enabled by default to show real-time status
+                  updates
+                </li>
               </ul>
             </div>
           </div>
@@ -388,26 +452,34 @@ export function KioskMonitor() {
           <div className="flex items-start gap-3">
             <Zap className="h-5 w-5 text-gray-600 mt-0.5" />
             <div className="flex-1">
-              <h3 className="font-semibold text-gray-900 mb-3">Debug Information</h3>
+              <h3 className="font-semibold text-gray-900 mb-3">
+                Debug Information
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                 <div className="bg-white rounded p-3">
                   <span className="text-gray-600">Last Poll Time:</span>
                   <p className="font-mono text-gray-900 mt-1">
-                    {health.lastPoll ? new Date(health.lastPoll).toLocaleString() : 'Never'}
+                    {health.lastPoll
+                      ? new Date(health.lastPoll).toLocaleString()
+                      : "Never"}
                   </p>
                 </div>
                 <div className="bg-white rounded p-3">
                   <span className="text-gray-600">Time Since Last Poll:</span>
                   <p className="font-mono text-gray-900 mt-1">
-                    {health.timeSinceLastPoll !== null 
-                      ? `${(health.timeSinceLastPoll / 1000).toFixed(1)}s (${health.timeSinceLastPoll}ms)`
-                      : 'N/A'}
+                    {health.timeSinceLastPoll !== null
+                      ? `${(health.timeSinceLastPoll / 1000).toFixed(1)}s (${
+                          health.timeSinceLastPoll
+                        }ms)`
+                      : "N/A"}
                   </p>
                 </div>
                 <div className="bg-white rounded p-3">
                   <span className="text-gray-600">Server Time:</span>
                   <p className="font-mono text-gray-900 mt-1">
-                    {health.serverTime ? new Date(health.serverTime).toLocaleString() : 'N/A'}
+                    {health.serverTime
+                      ? new Date(health.serverTime).toLocaleString()
+                      : "N/A"}
                   </p>
                 </div>
                 <div className="bg-white rounded p-3">
@@ -420,14 +492,20 @@ export function KioskMonitor() {
               {!health.isOnline && health.timeSinceLastPoll !== null && (
                 <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded">
                   <p className="text-sm text-red-700">
-                    Device is offline because time since last poll ({(health.timeSinceLastPoll / 1000).toFixed(1)}s) exceeds 30 seconds threshold.
+                    Device is offline because time since last poll (
+                    {(health.timeSinceLastPoll / 1000).toFixed(1)}s) exceeds 30
+                    seconds threshold.
                   </p>
                 </div>
               )}
               {!health.isOnline && health.lastPoll === null && (
                 <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded">
                   <p className="text-sm text-orange-700">
-                    Device has never polled the server. Make sure your ESP32 is running and configured to poll <code className="bg-orange-100 px-1 rounded">/kiosk/command</code>
+                    Device has never polled the server. Make sure your ESP32 is
+                    running and configured to poll{" "}
+                    <code className="bg-orange-100 px-1 rounded">
+                      /kiosk/command
+                    </code>
                   </p>
                 </div>
               )}

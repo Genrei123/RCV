@@ -206,7 +206,7 @@ export function MapComponent({
   if (loading)
     return (
       <div className="w-full h-full flex items-center justify-center">
-        <div className="animate-spin h-12 w-12 border-b-2 border-teal-600"></div>
+        <div className="animate-spin h-12 w-12 rounded-full border-4 border-gray-200 border-t-teal-600"></div>
       </div>
     );
   if (mapError)
