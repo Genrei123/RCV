@@ -1,6 +1,10 @@
 import { PageContainer } from "@/components/PageContainer";
 import { useState, useEffect } from "react";
-import { CertificateBlockchainService, type CertificateBlockchainData, type BlockchainStats } from "@/services/certificateBlockchainService";
+import {
+  CertificateBlockchainService,
+  type CertificateBlockchainData,
+  type BlockchainStats,
+} from "@/services/certificateBlockchainService";
 import { DataTable, type Column } from "@/components/DataTable";
 import { Pagination } from "@/components/Pagination";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,7 +12,9 @@ import { Shield, FileCheck, Building2, Package } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export function Blockchain() {
-  const [certificates, setCertificates] = useState<CertificateBlockchainData[]>([]);
+  const [certificates, setCertificates] = useState<CertificateBlockchainData[]>(
+    []
+  );
   const [stats, setStats] = useState<BlockchainStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -21,9 +27,12 @@ export function Blockchain() {
 
   const fetchData = async () => {
     setLoading(true);
-    
+
     // Fetch certificates
-    const certResponse = await CertificateBlockchainService.getCertificates(currentPage, pageSize);
+    const certResponse = await CertificateBlockchainService.getCertificates(
+      currentPage,
+      pageSize
+    );
     if (certResponse.success) {
       setCertificates(certResponse.certificates);
       setPagination(certResponse.pagination);
@@ -59,11 +68,15 @@ export function Blockchain() {
       key: "certificateType",
       label: "Type",
       render: (value: string) => (
-        <Badge variant={value === 'company' ? 'default' : 'secondary'}>
-          {value === 'company' ? (
-            <><Building2 className="h-3 w-3 mr-1" /> Company</>
+        <Badge variant={value === "company" ? "default" : "secondary"}>
+          {value === "company" ? (
+            <>
+              <Building2 className="h-3 w-3 mr-1" /> Company
+            </>
           ) : (
-            <><Package className="h-3 w-3 mr-1" /> Product</>
+            <>
+              <Package className="h-3 w-3 mr-1" /> Product
+            </>
           )}
         </Badge>
       ),
@@ -71,6 +84,9 @@ export function Blockchain() {
     {
       key: "entityName",
       label: "Entity",
+      render: (value: string) => (
+        <span className="whitespace-normal break-words">{value}</span>
+      ),
     },
     {
       key: "issuedDate",
@@ -96,8 +112,8 @@ export function Blockchain() {
       description="Immutable certificate verification powered by blockchain technology"
     >
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-        <Card>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
+        <Card className="overflow-hidden">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -106,14 +122,14 @@ export function Blockchain() {
                   {loading ? "..." : stats?.totalCertificates || 0}
                 </p>
               </div>
-              <div className="p-3 bg-teal-100 rounded-lg">
-                <FileCheck className="h-6 w-6 text-teal-600" />
+              <div className="p-3 bg-teal-100 rounded-lg shrink-0">
+                <FileCheck className="h-4 w-4 text-teal-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -122,14 +138,14 @@ export function Blockchain() {
                   {loading ? "..." : stats?.companyCertificates || 0}
                 </p>
               </div>
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <Building2 className="h-6 w-6 text-blue-600" />
+              <div className="p-3 bg-blue-100 rounded-lg shrink-0">
+                <Building2 className="h-4 w-4 text-blue-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -138,14 +154,14 @@ export function Blockchain() {
                   {loading ? "..." : stats?.productCertificates || 0}
                 </p>
               </div>
-              <div className="p-3 bg-purple-100 rounded-lg">
-                <Package className="h-6 w-6 text-purple-600" />
+              <div className="p-3 bg-purple-100 rounded-lg shrink-0">
+                <Package className="h-4 w-4 text-purple-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -155,16 +171,20 @@ export function Blockchain() {
                     <span className="text-sm">Loading...</span>
                   ) : (
                     <>
-                      <div className={`h-3 w-3 rounded-full ${stats?.chainIntegrity ? 'bg-green-500' : 'bg-red-500'}`} />
+                      <div
+                        className={`h-3 w-3 rounded-full ${
+                          stats?.chainIntegrity ? "bg-green-500" : "bg-red-500"
+                        }`}
+                      />
                       <span className="text-sm font-semibold">
-                        {stats?.chainIntegrity ? 'Valid' : 'Compromised'}
+                        {stats?.chainIntegrity ? "Valid" : "Compromised"}
                       </span>
                     </>
                   )}
                 </div>
               </div>
-              <div className="p-3 bg-green-100 rounded-lg">
-                <Shield className="h-6 w-6 text-green-600" />
+              <div className="p-3 bg-green-100 rounded-lg shrink-0">
+                <Shield className="h-4 w-4 text-green-600" />
               </div>
             </div>
           </CardContent>
@@ -173,13 +193,17 @@ export function Blockchain() {
 
       {/* Blockchain Info */}
       {stats && (
-        <Card className="mb-6">
+        <Card className="mb-6 overflow-hidden">
           <CardContent className="p-6">
             {stats.latestCertificate && (
               <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <p className="text-sm text-gray-600 mb-1">Latest Certificate:</p>
-                <p className="font-semibold text-gray-900">{stats.latestCertificate.entityName}</p>
-                <p className="text-xs text-gray-500 font-mono mt-1">
+                <p className="text-sm text-gray-600 mb-1">
+                  Latest Certificate:
+                </p>
+                <p className="font-semibold text-gray-900">
+                  {stats.latestCertificate.entityName}
+                </p>
+                <p className="text-xs text-gray-500 font-mono mt-1 break-all">
                   ID: {stats.latestCertificate.certificateId}
                 </p>
               </div>
@@ -201,10 +225,11 @@ export function Blockchain() {
         />
 
         {pagination && (
-          <div className="p-4 border-t flex items-center justify-between">
-            <div>
+          <div className="p-4 border-t flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="hidden sm:block">
               <span className="text-sm text-gray-600">
-                Page {currentPage} of {totalPages} ({pagination.total_items} total certificates)
+                Page {currentPage} of {totalPages} ({pagination.total_items}{" "}
+                total certificates)
               </span>
             </div>
             <Pagination

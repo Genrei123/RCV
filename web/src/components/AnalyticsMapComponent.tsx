@@ -348,11 +348,11 @@ export function AnalyticsMapComponent() {
       <div ref={mapRef} className="w-full h-full" />
       
       {/* Control Panel */}
-      <div className="absolute top-4 left-4 z-10">
+      <div className="absolute top-15 left-2 z-10">
         <Card className="shadow-lg p-4 bg-white border border-gray-200">
           <div className="text-center">
             <div className="flex items-center justify-center gap-2 mb-3">
-              <BarChart3 className="h-6 w-6 text-blue-600" />
+              <BarChart3 className="h-6 w-3 text-blue-600" />
               <h2 className="text-lg font-bold">DBSCAN Analytics</h2>
             </div>
             <p className="text-sm text-gray-600 mb-4">
