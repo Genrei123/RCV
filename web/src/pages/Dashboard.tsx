@@ -44,6 +44,7 @@ export function Dashboard(props: DashboardProps) {
   const [statsLoading, setStatsLoading] = useState<boolean>(true);
   const pageSize = 10;
 
+
   useEffect(() => {
     fetchCurrentUser();
     fetchDashboardStats();
@@ -326,6 +327,7 @@ export function Dashboard(props: DashboardProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.users]);
 
+  // Single-sidebar layout: render page content directly (global layout provides sidebar)
   return (
     <>
       <PageContainer
@@ -424,7 +426,7 @@ export function Dashboard(props: DashboardProps) {
                 >
                   <option value="lastName">Sort: Name (A→Z)</option>
                   <option value="email">Sort: Email (A→Z)</option>
-                  <option value="status">Sort: Status (A→Z)</option>
+                  <option value="status">Sort: Status</option>
                   <option value="status">Sort: All</option>
                 </select>
               </div>
