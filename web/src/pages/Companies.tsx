@@ -27,6 +27,7 @@ export function Companies(props: CompaniesProps) {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pagination, setPagination] = useState<any | null>(null);
   const pageSize = 10;
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Disable body scroll when a modal is open
   useEffect(() => {
@@ -48,7 +49,18 @@ export function Companies(props: CompaniesProps) {
       // fetch first page if parent didn't provide companies
       fetchCompaniesPage(1);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.companies]);
+
+  // Debounce search query changes (server-side fetch)
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      fetchCompaniesPage(1);
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
 
   // Fallback: Sometimes initial response/set doesn't include pagination yet (or parent passed just a single page array)
   // causing totalPages to evaluate to 1 and hiding the pagination controls until a manual refresh.
@@ -68,7 +80,7 @@ export function Companies(props: CompaniesProps) {
   const fetchCompaniesPage = async (page: number) => {
     setLoading(true);
     try {
-      const resp = await CompanyService.getCompaniesPage(page, pageSize);
+      const resp = await CompanyService.getCompaniesPage(page, pageSize, searchQuery);
       // debug: log server response for pagination diagnosis
       // eslint-disable-next-line no-console
       console.debug("Companies.fetchCompaniesPage response:", resp);
@@ -188,8 +200,8 @@ export function Companies(props: CompaniesProps) {
   ];
 
   const onSearch = (query: string) => {
-    // Search functionality can be implemented here
-    console.log("Search query:", query);
+    // Server-side search implementation (same as Products)
+    setSearchQuery(query);
   };
 
   const totalItems = pagination?.total_items ?? companies.length;

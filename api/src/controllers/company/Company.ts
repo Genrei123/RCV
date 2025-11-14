@@ -17,16 +17,41 @@ export const getAllCompanies = async (
 ) => {
   try {
     const { page, limit, skip } = parsePageParams(req, 10);
-    const [companies, total] = await CompanyRepo.findAndCount({
-      skip,
-      take: limit,
-      order: { name: "ASC" },
-    });
+    const search =
+      typeof req.query.search === "string" ? req.query.search.trim() : "";
+
+    let companies: any[] = [];
+    let total = 0;
+
+    if (search) {
+      const qb = CompanyRepo.createQueryBuilder("company")
+        .where("LOWER(company.name) LIKE LOWER(:q)", {
+          q: `%${search}%`,
+        })
+        .orWhere("LOWER(company.address) LIKE LOWER(:q)", {
+          q: `%${search}%`,
+        })
+        .orWhere("LOWER(company.licenseNumber) LIKE LOWER(:q)", {
+          q: `%${search}%`,
+        })
+        .orderBy("company.name", "ASC")
+        .skip(skip)
+        .take(limit);
+      [companies, total] = await qb.getManyAndCount();
+    } else {
+      [companies, total] = await CompanyRepo.findAndCount({
+        skip,
+        take: limit,
+        order: { name: "ASC" },
+      });
+    }
+
     const meta = buildPaginationMeta(page, limit, total);
     const links = buildLinks(req, page, limit, meta.total_pages);
     res.status(200).json({ success: true, data: companies, pagination: meta, links });
   } catch (error) {
-    return new CustomError(500, "Failed to all retrieve companies");
+    console.error("Error fetching companies:", error);
+    return next(new CustomError(500, "Failed to retrieve companies"));
   }
 };
 
