@@ -33,6 +33,12 @@ export const getAllProducts = async (
         .orWhere("LOWER(product.brandName) LIKE LOWER(:q)", {
           q: `%${search}%`,
         })
+        .orWhere("LOWER(product.lotNumber) LIKE LOWER(:q)", {
+          q: `%${search}%`,
+        })
+        .orWhere("LOWER(company.name) LIKE LOWER(:q)", {
+          q: `%${search}%`,
+        })
         .orderBy("product.dateOfRegistration", "DESC")
         .skip(skip)
         .take(limit);
