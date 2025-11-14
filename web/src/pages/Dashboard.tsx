@@ -29,14 +29,14 @@ export interface DashboardProps {
 }
 
 export function Dashboard(props: DashboardProps) {
-  const [, setSearch] = useState<string>("");
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [statsLoading, setStatsLoading] = useState<boolean>(true);
-  const pageSize = 10;
+   const [, setSearch] = useState<string>("");
+   const [currentUser, setCurrentUser] = useState<any>(null);
+   const [currentPage, setCurrentPage] = useState<number>(1);
+   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+   const [stats, setStats] = useState<DashboardStats | null>(null);
+   const [statsLoading, setStatsLoading] = useState<boolean>(true);
+   const pageSize = 10;
 
   useEffect(() => {
     fetchCurrentUser();
@@ -284,6 +284,7 @@ export function Dashboard(props: DashboardProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.users]);
 
+  // Single-sidebar layout: render page content directly (global layout provides sidebar)
   return (
     <>
       <PageContainer title="Dashboard" description="Overview of system statistics and user management">
