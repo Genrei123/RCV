@@ -79,13 +79,7 @@ export function Companies(props: CompaniesProps) {
       // if backend provides `productCount` (number) but not a full `products` array,
       // create a placeholder array with the right length so existing UI code
       // that uses `company.products?.length` continues to work.
-      const mapped = items.map((c: any) => ({
-        ...c,
-        products: c.products && Array.isArray(c.products)
-          ? c.products
-          : new Array(c.productCount || 0),
-      }));
-      setCompanies(mapped);
+      setCompanies(items);
       setPagination(resp.pagination || null);
       setCurrentPage(Number(resp.pagination?.current_page) || page);
     } catch (err) {
@@ -93,7 +87,7 @@ export function Companies(props: CompaniesProps) {
     } finally {
       setLoading(false);
     }
-  };
+};
 
   const handleAddSuccess = () => {
     // Refresh the companies list after adding a new company
@@ -157,10 +151,10 @@ export function Companies(props: CompaniesProps) {
       ),
     },
     {
-      key: "products",
+      key: "productCount",
       label: "Products",
-      render: (value: any[]) => {
-        const productCount = value?.length || 0;
+      render: (value: any) => {
+        const productCount = value || 0;
         return (
           <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm font-medium">
             {productCount} {productCount === 1 ? "Product" : "Products"}
