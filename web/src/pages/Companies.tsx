@@ -75,7 +75,17 @@ export function Companies(props: CompaniesProps) {
       // resp may have { data, pagination }
       // prefer resp.data or resp.companies
       const items = resp.data || (resp as any).companies || [];
-      setCompanies(items);
+      // Ensure the table's `products` column can derive a count:
+      // if backend provides `productCount` (number) but not a full `products` array,
+      // create a placeholder array with the right length so existing UI code
+      // that uses `company.products?.length` continues to work.
+      const mapped = items.map((c: any) => ({
+        ...c,
+        products: c.products && Array.isArray(c.products)
+          ? c.products
+          : new Array(c.productCount || 0),
+      }));
+      setCompanies(mapped);
       setPagination(resp.pagination || null);
       setCurrentPage(Number(resp.pagination?.current_page) || page);
     } catch (err) {

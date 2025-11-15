@@ -22,9 +22,22 @@ export const getAllCompanies = async (
       take: limit,
       order: { name: "ASC" },
     });
+
+    // Get ProductRepo
+    const { ProductRepo } = require("../../typeorm/data-source");
+
+    // For each company, count products with matching LTO number
+    const companiesWithProductCount = await Promise.all(
+      companies.map(async (company) => {
+        const productCount = await ProductRepo.count({ where: { LTONumber: company.licenseNumber } });
+        console.log(`Company: ${company.name}, License Number: ${company.licenseNumber}, Product Count: ${productCount}`);
+        return { ...company, productCount };
+      })
+    );
+
     const meta = buildPaginationMeta(page, limit, total);
     const links = buildLinks(req, page, limit, meta.total_pages);
-    res.status(200).json({ success: true, data: companies, pagination: meta, links });
+    res.status(200).json({ success: true, data: companiesWithProductCount, pagination: meta, links });
   } catch (error) {
     return new CustomError(500, "Failed to all retrieve companies");
   }
