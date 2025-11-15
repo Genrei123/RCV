@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'widgets/led_toggle_button.dart';
+import 'widgets/title_logo_header_app_bar.dart';
 import 'screens/scanner_screen.dart';
 
 void main() {
@@ -8,7 +9,7 @@ void main() {
 }
 
 class ThreeButtonToggleApp extends StatelessWidget {
-  const ThreeButtonToggleApp({super.key});    
+  const ThreeButtonToggleApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -32,97 +33,82 @@ class ToggleHomePage extends StatefulWidget {
 
 class _ToggleHomePageState extends State<ToggleHomePage> {
   final List<bool> _buttonStates = [false, false, false];
-  final TextEditingController _ipController = TextEditingController(text: '192.168.4.1');
+  final TextEditingController _ipController = TextEditingController(
+    text: '192.168.4.1',
+  );
   bool _isSending = false;
-  String? _lastScanned;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Three Button Toggle'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.qr_code_scanner),
-            tooltip: 'Scan QR / Barcode',
-            onPressed: () async {
-              final result = await Navigator.of(context).push<String?>(
-                MaterialPageRoute(builder: (_) => const ScannerScreen()),
-              );
-              if (result != null && mounted) {
-                setState(() {
-                  _lastScanned = result;
-                });
-
-                // If the QR contains an IP address, auto-fill the IP field.
-                if (_looksLikeIp(result)) {
-                  setState(() {
-                    _ipController.text = result;
-                  });
-                }
-
-                // Trigger blink on ESP32 LED 1 three times.
-                // Run in background but await it so we can show errors via SnackBar.
-                await _blinkLedSequence(1, 3);
-              }
-            },
-          ),
-        ],
+      appBar: TitleLogoHeaderAppBar(
+        title: 'Machine Manager',
+        height: 140,
+        showBackButton: false,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // IP input and send indicator
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _ipController,
-                    decoration: const InputDecoration(
-                      labelText: 'ESP32 IP',
-                      hintText: 'e.g. 192.168.4.1',
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                _isSending
-                    ? const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const SizedBox(width: 24, height: 24),
-              ],
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 4,
+              offset: Offset(0, -2),
             ),
-            const SizedBox(height: 12),
-            if (_lastScanned != null)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Last scanned:', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 6),
-                  Text(
-                    // show the last scanned string
-                    _lastScanned!,
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-              ),
-            const SizedBox(height: 12),
-            ...List.generate(_buttonStates.length, (index) {
-            final isOn = _buttonStates[index];
-            final labelColor = _labelColorForIndex(index);
-            return LedToggleButton(
-              index: index,
-              isOn: isOn,
-              labelColor: labelColor,
-              onPressed: () => _toggleButton(index),
-            );
-          }),
+          ],
+        ),
+        child: const Text(
+          'IOT MANAGER ONLY',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.8,
+          ),
+        ),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Align(
+            //   alignment: Alignment.topRight,
+            //   child: IconButton(
+            //     icon: const Icon(Icons.qr_code_scanner),
+            //     tooltip: 'Scan QR / Barcode',
+            //     onPressed: () async {
+            //       final result = await Navigator.of(context).push<String?>(
+            //         MaterialPageRoute(builder: (_) => const ScannerScreen()),
+            //       );
+            //       if (result != null && mounted) {
+            //         if (_looksLikeIp(result)) {
+            //           setState(() {
+            //             _ipController.text = result;
+            //           });
+            //         }
+            //         await _blinkLedSequence(1, 3);
+            //       }
+            //     },
+            //   ),
+            // ),
+            // Status card removed per request
+            _Esp32Form(ipController: _ipController, isSending: _isSending),
+            const SizedBox(height: 24),
+            const SizedBox(height: 8),
+            Text('Controls', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Column(
+              children: List.generate(_buttonStates.length, (index) {
+                return LedToggleButton(
+                  index: index,
+                  isOn: _buttonStates[index],
+                  labelColor: _labelColorForIndex(index),
+                  onPressed: () => _toggleButton(index),
+                );
+              }),
+            ),
           ],
         ),
       ),
@@ -146,29 +132,33 @@ class _ToggleHomePageState extends State<ToggleHomePage> {
       _isSending = true;
     });
 
-    _sendLedRequest(ip, index + 1, newState).then((success) {
-      if (!success) {
-        // Revert UI on failure
-        if (!mounted) return;
-        setState(() {
-          _buttonStates[index] = !newState;
+    _sendLedRequest(ip, index + 1, newState)
+        .then((success) {
+          if (!success) {
+            // Revert UI on failure
+            if (!mounted) return;
+            setState(() {
+              _buttonStates[index] = !newState;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Failed to send request to ESP32')),
+            );
+            return;
+          }
+        })
+        .whenComplete(() {
+          if (!mounted) return;
+          setState(() {
+            _isSending = false;
+          });
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to send request to ESP32')),
-        );
-        return;
-      }
-    }).whenComplete(() {
-      if (!mounted) return;
-      setState(() {
-        _isSending = false;
-      });
-    });
   }
 
   Future<bool> _sendLedRequest(String ip, int ledNumber, bool turnOn) async {
     try {
-      final uri = Uri.parse('http://$ip/led$ledNumber?state=${turnOn ? 'on' : 'off'}');
+      final uri = Uri.parse(
+        'http://$ip/led$ledNumber?state=${turnOn ? 'on' : 'off'}',
+      );
       final response = await http.get(uri).timeout(const Duration(seconds: 5));
       return response.statusCode == 200;
     } catch (e) {
@@ -210,7 +200,8 @@ class _ToggleHomePageState extends State<ToggleHomePage> {
       final offResults = await Future.wait(offFutures);
 
       // If any failed, show which cycle failed and abort
-      if (onResults.any((r) => r == false) || offResults.any((r) => r == false)) {
+      if (onResults.any((r) => r == false) ||
+          offResults.any((r) => r == false)) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Blink failed at iteration ${i + 1}')),
@@ -238,3 +229,50 @@ class _ToggleHomePageState extends State<ToggleHomePage> {
     super.dispose();
   }
 }
+
+// --- UI helper widgets (design only) ---
+
+class _Esp32Form extends StatelessWidget {
+  final TextEditingController ipController;
+  final bool isSending;
+  const _Esp32Form({required this.ipController, required this.isSending});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'ESP32 Connection',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: ipController,
+                decoration: const InputDecoration(
+                  labelText: 'ESP32 IP',
+                  hintText: 'e.g. 192.168.4.1',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+              ),
+            ),
+            const SizedBox(width: 12),
+            isSending
+                ? const SizedBox(
+                    width: 28,
+                    height: 28,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const SizedBox(width: 28, height: 28),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+// Removed LED state cards per current simplified design
