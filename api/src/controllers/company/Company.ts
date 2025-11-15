@@ -9,6 +9,7 @@ import {
   buildLinks,
 } from "../../utils/pagination";
 import { AuditLogService } from "../../services/auditLogService";
+import { redisService } from "../../services/redisService";
 
 export const getAllCompanies = async (
   req: Request,
@@ -20,7 +21,14 @@ export const getAllCompanies = async (
     const search =
       typeof req.query.search === "string" ? req.query.search.trim() : "";
 
-    let companies: any[] = [];
+    try {
+      const cachedData = await redisService.getCachedCompanies(page, limit, search);
+      if (cachedData) {
+        return res.status(200).json(cachedData);
+      }
+    } catch (redisError) {
+      console.warn("Redis cache failed, using database:", redisError instanceof Error ? redisError.message : 'Unknown error');
+    }    let companies: any[] = [];
     let total = 0;
 
     if (search) {
@@ -48,7 +56,16 @@ export const getAllCompanies = async (
 
     const meta = buildPaginationMeta(page, limit, total);
     const links = buildLinks(req, page, limit, meta.total_pages);
-    res.status(200).json({ success: true, data: companies, pagination: meta, links });
+    const responseData = { success: true, data: companies, pagination: meta, links };
+
+    // Cache the result for 5 minutes (change nalang if needed)
+    try {
+      await redisService.setCachedCompanies(page, limit, responseData, search, 300);
+    } catch (redisError) {
+      console.warn("Failed to cache companies:", redisError instanceof Error ? redisError.message : 'Unknown error');
+    }
+
+    res.status(200).json(responseData);
   } catch (error) {
     console.error("Error fetching companies:", error);
     return next(new CustomError(500, "Failed to retrieve companies"));
@@ -109,6 +126,13 @@ export const createCompany = async (
     }
 
     const savedCompany = await CompanyRepo.save(Company.data);
+    
+    // Clear companies cache when new company is created
+    try {
+      await redisService.invalidateCompaniesCache();
+    } catch (redisError) {
+      console.warn("Failed to clear companies cache:", redisError instanceof Error ? redisError.message : 'Unknown error');
+    }
     
     // Log company creation
     await AuditLogService.createLog({
