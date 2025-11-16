@@ -23,13 +23,19 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
     );
 
     if (daysUntilExpiration < 0) {
-      return { label: "Expired", color: "bg-red-100 text-red-800" };
+      return { label: "Expired", color: "app-bg-error-soft app-text-error" };
     } else if (daysUntilExpiration <= 30) {
-      return { label: "Expiring Soon", color: "bg-yellow-100 text-yellow-800" };
+      return {
+        label: "Expiring Soon",
+        color: "app-bg-secondary-soft app-text-secondary",
+      };
     } else if (daysUntilExpiration <= 90) {
-      return { label: "Expiring", color: "bg-orange-100 text-orange-800" };
+      return {
+        label: "Expiring",
+        color: "app-bg-secondary-soft app-text-secondary",
+      };
     } else {
-      return { label: "Active", color: "bg-green-100 text-green-800" };
+      return { label: "Active", color: "app-bg-success-soft app-text-success" };
     }
   };
 
@@ -43,12 +49,12 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
           <div className="flex items-center gap-3 min-w-0">
             <div
               className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                isExpired ? "bg-red-100" : "bg-blue-100"
+                isExpired ? "app-bg-error-soft" : "app-bg-primary-soft"
               }`}
             >
               <Package
                 className={`h-5 w-5 ${
-                  isExpired ? "text-red-600" : "text-blue-600"
+                  isExpired ? "app-text-error" : "app-text-primary"
                 }`}
               />
             </div>

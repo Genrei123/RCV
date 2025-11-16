@@ -2,17 +2,17 @@ import { Link } from "react-router-dom";
 
 export function Footer() {
   return (
-    <footer className="bg-teal-700 text-white border-t border-teal-600 w-full overflow-x-hidden">
+    <footer className="app-bg-primary text-white border-t border-[color:var(--app-primary)] w-full overflow-x-hidden">
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
         <div className="w-full">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 text-center md:text-left">
             {/* Logo Section */}
             <div className="flex flex-col items-center md:items-start">
               <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center mb-3">
-                <div className="w-8 h-8 bg-teal-600 rounded transform rotate-45"></div>
+                <div className="w-8 h-8 app-bg-primary rounded transform rotate-45"></div>
               </div>
               <h3 className="text-lg font-bold">RCV System</h3>
-              <p className="text-teal-200 text-sm">
+              <p className="text-white/80 text-sm">
                 Product Verification Platform
               </p>
             </div>
@@ -23,25 +23,25 @@ export function Footer() {
               <div className="space-y-2">
                 <Link
                   to="/about"
-                  className="block text-teal-200 hover:text-white transition-colors text-sm"
+                  className="block text-white/80 hover:text-white transition-colors text-sm"
                 >
                   About Us
                 </Link>
                 <Link
                   to="/contact"
-                  className="block text-teal-200 hover:text-white transition-colors text-sm"
+                  className="block text-white/80 hover:text-white transition-colors text-sm"
                 >
                   Contact
                 </Link>
                 <Link
                   to="/privacy"
-                  className="block text-teal-200 hover:text-white transition-colors text-sm"
+                  className="block text-white/80 hover:text-white transition-colors text-sm"
                 >
                   Privacy Policy
                 </Link>
                 <Link
                   to="/terms"
-                  className="block text-teal-200 hover:text-white transition-colors text-sm"
+                  className="block text-white/80 hover:text-white transition-colors text-sm"
                 >
                   Terms of Service
                 </Link>
@@ -56,7 +56,7 @@ export function Footer() {
                   href="https://facebook.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-10 h-10 bg-teal-600 rounded-lg flex items-center justify-center text-white hover:bg-teal-500 transition-colors"
+                  className="w-10 h-10 app-bg-primary rounded-lg flex items-center justify-center text-white hover:opacity-90 transition-colors"
                 >
                   <i className="fab fa-facebook-f"></i>
                 </a>
@@ -64,7 +64,7 @@ export function Footer() {
                   href="https://twitter.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-10 h-10 bg-teal-600 rounded-lg flex items-center justify-center text-white hover:bg-teal-500 transition-colors"
+                  className="w-10 h-10 app-bg-primary rounded-lg flex items-center justify-center text-white hover:opacity-90 transition-colors"
                 >
                   <i className="fab fa-twitter"></i>
                 </a>
@@ -72,7 +72,7 @@ export function Footer() {
                   href="https://linkedin.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-10 h-10 bg-teal-600 rounded-lg flex items-center justify-center text-white hover:bg-teal-500 transition-colors"
+                  className="w-10 h-10 app-bg-primary rounded-lg flex items-center justify-center text-white hover:opacity-90 transition-colors"
                 >
                   <i className="fab fa-linkedin-in"></i>
                 </a>
@@ -81,8 +81,8 @@ export function Footer() {
           </div>
 
           {/* Copyright */}
-          <div className="border-t border-teal-600 mt-8 pt-6 text-center w-full">
-            <p className="text-sm text-teal-200">
+          <div className="border-t border-[color:var(--app-primary)] mt-8 pt-6 text-center w-full">
+            <p className="text-sm text-white/80">
               &copy; {new Date().getFullYear()} RCV System. All rights reserved.
             </p>
           </div>

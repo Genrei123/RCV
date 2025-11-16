@@ -34,18 +34,18 @@ export function LoadingSpinner({
   const spinner =
     spinnerVariant === "line" ? (
       <div
-        className={`animate-spin ${sc.box} ${sc.line} border-teal-600 ${className}`}
+        className={`animate-spin ${sc.box} ${sc.line} border-[color:var(--app-primary)] ${className}`}
       />
     ) : (
       <div
-        className={`animate-spin ${sc.box} ${sc.ring} rounded-full border-gray-200 border-t-teal-600 ${className}`}
+        className={`animate-spin ${sc.box} ${sc.ring} rounded-full border-[color:var(--app-border)] border-t-[color:var(--app-primary)] ${className}`}
       />
     );
 
   return (
     <div className="flex flex-col items-center justify-center">
       {spinner}
-      {showText && <p className="text-gray-500 mt-3">{text}</p>}
+      {showText && <p className="app-text-subtle mt-3">{text}</p>}
     </div>
   );
 }

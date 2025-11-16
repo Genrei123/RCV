@@ -103,7 +103,7 @@ export function AuthPage() {
     if (/[0-9]/.test(password)) score++;
     if (/[^A-Za-z0-9]/.test(password)) score++;
 
-    if (score <= 2) return { score, label: 'Weak', color: 'bg-red-500' };
+    if (score <= 2) return { score, label: 'Weak', color: 'bg-error-500' };
     if (score <= 4) return { score, label: 'Fair', color: 'bg-yellow-500' };
     if (score <= 5) return { score, label: 'Good', color: 'bg-blue-500' };
     return { score, label: 'Strong', color: 'bg-green-500' };
@@ -351,12 +351,12 @@ export function AuthPage() {
         <div className="hidden lg:block">
           <div className="text-center space-y-6">
             <div className="inline-block p-6 bg-white rounded-2xl shadow-lg">
-              <div className="w-24 h-24 bg-gradient-to-br from-[#005440] to-[#00B087] rounded-xl flex items-center justify-center">
+              <div className="w-24 h-24 bg-gradient-to-br from-primary to-[#00B087] rounded-xl flex items-center justify-center">
                 <img src="/logo.svg" alt="RCV Logo" className="w-16 h-16 object-contain" />
               </div>
             </div>
-            <h1 className="text-4xl font-bold text-[#005440]">RCV System</h1>
-            <p className="text-xl text-gray-600">
+            <h1 className="text-4xl font-bold text-primary">RCV System</h1>
+            <p className="text-xl text-neutral-600">
               Secure Product Verification & Management
             </p>
             
@@ -366,24 +366,24 @@ export function AuthPage() {
         {/* Right Side - Auth Forms */}
         <Card className="p-8 shadow-2xl bg-white">
           <div className="mb-8 text-center lg:hidden">
-            <div className="inline-block p-4 bg-gradient-to-br from-[#005440] to-[#00B087] rounded-xl mb-4">
+            <div className="inline-block p-4 bg-gradient-to-br from-primary to-[#00B087] rounded-xl mb-4">
               <img src="/logo.svg" alt="RCV Logo" className="w-12 h-12 object-contain" />
             </div>
           </div>
 
           <div className="mb-8 text-center">
-            <h2 className="text-3xl font-bold text-[#005440] mb-2">
+            <h2 className="text-3xl font-bold text-primary mb-2">
               {isLogin ? 'Welcome Back' : 'Create Account'}
             </h2>
-            <p className="text-gray-600">
+            <p className="text-neutral-600">
               {isLogin ? 'Sign in to continue to RCV System' : 'Sign up to get started with RCV System'}
             </p>
           </div>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-              <p className="text-red-600 text-sm flex-1">{error}</p>
+            <div className="mb-6 p-4 bg-error-50 border border-error-200 rounded-lg flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-error-600 flex-shrink-0 mt-0.5" />
+              <p className="text-error-600 text-sm flex-1">{error}</p>
             </div>
           )}
 
@@ -391,11 +391,11 @@ export function AuthPage() {
           {isLogin ? (
             <form onSubmit={handleLogin} className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-neutral-700 mb-2">
                   Email Address
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5" />
                   <Input
                     type="email"
                     placeholder="Enter your email"
@@ -408,11 +408,11 @@ export function AuthPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-neutral-700 mb-2">
                   Password
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5" />
                   <Input
                     type={showPassword ? 'text' : 'password'}
                     placeholder="Enter your password"
@@ -424,7 +424,7 @@ export function AuthPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
                   >
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
@@ -435,16 +435,16 @@ export function AuthPage() {
                 <label className="flex items-center cursor-pointer">
                   <input
                     type="checkbox"
-                    className="mr-2 rounded border-gray-300 text-[#005440] focus:ring-[#005440]"
+                    className="mr-2 rounded border-neutral-300 text-primary focus:ring-primary"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
                   />
-                  <span className="text-sm text-gray-600">Remember me</span>
+                  <span className="text-sm text-neutral-600">Remember me</span>
                 </label>
                 <button
                   type="button"
                   onClick={handleForgotPassword}
-                  className="text-sm text-[#005440] hover:text-[#00B087] font-medium"
+                  className="text-sm text-primary hover:text-[#00B087] font-medium"
                 >
                   Forgot Password?
                 </button>
@@ -452,7 +452,7 @@ export function AuthPage() {
 
               <Button
                 type="submit"
-                className="w-full h-11 bg-[#005440] hover:bg-[#00B087] text-white font-semibold"
+                className="w-full h-11 bg-primary hover:bg-[#00B087] text-white font-semibold"
                 disabled={loading}
               >
                 {loading ? (
@@ -470,105 +470,105 @@ export function AuthPage() {
             <form onSubmit={handleRegister} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
                     First Name *
                   </label>
                   <div className="relative">
-                    <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5" />
                     <Input
                       type="text"
                       placeholder="John"
-                      className={`pl-10 h-11 ${errors.firstName ? 'border-red-500' : ''}`}
+                      className={`pl-10 h-11 ${errors.firstName ? 'border-error-500' : ''}`}
                       value={registerData.firstName}
                       onChange={(e) => setRegisterData({ ...registerData, firstName: e.target.value })}
                       required
                     />
                   </div>
-                  {errors.firstName && <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>}
+                  {errors.firstName && <p className="text-error-500 text-xs mt-1">{errors.firstName}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
                     Middle Name (Optional)
                   </label>
                   <div className="relative">
-                    <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5" />
                     <Input
                       type="text"
                       placeholder="M."
-                      className={`pl-10 h-11 ${errors.middleName ? 'border-red-500' : ''}`}
+                      className={`pl-10 h-11 ${errors.middleName ? 'border-error-500' : ''}`}
                       value={registerData.middleName}
                       onChange={(e) => setRegisterData({ ...registerData, middleName: e.target.value })}
                     />
                   </div>
-                  {errors.middleName && <p className="text-red-500 text-xs mt-1">{errors.middleName}</p>}
+                  {errors.middleName && <p className="text-error-500 text-xs mt-1">{errors.middleName}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
                     Last Name *
                   </label>
                   <div className="relative">
-                    <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5" />
                     <Input
                       type="text"
                       placeholder="Doe"
-                      className={`pl-10 h-11 ${errors.lastName ? 'border-red-500' : ''}`}
+                      className={`pl-10 h-11 ${errors.lastName ? 'border-error-500' : ''}`}
                       value={registerData.lastName}
                       onChange={(e) => setRegisterData({ ...registerData, lastName: e.target.value })}
                       required
                     />
                   </div>
-                  {errors.lastName && <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>}
+                  {errors.lastName && <p className="text-error-500 text-xs mt-1">{errors.lastName}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
                     Extension Name (Optional)
                   </label>
                   <div className="relative">
-                    <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5" />
                     <Input
                       type="text"
                       placeholder="Jr., Sr., III, etc."
-                      className={`pl-10 h-11 ${errors.extName ? 'border-red-500' : ''}`}
+                      className={`pl-10 h-11 ${errors.extName ? 'border-error-500' : ''}`}
                       value={registerData.extName}
                       onChange={(e) => setRegisterData({ ...registerData, extName: e.target.value })}
                     />
                   </div>
-                  {errors.extName && <p className="text-red-500 text-xs mt-1">{errors.extName}</p>}
+                  {errors.extName && <p className="text-error-500 text-xs mt-1">{errors.extName}</p>}
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-neutral-700 mb-2">
                   Email Address *
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5" />
                   <Input
                     type="email"
                     placeholder="john.doe@example.com"
-                    className={`pl-10 h-11 ${errors.email ? 'border-red-500' : ''}`}
+                    className={`pl-10 h-11 ${errors.email ? 'border-error-500' : ''}`}
                     value={registerData.email}
                     onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
                     required
                   />
                 </div>
-                {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+                {errors.email && <p className="text-error-500 text-xs mt-1">{errors.email}</p>}
               </div>
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
                     Password *
                   </label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5" />
                     <Input
                       type={showPassword ? 'text' : 'password'}
                       placeholder="Min 8 characters"
-                      className={`pl-10 pr-10 h-11 ${errors.password ? 'border-red-500' : ''}`}
+                      className={`pl-10 pr-10 h-11 ${errors.password ? 'border-error-500' : ''}`}
                       value={registerData.password}
                       onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
                       required
@@ -576,7 +576,7 @@ export function AuthPage() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
                     >
                       {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
@@ -584,29 +584,29 @@ export function AuthPage() {
                   {registerData.password && (
                     <div className="mt-2">
                       <div className="flex items-center gap-2 mb-1">
-                        <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                        <div className="flex-1 h-1.5 bg-neutral-200 rounded-full overflow-hidden">
                           <div 
                             className={`h-full transition-all ${passwordStrength.color}`}
                             style={{ width: `${(passwordStrength.score / 6) * 100}%` }}
                           />
                         </div>
-                        <span className="text-xs font-medium text-gray-600">{passwordStrength.label}</span>
+                        <span className="text-xs font-medium text-neutral-600">{passwordStrength.label}</span>
                       </div>
                     </div>
                   )}
-                  {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
+                  {errors.password && <p className="text-error-500 text-xs mt-1">{errors.password}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
                     Confirm Password *
                   </label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5" />
                     <Input
                       type={showConfirmPassword ? 'text' : 'password'}
                       placeholder="Confirm password"
-                      className={`pl-10 pr-10 h-11 ${errors.confirmPassword ? 'border-red-500' : ''}`}
+                      className={`pl-10 pr-10 h-11 ${errors.confirmPassword ? 'border-error-500' : ''}`}
                       value={registerData.confirmPassword}
                       onChange={(e) => setRegisterData({ ...registerData, confirmPassword: e.target.value })}
                       required
@@ -614,7 +614,7 @@ export function AuthPage() {
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
                     >
                       {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
@@ -625,98 +625,98 @@ export function AuthPage() {
                       <span className="text-xs text-green-600">Passwords match</span>
                     </div>
                   )}
-                  {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>}
+                  {errors.confirmPassword && <p className="text-error-500 text-xs mt-1">{errors.confirmPassword}</p>}
                 </div>
               </div>
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
                     Phone Number *
                   </label>
                   <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5" />
                     <Input
                       type="tel"
                       placeholder="+1 (555) 123-4567"
-                      className={`pl-10 h-11 ${errors.phoneNumber ? 'border-red-500' : ''}`}
+                      className={`pl-10 h-11 ${errors.phoneNumber ? 'border-error-500' : ''}`}
                       value={registerData.phoneNumber}
                       onChange={(e) => setRegisterData({ ...registerData, phoneNumber: e.target.value })}
                       required
                     />
                   </div>
-                  {errors.phoneNumber && <p className="text-red-500 text-xs mt-1">{errors.phoneNumber}</p>}
+                  {errors.phoneNumber && <p className="text-error-500 text-xs mt-1">{errors.phoneNumber}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
                     Location *
                   </label>
                   <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5" />
                     <Input
                       type="text"
                       placeholder="City, Country"
-                      className={`pl-10 h-11 ${errors.location ? 'border-red-500' : ''}`}
+                      className={`pl-10 h-11 ${errors.location ? 'border-error-500' : ''}`}
                       value={registerData.location}
                       onChange={(e) => setRegisterData({ ...registerData, location: e.target.value })}
                       required
                     />
                   </div>
-                  {errors.location && <p className="text-red-500 text-xs mt-1">{errors.location}</p>}
+                  {errors.location && <p className="text-error-500 text-xs mt-1">{errors.location}</p>}
                 </div>
               </div>
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
                     Date of Birth *
                   </label>
                   <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5" />
                     <Input
                       type="date"
-                      className={`pl-10 h-11 ${errors.dateOfBirth ? 'border-red-500' : ''}`}
+                      className={`pl-10 h-11 ${errors.dateOfBirth ? 'border-error-500' : ''}`}
                       value={registerData.dateOfBirth}
                       onChange={(e) => setRegisterData({ ...registerData, dateOfBirth: e.target.value })}
                       required
                     />
                   </div>
-                  {errors.dateOfBirth && <p className="text-red-500 text-xs mt-1">{errors.dateOfBirth}</p>}
+                  {errors.dateOfBirth && <p className="text-error-500 text-xs mt-1">{errors.dateOfBirth}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
                     Badge ID *
                   </label>
                   <div className="relative">
-                    <BadgeCheck className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <BadgeCheck className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5" />
                     <Input
                       type="text"
                       placeholder="BADGE-12345"
-                      className={`pl-10 h-11 ${errors.badgeId ? 'border-red-500' : ''}`}
+                      className={`pl-10 h-11 ${errors.badgeId ? 'border-error-500' : ''}`}
                       value={registerData.badgeId}
                       onChange={(e) => setRegisterData({ ...registerData, badgeId: e.target.value })}
                       required
                     />
                   </div>
-                  {errors.badgeId && <p className="text-red-500 text-xs mt-1">{errors.badgeId}</p>}
+                  {errors.badgeId && <p className="text-error-500 text-xs mt-1">{errors.badgeId}</p>}
                 </div>
               </div>
 
               <div className="flex items-start">
                 <input
                   type="checkbox"
-                  className="mt-1 mr-2 rounded border-gray-300 text-[#005440] focus:ring-[#005440]"
+                  className="mt-1 mr-2 rounded border-neutral-300 text-primary focus:ring-primary"
                   required
                 />
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-neutral-600">
                   I agree to the{' '}
-                  <a href="#" className="text-[#005440] hover:text-[#00B087] font-medium">
+                  <a href="#" className="text-primary hover:text-[#00B087] font-medium">
                     Terms of Service
                   </a>{' '}
                   and{' '}
-                  <a href="#" className="text-[#005440] hover:text-[#00B087] font-medium">
+                  <a href="#" className="text-primary hover:text-[#00B087] font-medium">
                     Privacy Policy
                   </a>
                 </span>
@@ -724,7 +724,7 @@ export function AuthPage() {
 
               <Button
                 type="submit"
-                className="w-full h-11 bg-[#005440] hover:bg-[#00B087] text-white font-semibold"
+                className="w-full h-11 bg-primary hover:bg-[#00B087] text-white font-semibold"
                 disabled={loading}
               >
                 {loading ? (
@@ -741,7 +741,7 @@ export function AuthPage() {
 
           {/* Toggle Login/Register */}
           <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-neutral-600">
               {isLogin ? "Don't have an account?" : 'Already have an account?'}{' '}
               <button
                 type="button"
@@ -750,7 +750,7 @@ export function AuthPage() {
                   setError('');
                   setErrors({});
                 }}
-                className="text-[#005440] hover:text-[#00B087] font-semibold"
+                className="text-primary hover:text-[#00B087] font-semibold"
               >
                 {isLogin ? 'Sign Up' : 'Sign In'}
               </button>

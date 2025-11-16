@@ -44,7 +44,6 @@ export function Dashboard(props: DashboardProps) {
   const [statsLoading, setStatsLoading] = useState<boolean>(true);
   const pageSize = 10;
 
-
   useEffect(() => {
     fetchCurrentUser();
     fetchDashboardStats();
@@ -111,18 +110,17 @@ export function Dashboard(props: DashboardProps) {
         } = {
           Pending: {
             label: "Pending",
-            className:
-              "border-amber-500 text-amber-700 bg-amber-50 hover:bg-amber-100",
+            className: "border-gray-500 text-foreground-500 bg-gray-50 hover:bg-gray-100",
           },
           Active: {
             label: "Active",
             className:
-              "border-green-500 text-green-700 bg-green-50 hover:bg-green-100",
+              "border-green-500 text-green-700 app-bg-surface hover:bg-green-100",
           },
           Archived: {
             label: "Archived",
             className:
-              "border-gray-500 text-gray-700 bg-gray-50 hover:bg-gray-100",
+              "border-red-500 app-text-error app-bg-surface hover:app-bg-error",
           },
         };
         const config = statusConfig[value] || statusConfig["Pending"];
@@ -341,10 +339,10 @@ export function Dashboard(props: DashboardProps) {
             <CardContent className="p-4 sm:p-6 h-full flex flex-col justify-center">
               <div className="flex items-start justify-between">
                 <div className="text-left">
-                  <p className="text-xs sm:text-sm font-medium text-gray-600">
+                  <p className="text-xs sm:text-sm font-medium app-text-subtle">
                     Total Users
                   </p>
-                  <p className="text-2xl sm:text-3xl font-bold text-gray-900 mt-1 sm:mt-2">
+                  <p className="text-2xl sm:text-3xl font-bold app-text mt-1 sm:mt-2">
                     {statsLoading ? (
                       <span className="animate-pulse">...</span>
                     ) : (
@@ -352,8 +350,8 @@ export function Dashboard(props: DashboardProps) {
                     )}
                   </p>
                 </div>
-                <div className="h-10 w-10 sm:h-12 sm:w-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Users className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+                <div className="h-10 w-10 sm:h-12 sm:w-12 app-bg-primary-soft rounded-lg flex items-center justify-center">
+                  <Users className="h-5 w-5 sm:h-6 sm:w-6 app-text-primary" />
                 </div>
               </div>
             </CardContent>
@@ -364,10 +362,10 @@ export function Dashboard(props: DashboardProps) {
             <CardContent className="p-3 sm:p-6 flex-1 flex flex-col justify-between">
               <div className="flex items-start justify-between">
                 <div className="text-left">
-                  <p className="text-xs sm:text-sm font-medium text-gray-600">
+                  <p className="text-xs sm:text-sm font-medium app-text-subtle">
                     Total Products
                   </p>
-                  <p className="text-xl sm:text-3xl font-bold text-gray-900 mt-1 sm:mt-2">
+                  <p className="text-xl sm:text-3xl font-bold app-text mt-1 sm:mt-2">
                     {statsLoading ? (
                       <span className="animate-pulse">...</span>
                     ) : (
@@ -375,8 +373,8 @@ export function Dashboard(props: DashboardProps) {
                     )}
                   </p>
                 </div>
-                <div className="h-9 w-9 sm:h-12 sm:w-12 bg-green-100 rounded-lg flex items-center justify-center">
-                  <Package className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
+                <div className="h-9 w-9 sm:h-12 sm:w-12 app-bg-success-soft rounded-lg flex items-center justify-center">
+                  <Package className="h-5 w-5 sm:h-6 sm:w-6 app-text-success" />
                 </div>
               </div>
             </CardContent>
@@ -387,10 +385,10 @@ export function Dashboard(props: DashboardProps) {
             <CardContent className="p-3 sm:p-6 flex-1 flex flex-col justify-between">
               <div className="flex items-start justify-between">
                 <div className="text-left">
-                  <p className="text-xs sm:text-sm font-medium text-gray-600">
+                  <p className="text-xs sm:text-sm font-medium app-text-subtle">
                     Total Companies
                   </p>
-                  <p className="text-xl sm:text-3xl font-bold text-gray-900 mt-1 sm:mt-2">
+                  <p className="text-xl sm:text-3xl font-bold app-text mt-1 sm:mt-2">
                     {statsLoading ? (
                       <span className="animate-pulse">...</span>
                     ) : (
@@ -398,8 +396,8 @@ export function Dashboard(props: DashboardProps) {
                     )}
                   </p>
                 </div>
-                <div className="h-9 w-9 sm:h-12 sm:w-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <Building2 className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
+                <div className="h-9 w-9 sm:h-12 sm:w-12 app-bg-primary-soft rounded-lg flex items-center justify-center">
+                  <Building2 className="h-5 w-5 sm:h-6 sm:w-6 app-text-primary" />
                 </div>
               </div>
             </CardContent>

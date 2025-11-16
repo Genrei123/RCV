@@ -117,13 +117,13 @@ export function Blockchain() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Total Certificates</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm text-neutral-600 mb-1">Total Certificates</p>
+                <p className="text-2xl font-bold text-neutral-900">
                   {loading ? "..." : stats?.totalCertificates || 0}
                 </p>
               </div>
-              <div className="p-3 bg-teal-100 rounded-lg shrink-0">
-                <FileCheck className="h-4 w-4 text-teal-600" />
+              <div className="p-3 app-bg-primary-soft rounded-lg shrink-0">
+                <FileCheck className="h-4 w-4 app-text-primary" />
               </div>
             </div>
           </CardContent>
@@ -133,13 +133,13 @@ export function Blockchain() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Company Certs</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm text-neutral-600-600 mb-1">Company Certs</p>
+                <p className="text-2xl font-bold text-neutral-900">
                   {loading ? "..." : stats?.companyCertificates || 0}
                 </p>
               </div>
-              <div className="p-3 bg-blue-100 rounded-lg shrink-0">
-                <Building2 className="h-4 w-4 text-blue-600" />
+              <div className="p-3 app-bg-primary-soft rounded-lg shrink-0">
+                <Building2 className="h-4 w-4 app-text-primary" />
               </div>
             </div>
           </CardContent>
@@ -149,13 +149,13 @@ export function Blockchain() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Product Certs</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm text-neutral-600 mb-1">Product Certs</p>
+                <p className="text-2xl font-bold text-neutral-900">
                   {loading ? "..." : stats?.productCertificates || 0}
                 </p>
               </div>
-              <div className="p-3 bg-purple-100 rounded-lg shrink-0">
-                <Package className="h-4 w-4 text-purple-600" />
+              <div className="p-3 app-bg-primary-soft rounded-lg shrink-0">
+                <Package className="h-4 w-4 app-text-primary" />
               </div>
             </div>
           </CardContent>
@@ -165,7 +165,7 @@ export function Blockchain() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Chain Status</p>
+                <p className="text-sm text-neutral-600 mb-1">Chain Status</p>
                 <div className="flex items-center gap-2">
                   {loading ? (
                     <span className="text-sm">Loading...</span>
@@ -173,7 +173,9 @@ export function Blockchain() {
                     <>
                       <div
                         className={`h-3 w-3 rounded-full ${
-                          stats?.chainIntegrity ? "bg-green-500" : "bg-red-500"
+                          stats?.chainIntegrity
+                            ? "app-bg-success"
+                            : "app-bg-error"
                         }`}
                       />
                       <span className="text-sm font-semibold">
@@ -183,8 +185,8 @@ export function Blockchain() {
                   )}
                 </div>
               </div>
-              <div className="p-3 bg-green-100 rounded-lg shrink-0">
-                <Shield className="h-4 w-4 text-green-600" />
+              <div className="p-3 app-bg-success-soft rounded-lg shrink-0">
+                <Shield className="h-4 w-4 app-text-success" />
               </div>
             </div>
           </CardContent>
@@ -196,14 +198,14 @@ export function Blockchain() {
         <Card className="mb-6 overflow-hidden">
           <CardContent className="p-6">
             {stats.latestCertificate && (
-              <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <p className="text-sm text-gray-600 mb-1">
+              <div className="mt-4 p-4 bg-neutral-50 rounded-lg border border-neutral-200">
+                <p className="text-sm text-neutral-600 mb-1">
                   Latest Certificate:
                 </p>
-                <p className="font-semibold text-gray-900">
+                <p className="font-semibold text-neutral-900">
                   {stats.latestCertificate.entityName}
                 </p>
-                <p className="text-xs text-gray-500 font-mono mt-1 break-all">
+                <p className="text-xs text-neutral-500 font-mono mt-1 break-all">
                   ID: {stats.latestCertificate.certificateId}
                 </p>
               </div>
@@ -227,7 +229,7 @@ export function Blockchain() {
         {pagination && (
           <div className="p-4 border-t flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="hidden sm:block">
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-neutral-600">
                 Page {currentPage} of {totalPages} ({pagination.total_items}{" "}
                 total certificates)
               </span>

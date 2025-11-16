@@ -56,7 +56,7 @@ export function LogoutModal({ isOpen, onClose, onConfirm, userName = "User" }: L
           <Button 
             variant="outline" 
             onClick={onClose}
-            className="px-6"
+            className="px-6 text-foreground"
           >
             Cancel
           </Button>

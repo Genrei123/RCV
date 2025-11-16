@@ -256,7 +256,7 @@ export function Sidebar({ open, onClose }: { open?: boolean; onClose?: () => voi
                   to={item.path}
                   className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
                     isActive
-                      ? "bg-teal-800 text-white"
+                      ? "app-bg-primary text-white"
                       : "text-gray-600 hover:bg-gray-100"
                   }`}
                 >
@@ -268,18 +268,6 @@ export function Sidebar({ open, onClose }: { open?: boolean; onClose?: () => voi
                 </Link>
               );
             })}
-
-            {/* Logout Button */}
-            <button
-              onClick={() => setShowLogoutModal(true)}
-              className="w-full flex items-center justify-between px-4 py-3 text-red-500 hover:bg-red-50 rounded-lg transition-colors mt-4"
-            >
-              <div className="flex items-center gap-3">
-                <LogOut size={20} />
-                <span className="font-medium">Log Out</span>
-              </div>
-              <span className="text-xs">›</span>
-            </button>
           </div>
         </nav>
       </aside>
@@ -320,7 +308,7 @@ export function Sidebar({ open, onClose }: { open?: boolean; onClose?: () => voi
                   key={m.path}
                   to={m.path}
                   onClick={() => { closeDrawer(); }}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg ${isActive ? "bg-emerald-50 text-emerald-600" : "text-slate-700 hover:bg-slate-100"}`}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg ${isActive ? "app-bg-primary-soft app-text-primary" : "text-slate-700 hover:bg-slate-100"}`}
                 >
                   <Icon size={18} />
                   <span className="font-medium">{m.label}</span>
@@ -339,7 +327,7 @@ export function Sidebar({ open, onClose }: { open?: boolean; onClose?: () => voi
                   onClick={() => setShowProfileMenu((s) => !s)}
                   className="w-full flex items-center gap-3 text-left focus:outline-none"
                 >
-                  <div className="w-10 h-10 rounded-full overflow-hidden bg-emerald-600 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-full overflow-hidden app-bg-primary flex items-center justify-center">
                     {avatarUrl ? <img src={avatarUrl} alt="Avatar" className="w-10 h-10 object-cover" /> : <User size={16} className="text-white" />}
                   </div>
                   <div className="flex-1">

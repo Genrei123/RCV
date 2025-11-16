@@ -1,28 +1,28 @@
-import * as React from "react"
-import { cn } from "@/utils/utils"
+import * as React from "react";
+import { cn } from "@/utils/utils";
 
 interface DialogProps {
-  open?: boolean
-  onOpenChange?: (open: boolean) => void
-  children: React.ReactNode
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  children: React.ReactNode;
 }
 
 const Dialog: React.FC<DialogProps> = ({ open, onOpenChange, children }) => {
-  if (!open) return null
+  if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div 
+      <div
         className="fixed inset-0 bg-black/80"
         onClick={() => onOpenChange?.(false)}
       />
       {children}
     </div>
-  )
-}
+  );
+};
 
 interface DialogContentProps extends React.HTMLAttributes<HTMLDivElement> {
-  children: React.ReactNode
+  children: React.ReactNode;
 }
 
 const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
@@ -38,8 +38,8 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
       {children}
     </div>
   )
-)
-DialogContent.displayName = "DialogContent"
+);
+DialogContent.displayName = "DialogContent";
 
 const DialogHeader = ({
   className,
@@ -52,8 +52,8 @@ const DialogHeader = ({
     )}
     {...props}
   />
-)
-DialogHeader.displayName = "DialogHeader"
+);
+DialogHeader.displayName = "DialogHeader";
 
 const DialogFooter = ({
   className,
@@ -66,8 +66,8 @@ const DialogFooter = ({
     )}
     {...props}
   />
-)
-DialogFooter.displayName = "DialogFooter"
+);
+DialogFooter.displayName = "DialogFooter";
 
 const DialogTitle = React.forwardRef<
   HTMLHeadingElement,
@@ -81,8 +81,8 @@ const DialogTitle = React.forwardRef<
     )}
     {...props}
   />
-))
-DialogTitle.displayName = "DialogTitle"
+));
+DialogTitle.displayName = "DialogTitle";
 
 const DialogDescription = React.forwardRef<
   HTMLParagraphElement,
@@ -90,11 +90,11 @@ const DialogDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <p
     ref={ref}
-    className={cn("text-sm text-gray-500", className)}
+    className={cn("text-sm app-text-subtle", className)}
     {...props}
   />
-))
-DialogDescription.displayName = "DialogDescription"
+));
+DialogDescription.displayName = "DialogDescription";
 
 export {
   Dialog,
@@ -103,4 +103,4 @@ export {
   DialogFooter,
   DialogTitle,
   DialogDescription,
-}
+};

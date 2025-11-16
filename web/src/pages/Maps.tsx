@@ -106,7 +106,7 @@ export function Maps() {
 
   if (loading) {
     return (
-      <div className="h-full w-full flex items-center justify-center bg-gray-50">
+      <div className="h-full w-full flex items-center justify-center bg-neutral-50">
         <LoadingSpinner size="lg" text="Loading Map..." />
       </div>
     );
