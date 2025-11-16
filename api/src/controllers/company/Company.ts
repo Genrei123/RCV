@@ -21,6 +21,7 @@ export const getAllCompanies = async (
     const search =
       typeof req.query.search === "string" ? req.query.search.trim() : "";
 
+    // Try to get cached data
     try {
       const cachedData = await redisService.getCachedCompanies(page, limit, search);
       if (cachedData) {
@@ -28,9 +29,12 @@ export const getAllCompanies = async (
       }
     } catch (redisError) {
       console.warn("Redis cache failed, using database:", redisError instanceof Error ? redisError.message : 'Unknown error');
-    }    let companies: any[] = [];
+    }
+
+    let companies: any[] = [];
     let total = 0;
 
+    // Query with or without search
     if (search) {
       const qb = CompanyRepo.createQueryBuilder("company")
         .where("LOWER(company.name) LIKE LOWER(:q)", {
@@ -54,11 +58,29 @@ export const getAllCompanies = async (
       });
     }
 
+    // Get ProductRepo
+    const { ProductRepo } = require("../../typeorm/data-source");
+
+    // For each company, count products with matching LTO number
+    const mappedCompanies = await Promise.all(
+      companies.map(async (company) => {
+        const productCount = await ProductRepo.count({ 
+          where: { LTONumber: company.licenseNumber } 
+        });
+        return { ...company, productCount };
+      })
+    );
+
     const meta = buildPaginationMeta(page, limit, total);
     const links = buildLinks(req, page, limit, meta.total_pages);
-    const responseData = { success: true, data: companies, pagination: meta, links };
+    const responseData = { 
+      success: true, 
+      data: mappedCompanies, 
+      pagination: meta, 
+      links 
+    };
 
-    // Cache the result for 5 minutes (change nalang if needed)
+    // Cache the result for 5 minutes
     try {
       await redisService.setCachedCompanies(page, limit, responseData, search, 300);
     } catch (redisError) {

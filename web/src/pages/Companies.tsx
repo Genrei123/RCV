@@ -87,6 +87,10 @@ export function Companies(props: CompaniesProps) {
       // resp may have { data, pagination }
       // prefer resp.data or resp.companies
       const items = resp.data || (resp as any).companies || [];
+      // Ensure the table's `products` column can derive a count:
+      // if backend provides `productCount` (number) but not a full `products` array,
+      // create a placeholder array with the right length so existing UI code
+      // that uses `company.products?.length` continues to work.
       setCompanies(items);
       setPagination(resp.pagination || null);
       setCurrentPage(Number(resp.pagination?.current_page) || page);
@@ -95,7 +99,7 @@ export function Companies(props: CompaniesProps) {
     } finally {
       setLoading(false);
     }
-  };
+};
 
   const handleAddSuccess = () => {
     // Refresh the companies list after adding a new company
@@ -159,10 +163,10 @@ export function Companies(props: CompaniesProps) {
       ),
     },
     {
-      key: "products",
+      key: "productCount",
       label: "Products",
-      render: (value: any[]) => {
-        const productCount = value?.length || 0;
+      render: (value: any) => {
+        const productCount = value || 0;
         return (
           <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm font-medium">
             {productCount} {productCount === 1 ? "Product" : "Products"}
