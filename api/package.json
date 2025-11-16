@@ -13,6 +13,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@types/nodemailer": "^7.0.2",
     "@types/redis": "^4.0.10",
     "bcryptjs": "^2.4.3",
