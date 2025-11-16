@@ -352,7 +352,7 @@ export function AnalyticsMapComponent() {
         <Card className="shadow-lg p-4 bg-white border border-gray-200">
           <div className="text-center">
             <div className="flex items-center justify-center gap-2 mb-3">
-              <BarChart3 className="h-6 w-6 text-blue-600" />
+              <BarChart3 className="h-6 w-3 text-blue-600" />
               <h2 className="text-lg font-bold">DBSCAN Analytics</h2>
             </div>
             <p className="text-sm text-gray-600 mb-4">

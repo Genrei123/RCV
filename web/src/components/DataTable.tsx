@@ -33,6 +33,8 @@ export interface DataTableProps {
   emptyStateDescription?: string;
   emptyStateIcon?: ReactNode;
   showSearch?: boolean;
+  /** Optional custom controls rendered to the right of the search bar */
+  customControls?: ReactNode;
 }
 
 const defaultEmptyIcon = (
@@ -63,6 +65,7 @@ export function DataTable({
   emptyStateDescription = "You may try to input different keywords, check for typos, or adjust your filters.",
   emptyStateIcon = defaultEmptyIcon,
   showSearch = true,
+  customControls,
 }: DataTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortConfig, setSortConfig] = useState<{
@@ -173,28 +176,33 @@ export function DataTable({
   };
 
   return (
-    <Card className="border-0 shadow-sm">
+    <Card className="border-0 shadow-lg">
       <CardHeader className="pb-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
           <CardTitle className="text-xl font-semibold text-gray-800">
             {title}
           </CardTitle>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
             {showSearch && (
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <div className="relative group rounded-md border border-gray-300 focus-within:border-black transition-colors">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-black transition-colors" />
                 <Input
                   placeholder={searchPlaceholder}
-                  className="pl-10 w-64"
+                  className="pl-10 w-full sm:w-64 border-0 bg-white text-gray-800 placeholder:text-gray-400 focus:text-black focus:placeholder:text-gray-500"
                   value={searchQuery}
                   onChange={(e) => handleSearch(e.target.value)}
                 />
               </div>
             )}
+            {customControls && (
+              <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+                {customControls}
+              </div>
+            )}
           </div>
         </div>
       </CardHeader>
-      <CardContent className="p-0">
+      <CardContent className="p-4">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16">
             <LoadingSpinner />
@@ -210,64 +218,66 @@ export function DataTable({
             <p className="text-gray-500 max-w-sm">{emptyStateDescription}</p>
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow className="border-b border-gray-200">
-                {columns.map((column) => (
-                  <TableHead
-                    key={column.key}
-                    className={`text-left font-medium text-gray-600 ${
-                      column.sortable
-                        ? "cursor-pointer select-none hover:bg-gray-50"
-                        : ""
-                    }`}
-                    onClick={() => column.sortable && handleSort(column.key)}
-                  >
-                    <div className="flex items-center gap-2">
-                      {column.label}
-                      {column.sortable && (
-                        <span className="inline-flex">
-                          {sortConfig?.key === column.key ? (
-                            sortConfig.direction === "asc" ? (
-                              <ArrowUp className="h-4 w-4 text-teal-600" />
-                            ) : (
-                              <ArrowDown className="h-4 w-4 text-teal-600" />
-                            )
-                          ) : (
-                            <ArrowUpDown className="h-4 w-4 text-gray-400" />
-                          )}
-                        </span>
-                      )}
-                    </div>
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {processedData.map((row, rowIndex) => (
-                <TableRow
-                  key={rowIndex}
-                  className={`border-b border-gray-100 hover:bg-teal-50 ${
-                    onRowClick ? "cursor-pointer" : ""
-                  }`}
-                  onClick={() => onRowClick?.(row)}
-                >
+          <div className="w-full overflow-x-auto">
+            <Table className="min-w-[640px]">
+              <TableHeader>
+                <TableRow className="border-b border-gray-200">
                   {columns.map((column) => (
-                    <TableCell
+                    <TableHead
                       key={column.key}
-                      className={
-                        column.key === columns[0].key
-                          ? "font-medium text-gray-900"
-                          : "text-gray-700"
-                      }
+                      className={`text-left font-medium text-gray-600 ${
+                        column.sortable
+                          ? "cursor-pointer select-none hover:bg-gray-50"
+                          : ""
+                      }`}
+                      onClick={() => column.sortable && handleSort(column.key)}
                     >
-                      {renderCellContent(column, row)}
-                    </TableCell>
+                      <div className="flex items-center gap-2">
+                        {column.label}
+                        {column.sortable && (
+                          <span className="inline-flex">
+                            {sortConfig?.key === column.key ? (
+                              sortConfig.direction === "asc" ? (
+                                <ArrowUp className="h-4 w-4 text-teal-600" />
+                              ) : (
+                                <ArrowDown className="h-4 w-4 text-teal-600" />
+                              )
+                            ) : (
+                              <ArrowUpDown className="h-4 w-4 text-gray-400" />
+                            )}
+                          </span>
+                        )}
+                      </div>
+                    </TableHead>
                   ))}
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {processedData.map((row, rowIndex) => (
+                  <TableRow
+                    key={rowIndex}
+                    className={`border-b border-gray-100 hover:bg-teal-50 ${
+                      onRowClick ? "cursor-pointer" : ""
+                    }`}
+                    onClick={() => onRowClick?.(row)}
+                  >
+                    {columns.map((column) => (
+                      <TableCell
+                        key={column.key}
+                        className={
+                          column.key === columns[0].key
+                            ? "font-medium text-gray-900"
+                            : "text-gray-700"
+                        }
+                      >
+                        {renderCellContent(column, row)}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </CardContent>
     </Card>

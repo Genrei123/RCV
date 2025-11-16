@@ -97,18 +97,18 @@ export function Profile({
       try {
         const saved = localStorage.getItem("profile_avatar_data");
         if (saved) {
-          console.log('🔄 Avatar updated, refreshing preview');
+          console.log("🔄 Avatar updated, refreshing preview");
           setLocalAvatar(saved);
         }
       } catch (e) {
-        console.error('Error updating avatar preview:', e);
+        console.error("Error updating avatar preview:", e);
       }
     };
 
-    window.addEventListener('profile-avatar-updated', handleAvatarUpdate);
+    window.addEventListener("profile-avatar-updated", handleAvatarUpdate);
 
     return () => {
-      window.removeEventListener('profile-avatar-updated', handleAvatarUpdate);
+      window.removeEventListener("profile-avatar-updated", handleAvatarUpdate);
     };
   }, [propUser]);
 
@@ -187,33 +187,33 @@ export function Profile({
       };
 
       // Add avatar if it's a Firebase Storage URL (not base64)
-      if (updatedUser.avatar && updatedUser.avatar.startsWith('http')) {
+      if (updatedUser.avatar && updatedUser.avatar.startsWith("http")) {
         profileData.avatar = updatedUser.avatar;
-        console.log('💾 Saving Firebase Storage URL:', updatedUser.avatar);
+        console.log("💾 Saving Firebase Storage URL:", updatedUser.avatar);
       }
 
-      console.log('💾 Saving profile with data:', profileData);
+      console.log("💾 Saving profile with data:", profileData);
       await UserPageService.updateProfile(profileData);
-      
+
       toast.success("Profile updated successfully!");
-      
+
       // Refresh profile data to get the updated avatar URL from backend
       await fetchProfile();
-      
+
       // Also update local avatar preview from localStorage
       try {
         const saved = localStorage.getItem("profile_avatar_data");
         if (saved) {
-          console.log('🔄 Updating local avatar preview');
+          console.log("🔄 Updating local avatar preview");
           setLocalAvatar(saved);
         }
       } catch (e) {
-        console.error('Error updating local avatar:', e);
+        console.error("Error updating local avatar:", e);
       }
-      
+
       // Refresh audit logs to show the profile update action
       await fetchAuditLogs(logsPagination.current_page);
-      
+
       setShowEditModal(false);
     } catch (error) {
       console.error("Failed to update profile:", error);
@@ -382,504 +382,517 @@ export function Profile({
       title="Profile"
       description="Manage your personal account information and activity"
       headerAction={
-        <div className="flex gap-3">
-          <Button
-            onClick={handleEditProfile}
-            className="bg-teal-600 hover:bg-teal-700 text-white"
-          >
-            Edit Profile
-          </Button>
-          <Button
-            onClick={handleArchiveAccount}
-            variant="destructive"
-            className="bg-red-600 hover:bg-red-700 text-white"
-          >
-            <Archive className="h-4 w-4 mr-2" />
-            Archive Account
-          </Button>
-        </div>
+      <div className="flex items-center gap-3">
+        <Button
+        onClick={handleEditProfile}
+        className="bg-teal-600 hover:bg-teal-700 text-white w-auto"
+        >
+        Edit Profile
+        </Button>
+        <Button
+        onClick={handleArchiveAccount}
+        variant="destructive"
+        className="bg-red-600 hover:bg-red-700 text-white w-auto"
+        >
+        <Archive className="h-4 w-4 mr-2" />
+        Archive Account
+        </Button>
+      </div>
       }
     >
-      <div className="grid lg:grid-cols-2 gap-8">
-        {/* Profile Information */}
-        <Card>
-          <CardContent className="p-6">
-            <div className="mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-1">
-                Profile Information
-              </h2>
-              <p className="text-sm text-gray-600">
-                Update your personal account
-              </p>
-            </div>
+      <div className="grid w-full grid-cols-1 xl:grid-cols-2 gap-6 md:gap-8">
+      {/* Profile Information */}
+      <Card className="w-full">
+        <CardContent className="p-4 sm:p-6 w-full">
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-1">
+          Profile Information
+          </h2>
+          <p className="text-sm text-gray-600">
+          Update your personal account
+          </p>
+        </div>
 
-            {/* Avatar Section */}
-            <div className="text-center mb-8">
-              <div className="relative inline-block">
-                <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4 overflow-hidden">
-                  {localAvatar ? (
-                    <img
-                      src={localAvatar}
-                      alt={getFullName(user)}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : user?.avatar ? (
-                    <img
-                      src={user.avatar}
-                      alt={getFullName(user)}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <User className="w-12 h-12 text-gray-500" />
-                  )}
-                  {/* View-only avatar: no overlay or edit icon */}
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900">
-                  {getFullName(user)}
-                </h3>
-                <p className="text-sm text-gray-600">
-                  {getRoleName(user?.role)}
-                </p>
-              </div>
-            </div>
-
-            {/* Profile Details */}
-            <div className="space-y-4">
-              <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
-                <Mail className="w-5 h-5 text-gray-500 mt-0.5" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900">Email</p>
-                  <p className="text-sm text-gray-600">
-                    {user?.email || "Not provided"}
-                  </p>
-                </div>
-              </div>
-
-              {user?.location && (
-                <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
-                  <MapPin className="w-5 h-5 text-gray-500 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">
-                      Location
-                    </p>
-                    <p className="text-sm text-gray-600">{user.location}</p>
-                  </div>
-                </div>
-              )}
-
-              {user?.dateOfBirth && (
-                <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
-                  <Calendar className="w-5 h-5 text-gray-500 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">
-                      Date of Birth
-                    </p>
-                    <p className="text-sm text-gray-600">{user.dateOfBirth}</p>
-                  </div>
-                </div>
-              )}
-
-              {user?.phoneNumber && (
-                <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
-                  <Phone className="w-5 h-5 text-gray-500 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">
-                      Phone Number
-                    </p>
-                    <p className="text-sm text-gray-600">{user.phoneNumber}</p>
-                  </div>
-                </div>
-              )}
-
-              {user?.badgeId && (
-                <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
-                  <BadgeIcon className="w-5 h-5 text-gray-500 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">
-                      Badge ID
-                    </p>
-                    <p className="text-sm text-gray-600">{user.badgeId}</p>
-                  </div>
-                </div>
-              )}
-
-              {user?.stationedAt && (
-                <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg">
-                  <BadgeIcon className="w-5 h-5 text-gray-500 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">
-                      Stationed At
-                    </p>
-                    <p className="text-sm text-gray-600">{user.stationedAt}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Recent Activities */}
-        <Card>
-          <CardContent className="p-6">
-            <div className="mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-1">
-                Your Recent Activities
-              </h2>
-            </div>
-
-            {/* Activities Table */}
-            <div className="mb-6">
-              <DataTable
-                title=""
-                columns={activityColumns}
-                data={auditLogs}
-                loading={logsLoading}
-                emptyStateTitle="No Activities Found"
-                emptyStateDescription="Your recent activities will appear here."
-                showSearch={false}
-              />
-            </div>
-
-            {/* Pagination */}
-            <Pagination
-              currentPage={logsPagination.current_page}
-              totalPages={logsPagination.total_pages}
-              totalItems={logsPagination.total_items}
-              itemsPerPage={logsPagination.per_page}
-              onPageChange={(page) => fetchAuditLogs(page)}
-              showingText={`Showing ${auditLogs.length} out of ${logsPagination.total_items} activities`}
+        {/* Avatar Section */}
+        <div className="text-center mb-8">
+          <div className="relative inline-block">
+          <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4 overflow-hidden">
+            {localAvatar ? (
+            <img
+              src={localAvatar}
+              alt={getFullName(user)}
+              className="w-full h-full object-cover"
             />
-          </CardContent>
-        </Card>
+            ) : user?.avatar ? (
+            <img
+              src={user.avatar}
+              alt={getFullName(user)}
+              className="w-full h-full object-cover"
+            />
+            ) : (
+            <User className="w-12 h-12 text-gray-500" />
+            )}
+            {/* View-only avatar: no overlay or edit icon */}
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900">
+            {getFullName(user)}
+          </h3>
+          <p className="text-sm text-gray-600">
+            {getRoleName(user?.role)}
+          </p>
+          </div>
+        </div>
+
+        {/* Profile Details */}
+        <div className="space-y-4 w-full">
+          <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg w-full">
+          <Mail className="w-5 h-5 text-gray-500 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-gray-900">Email</p>
+            <p className="text-sm text-gray-600 break-all">
+            {user?.email || "Not provided"}
+            </p>
+          </div>
+          </div>
+
+          {user?.location && (
+          <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg w-full">
+            <MapPin className="w-5 h-5 text-gray-500 mt-0.5" />
+            <div className="flex-1">
+            <p className="text-sm font-medium text-gray-900">
+              Location
+            </p>
+            <p className="text-sm text-gray-600 break-words">
+              {user.location}
+            </p>
+            </div>
+          </div>
+          )}
+
+          {user?.dateOfBirth && (
+          <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg w-full">
+            <Calendar className="w-5 h-5 text-gray-500 mt-0.5" />
+            <div className="flex-1">
+            <p className="text-sm font-medium text-gray-900">
+              Date of Birth
+            </p>
+            <p className="text-sm text-gray-600">{user.dateOfBirth}</p>
+            </div>
+          </div>
+          )}
+
+          {user?.phoneNumber && (
+          <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg w-full">
+            <Phone className="w-5 h-5 text-gray-500 mt-0.5" />
+            <div className="flex-1">
+            <p className="text-sm font-medium text-gray-900">
+              Phone Number
+            </p>
+            <p className="text-sm text-gray-600 break-all">
+              {user.phoneNumber}
+            </p>
+            </div>
+          </div>
+          )}
+
+          {user?.badgeId && (
+          <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg w-full">
+            <BadgeIcon className="w-5 h-5 text-gray-500 mt-0.5" />
+            <div className="flex-1">
+            <p className="text-sm font-medium text-gray-900">
+              Badge ID
+            </p>
+            <p className="text-sm text-gray-600 break-all">
+              {user.badgeId}
+            </p>
+            </div>
+          </div>
+          )}
+
+          {user?.stationedAt && (
+          <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg w-full">
+            <BadgeIcon className="w-5 h-5 text-gray-500 mt-0.5" />
+            <div className="flex-1">
+            <p className="text-sm font-medium text-gray-900">
+              Stationed At
+            </p>
+            <p className="text-sm text-gray-600 break-words">
+              {user.stationedAt}
+            </p>
+            </div>
+          </div>
+          )}
+        </div>
+        </CardContent>
+      </Card>
+
+      {/* Recent Activities */}
+      <Card className="w-full">
+        <CardContent className="p-4 sm:p-6 w-full">
+        <div className="mb-6 w-full">
+          <h2 className="text-xl font-semibold text-gray-900 mb-1 w-full">
+          Your Recent Activities
+          </h2>
+        </div>
+
+        {/* Activities Table */}
+        <div className="mb-6 w-full">
+          <DataTable
+          title=""
+          columns={activityColumns}
+          data={auditLogs}
+          loading={logsLoading}
+          emptyStateTitle="No Activities Found"
+          emptyStateDescription="Your recent activities will appear here."
+          showSearch={false}
+          />
+        </div>
+
+        {/* Pagination */}
+        <div className="mt-2">
+          <Pagination
+          currentPage={logsPagination.current_page}
+          totalPages={logsPagination.total_pages}
+          totalItems={logsPagination.total_items}
+          itemsPerPage={logsPagination.per_page}
+          onPageChange={(page) => fetchAuditLogs(page)}
+          showingText={`Showing ${auditLogs.length} of ${logsPagination.total_items} activities`}
+          showingPosition="right"
+          />
+        </div>
+        </CardContent>
+      </Card>
       </div>
 
       {/* Modals */}
       <EditProfileModal
-        isOpen={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        user={user}
-        onSave={handleSaveProfile}
+      isOpen={showEditModal}
+      onClose={() => setShowEditModal(false)}
+      user={user}
+      onSave={handleSaveProfile}
       />
       <ArchiveAccountModal
-        isOpen={showArchiveModal}
-        onClose={() => setShowArchiveModal(false)}
-        userEmail={user?.email || ""}
-        onConfirm={handleConfirmArchive}
+      isOpen={showArchiveModal}
+      onClose={() => setShowArchiveModal(false)}
+      userEmail={user?.email || ""}
+      onConfirm={handleConfirmArchive}
       />
 
       {/* Audit Log Details Modal */}
       <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Activity Details</DialogTitle>
-          </DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+        <DialogTitle>Activity Details</DialogTitle>
+        </DialogHeader>
 
-          {selectedLog && (
-            <div className="space-y-4">
-              {/* Action */}
-              <div className="border-b pb-3">
-                <p className="text-sm font-medium text-gray-500 mb-1">Action</p>
-                <p className="text-base font-semibold text-gray-900">
-                  {selectedLog.action}
-                </p>
+        {selectedLog && (
+        <div className="space-y-4">
+          {/* Action */}
+          <div className="border-b pb-3">
+          <p className="text-sm font-medium text-gray-500 mb-1">Action</p>
+          <p className="text-base font-semibold text-gray-900">
+            {selectedLog.action}
+          </p>
+          </div>
+
+          {/* Action Type */}
+          <div className="border-b pb-3">
+          <p className="text-sm font-medium text-gray-500 mb-1">Type</p>
+          <span
+            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+            AuditLogService.getActionTypeBadge(selectedLog.actionType)
+              .className
+            }`}
+          >
+            {
+            AuditLogService.getActionTypeBadge(selectedLog.actionType)
+              .label
+            }
+          </span>
+          </div>
+
+          {/* Platform */}
+          <div className="border-b pb-3">
+          <p className="text-sm font-medium text-gray-500 mb-1">
+            Platform
+          </p>
+          <p className="text-base text-gray-900">
+            {selectedLog.platform === "WEB" ? "Web" : "Mobile"}
+          </p>
+          </div>
+
+          {/* Date & Time */}
+          <div className="border-b pb-3">
+          <p className="text-sm font-medium text-gray-500 mb-1">
+            Date & Time
+          </p>
+          <p className="text-base text-gray-900">
+            {new Date(selectedLog.createdAt).toLocaleString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            })}
+          </p>
+          </div>
+
+          {/* IP Address */}
+          {selectedLog.ipAddress && (
+          <div className="border-b pb-3">
+            <p className="text-sm font-medium text-gray-500 mb-1">
+            IP Address
+            </p>
+            <p className="text-base text-gray-900 font-mono">
+            {selectedLog.ipAddress}
+            </p>
+          </div>
+          )}
+
+          {/* User Agent */}
+          {selectedLog.userAgent && (
+          <div className="border-b pb-3">
+            <p className="text-sm font-medium text-gray-500 mb-1">
+            User Agent
+            </p>
+            <p className="text-sm text-gray-700 break-words">
+            {selectedLog.userAgent}
+            </p>
+          </div>
+          )}
+
+          {/* Location */}
+          {selectedLog.location && (
+          <div className="border-b pb-3">
+            <p className="text-sm font-medium text-gray-500 mb-1">
+            Location
+            </p>
+            <div className="space-y-1">
+            {selectedLog.location.latitude &&
+              selectedLog.location.longitude && (
+              <p className="text-sm text-gray-700">
+                Coordinates: {selectedLog.location.latitude},{" "}
+                {selectedLog.location.longitude}
+              </p>
+              )}
+            {selectedLog.location.address && (
+              <p className="text-sm text-gray-700">
+              Address: {selectedLog.location.address}
+              </p>
+            )}
+            </div>
+          </div>
+          )}
+
+          {/* Scan Images */}
+          {selectedLog.metadata?.frontImageUrl ||
+          selectedLog.metadata?.backImageUrl ? (
+          <div className="border-b pb-3">
+            <p className="text-sm font-medium text-gray-500 mb-3">
+            Scan Images
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {selectedLog.metadata.frontImageUrl && (
+              <div className="space-y-2">
+              <p className="text-xs font-medium text-gray-600">
+                Front Image
+              </p>
+              <a
+                href={selectedLog.metadata.frontImageUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block border rounded-lg overflow-hidden hover:opacity-80 transition-opacity"
+              >
+                <img
+                src={selectedLog.metadata.frontImageUrl}
+                alt="Front scan"
+                className="w-full h-48 object-cover"
+                />
+              </a>
               </div>
+            )}
+            {selectedLog.metadata.backImageUrl && (
+              <div className="space-y-2">
+              <p className="text-xs font-medium text-gray-600">
+                Back Image
+              </p>
+              <a
+                href={selectedLog.metadata.backImageUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block border rounded-lg overflow-hidden hover:opacity-80 transition-opacity"
+              >
+                <img
+                src={selectedLog.metadata.backImageUrl}
+                alt="Back scan"
+                className="w-full h-48 object-cover"
+                />
+              </a>
+              </div>
+            )}
+            </div>
+          </div>
+          ) : null}
 
-              {/* Action Type */}
-              <div className="border-b pb-3">
-                <p className="text-sm font-medium text-gray-500 mb-1">Type</p>
-                <span
-                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    AuditLogService.getActionTypeBadge(selectedLog.actionType)
-                      .className
-                  }`}
-                >
-                  {
-                    AuditLogService.getActionTypeBadge(selectedLog.actionType)
-                      .label
-                  }
+          {/* OCR Extracted Information */}
+          {selectedLog.metadata?.extractedInfo && (
+          <div className="border-b pb-3">
+            <p className="text-sm font-medium text-gray-500 mb-2">
+            OCR Extracted Information
+            </p>
+            <div className="bg-blue-50 rounded-lg p-3 space-y-2">
+            {Object.entries(selectedLog.metadata.extractedInfo).map(
+              ([key, value]) => (
+              <div
+                key={key}
+                className="flex justify-between items-start gap-3"
+              >
+                <span className="text-sm font-medium text-blue-700 capitalize">
+                {key.replace(/([A-Z])/g, " $1").trim()}:
+                </span>
+                <span className="text-sm text-gray-900 text-right ml-4 font-medium break-words max-w-[60%]">
+                {value === undefined ||
+                value === null ||
+                value === ""
+                  ? "N/A"
+                  : typeof value === "object"
+                  ? JSON.stringify(value)
+                  : String(value)}
                 </span>
               </div>
+              )
+            )}
+            </div>
+          </div>
+          )}
 
-              {/* Platform */}
-              <div className="border-b pb-3">
-                <p className="text-sm font-medium text-gray-500 mb-1">
-                  Platform
-                </p>
-                <p className="text-base text-gray-900">
-                  {selectedLog.platform === "WEB" ? "Web" : "Mobile"}
-                </p>
+          {/* OCR Raw Text */}
+          {selectedLog.metadata?.scannedText && (
+          <div className="border-b pb-3">
+            <p className="text-sm font-medium text-gray-500 mb-2">
+            OCR Raw Text
+            </p>
+            <div className="bg-gray-100 rounded-lg p-3 max-h-48 overflow-y-auto">
+            <pre className="text-xs text-gray-800 whitespace-pre-wrap font-mono">
+              {selectedLog.metadata.scannedText}
+            </pre>
+            </div>
+          </div>
+          )}
+
+          {/* Scan Type & Status */}
+          {(selectedLog.metadata?.scanType ||
+          selectedLog.metadata?.extractionSuccess !== undefined) && (
+          <div className="border-b pb-3">
+            <p className="text-sm font-medium text-gray-500 mb-2">
+            Scan Details
+            </p>
+            <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+            {selectedLog.metadata.scanType && (
+              <div className="flex justify-between items-start">
+              <span className="text-sm font-medium text-gray-600">
+                Scan Type:
+              </span>
+              <span className="text-sm text-gray-900 font-medium">
+                {selectedLog.metadata.scanType}
+              </span>
               </div>
-
-              {/* Date & Time */}
-              <div className="border-b pb-3">
-                <p className="text-sm font-medium text-gray-500 mb-1">
-                  Date & Time
-                </p>
-                <p className="text-base text-gray-900">
-                  {new Date(selectedLog.createdAt).toLocaleString("en-US", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    second: "2-digit",
-                  })}
-                </p>
+            )}
+            {selectedLog.metadata.extractionSuccess !== undefined && (
+              <div className="flex justify-between items-start">
+              <span className="text-sm font-medium text-gray-600">
+                Extraction Status:
+              </span>
+              <span
+                className={`text-sm font-medium ${
+                selectedLog.metadata.extractionSuccess
+                  ? "text-green-600"
+                  : "text-red-600"
+                }`}
+              >
+                {selectedLog.metadata.extractionSuccess
+                ? "Success"
+                : "Failed"}
+              </span>
               </div>
+            )}
+            </div>
+          </div>
+          )}
 
-              {/* IP Address */}
-              {selectedLog.ipAddress && (
-                <div className="border-b pb-3">
-                  <p className="text-sm font-medium text-gray-500 mb-1">
-                    IP Address
-                  </p>
-                  <p className="text-base text-gray-900 font-mono">
-                    {selectedLog.ipAddress}
-                  </p>
+          {/* Metadata */}
+          {selectedLog.metadata &&
+          Object.keys(selectedLog.metadata).length > 0 && (
+            <div className="border-b pb-3">
+            <p className="text-sm font-medium text-gray-500 mb-2">
+              Additional Information
+            </p>
+            <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+              {Object.entries(selectedLog.metadata)
+              .filter(
+                ([key]) =>
+                key !== "frontImageUrl" &&
+                key !== "backImageUrl" &&
+                key !== "extractedInfo" &&
+                key !== "scanType" &&
+                key !== "extractionSuccess" &&
+                key !== "scannedText"
+              )
+              .map(([key, value]) => (
+                <div
+                key={key}
+                className="flex justify-between items-start gap-3"
+                >
+                <span className="text-sm font-medium text-gray-600 capitalize">
+                  {key.replace(/([A-Z])/g, " $1").trim()}:
+                </span>
+                <span className="text-sm text-gray-900 text-right ml-4 break-words max-w-[60%]">
+                  {typeof value === "object"
+                  ? JSON.stringify(value)
+                  : String(value)}
+                </span>
                 </div>
-              )}
-
-              {/* User Agent */}
-              {selectedLog.userAgent && (
-                <div className="border-b pb-3">
-                  <p className="text-sm font-medium text-gray-500 mb-1">
-                    User Agent
-                  </p>
-                  <p className="text-sm text-gray-700 break-words">
-                    {selectedLog.userAgent}
-                  </p>
-                </div>
-              )}
-
-              {/* Location */}
-              {selectedLog.location && (
-                <div className="border-b pb-3">
-                  <p className="text-sm font-medium text-gray-500 mb-1">
-                    Location
-                  </p>
-                  <div className="space-y-1">
-                    {selectedLog.location.latitude &&
-                      selectedLog.location.longitude && (
-                        <p className="text-sm text-gray-700">
-                          Coordinates: {selectedLog.location.latitude},{" "}
-                          {selectedLog.location.longitude}
-                        </p>
-                      )}
-                    {selectedLog.location.address && (
-                      <p className="text-sm text-gray-700">
-                        Address: {selectedLog.location.address}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Scan Images */}
-              {selectedLog.metadata?.frontImageUrl ||
-              selectedLog.metadata?.backImageUrl ? (
-                <div className="border-b pb-3">
-                  <p className="text-sm font-medium text-gray-500 mb-3">
-                    Scan Images
-                  </p>
-                  <div className="grid grid-cols-2 gap-4">
-                    {selectedLog.metadata.frontImageUrl && (
-                      <div className="space-y-2">
-                        <p className="text-xs font-medium text-gray-600">
-                          Front Image
-                        </p>
-                        <a
-                          href={selectedLog.metadata.frontImageUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="block border rounded-lg overflow-hidden hover:opacity-80 transition-opacity"
-                        >
-                          <img
-                            src={selectedLog.metadata.frontImageUrl}
-                            alt="Front scan"
-                            className="w-full h-48 object-cover"
-                          />
-                        </a>
-                      </div>
-                    )}
-                    {selectedLog.metadata.backImageUrl && (
-                      <div className="space-y-2">
-                        <p className="text-xs font-medium text-gray-600">
-                          Back Image
-                        </p>
-                        <a
-                          href={selectedLog.metadata.backImageUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="block border rounded-lg overflow-hidden hover:opacity-80 transition-opacity"
-                        >
-                          <img
-                            src={selectedLog.metadata.backImageUrl}
-                            alt="Back scan"
-                            className="w-full h-48 object-cover"
-                          />
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : null}
-
-              {/* OCR Extracted Information */}
-              {selectedLog.metadata?.extractedInfo && (
-                <div className="border-b pb-3">
-                  <p className="text-sm font-medium text-gray-500 mb-2">
-                    OCR Extracted Information
-                  </p>
-                  <div className="bg-blue-50 rounded-lg p-3 space-y-2">
-                    {Object.entries(selectedLog.metadata.extractedInfo).map(
-                      ([key, value]) => (
-                        <div
-                          key={key}
-                          className="flex justify-between items-start"
-                        >
-                          <span className="text-sm font-medium text-blue-700 capitalize">
-                            {key.replace(/([A-Z])/g, " $1").trim()}:
-                          </span>
-                          <span className="text-sm text-gray-900 text-right ml-4 font-medium">
-                            {(value === undefined || value === null || value === "") 
-                              ? "N/A" 
-                              : typeof value === "object" 
-                              ? JSON.stringify(value) 
-                              : String(value)}
-                          </span>
-                        </div>
-                      )
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* OCR Raw Text */}
-              {selectedLog.metadata?.scannedText && (
-                <div className="border-b pb-3">
-                  <p className="text-sm font-medium text-gray-500 mb-2">
-                    OCR Raw Text
-                  </p>
-                  <div className="bg-gray-100 rounded-lg p-3 max-h-48 overflow-y-auto">
-                    <pre className="text-xs text-gray-800 whitespace-pre-wrap font-mono">
-                      {selectedLog.metadata.scannedText}
-                    </pre>
-                  </div>
-                </div>
-              )}
-
-              {/* Scan Type & Status */}
-              {(selectedLog.metadata?.scanType ||
-                selectedLog.metadata?.extractionSuccess !== undefined) && (
-                <div className="border-b pb-3">
-                  <p className="text-sm font-medium text-gray-500 mb-2">
-                    Scan Details
-                  </p>
-                  <div className="bg-gray-50 rounded-lg p-3 space-y-2">
-                    {selectedLog.metadata.scanType && (
-                      <div className="flex justify-between items-start">
-                        <span className="text-sm font-medium text-gray-600">
-                          Scan Type:
-                        </span>
-                        <span className="text-sm text-gray-900 font-medium">
-                          {selectedLog.metadata.scanType}
-                        </span>
-                      </div>
-                    )}
-                    {selectedLog.metadata.extractionSuccess !== undefined && (
-                      <div className="flex justify-between items-start">
-                        <span className="text-sm font-medium text-gray-600">
-                          Extraction Status:
-                        </span>
-                        <span
-                          className={`text-sm font-medium ${
-                            selectedLog.metadata.extractionSuccess
-                              ? "text-green-600"
-                              : "text-red-600"
-                          }`}
-                        >
-                          {selectedLog.metadata.extractionSuccess
-                            ? "Success"
-                            : "Failed"}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Metadata */}
-              {selectedLog.metadata &&
-                Object.keys(selectedLog.metadata).length > 0 && (
-                  <div className="border-b pb-3">
-                    <p className="text-sm font-medium text-gray-500 mb-2">
-                      Additional Information
-                    </p>
-                    <div className="bg-gray-50 rounded-lg p-3 space-y-2">
-                      {Object.entries(selectedLog.metadata)
-                        .filter(
-                          ([key]) =>
-                            key !== "frontImageUrl" && 
-                            key !== "backImageUrl" &&
-                            key !== "extractedInfo" &&
-                            key !== "scanType" &&
-                            key !== "extractionSuccess" &&
-                            key !== "scannedText"
-                        )
-                        .map(([key, value]) => (
-                          <div
-                            key={key}
-                            className="flex justify-between items-start"
-                          >
-                            <span className="text-sm font-medium text-gray-600 capitalize">
-                              {key.replace(/([A-Z])/g, " $1").trim()}:
-                            </span>
-                            <span className="text-sm text-gray-900 text-right ml-4">
-                              {typeof value === "object"
-                                ? JSON.stringify(value)
-                                : String(value)}
-                            </span>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                )}
-
-              {/* Target User */}
-              {selectedLog.targetUser && (
-                <div className="border-b pb-3">
-                  <p className="text-sm font-medium text-gray-500 mb-1">
-                    Target User
-                  </p>
-                  <p className="text-base text-gray-900">
-                    {selectedLog.targetUser.firstName}{" "}
-                    {selectedLog.targetUser.lastName}
-                    <span className="text-sm text-gray-500 ml-2">
-                      ({selectedLog.targetUser.email})
-                    </span>
-                  </p>
-                </div>
-              )}
-
-              {/* Log ID */}
-              <div>
-                <p className="text-sm font-medium text-gray-500 mb-1">Log ID</p>
-                <p className="text-xs text-gray-600 font-mono">
-                  {selectedLog._id}
-                </p>
-              </div>
+              ))}
+            </div>
             </div>
           )}
 
-          <div className="flex justify-end mt-6">
-            <Button
-              variant="outline"
-              onClick={() => setShowDetailsModal(false)}
-            >
-              Close
-            </Button>
+          {/* Target User */}
+          {selectedLog.targetUser && (
+          <div className="border-b pb-3">
+            <p className="text-sm font-medium text-gray-500 mb-1">
+            Target User
+            </p>
+            <p className="text-base text-gray-900">
+            {selectedLog.targetUser.firstName}{" "}
+            {selectedLog.targetUser.lastName}
+            <span className="text-sm text-gray-500 ml-2">
+              ({selectedLog.targetUser.email})
+            </span>
+            </p>
           </div>
-        </DialogContent>
+          )}
+
+          {/* Log ID */}
+          <div>
+          <p className="text-sm font-medium text-gray-500 mb-1">Log ID</p>
+          <p className="text-xs text-gray-600 font-mono">
+            {selectedLog._id}
+          </p>
+          </div>
+        </div>
+        )}
+
+        <div className="flex justify-end mt-6">
+        <Button
+          variant="outline"
+          onClick={() => setShowDetailsModal(false)}
+        >
+          Close
+        </Button>
+        </div>
+      </DialogContent>
       </Dialog>
 
       {/* Avatar Crop Dialog */}

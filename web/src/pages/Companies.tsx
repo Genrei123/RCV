@@ -218,32 +218,23 @@ export function Companies(props: CompaniesProps) {
         title="Companies"
         description="Manage and view all registered companies in the system."
       >
-        {/* Header Actions */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-          <div className="flex items-center gap-2">
-            <Button onClick={() => setShowAddModal(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Company
-            </Button>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <div className="text-sm text-gray-600">
-              <span className="font-medium">
-                {pagination?.total_items ?? companies.length}
-              </span>{" "}
-              {(pagination?.total_items ?? companies.length) === 1
-                ? "company"
-                : "companies"}{" "}
-              registered
-            </div>
+        {/* Header Summary */}
+        <div className="flex items-center justify-end mb-4">
+          <div className="text-sm text-gray-600">
+            <span className="font-medium">
+              {pagination?.total_items ?? companies.length}
+            </span>{" "}
+            {(pagination?.total_items ?? companies.length) === 1
+              ? "company"
+              : "companies"}{" "}
+            registered
           </div>
         </div>
 
         {/* Data Table */}
         <>
           <DataTable
-            title=""
+            title="Company List"
             columns={columns}
             data={pagedCompanies}
             searchPlaceholder="Search companies..."
@@ -251,16 +242,25 @@ export function Companies(props: CompaniesProps) {
             loading={loading}
             emptyStateTitle="No Companies Found"
             emptyStateDescription="Try adjusting your search or add a new company to get started."
+            customControls={
+              <Button
+                onClick={() => setShowAddModal(true)}
+                className="whitespace-nowrap"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Company
+              </Button>
+            }
           />
 
-          <div className="mt-4 flex items-center justify-between">
-            <div>
+          <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="hidden sm:block">
               <span className="text-sm">
                 Page {currentPage} of {totalPages}
               </span>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 justify-center sm:justify-end w-full sm:w-auto">
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}

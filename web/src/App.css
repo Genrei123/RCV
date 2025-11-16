@@ -7,7 +7,7 @@
 @media (max-width: 768px) {
   .app-grid {
     grid-template-columns: 1fr !important;
-    grid-template-areas: 
+    grid-template-areas:
       "main"
       "footer" !important;
   }
@@ -57,7 +57,8 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
+  /* Global app background (light mode) */
+  --background: #fafbff;
   --foreground: oklch(0.145 0 0);
   --card: oklch(100% 0.00011 271.152);
   --card-foreground: oklch(0.145 0 0);

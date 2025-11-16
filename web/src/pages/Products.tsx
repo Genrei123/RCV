@@ -197,16 +197,13 @@ export function Products(props: ProductsProps) {
       title="Products"
       description="Manage and view all registered products in the system."
     >
-      {/* Header Actions */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-        <div className="flex items-center gap-2">
-          <Button onClick={handleAddProduct}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Product
-          </Button>
-        </div>
-
-        <div className="flex border rounded-lg">
+      {/* Header Actions: right-aligned toggles (hidden on mobile in grid view) */}
+      <div className="flex flex-col md:flex-row md:items-center justify-end mb-6">
+        <div
+          className={`flex border rounded-lg self-end ${
+            viewMode === "grid" ? "hidden sm:flex" : ""
+          }`}
+        >
           <Button
             variant={viewMode === "grid" ? "default" : "ghost"}
             size="sm"
@@ -230,7 +227,7 @@ export function Products(props: ProductsProps) {
       {viewMode === "list" ? (
         <>
           <DataTable
-            title=""
+            title="Product List"
             columns={columns}
             data={pagedProducts}
             searchPlaceholder="Search products..."
@@ -238,16 +235,22 @@ export function Products(props: ProductsProps) {
             loading={loading}
             emptyStateTitle="No Products Found"
             emptyStateDescription="Try adjusting your search or add a new product to get started."
+            customControls={
+              <Button onClick={handleAddProduct} className="whitespace-nowrap">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Product
+              </Button>
+            }
           />
 
-          <div className="mt-4 flex items-center justify-between">
-            <div>
+          <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="hidden sm:block">
               <span className="text-sm">
                 Page {currentPage} of {totalPages}
               </span>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 justify-center sm:justify-end w-full sm:w-auto">
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}
@@ -261,19 +264,48 @@ export function Products(props: ProductsProps) {
         </>
       ) : (
         <div className="space-y-6">
-          {/* Search Input for Grid View */}
-          <div className="flex items-center justify-between">
-            <div></div>
-            <div className="relative w-64">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <div className="flex flex-row flex-nowrap items-center justify-end gap-2 sm:gap-3">
+            {/* Mobile: flexible width; Desktop: fixed width */}
+            <div className="relative flex-1 sm:flex-none max-w-[70%] min-w-[140px] sm:max-w-none sm:w-64 group rounded-md border border-gray-300 focus-within:border-black transition-colors flex items-center h-10">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4 group-focus-within:text-black transition-colors" />
               <Input
                 type="text"
                 placeholder="Search products..."
-                className="pl-10"
+                className="pl-10 border-0 bg-white text-gray-800 focus:text-black placeholder:text-gray-400 focus:placeholder:text-gray-500 h-10"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
+            <div className="flex items-center shrink-0">
+              <Button
+                onClick={handleAddProduct}
+                className="whitespace-nowrap sm:ml-2"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Product
+              </Button>
+            </div>
+            {/* Mobile toggle group (shown only in grid view) */}
+            {viewMode === "grid" && (
+              <div className="flex border rounded-lg sm:hidden shrink-0">
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => setViewMode("grid")}
+                  className="rounded-r-none"
+                >
+                  <Grid className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setViewMode("list")}
+                  className="rounded-l-none"
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Grid Content Container */}
@@ -305,13 +337,13 @@ export function Products(props: ProductsProps) {
             ) : null}
           </div>
 
-          <div className="mt-4 flex items-center justify-between">
-            <div>
+          <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="hidden sm:block">
               <span className="text-sm">
                 Page {currentPage} of {totalPages}
               </span>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 justify-center sm:justify-end w-full sm:w-auto">
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}
