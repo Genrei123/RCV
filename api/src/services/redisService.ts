@@ -29,7 +29,7 @@ class RedisService {
         await this.client.connect();
       }
     } catch (error) {
-      console.error(error);
+      // Silent fail
     }
   }
 
