@@ -273,7 +273,7 @@ export function Profile({
       render: (value) => {
         if (typeof value !== "string") {
           return (
-            <span className="font-medium text-gray-900">{String(value)}</span>
+            <span className="font-medium text-neutral-900">{String(value)}</span>
           );
         }
         const MAX_LEN = 40;
@@ -281,7 +281,7 @@ export function Profile({
           value.length > MAX_LEN ? value.slice(0, MAX_LEN) + "…" : value;
         return (
           <span
-            className="font-medium text-gray-900"
+            className="font-medium text-neutral-900"
             title={value} // native tooltip shows full action
             data-full-action={value}
           >
@@ -296,7 +296,7 @@ export function Profile({
       render: (value: string) => {
         const icon = value === "WEB" ? "" : ""; // blank lang since tanggal emoji
         return (
-          <span className="text-sm text-gray-600">
+          <span className="text-sm text-neutral-600">
             {icon} {value}
           </span>
         );
@@ -323,10 +323,10 @@ export function Profile({
 
           return (
             <div className="flex flex-col">
-              <span className="text-sm font-medium text-gray-900">
+              <span className="text-sm font-medium text-neutral-900">
                 {dateStr}
               </span>
-              <span className="text-xs text-gray-500">{timeStr}</span>
+              <span className="text-xs text-neutral-500">{timeStr}</span>
             </div>
           );
         } catch (error) {
@@ -367,10 +367,10 @@ export function Profile({
     return (
       <div className="space-y-6">
         <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-48 mb-6"></div>
+          <div className="h-8 bg-neutral-200 rounded w-48 mb-6"></div>
           <div className="grid lg:grid-cols-2 gap-8">
-            <div className="h-96 bg-gray-200 rounded-lg"></div>
-            <div className="h-96 bg-gray-200 rounded-lg"></div>
+            <div className="h-96 bg-neutral-200 rounded-lg"></div>
+            <div className="h-96 bg-neutral-200 rounded-lg"></div>
           </div>
         </div>
       </div>
@@ -385,14 +385,14 @@ export function Profile({
       <div className="flex items-center gap-3">
         <Button
         onClick={handleEditProfile}
-        className="bg-teal-600 hover:bg-teal-700 text-white w-auto"
+        className="bg-teal-600 hover:bg-primary-700 text-white w-auto"
         >
         Edit Profile
         </Button>
         <Button
         onClick={handleArchiveAccount}
         variant="destructive"
-        className="bg-red-600 hover:bg-red-700 text-white w-auto"
+        className="bg-error-600 hover:bg-error-700 text-white w-auto"
         >
         <Archive className="h-4 w-4 mr-2" />
         Archive Account
@@ -405,10 +405,10 @@ export function Profile({
       <Card className="w-full">
         <CardContent className="p-4 sm:p-6 w-full">
         <div className="mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-1">
+          <h2 className="text-xl font-semibold text-neutral-900 mb-1">
           Profile Information
           </h2>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-neutral-600">
           Update your personal account
           </p>
         </div>
@@ -416,7 +416,7 @@ export function Profile({
         {/* Avatar Section */}
         <div className="text-center mb-8">
           <div className="relative inline-block">
-          <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4 overflow-hidden">
+          <div className="w-24 h-24 bg-neutral-200 rounded-full flex items-center justify-center mx-auto mb-4 overflow-hidden">
             {localAvatar ? (
             <img
               src={localAvatar}
@@ -430,14 +430,14 @@ export function Profile({
               className="w-full h-full object-cover"
             />
             ) : (
-            <User className="w-12 h-12 text-gray-500" />
+            <User className="w-12 h-12 text-neutral-500" />
             )}
             {/* View-only avatar: no overlay or edit icon */}
           </div>
-          <h3 className="text-lg font-semibold text-gray-900">
+          <h3 className="text-lg font-semibold text-neutral-900">
             {getFullName(user)}
           </h3>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-neutral-600">
             {getRoleName(user?.role)}
           </p>
           </div>
@@ -445,24 +445,24 @@ export function Profile({
 
         {/* Profile Details */}
         <div className="space-y-4 w-full">
-          <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg w-full">
-          <Mail className="w-5 h-5 text-gray-500 mt-0.5" />
+          <div className="flex items-start gap-3 p-3 border border-neutral-200 rounded-lg w-full">
+          <Mail className="w-5 h-5 text-neutral-500 mt-0.5" />
           <div className="flex-1">
-            <p className="text-sm font-medium text-gray-900">Email</p>
-            <p className="text-sm text-gray-600 break-all">
+            <p className="text-sm font-medium text-neutral-900">Email</p>
+            <p className="text-sm text-neutral-600 break-all">
             {user?.email || "Not provided"}
             </p>
           </div>
           </div>
 
           {user?.location && (
-          <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg w-full">
-            <MapPin className="w-5 h-5 text-gray-500 mt-0.5" />
+          <div className="flex items-start gap-3 p-3 border border-neutral-200 rounded-lg w-full">
+            <MapPin className="w-5 h-5 text-neutral-500 mt-0.5" />
             <div className="flex-1">
-            <p className="text-sm font-medium text-gray-900">
+            <p className="text-sm font-medium text-neutral-900">
               Location
             </p>
-            <p className="text-sm text-gray-600 break-words">
+            <p className="text-sm text-neutral-600 break-words">
               {user.location}
             </p>
             </div>
@@ -470,25 +470,25 @@ export function Profile({
           )}
 
           {user?.dateOfBirth && (
-          <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg w-full">
-            <Calendar className="w-5 h-5 text-gray-500 mt-0.5" />
+          <div className="flex items-start gap-3 p-3 border border-neutral-200 rounded-lg w-full">
+            <Calendar className="w-5 h-5 text-neutral-500 mt-0.5" />
             <div className="flex-1">
-            <p className="text-sm font-medium text-gray-900">
+            <p className="text-sm font-medium text-neutral-900">
               Date of Birth
             </p>
-            <p className="text-sm text-gray-600">{user.dateOfBirth}</p>
+            <p className="text-sm text-neutral-600">{user.dateOfBirth}</p>
             </div>
           </div>
           )}
 
           {user?.phoneNumber && (
-          <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg w-full">
-            <Phone className="w-5 h-5 text-gray-500 mt-0.5" />
+          <div className="flex items-start gap-3 p-3 border border-neutral-200 rounded-lg w-full">
+            <Phone className="w-5 h-5 text-neutral-500 mt-0.5" />
             <div className="flex-1">
-            <p className="text-sm font-medium text-gray-900">
+            <p className="text-sm font-medium text-neutral-900">
               Phone Number
             </p>
-            <p className="text-sm text-gray-600 break-all">
+            <p className="text-sm text-neutral-600 break-all">
               {user.phoneNumber}
             </p>
             </div>
@@ -496,13 +496,13 @@ export function Profile({
           )}
 
           {user?.badgeId && (
-          <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg w-full">
-            <BadgeIcon className="w-5 h-5 text-gray-500 mt-0.5" />
+          <div className="flex items-start gap-3 p-3 border border-neutral-200 rounded-lg w-full">
+            <BadgeIcon className="w-5 h-5 text-neutral-500 mt-0.5" />
             <div className="flex-1">
-            <p className="text-sm font-medium text-gray-900">
+            <p className="text-sm font-medium text-neutral-900">
               Badge ID
             </p>
-            <p className="text-sm text-gray-600 break-all">
+            <p className="text-sm text-neutral-600 break-all">
               {user.badgeId}
             </p>
             </div>
@@ -510,13 +510,13 @@ export function Profile({
           )}
 
           {user?.stationedAt && (
-          <div className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg w-full">
-            <BadgeIcon className="w-5 h-5 text-gray-500 mt-0.5" />
+          <div className="flex items-start gap-3 p-3 border border-neutral-200 rounded-lg w-full">
+            <BadgeIcon className="w-5 h-5 text-neutral-500 mt-0.5" />
             <div className="flex-1">
-            <p className="text-sm font-medium text-gray-900">
+            <p className="text-sm font-medium text-neutral-900">
               Stationed At
             </p>
-            <p className="text-sm text-gray-600 break-words">
+            <p className="text-sm text-neutral-600 break-words">
               {user.stationedAt}
             </p>
             </div>
@@ -530,7 +530,7 @@ export function Profile({
       <Card className="w-full">
         <CardContent className="p-4 sm:p-6 w-full">
         <div className="mb-6 w-full">
-          <h2 className="text-xl font-semibold text-gray-900 mb-1 w-full">
+          <h2 className="text-xl font-semibold text-neutral-900 mb-1 w-full">
           Your Recent Activities
           </h2>
         </div>
@@ -589,15 +589,15 @@ export function Profile({
         <div className="space-y-4">
           {/* Action */}
           <div className="border-b pb-3">
-          <p className="text-sm font-medium text-gray-500 mb-1">Action</p>
-          <p className="text-base font-semibold text-gray-900">
+          <p className="text-sm font-medium text-neutral-500 mb-1">Action</p>
+          <p className="text-base font-semibold text-neutral-900">
             {selectedLog.action}
           </p>
           </div>
 
           {/* Action Type */}
           <div className="border-b pb-3">
-          <p className="text-sm font-medium text-gray-500 mb-1">Type</p>
+          <p className="text-sm font-medium text-neutral-500 mb-1">Type</p>
           <span
             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
             AuditLogService.getActionTypeBadge(selectedLog.actionType)
@@ -613,20 +613,20 @@ export function Profile({
 
           {/* Platform */}
           <div className="border-b pb-3">
-          <p className="text-sm font-medium text-gray-500 mb-1">
+          <p className="text-sm font-medium text-neutral-500 mb-1">
             Platform
           </p>
-          <p className="text-base text-gray-900">
+          <p className="text-base text-neutral-900">
             {selectedLog.platform === "WEB" ? "Web" : "Mobile"}
           </p>
           </div>
 
           {/* Date & Time */}
           <div className="border-b pb-3">
-          <p className="text-sm font-medium text-gray-500 mb-1">
+          <p className="text-sm font-medium text-neutral-500 mb-1">
             Date & Time
           </p>
-          <p className="text-base text-gray-900">
+          <p className="text-base text-neutral-900">
             {new Date(selectedLog.createdAt).toLocaleString("en-US", {
             year: "numeric",
             month: "long",
@@ -641,10 +641,10 @@ export function Profile({
           {/* IP Address */}
           {selectedLog.ipAddress && (
           <div className="border-b pb-3">
-            <p className="text-sm font-medium text-gray-500 mb-1">
+            <p className="text-sm font-medium text-neutral-500 mb-1">
             IP Address
             </p>
-            <p className="text-base text-gray-900 font-mono">
+            <p className="text-base text-neutral-900 font-mono">
             {selectedLog.ipAddress}
             </p>
           </div>
@@ -653,10 +653,10 @@ export function Profile({
           {/* User Agent */}
           {selectedLog.userAgent && (
           <div className="border-b pb-3">
-            <p className="text-sm font-medium text-gray-500 mb-1">
+            <p className="text-sm font-medium text-neutral-500 mb-1">
             User Agent
             </p>
-            <p className="text-sm text-gray-700 break-words">
+            <p className="text-sm text-neutral-700 break-words">
             {selectedLog.userAgent}
             </p>
           </div>
@@ -665,19 +665,19 @@ export function Profile({
           {/* Location */}
           {selectedLog.location && (
           <div className="border-b pb-3">
-            <p className="text-sm font-medium text-gray-500 mb-1">
+            <p className="text-sm font-medium text-neutral-500 mb-1">
             Location
             </p>
             <div className="space-y-1">
             {selectedLog.location.latitude &&
               selectedLog.location.longitude && (
-              <p className="text-sm text-gray-700">
+              <p className="text-sm text-neutral-700">
                 Coordinates: {selectedLog.location.latitude},{" "}
                 {selectedLog.location.longitude}
               </p>
               )}
             {selectedLog.location.address && (
-              <p className="text-sm text-gray-700">
+              <p className="text-sm text-neutral-700">
               Address: {selectedLog.location.address}
               </p>
             )}
@@ -689,13 +689,13 @@ export function Profile({
           {selectedLog.metadata?.frontImageUrl ||
           selectedLog.metadata?.backImageUrl ? (
           <div className="border-b pb-3">
-            <p className="text-sm font-medium text-gray-500 mb-3">
+            <p className="text-sm font-medium text-neutral-500 mb-3">
             Scan Images
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {selectedLog.metadata.frontImageUrl && (
               <div className="space-y-2">
-              <p className="text-xs font-medium text-gray-600">
+              <p className="text-xs font-medium text-neutral-600">
                 Front Image
               </p>
               <a
@@ -714,7 +714,7 @@ export function Profile({
             )}
             {selectedLog.metadata.backImageUrl && (
               <div className="space-y-2">
-              <p className="text-xs font-medium text-gray-600">
+              <p className="text-xs font-medium text-neutral-600">
                 Back Image
               </p>
               <a
@@ -738,7 +738,7 @@ export function Profile({
           {/* OCR Extracted Information */}
           {selectedLog.metadata?.extractedInfo && (
           <div className="border-b pb-3">
-            <p className="text-sm font-medium text-gray-500 mb-2">
+            <p className="text-sm font-medium text-neutral-500 mb-2">
             OCR Extracted Information
             </p>
             <div className="bg-blue-50 rounded-lg p-3 space-y-2">
@@ -751,7 +751,7 @@ export function Profile({
                 <span className="text-sm font-medium text-blue-700 capitalize">
                 {key.replace(/([A-Z])/g, " $1").trim()}:
                 </span>
-                <span className="text-sm text-gray-900 text-right ml-4 font-medium break-words max-w-[60%]">
+                <span className="text-sm text-neutral-900 text-right ml-4 font-medium break-words max-w-[60%]">
                 {value === undefined ||
                 value === null ||
                 value === ""
@@ -770,11 +770,11 @@ export function Profile({
           {/* OCR Raw Text */}
           {selectedLog.metadata?.scannedText && (
           <div className="border-b pb-3">
-            <p className="text-sm font-medium text-gray-500 mb-2">
+            <p className="text-sm font-medium text-neutral-500 mb-2">
             OCR Raw Text
             </p>
-            <div className="bg-gray-100 rounded-lg p-3 max-h-48 overflow-y-auto">
-            <pre className="text-xs text-gray-800 whitespace-pre-wrap font-mono">
+            <div className="bg-neutral-100 rounded-lg p-3 max-h-48 overflow-y-auto">
+            <pre className="text-xs text-neutral-800 whitespace-pre-wrap font-mono">
               {selectedLog.metadata.scannedText}
             </pre>
             </div>
@@ -785,23 +785,23 @@ export function Profile({
           {(selectedLog.metadata?.scanType ||
           selectedLog.metadata?.extractionSuccess !== undefined) && (
           <div className="border-b pb-3">
-            <p className="text-sm font-medium text-gray-500 mb-2">
+            <p className="text-sm font-medium text-neutral-500 mb-2">
             Scan Details
             </p>
-            <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+            <div className="bg-neutral-50 rounded-lg p-3 space-y-2">
             {selectedLog.metadata.scanType && (
               <div className="flex justify-between items-start">
-              <span className="text-sm font-medium text-gray-600">
+              <span className="text-sm font-medium text-neutral-600">
                 Scan Type:
               </span>
-              <span className="text-sm text-gray-900 font-medium">
+              <span className="text-sm text-neutral-900 font-medium">
                 {selectedLog.metadata.scanType}
               </span>
               </div>
             )}
             {selectedLog.metadata.extractionSuccess !== undefined && (
               <div className="flex justify-between items-start">
-              <span className="text-sm font-medium text-gray-600">
+              <span className="text-sm font-medium text-neutral-600">
                 Extraction Status:
               </span>
               <span
@@ -825,10 +825,10 @@ export function Profile({
           {selectedLog.metadata &&
           Object.keys(selectedLog.metadata).length > 0 && (
             <div className="border-b pb-3">
-            <p className="text-sm font-medium text-gray-500 mb-2">
+            <p className="text-sm font-medium text-neutral-500 mb-2">
               Additional Information
             </p>
-            <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+            <div className="bg-neutral-50 rounded-lg p-3 space-y-2">
               {Object.entries(selectedLog.metadata)
               .filter(
                 ([key]) =>
@@ -844,10 +844,10 @@ export function Profile({
                 key={key}
                 className="flex justify-between items-start gap-3"
                 >
-                <span className="text-sm font-medium text-gray-600 capitalize">
+                <span className="text-sm font-medium text-neutral-600 capitalize">
                   {key.replace(/([A-Z])/g, " $1").trim()}:
                 </span>
-                <span className="text-sm text-gray-900 text-right ml-4 break-words max-w-[60%]">
+                <span className="text-sm text-neutral-900 text-right ml-4 break-words max-w-[60%]">
                   {typeof value === "object"
                   ? JSON.stringify(value)
                   : String(value)}
@@ -861,13 +861,13 @@ export function Profile({
           {/* Target User */}
           {selectedLog.targetUser && (
           <div className="border-b pb-3">
-            <p className="text-sm font-medium text-gray-500 mb-1">
+            <p className="text-sm font-medium text-neutral-500 mb-1">
             Target User
             </p>
-            <p className="text-base text-gray-900">
+            <p className="text-base text-neutral-900">
             {selectedLog.targetUser.firstName}{" "}
             {selectedLog.targetUser.lastName}
-            <span className="text-sm text-gray-500 ml-2">
+            <span className="text-sm text-neutral-500 ml-2">
               ({selectedLog.targetUser.email})
             </span>
             </p>
@@ -876,8 +876,8 @@ export function Profile({
 
           {/* Log ID */}
           <div>
-          <p className="text-sm font-medium text-gray-500 mb-1">Log ID</p>
-          <p className="text-xs text-gray-600 font-mono">
+          <p className="text-sm font-medium text-neutral-500 mb-1">Log ID</p>
+          <p className="text-xs text-neutral-600 font-mono">
             {selectedLog._id}
           </p>
           </div>

@@ -49,10 +49,10 @@ export function ForgotPasswordPage() {
     if (/[0-9]/.test(password)) score++;
     if (/[^A-Za-z0-9]/.test(password)) score++;
 
-    if (score <= 2) return { score, label: 'Weak', color: 'bg-red-500' };
+    if (score <= 2) return { score, label: 'Weak', color: 'bg-error-500' };
     if (score <= 4) return { score, label: 'Fair', color: 'bg-yellow-500' };
     if (score <= 5) return { score, label: 'Good', color: 'bg-blue-500' };
-    return { score, label: 'Strong', color: 'bg-green-500' };
+    return { score, label: 'Strong', color: 'bg-primary-500' };
   };
 
   const validatePassword = (password: string): boolean => {
@@ -162,21 +162,21 @@ export function ForgotPasswordPage() {
   const renderEmailStep = () => (
     <form onSubmit={handleSendResetEmail} className="space-y-6">
       <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
-          <Mail className="w-8 h-8 text-[#005440]" />
+        <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-100 rounded-full mb-4">
+          <Mail className="w-8 h-8 text-primary" />
         </div>
-        <h2 className="text-2xl font-bold text-[#005440] mb-2">Forgot Password?</h2>
-        <p className="text-gray-600">
+        <h2 className="text-2xl font-bold text-primary mb-2">Forgot Password?</h2>
+        <p className="text-neutral-600">
           Enter your email address and we'll send you a code to reset your password.
         </p>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-neutral-700 mb-2">
           Email Address
         </label>
         <div className="relative">
-          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5" />
           <Input
             type="email"
             placeholder="Enter your email"
@@ -190,7 +190,7 @@ export function ForgotPasswordPage() {
 
       <Button
         type="submit"
-        className="w-full h-11 bg-[#005440] hover:bg-[#00B087] text-white font-semibold"
+        className="w-full h-11 bg-primary hover:bg-[#00B087] text-white font-semibold"
         disabled={loading}
       >
         {loading ? (
@@ -208,17 +208,17 @@ export function ForgotPasswordPage() {
   const renderVerifyStep = () => (
     <form onSubmit={handleVerifyCode} className="space-y-6">
       <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
-          <Key className="w-8 h-8 text-[#005440]" />
+        <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-100 rounded-full mb-4">
+          <Key className="w-8 h-8 text-primary" />
         </div>
-        <h2 className="text-2xl font-bold text-[#005440] mb-2">Verify Code</h2>
-        <p className="text-gray-600">
+        <h2 className="text-2xl font-bold text-primary mb-2">Verify Code</h2>
+        <p className="text-neutral-600">
           We sent a 6-digit code to <strong>{email}</strong>
         </p>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-neutral-700 mb-2">
           Reset Code
         </label>
         <Input
@@ -234,7 +234,7 @@ export function ForgotPasswordPage() {
 
       <Button
         type="submit"
-        className="w-full h-11 bg-[#005440] hover:bg-[#00B087] text-white font-semibold"
+        className="w-full h-11 bg-primary hover:bg-[#00B087] text-white font-semibold"
         disabled={loading || resetCode.length !== 6}
       >
         {loading ? (
@@ -248,13 +248,13 @@ export function ForgotPasswordPage() {
       </Button>
 
       <div className="text-center">
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-neutral-600">
           Didn't receive the code?{' '}
           <button
             type="button"
             onClick={handleResendCode}
             disabled={loading}
-            className="text-[#005440] hover:text-[#00B087] font-semibold"
+            className="text-primary hover:text-[#00B087] font-semibold"
           >
             Resend Code
           </button>
@@ -266,21 +266,21 @@ export function ForgotPasswordPage() {
   const renderResetStep = () => (
     <form onSubmit={handleResetPassword} className="space-y-6">
       <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
-          <Lock className="w-8 h-8 text-[#005440]" />
+        <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-100 rounded-full mb-4">
+          <Lock className="w-8 h-8 text-primary" />
         </div>
-        <h2 className="text-2xl font-bold text-[#005440] mb-2">Set New Password</h2>
-        <p className="text-gray-600">
+        <h2 className="text-2xl font-bold text-primary mb-2">Set New Password</h2>
+        <p className="text-neutral-600">
           Create a strong password for your account
         </p>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-neutral-700 mb-2">
           New Password
         </label>
         <div className="relative">
-          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5" />
           <Input
             type={showPassword ? 'text' : 'password'}
             placeholder="Enter new password"
@@ -292,7 +292,7 @@ export function ForgotPasswordPage() {
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
           >
             {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
           </button>
@@ -300,24 +300,24 @@ export function ForgotPasswordPage() {
         {newPassword && (
           <div className="mt-2">
             <div className="flex items-center gap-2 mb-1">
-              <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+              <div className="flex-1 h-1.5 bg-neutral-200 rounded-full overflow-hidden">
                 <div 
                   className={`h-full transition-all ${passwordStrength.color}`}
                   style={{ width: `${(passwordStrength.score / 6) * 100}%` }}
                 />
               </div>
-              <span className="text-xs font-medium text-gray-600">{passwordStrength.label}</span>
+              <span className="text-xs font-medium text-neutral-600">{passwordStrength.label}</span>
             </div>
           </div>
         )}
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-neutral-700 mb-2">
           Confirm Password
         </label>
         <div className="relative">
-          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5" />
           <Input
             type={showConfirmPassword ? 'text' : 'password'}
             placeholder="Confirm new password"
@@ -329,22 +329,22 @@ export function ForgotPasswordPage() {
           <button
             type="button"
             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
           >
             {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
           </button>
         </div>
         {confirmPassword && newPassword === confirmPassword && (
           <div className="flex items-center gap-1 mt-1">
-            <CheckCircle2 className="w-4 h-4 text-green-600" />
-            <span className="text-xs text-green-600">Passwords match</span>
+            <CheckCircle2 className="w-4 h-4 text-primary-600" />
+            <span className="text-xs text-primary-600">Passwords match</span>
           </div>
         )}
       </div>
 
       <Button
         type="submit"
-        className="w-full h-11 bg-[#005440] hover:bg-[#00B087] text-white font-semibold"
+        className="w-full h-11 bg-primary hover:bg-[#00B087] text-white font-semibold"
         disabled={loading}
       >
         {loading ? (
@@ -361,16 +361,16 @@ export function ForgotPasswordPage() {
 
   const renderSuccessStep = () => (
     <div className="text-center space-y-6">
-      <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-4">
-        <CheckCircle2 className="w-12 h-12 text-green-600" />
+      <div className="inline-flex items-center justify-center w-20 h-20 bg-primary-100 rounded-full mb-4">
+        <CheckCircle2 className="w-12 h-12 text-primary-600" />
       </div>
-      <h2 className="text-2xl font-bold text-[#005440]">Password Reset Successful!</h2>
-      <p className="text-gray-600">
+      <h2 className="text-2xl font-bold text-primary">Password Reset Successful!</h2>
+      <p className="text-neutral-600">
         Your password has been successfully reset. You can now log in with your new password.
       </p>
       <Button
         onClick={() => navigate('/login')}
-        className="w-full h-11 bg-[#005440] hover:bg-[#00B087] text-white font-semibold"
+        className="w-full h-11 bg-primary hover:bg-[#00B087] text-white font-semibold"
       >
         Back to Login
       </Button>
@@ -379,7 +379,7 @@ export function ForgotPasswordPage() {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-primary-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md p-8 shadow-2xl bg-white">
         {/* Back Button */}
         {currentStep !== RESET_STEPS.SUCCESS && (
@@ -393,7 +393,7 @@ export function ForgotPasswordPage() {
                 setCurrentStep(RESET_STEPS.VERIFY);
               }
             }}
-            className="flex items-center gap-2 text-gray-600 hover:text-[#005440] mb-6"
+            className="flex items-center gap-2 text-neutral-600 hover:text-primary mb-6"
           >
             <ArrowLeft className="w-4 h-4" />
             <span className="text-sm font-medium">Back</span>
@@ -402,17 +402,17 @@ export function ForgotPasswordPage() {
 
         {/* Error Message */}
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-            <p className="text-red-600 text-sm flex-1">{error}</p>
+          <div className="mb-6 p-4 bg-error-50 border border-error-200 rounded-lg flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-error-600 flex-shrink-0 mt-0.5" />
+            <p className="text-error-600 text-sm flex-1">{error}</p>
           </div>
         )}
 
         {/* Success Message */}
         {successMessage && (
-          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3">
-            <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-            <p className="text-green-600 text-sm flex-1">{successMessage}</p>
+          <div className="mb-6 p-4 bg-primary-50 border border-primary-200 rounded-lg flex items-start gap-3">
+            <CheckCircle2 className="w-5 h-5 text-primary-600 flex-shrink-0 mt-0.5" />
+            <p className="text-primary-600 text-sm flex-1">{successMessage}</p>
           </div>
         )}
 
@@ -424,10 +424,10 @@ export function ForgotPasswordPage() {
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
                     currentStep === step
-                      ? 'bg-[#005440] text-white'
+                      ? 'bg-primary text-white'
                       : Object.values(RESET_STEPS).indexOf(currentStep) > index
-                      ? 'bg-green-100 text-[#005440]'
-                      : 'bg-gray-200 text-gray-400'
+                      ? 'bg-primary-100 text-primary'
+                      : 'bg-neutral-200 text-neutral-400'
                   }`}
                 >
                   {index + 1}
@@ -436,8 +436,8 @@ export function ForgotPasswordPage() {
                   <div
                     className={`w-12 h-1 mx-1 ${
                       Object.values(RESET_STEPS).indexOf(currentStep) > index
-                        ? 'bg-[#005440]'
-                        : 'bg-gray-200'
+                        ? 'bg-primary'
+                        : 'bg-neutral-200'
                     }`}
                   />
                 )}

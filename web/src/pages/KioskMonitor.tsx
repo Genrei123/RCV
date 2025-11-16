@@ -122,36 +122,36 @@ export function KioskMonitor() {
   };
 
   const getStatusColor = (isOnline: boolean): string => {
-    return isOnline ? "text-green-600" : "text-red-600";
+    return isOnline ? "text-green-600" : "text-error-600";
   };
 
   const getStatusBgColor = (isOnline: boolean): string => {
-    return isOnline ? "bg-green-100" : "bg-red-100";
+    return isOnline ? "bg-green-100" : "bg-error-100";
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-neutral-50 p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+              <h1 className="text-2xl font-bold text-neutral-900 flex items-center gap-3">
                 <Activity className="h-8 w-8 text-teal-600" />
                 Kiosk Health Monitor
               </h1>
-              <p className="text-gray-600 mt-1">
+              <p className="text-neutral-600 mt-1">
                 Monitor ESP32 device status and control LEDs remotely
               </p>
             </div>
 
             <div className="flex items-center gap-3">
-              <label className="flex items-center gap-2 text-sm text-gray-700">
+              <label className="flex items-center gap-2 text-sm text-neutral-700">
                 <input
                   type="checkbox"
                   checked={autoRefresh}
                   onChange={(e) => setAutoRefresh(e.target.checked)}
-                  className="rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+                  className="rounded border-neutral-300 text-teal-600 focus:ring-teal-500"
                 />
                 Auto-refresh (5s)
               </label>
@@ -173,7 +173,7 @@ export function KioskMonitor() {
         {/* Status Overview Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
           {/* Online Status */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-lg shadow-sm border border-neutral-200 p-6">
             <div className="flex items-center justify-between mb-4">
               <div
                 className={`p-3 rounded-lg ${getStatusBgColor(
@@ -191,7 +191,7 @@ export function KioskMonitor() {
                 )}
               </div>
             </div>
-            <h3 className="text-sm font-medium text-gray-600 mb-1">Status</h3>
+            <h3 className="text-sm font-medium text-neutral-600 mb-1">Status</h3>
             <p
               className={`text-2xl font-bold ${getStatusColor(
                 health.isOnline
@@ -202,44 +202,44 @@ export function KioskMonitor() {
           </div>
 
           {/* Last Poll */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-lg shadow-sm border border-neutral-200 p-6">
             <div className="flex items-center justify-between mb-4">
-              <div className="p-3 rounded-lg bg-blue-100">
-                <Clock className="h-6 w-6 text-blue-600" />
+              <div className="p-3 rounded-lg app-bg-primary-soft">
+                <Clock className="h-6 w-6 app-text-primary" />
               </div>
             </div>
-            <h3 className="text-sm font-medium text-gray-600 mb-1">
+            <h3 className="text-sm font-medium text-neutral-600 mb-1">
               Last Poll
             </h3>
-            <p className="text-2xl font-bold text-gray-900">
+            <p className="text-2xl font-bold text-neutral-900">
               {formatLastPoll(health.lastPoll)}
             </p>
           </div>
 
           {/* Poll Count */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-lg shadow-sm border border-neutral-200 p-6">
             <div className="flex items-center justify-between mb-4">
-              <div className="p-3 rounded-lg bg-purple-100">
-                <Zap className="h-6 w-6 text-purple-600" />
+              <div className="p-3 rounded-lg app-bg-primary-soft">
+                <Zap className="h-6 w-6 app-text-primary" />
               </div>
             </div>
-            <h3 className="text-sm font-medium text-gray-600 mb-1">
+            <h3 className="text-sm font-medium text-neutral-600 mb-1">
               Poll Count
             </h3>
-            <p className="text-2xl font-bold text-gray-900">
+            <p className="text-2xl font-bold text-neutral-900">
               {health.pollCount.toLocaleString()}
             </p>
           </div>
 
           {/* Uptime */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-lg shadow-sm border border-neutral-200 p-6">
             <div className="flex items-center justify-between mb-4">
-              <div className="p-3 rounded-lg bg-orange-100">
-                <Power className="h-6 w-6 text-orange-600" />
+              <div className="p-3 rounded-lg app-bg-secondary-soft">
+                <Power className="h-6 w-6 app-text-secondary" />
               </div>
             </div>
-            <h3 className="text-sm font-medium text-gray-600 mb-1">Uptime</h3>
-            <p className="text-2xl font-bold text-gray-900">
+            <h3 className="text-sm font-medium text-neutral-600 mb-1">Uptime</h3>
+            <p className="text-2xl font-bold text-neutral-900">
               {formatUptime(health.uptime)}
             </p>
           </div>
@@ -247,33 +247,33 @@ export function KioskMonitor() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* LED Control Panel */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <Lightbulb className="h-5 w-5 text-yellow-500" />
+          <div className="bg-white rounded-lg shadow-sm border border-neutral-200">
+            <div className="p-6 border-b border-neutral-200">
+              <h2 className="text-lg font-semibold text-neutral-900 flex items-center gap-2">
+                <Lightbulb className="h-5 w-5 app-text-secondary" />
                 LED Control
               </h2>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-sm text-neutral-600 mt-1">
                 Control ESP32 LEDs remotely
               </p>
             </div>
 
             <div className="p-6 space-y-4">
               {/* LED 1 */}
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-between p-4 bg-neutral-50 rounded-lg">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-red-100 rounded-lg">
-                    <Lightbulb className="h-5 w-5 text-red-600" />
+                  <div className="p-2 app-bg-error-soft rounded-lg">
+                    <Lightbulb className="h-5 w-5 app-text-error" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900">LED 1</h3>
-                    <p className="text-sm text-gray-600">Red indicator</p>
+                    <h3 className="font-semibold text-neutral-900">LED 1</h3>
+                    <p className="text-sm text-neutral-600">Red indicator</p>
                   </div>
                 </div>
                 <button
                   onClick={() => handleLEDControl(1)}
                   disabled={controlLoading === 1}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 app-bg-error text-white rounded-lg hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {controlLoading === 1 ? (
                     <div className="animate-spin h-4 w-4 rounded-full border-2 border-white/50 border-t-white"></div>
@@ -284,20 +284,20 @@ export function KioskMonitor() {
               </div>
 
               {/* LED 2 */}
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-between p-4 bg-neutral-50 rounded-lg">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <Lightbulb className="h-5 w-5 text-green-600" />
+                  <div className="p-2 app-bg-success-soft rounded-lg">
+                    <Lightbulb className="h-5 w-5 app-text-success" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900">LED 2</h3>
-                    <p className="text-sm text-gray-600">Green indicator</p>
+                    <h3 className="font-semibold text-neutral-900">LED 2</h3>
+                    <p className="text-sm text-neutral-600">Green indicator</p>
                   </div>
                 </div>
                 <button
                   onClick={() => handleLEDControl(2)}
                   disabled={controlLoading === 2}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 app-bg-primary text-white rounded-lg hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {controlLoading === 2 ? (
                     <div className="animate-spin h-4 w-4 rounded-full border-2 border-white/50 border-t-white"></div>
@@ -308,20 +308,20 @@ export function KioskMonitor() {
               </div>
 
               {/* LED 3 */}
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-between p-4 bg-neutral-50 rounded-lg">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <Lightbulb className="h-5 w-5 text-blue-600" />
+                  <div className="p-2 app-bg-primary-soft rounded-lg">
+                    <Lightbulb className="h-5 w-5 app-text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900">LED 3</h3>
-                    <p className="text-sm text-gray-600">Blue indicator</p>
+                    <h3 className="font-semibold text-neutral-900">LED 3</h3>
+                    <p className="text-sm text-neutral-600">Blue indicator</p>
                   </div>
                 </div>
                 <button
                   onClick={() => handleLEDControl(3)}
                   disabled={controlLoading === 3}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 app-bg-primary text-white rounded-lg hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {controlLoading === 3 ? (
                     <div className="animate-spin h-4 w-4 rounded-full border-2 border-white/50 border-t-white"></div>
@@ -334,26 +334,26 @@ export function KioskMonitor() {
           </div>
 
           {/* Current Command Status */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <Zap className="h-5 w-5 text-purple-600" />
+          <div className="bg-white rounded-lg shadow-sm border border-neutral-200">
+            <div className="p-6 border-b border-neutral-200">
+              <h2 className="text-lg font-semibold text-neutral-900 flex items-center gap-2">
+                <Zap className="h-5 w-5 app-text-primary" />
                 Current Command
               </h2>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-sm text-neutral-600 mt-1">
                 Command waiting for ESP32 to poll
               </p>
             </div>
 
             <div className="p-6">
-              <div className="bg-gray-900 rounded-lg p-6 font-mono text-sm">
+              <div className="bg-neutral-900 rounded-lg p-6 font-mono text-sm">
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-gray-400">Action:</span>
+                    <span className="text-neutral-400">Action:</span>
                     <span
                       className={`font-semibold ${
                         currentCommand.action === "none"
-                          ? "text-gray-400"
+                          ? "text-neutral-400"
                           : "text-green-400"
                       }`}
                     >
@@ -361,16 +361,16 @@ export function KioskMonitor() {
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-gray-400">LED:</span>
+                    <span className="text-neutral-400">LED:</span>
                     <span className="text-blue-400">{currentCommand.led}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-gray-400">State:</span>
+                    <span className="text-neutral-400">State:</span>
                     <span
                       className={`font-semibold ${
                         currentCommand.state === "on"
                           ? "text-green-400"
-                          : "text-red-400"
+                          : "text-error-400"
                       }`}
                     >
                       "{currentCommand.state}"
@@ -381,14 +381,14 @@ export function KioskMonitor() {
 
               <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <div className="flex items-start gap-2">
-                  <Activity className="h-5 w-5 text-blue-600 mt-0.5" />
+                  <Activity className="h-5 w-5 app-text-primary mt-0.5" />
                   <div>
-                    <h4 className="font-semibold text-blue-900 mb-1">
+                    <h4 className="font-semibold app-text-primary mb-1">
                       Polling Mechanism
                     </h4>
-                    <p className="text-sm text-blue-700">
+                    <p className="text-sm app-text-primary">
                       The ESP32 device polls the{" "}
-                      <code className="bg-blue-100 px-1 py-0.5 rounded">
+                      <code className="app-bg-primary-soft px-1 py-0.5 rounded">
                         /kiosk/command
                       </code>{" "}
                       endpoint regularly. When you click a button above, the
@@ -400,14 +400,14 @@ export function KioskMonitor() {
               </div>
 
               {currentCommand.action !== "none" && (
-                <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="mt-4 p-4 app-bg-secondary-soft border border-[color:var(--app-secondary)]/30 rounded-lg">
                   <div className="flex items-start gap-2">
-                    <Zap className="h-5 w-5 text-yellow-600 mt-0.5" />
+                    <Zap className="h-5 w-5 app-text-secondary mt-0.5" />
                     <div>
-                      <h4 className="font-semibold text-yellow-900 mb-1">
+                      <h4 className="font-semibold app-text-secondary mb-1">
                         Command Pending
                       </h4>
-                      <p className="text-sm text-yellow-700">
+                      <p className="text-sm app-text-secondary">
                         A command is waiting to be picked up by the ESP32
                         device. It will be executed on the next poll.
                       </p>
@@ -448,25 +448,25 @@ export function KioskMonitor() {
         </div>
 
         {/* Debug Information */}
-        <div className="mt-6 bg-gray-100 border border-gray-300 rounded-lg p-4">
+        <div className="mt-6 bg-neutral-100 border border-neutral-300 rounded-lg p-4">
           <div className="flex items-start gap-3">
-            <Zap className="h-5 w-5 text-gray-600 mt-0.5" />
+            <Zap className="h-5 w-5 text-neutral-600 mt-0.5" />
             <div className="flex-1">
-              <h3 className="font-semibold text-gray-900 mb-3">
+              <h3 className="font-semibold text-neutral-900 mb-3">
                 Debug Information
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                 <div className="bg-white rounded p-3">
-                  <span className="text-gray-600">Last Poll Time:</span>
-                  <p className="font-mono text-gray-900 mt-1">
+                  <span className="text-neutral-600">Last Poll Time:</span>
+                  <p className="font-mono text-neutral-900 mt-1">
                     {health.lastPoll
                       ? new Date(health.lastPoll).toLocaleString()
                       : "Never"}
                   </p>
                 </div>
                 <div className="bg-white rounded p-3">
-                  <span className="text-gray-600">Time Since Last Poll:</span>
-                  <p className="font-mono text-gray-900 mt-1">
+                  <span className="text-neutral-600">Time Since Last Poll:</span>
+                  <p className="font-mono text-neutral-900 mt-1">
                     {health.timeSinceLastPoll !== null
                       ? `${(health.timeSinceLastPoll / 1000).toFixed(1)}s (${
                           health.timeSinceLastPoll
@@ -475,23 +475,23 @@ export function KioskMonitor() {
                   </p>
                 </div>
                 <div className="bg-white rounded p-3">
-                  <span className="text-gray-600">Server Time:</span>
-                  <p className="font-mono text-gray-900 mt-1">
+                  <span className="text-neutral-600">Server Time:</span>
+                  <p className="font-mono text-neutral-900 mt-1">
                     {health.serverTime
                       ? new Date(health.serverTime).toLocaleString()
                       : "N/A"}
                   </p>
                 </div>
                 <div className="bg-white rounded p-3">
-                  <span className="text-gray-600">Online Threshold:</span>
-                  <p className="font-mono text-gray-900 mt-1">
+                  <span className="text-neutral-600">Online Threshold:</span>
+                  <p className="font-mono text-neutral-900 mt-1">
                     30 seconds (30000ms)
                   </p>
                 </div>
               </div>
               {!health.isOnline && health.timeSinceLastPoll !== null && (
-                <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded">
-                  <p className="text-sm text-red-700">
+                <div className="mt-3 p-3 bg-error-50 border border-error-200 rounded">
+                  <p className="text-sm text-error-700">
                     Device is offline because time since last poll (
                     {(health.timeSinceLastPoll / 1000).toFixed(1)}s) exceeds 30
                     seconds threshold.
@@ -499,11 +499,11 @@ export function KioskMonitor() {
                 </div>
               )}
               {!health.isOnline && health.lastPoll === null && (
-                <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded">
-                  <p className="text-sm text-orange-700">
+                <div className="mt-3 p-3 bg-error-50 border border-error-200 rounded">
+                  <p className="text-sm text-error-700">
                     Device has never polled the server. Make sure your ESP32 is
                     running and configured to poll{" "}
-                    <code className="bg-orange-100 px-1 rounded">
+                    <code className="bg-error-100 px-1 rounded">
                       /kiosk/command
                     </code>
                   </p>

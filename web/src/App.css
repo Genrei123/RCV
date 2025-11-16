@@ -57,6 +57,35 @@
 
 :root {
   --radius: 0.625rem;
+  /* App brand palette (aligned with Flutter AppColors) */
+  --app-primary: #005440;
+  --app-primary-light: #00ba8e;
+  --app-accent: #002d72;
+  --app-secondary: #a5c9a1;
+  --app-neutral: #f0f2f5;
+  --app-text: #000000;
+  --app-white: #ffffff;
+  --app-muted: #b7b7b7;
+  --app-error: #d64541;
+  --app-success: #4c9f70;
+  /* Derived soft backgrounds */
+  --app-primary-soft: color-mix(in srgb, var(--app-primary) 14%, white);
+  --app-accent-soft: color-mix(in srgb, var(--app-accent) 14%, white);
+  --app-secondary-soft: color-mix(in srgb, var(--app-secondary) 24%, white);
+  --app-success-soft: color-mix(in srgb, var(--app-success) 14%, white);
+  --app-error-soft: color-mix(in srgb, var(--app-error) 14%, white);
+  /* Unified gray/neutral scale */
+  --app-gray-50: color-mix(in srgb, var(--app-text) 4%, white);
+  --app-gray-100: color-mix(in srgb, var(--app-text) 7%, white);
+  --app-gray-200: color-mix(in srgb, var(--app-text) 12%, white);
+  --app-gray-300: color-mix(in srgb, var(--app-text) 20%, white);
+  --app-gray-400: color-mix(in srgb, var(--app-text) 32%, white);
+  --app-gray-500: color-mix(in srgb, var(--app-text) 45%, white);
+  --app-gray-600: color-mix(in srgb, var(--app-text) 60%, white);
+  --app-gray-700: color-mix(in srgb, var(--app-text) 70%, white);
+  --app-gray-800: color-mix(in srgb, var(--app-text) 82%, white);
+  --app-gray-900: var(--app-text);
+  --app-neutral-soft: color-mix(in srgb, var(--app-neutral) 60%, white);
   /* Global app background (light mode) */
   --background: #fafbff;
   --foreground: oklch(0.145 0 0);
@@ -132,4 +161,317 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* --- App palette utility classes --- */
+@layer utilities {
+  .app-bg-primary {
+    background-color: var(--app-primary);
+  }
+  .app-text-primary {
+    color: var(--app-primary);
+  }
+  .app-border-primary {
+    border-color: var(--app-primary);
+  }
+
+  .app-bg-primary-soft {
+    background-color: var(--app-primary-soft);
+  }
+  .app-bg-accent {
+    background-color: var(--app-accent);
+  }
+  .app-text-accent {
+    color: var(--app-accent);
+  }
+  .app-bg-accent-soft {
+    background-color: var(--app-accent-soft);
+  }
+
+  .app-bg-secondary {
+    background-color: var(--app-secondary);
+  }
+  .app-text-secondary {
+    color: var(--app-secondary);
+  }
+  .app-bg-secondary-soft {
+    background-color: var(--app-secondary-soft);
+  }
+
+  .app-bg-success {
+    background-color: var(--app-success);
+  }
+  .app-text-success {
+    color: var(--app-success);
+  }
+  .app-bg-success-soft {
+    background-color: var(--app-success-soft);
+  }
+
+  .app-bg-error {
+    background-color: var(--app-error);
+  }
+  .app-text-error {
+    color: var(--app-error);
+  }
+  .app-bg-error-soft {
+    background-color: var(--app-error-soft);
+  }
+
+  /* Neutral utilities */
+  .app-text {
+    color: var(--app-text);
+  }
+  .app-text-muted {
+    color: var(--app-muted);
+  }
+  .app-text-subtle {
+    color: var(--app-gray-600);
+  }
+  .app-bg-neutral {
+    background-color: var(--app-neutral);
+  }
+  .app-bg-neutral-soft {
+    background-color: var(--app-neutral-soft);
+  }
+  .app-bg-surface {
+    background-color: var(--app-white);
+  }
+  .app-border-neutral {
+    border-color: var(--app-neutral);
+  }
+}
+
+/* --- Map existing random Tailwind colors to app palette globally --- */
+/* Blues & Purples -> Primary */
+.bg-blue-50,
+.bg-blue-100,
+.bg-purple-50,
+.bg-purple-100 {
+  background-color: var(--app-primary-soft) !important;
+}
+.text-blue-600,
+.text-blue-400,
+.text-blue-700,
+.text-blue-900,
+.text-purple-600,
+.text-purple-700 {
+  color: var(--app-primary) !important;
+}
+/* Blue borders */
+.border-blue-200 {
+  border-color: var(--app-primary-soft) !important;
+}
+
+/* Indigo -> Accent */
+.bg-indigo-50,
+.bg-indigo-100 {
+  background-color: var(--app-accent-soft) !important;
+}
+.text-indigo-500,
+.text-indigo-600,
+.text-indigo-700,
+.text-indigo-900 {
+  color: var(--app-accent) !important;
+}
+.bg-indigo-500,
+.bg-indigo-600,
+.hover\:bg-indigo-600:hover,
+.hover\:bg-indigo-700:hover {
+  background-color: var(--app-accent) !important;
+}
+
+/* Greens -> Success/Primary depending on context */
+.bg-green-50,
+.bg-green-100 {
+  background-color: var(--app-success-soft) !important;
+}
+.text-green-400,
+.text-green-500,
+.text-green-600,
+.text-green-700,
+.text-green-800 {
+  color: var(--app-success) !important;
+}
+.bg-green-500,
+.bg-green-600,
+.hover\:bg-green-600:hover,
+.hover\:bg-green-700:hover {
+  background-color: var(--app-primary) !important;
+}
+
+/* Emerald -> Primary */
+.bg-emerald-50 {
+  background-color: var(--app-primary-soft) !important;
+}
+.text-emerald-600 {
+  color: var(--app-primary) !important;
+}
+.bg-emerald-600,
+.hover\:bg-emerald-600:hover {
+  background-color: var(--app-primary) !important;
+}
+
+/* Oranges/Yellows -> Secondary (used as a muted warning) */
+.bg-yellow-50,
+.bg-yellow-100,
+.bg-orange-50,
+.bg-orange-100 {
+  background-color: var(--app-secondary-soft) !important;
+}
+.text-yellow-600,
+.text-yellow-700,
+.text-yellow-800,
+.text-orange-600,
+.text-orange-700,
+.text-orange-800 {
+  color: var(--app-secondary) !important;
+}
+.bg-yellow-500,
+.bg-yellow-600,
+.bg-orange-500,
+.bg-orange-600,
+.hover\:bg-yellow-700:hover,
+.hover\:bg-orange-600:hover {
+  background-color: var(--app-primary-light) !important;
+}
+/* Amber -> Secondary */
+.bg-amber-50,
+.bg-amber-100 {
+  background-color: var(--app-secondary-soft) !important;
+}
+.text-amber-600,
+.text-amber-700,
+.text-amber-800 {
+  color: var(--app-secondary) !important;
+}
+.border-amber-500 {
+  border-color: var(--app-secondary) !important;
+}
+
+/* Reds -> Error */
+.bg-red-50,
+.bg-red-100 {
+  background-color: var(--app-error-soft) !important;
+}
+.text-red-500,
+.text-red-600,
+.text-red-700,
+.text-red-800 {
+  color: var(--app-error) !important;
+}
+.bg-red-500,
+.bg-red-600,
+.hover\:bg-red-600:hover,
+.hover\:bg-red-700:hover {
+  background-color: var(--app-error) !important;
+}
+
+/* Neutralize slate/zinc randoms to neutral */
+.bg-slate-100,
+.bg-zinc-100 {
+  background-color: var(--app-neutral) !important;
+}
+.text-slate-700,
+.text-zinc-700 {
+  color: var(--app-text) !important;
+}
+
+/* Teal -> Primary */
+.bg-teal-50,
+.bg-teal-100 {
+  background-color: var(--app-primary-soft) !important;
+}
+.text-teal-600,
+.text-teal-700 {
+  color: var(--app-primary) !important;
+}
+.bg-teal-600,
+.bg-teal-700,
+.hover\:bg-teal-700:hover {
+  background-color: var(--app-primary) !important;
+}
+.border-teal-500 {
+  border-color: var(--app-primary) !important;
+}
+.focus\:ring-teal-500:focus {
+  --tw-ring-color: var(--app-primary) !important;
+}
+
+/* Slate 50 */
+.bg-slate-50 {
+  background-color: var(--app-white) !important;
+}
+
+/* Replace Tailwind grays with unified app neutrals */
+/* Text */
+.text-gray-900,
+.text-slate-900,
+.text-zinc-900 {
+  color: var(--app-gray-900) !important;
+}
+.text-gray-800,
+.text-slate-800,
+.text-zinc-800 {
+  color: var(--app-gray-800) !important;
+}
+.text-gray-700,
+.text-slate-700,
+.text-zinc-700 {
+  color: var(--app-gray-700) !important;
+}
+.text-gray-600,
+.text-slate-600,
+.text-zinc-600 {
+  color: var(--app-gray-600) !important;
+}
+.text-gray-500,
+.text-slate-500,
+.text-zinc-500 {
+  color: var(--app-muted) !important;
+}
+/* Lighter gray text */
+.text-gray-400,
+.text-slate-400,
+.text-zinc-400 {
+  color: var(--app-gray-400) !important;
+}
+.text-gray-300,
+.text-slate-300,
+.text-zinc-300 {
+  color: var(--app-gray-300) !important;
+}
+.text-gray-200,
+.text-slate-200,
+.text-zinc-200 {
+  color: var(--app-gray-200) !important;
+}
+.text-gray-100,
+.text-slate-100,
+.text-zinc-100 {
+  color: var(--app-gray-100) !important;
+}
+.text-gray-50,
+.text-slate-50,
+.text-zinc-50 {
+  color: var(--app-gray-50) !important;
+}
+
+/* Backgrounds */
+.bg-gray-50 {
+  background-color: var(--app-white) !important;
+}
+.bg-gray-100 {
+  background-color: var(--app-neutral) !important;
+}
+.bg-gray-200 {
+  background-color: var(--app-neutral-soft) !important;
+}
+
+/* Borders */
+.border-gray-200 {
+  border-color: var(--app-neutral) !important;
+}
+.border-gray-300 {
+  border-color: var(--app-neutral-soft) !important;
 }

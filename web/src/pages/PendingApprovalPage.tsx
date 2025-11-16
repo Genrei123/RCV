@@ -1,22 +1,31 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Clock, Mail, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
-import { CookieManager } from '@/utils/cookies';
+import { useEffect, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Clock,
+  Mail,
+  ArrowLeft,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
+import { CookieManager } from "@/utils/cookies";
 
 export function PendingApprovalPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [userEmail, setUserEmail] = useState<string>('');
+  const [userEmail, setUserEmail] = useState<string>("");
 
   useEffect(() => {
     // Get email from navigation state or cookies
-    const email = location.state?.email || CookieManager.getCookie('pendingApprovalEmail') || '';
+    const email =
+      location.state?.email ||
+      CookieManager.getCookie("pendingApprovalEmail") ||
+      "";
     setUserEmail(email);
 
     // Clear any existing tokens since user is not approved
-    CookieManager.deleteCookie('token');
+    CookieManager.deleteCookie("token");
   }, [location]);
 
   return (
@@ -37,19 +46,19 @@ export function PendingApprovalPage() {
 
           {/* Title */}
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            <h1 className="text-3xl font-bold text-neutral-900 mb-2">
               Account Pending Approval
             </h1>
-            <p className="text-lg text-gray-600">
+            <p className="text-lg text-neutral-600">
               Your registration was successful!
             </p>
           </div>
 
           {/* Email Display */}
           {userEmail && (
-            <div className="bg-gray-50 rounded-lg p-4 flex items-center justify-center gap-2">
-              <Mail className="w-5 h-5 text-gray-500" />
-              <span className="font-medium text-gray-700">{userEmail}</span>
+            <div className="bg-neutral-50 rounded-lg p-4 flex items-center justify-center gap-2">
+              <Mail className="w-5 h-5 text-neutral-500" />
+              <span className="font-medium text-neutral-700">{userEmail}</span>
             </div>
           )}
 
@@ -62,9 +71,10 @@ export function PendingApprovalPage() {
                   Waiting for Administrator Approval
                 </h3>
                 <p className="text-amber-800 leading-relaxed">
-                  Your account has been created successfully and is currently pending approval 
-                  from an administrator. This is a security measure to ensure only authorized 
-                  personnel can access the RCV System.
+                  Your account has been created successfully and is currently
+                  pending approval from an administrator. This is a security
+                  measure to ensure only authorized personnel can access the RCV
+                  System.
                 </p>
               </div>
             </div>
@@ -72,12 +82,15 @@ export function PendingApprovalPage() {
             <div className="flex items-start gap-3">
               <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0 mt-1" />
               <div>
-                <h3 className="font-semibold text-gray-900 mb-2">
+                <h3 className="font-semibold text-neutral-900 mb-2">
                   What Happens Next?
                 </h3>
-                <ul className="text-gray-700 space-y-2 list-disc list-inside">
+                <ul className="text-neutral-700 space-y-2 list-disc list-inside">
                   <li>An administrator will review your registration</li>
-                  <li>You will receive a notification once your account is approved</li>
+                  <li>
+                    You will receive a notification once your account is
+                    approved
+                  </li>
                   <li>You can then log in and access the system</li>
                 </ul>
               </div>
@@ -86,9 +99,10 @@ export function PendingApprovalPage() {
 
           {/* Info Box */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="text-sm text-blue-800">
-              <strong>Note:</strong> This process typically takes 24-48 hours. 
-              If you haven't received approval after 2 business days, please contact your administrator.
+            <p className="text-sm text-accent-800">
+              <strong>Note:</strong> This process typically takes 24-48 hours.
+              If you haven't received approval after 2 business days, please
+              contact your administrator.
             </p>
           </div>
 
@@ -97,16 +111,16 @@ export function PendingApprovalPage() {
             <Button
               variant="outline"
               className="flex-1"
-              onClick={() => navigate('/login')}
+              onClick={() => navigate("/login")}
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Login
             </Button>
             <Button
-              className="flex-1 bg-[#005440] hover:bg-[#004435]"
+              className="flex-1 bg-primary hover:bg-primary-light"
               onClick={() => {
-                localStorage.removeItem('pendingApprovalEmail');
-                navigate('/login');
+                localStorage.removeItem("pendingApprovalEmail");
+                navigate("/login");
               }}
             >
               Understood
@@ -114,8 +128,8 @@ export function PendingApprovalPage() {
           </div>
 
           {/* Support Info */}
-          <div className="pt-6 border-t border-gray-200">
-            <p className="text-sm text-gray-500">
+          <div className="pt-6 border-t border-neutral-200">
+            <p className="text-sm text-neutral-500">
               Need help? Contact your system administrator or IT support team.
             </p>
           </div>

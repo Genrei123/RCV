@@ -141,7 +141,7 @@ export function Companies(props: CompaniesProps) {
       key: "licenseNumber",
       label: "License Number",
       render: (value: string) => (
-        <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-sm font-mono">
+        <span className="px-2 py-1 bg-neutral-100 text-neutral-700 rounded text-sm font-mono">
           {value}
         </span>
       ),
@@ -152,7 +152,7 @@ export function Companies(props: CompaniesProps) {
       render: (value: any[]) => {
         const productCount = value?.length || 0;
         return (
-          <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm font-medium">
+          <span className="px-2 py-1 app-bg-primary-soft app-text-primary rounded text-sm font-medium">
             {productCount} {productCount === 1 ? "Product" : "Products"}
           </span>
         );
@@ -177,7 +177,7 @@ export function Companies(props: CompaniesProps) {
             size="sm"
             variant="outline"
             onClick={(e) => handleDownloadCertificate(row, e)}
-            className="text-teal-600 hover:text-teal-700 hover:bg-teal-50"
+            className="app-text-primary hover:opacity-90 hover:app-bg-primary-soft"
           >
             <Download className="h-4 w-4 mr-1" />
             Certificate
@@ -208,7 +208,7 @@ export function Companies(props: CompaniesProps) {
       >
         {/* Header Summary */}
         <div className="flex items-center justify-end mb-4">
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-neutral-600">
             <span className="font-medium">
               {pagination?.total_items ?? companies.length}
             </span>{" "}
