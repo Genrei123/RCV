@@ -57,70 +57,139 @@ export function Pagination({
     showingText || `Showing ${startItem}-${endItem} of ${totalItems} results`;
 
   return (
-    <div className="flex items-center justify-between pt-4">
-      {showingPosition === "left" && (
-        <div className="text-sm text-gray-500">{showing}</div>
-      )}
-
-      {totalPages > 1 && (
-        <nav
-          className="inline-flex items-center space-x-2"
-          aria-label="Pagination"
-        >
-          {showingPosition === "right" && (
-            <div className="text-sm text-gray-500 ml-4">{showing}</div>
-          )}
-
-          <button
-            onClick={onPrev}
-            disabled={currentPage === 1}
-            className={`inline-flex items-center rounded-md border bg-white px-3 py-1 text-sm font-medium transition-colors hover:bg-gray-50 ${
-              currentPage === 1 ? "cursor-not-allowed opacity-50" : ""
-            }`}
-            aria-label="Previous page"
+    <div className="w-full">
+      {/* Mobile: stack Page X of Y, Showing, then controls centered */}
+      <div className="sm:hidden w-full flex flex-col items-center gap-2 pt-4">
+        <div className="text-sm app-text">
+          Page {currentPage} of {totalPages}
+        </div>
+        <div className="text-sm app-text-subtle">{showing}</div>
+        {totalPages > 1 && (
+          <nav
+            className="inline-flex items-center space-x-2"
+            aria-label="Pagination"
           >
-            Prev
-          </button>
+            <button
+              onClick={onPrev}
+              disabled={currentPage === 1}
+              className={`inline-flex items-center rounded-md border bg-white px-3 py-1 text-sm font-medium transition-colors hover:app-bg-neutral ${
+                currentPage === 1 ? "cursor-not-allowed opacity-50" : ""
+              }`}
+              aria-label="Previous page"
+            >
+              Prev
+            </button>
 
-          <ul className="inline-flex items-center gap-1">
-            {pages.map((p, idx) =>
-              typeof p === "number" ? (
-                <li key={idx}>
-                  <button
-                    onClick={() => onPageChange?.(p)}
-                    aria-current={p === currentPage ? "page" : undefined}
-                    className={`inline-flex h-8 min-w-[2rem] items-center justify-center rounded-md px-3 text-sm font-medium transition-colors ${
-                      p === currentPage
-                        ? "bg-teal-600 text-white"
-                        : "bg-white text-gray-700 hover:bg-gray-50"
-                    }`}
+            <ul className="inline-flex items-center gap-1">
+              {pages.map((p, idx) =>
+                typeof p === "number" ? (
+                  <li key={idx}>
+                    <button
+                      onClick={() => onPageChange?.(p)}
+                      aria-current={p === currentPage ? "page" : undefined}
+                      className={`inline-flex h-8 min-w-[2rem] items-center justify-center rounded-md px-3 text-sm font-medium transition-colors ${
+                        p === currentPage
+                          ? "app-bg-primary text-white"
+                          : "bg-white app-text-subtle hover:app-bg-neutral"
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  </li>
+                ) : (
+                  <li
+                    key={idx}
+                    className="inline-flex h-8 min-w-[2rem] items-center justify-center px-2 text-sm app-text-subtle"
                   >
                     {p}
-                  </button>
-                </li>
-              ) : (
-                <li
-                  key={idx}
-                  className="inline-flex h-8 min-w-[2rem] items-center justify-center px-2 text-sm text-gray-400"
-                >
-                  {p}
-                </li>
-              )
-            )}
-          </ul>
+                  </li>
+                )
+              )}
+            </ul>
 
-          <button
-            onClick={onNext}
-            disabled={currentPage === totalPages}
-            className={`inline-flex items-center rounded-md border bg-white px-3 py-1 text-sm font-medium transition-colors hover:bg-gray-50 ${
-              currentPage === totalPages ? "cursor-not-allowed opacity-50" : ""
-            }`}
-            aria-label="Next page"
+            <button
+              onClick={onNext}
+              disabled={currentPage === totalPages}
+              className={`inline-flex items-center rounded-md border bg-white px-3 py-1 text-sm font-medium transition-colors hover:app-bg-neutral ${
+                currentPage === totalPages
+                  ? "cursor-not-allowed opacity-50"
+                  : ""
+              }`}
+              aria-label="Next page"
+            >
+              Next
+            </button>
+          </nav>
+        )}
+      </div>
+
+      {/* Desktop / tablet: wrap when constrained */}
+      <div className="hidden sm:flex flex-wrap items-center gap-2 pt-4">
+        {showingPosition === "left" && (
+          <div className="text-sm app-text-subtle flex-shrink-0">{showing}</div>
+        )}
+        {totalPages > 1 && (
+          <nav
+            className="flex flex-wrap items-center gap-2"
+            aria-label="Pagination"
           >
-            Next
-          </button>
-        </nav>
-      )}
+            <button
+              onClick={onPrev}
+              disabled={currentPage === 1}
+              className={`inline-flex items-center rounded-md border bg-white px-3 py-1 text-sm font-medium transition-colors hover:app-bg-neutral ${
+                currentPage === 1 ? "cursor-not-allowed opacity-50" : ""
+              }`}
+              aria-label="Previous page"
+            >
+              Prev
+            </button>
+            <ul className="flex flex-wrap items-center gap-1">
+              {pages.map((p, idx) =>
+                typeof p === "number" ? (
+                  <li key={idx}>
+                    <button
+                      onClick={() => onPageChange?.(p)}
+                      aria-current={p === currentPage ? "page" : undefined}
+                      className={`inline-flex h-8 min-w-[2rem] items-center justify-center rounded-md px-3 text-sm font-medium transition-colors ${
+                        p === currentPage
+                          ? "app-bg-primary text-white"
+                          : "bg-white app-text-subtle hover:app-bg-neutral"
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  </li>
+                ) : (
+                  <li
+                    key={idx}
+                    className="inline-flex h-8 min-w-[2rem] items-center justify-center px-2 text-sm app-text-subtle"
+                  >
+                    {p}
+                  </li>
+                )
+              )}
+            </ul>
+
+            <button
+              onClick={onNext}
+              disabled={currentPage === totalPages}
+              className={`inline-flex items-center rounded-md border bg-white px-3 py-1 text-sm font-medium transition-colors hover:app-bg-neutral ${
+                currentPage === totalPages
+                  ? "cursor-not-allowed opacity-50"
+                  : ""
+              }`}
+              aria-label="Next page"
+            >
+              Next
+            </button>
+            {showingPosition === "right" && (
+              <div className="text-sm app-text-subtle mr-2 flex-shrink-0">
+                {showing}
+              </div>
+            )}
+          </nav>
+        )}
+      </div>
     </div>
   );
 }

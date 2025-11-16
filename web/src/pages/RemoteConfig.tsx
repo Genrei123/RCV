@@ -73,7 +73,7 @@ export function RemoteConfig() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
+      <div className="min-h-screen bg-neutral-50 p-6">
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center justify-center h-64">
             <LoadingSpinner size="lg" text="Loading Remote Config..." />
@@ -84,28 +84,28 @@ export function RemoteConfig() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-neutral-50 p-6">
       <div className="max-w-6xl mx-auto">
         {/* Page Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+          <h1 className="text-2xl font-bold text-neutral-900 mb-2">
             Mobile App Settings
           </h1>
-          <p className="text-gray-600">
+          <p className="text-neutral-600">
             Control which features are available in the mobile application.
             Changes are applied instantly to all connected devices.
           </p>
         </div>
 
         {/* Settings List */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="p-6 border-b border-gray-200">
+        <div className="bg-white rounded-lg shadow-sm border border-neutral-200">
+          <div className="p-6 border-b border-neutral-200">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">
+                <h2 className="text-lg font-semibold text-neutral-900">
                   App Features ({draftParameters.length})
                 </h2>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-neutral-500 mt-1">
                   Toggle features on or off for the mobile application
                 </p>
               </div>
@@ -115,7 +115,7 @@ export function RemoteConfig() {
                   <button
                     onClick={handlePublish}
                     disabled={publishing}
-                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center gap-2 px-4 py-2 bg-neutral-600 text-white rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {publishing ? (
                       <div className="animate-spin h-4 w-4 border-4 border-white border-t-transparent rounded-full"></div>
@@ -131,16 +131,16 @@ export function RemoteConfig() {
 
           {draftParameters.length === 0 ? (
             <div className="p-12 text-center">
-              <Settings className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
+              <Settings className="h-12 w-12 text-neutral-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-neutral-900 mb-2">
                 No Settings Found
               </h3>
-              <p className="text-gray-600">
+              <p className="text-neutral-600">
                 No mobile app settings are currently configured.
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-200">
+            <div className="divide-y divide-neutral-200">
               {draftParameters.map((param) => {
                 const isChanged =
                   publishedParameters.find((p) => p.key === param.key)
@@ -200,7 +200,7 @@ export function RemoteConfig() {
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <h3 className="font-semibold text-gray-900">
+                          <h3 className="font-semibold text-neutral-900">
                             {getFeatureName(param.key)}
                           </h3>
                           {isChanged && (
@@ -210,18 +210,18 @@ export function RemoteConfig() {
                           )}
                         </div>
 
-                        <p className="text-gray-600 text-sm mb-3">
+                        <p className="text-neutral-600 text-sm mb-3">
                           {getFeatureDescription(param.key)}
                         </p>
 
                         <div className="flex items-center gap-3">
-                          <span className="text-sm text-gray-500">
+                          <span className="text-sm text-neutral-500">
                             Status:{" "}
                             <span
                               className={
                                 param.value
                                   ? "text-red-600 font-medium"
-                                  : "text-green-600 font-medium"
+                                  : "text-neutral-600 font-medium"
                               }
                             >
                               {param.value ? "Disabled" : "Enabled"}
@@ -236,7 +236,7 @@ export function RemoteConfig() {
                             handleValueChange(param.key, !param.value)
                           }
                           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 ${
-                            param.value ? "bg-red-600" : "bg-green-600"
+                            param.value ? "bg-red-600" : "bg-neutral-600"
                           }`}
                         >
                           <span

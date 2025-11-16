@@ -40,10 +40,17 @@ export class CompanyService {
   }
 
   // New: fetch a specific page of companies from the server
-  static async getCompaniesPage(page = 1, limit = 10) {
+  static async getCompaniesPage(page = 1, limit = 10, search?: string) {
     try {
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(limit),
+      });
+      if (search && search.trim().length > 0) {
+        params.append("search", search.trim());
+      }
       const response = await apiClient.get<CompanyApiResponse>(
-        `/company/companies?page=${page}&limit=${limit}`
+        `/company/companies?${params.toString()}`
       );
       return response.data;
     } catch (error) {

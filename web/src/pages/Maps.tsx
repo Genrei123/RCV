@@ -6,6 +6,8 @@ import { LoadingSpinner } from "@/components/LoadingSpinner";
 
 export function Maps() {
   const [inspectors, setInspectors] = useState<Inspector[]>([]);
+  const [filteredInspectors, setFilteredInspectors] = useState<Inspector[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -58,9 +60,11 @@ export function Maps() {
 
         console.log("Mapped inspectors:", mappedInspectors);
         setInspectors(mappedInspectors);
+        setFilteredInspectors(mappedInspectors);
       } catch (error) {
         console.error("Error loading inspectors:", error);
         setInspectors([]);
+        setFilteredInspectors([]);
       } finally {
         setLoading(false);
       }
@@ -74,12 +78,35 @@ export function Maps() {
   };
 
   const handleSearch = (query: string) => {
-    console.log("Map search:", query);
+    setSearchQuery(query);
+    
+    if (!query.trim()) {
+      setFilteredInspectors(inspectors);
+      return;
+    }
+    
+    try {
+      // yung search dito inspector names lang
+      const filtered = inspectors.filter(inspector => {
+        if (!inspector || !inspector.name) return false;
+        
+        const searchLower = query.toLowerCase();
+        const name = inspector.name.toLowerCase();
+        
+        return name.includes(searchLower);
+      });
+      
+      setFilteredInspectors(filtered);
+      
+    } catch (error) {
+      console.error("Search error:", error);
+      setFilteredInspectors(inspectors);
+    }
   };
 
   if (loading) {
     return (
-      <div className="h-full w-full flex items-center justify-center bg-gray-50">
+      <div className="h-full w-full flex items-center justify-center bg-neutral-50">
         <LoadingSpinner size="lg" text="Loading Map..." />
       </div>
     );
@@ -88,7 +115,7 @@ export function Maps() {
   return (
     <div className="h-full w-full">
       <MapComponent
-        inspectors={inspectors}
+        inspectors={filteredInspectors}
         onInspectorClick={handleInspectorClick}
         onSearch={handleSearch}
         loading={loading}

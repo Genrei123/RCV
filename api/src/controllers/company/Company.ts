@@ -9,6 +9,7 @@ import {
   buildLinks,
 } from "../../utils/pagination";
 import { AuditLogService } from "../../services/auditLogService";
+import { redisService } from "../../services/redisService";
 
 export const getAllCompanies = async (
   req: Request,
@@ -17,16 +18,79 @@ export const getAllCompanies = async (
 ) => {
   try {
     const { page, limit, skip } = parsePageParams(req, 10);
-    const [companies, total] = await CompanyRepo.findAndCount({
-      skip,
-      take: limit,
-      order: { name: "ASC" },
-    });
+    const search =
+      typeof req.query.search === "string" ? req.query.search.trim() : "";
+
+    // Try to get cached data
+    try {
+      const cachedData = await redisService.getCachedCompanies(page, limit, search);
+      if (cachedData) {
+        return res.status(200).json(cachedData);
+      }
+    } catch (redisError) {
+      console.warn("Redis cache failed, using database:", redisError instanceof Error ? redisError.message : 'Unknown error');
+    }
+
+    let companies: any[] = [];
+    let total = 0;
+
+    // Query with or without search
+    if (search) {
+      const qb = CompanyRepo.createQueryBuilder("company")
+        .where("LOWER(company.name) LIKE LOWER(:q)", {
+          q: `%${search}%`,
+        })
+        .orWhere("LOWER(company.address) LIKE LOWER(:q)", {
+          q: `%${search}%`,
+        })
+        .orWhere("LOWER(company.licenseNumber) LIKE LOWER(:q)", {
+          q: `%${search}%`,
+        })
+        .orderBy("company.name", "ASC")
+        .skip(skip)
+        .take(limit);
+      [companies, total] = await qb.getManyAndCount();
+    } else {
+      [companies, total] = await CompanyRepo.findAndCount({
+        skip,
+        take: limit,
+        order: { name: "ASC" },
+      });
+    }
+
+    // Get ProductRepo
+    const { ProductRepo } = require("../../typeorm/data-source");
+
+    // For each company, count products with matching LTO number
+    const mappedCompanies = await Promise.all(
+      companies.map(async (company) => {
+        const productCount = await ProductRepo.count({ 
+          where: { LTONumber: company.licenseNumber } 
+        });
+        return { ...company, productCount };
+      })
+    );
+
     const meta = buildPaginationMeta(page, limit, total);
     const links = buildLinks(req, page, limit, meta.total_pages);
-    res.status(200).json({ success: true, data: companies, pagination: meta, links });
+    const responseData = { 
+      success: true, 
+      data: mappedCompanies, 
+      pagination: meta, 
+      links 
+    };
+
+    // Cache the result for 5 minutes
+    try {
+      await redisService.setCachedCompanies(page, limit, responseData, search, 300);
+    } catch (redisError) {
+      console.warn("Failed to cache companies:", redisError instanceof Error ? redisError.message : 'Unknown error');
+    }
+
+    res.status(200).json(responseData);
   } catch (error) {
-    return new CustomError(500, "Failed to all retrieve companies");
+    console.error("Error fetching companies:", error);
+    return next(new CustomError(500, "Failed to retrieve companies"));
   }
 };
 
@@ -84,6 +148,13 @@ export const createCompany = async (
     }
 
     const savedCompany = await CompanyRepo.save(Company.data);
+    
+    // Clear companies cache when new company is created
+    try {
+      await redisService.invalidateCompaniesCache();
+    } catch (redisError) {
+      console.warn("Failed to clear companies cache:", redisError instanceof Error ? redisError.message : 'Unknown error');
+    }
     
     // Log company creation
     await AuditLogService.createLog({

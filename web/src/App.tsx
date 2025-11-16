@@ -142,7 +142,7 @@ function App() {
   }, [isLoggedIn]);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Global Loading Indicator for all API requests */}
       <GlobalLoadingIndicator />
 

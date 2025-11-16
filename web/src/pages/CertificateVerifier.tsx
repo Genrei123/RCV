@@ -86,9 +86,9 @@ export function CertificateVerifier() {
             <div className="space-y-6">
               {/* Certificate ID Input */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-neutral-700 mb-2">
                   Certificate ID
-                  <span className="text-red-500 ml-1">*</span>
+                  <span className="text-error-500 ml-1">*</span>
                 </label>
                 <Input
                   type="text"
@@ -98,16 +98,16 @@ export function CertificateVerifier() {
                   className="font-mono text-sm"
                   disabled={verifying}
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-neutral-500 mt-1">
                   Scan the QR code on the certificate to get the Certificate ID
                 </p>
               </div>
 
               {/* PDF Upload */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-neutral-700 mb-2">
                   PDF Certificate File
-                  <span className="text-red-500 ml-1">*</span>
+                  <span className="text-error-500 ml-1">*</span>
                 </label>
                 <div className="flex items-center gap-3">
                   <label className="flex-1">
@@ -116,22 +116,22 @@ export function CertificateVerifier() {
                       transition-colors
                       ${pdfFile 
                         ? 'border-teal-500 bg-teal-50' 
-                        : 'border-gray-300 hover:border-teal-500 hover:bg-gray-50'
+                        : 'border-neutral-300 hover:border-teal-500 hover:bg-neutral-50'
                       }
                       ${verifying ? 'opacity-50 cursor-not-allowed' : ''}
                     `}>
-                      <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                      <Upload className="h-8 w-8 mx-auto mb-2 text-neutral-400" />
                       {pdfFile ? (
                         <div>
                           <p className="text-sm font-medium text-teal-700">{pdfFile.name}</p>
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-neutral-500 mt-1">
                             {(pdfFile.size / 1024).toFixed(2)} KB
                           </p>
                         </div>
                       ) : (
                         <div>
-                          <p className="text-sm text-gray-600">Click to select PDF file</p>
-                          <p className="text-xs text-gray-500 mt-1">or drag and drop</p>
+                          <p className="text-sm text-neutral-600">Click to select PDF file</p>
+                          <p className="text-xs text-neutral-500 mt-1">or drag and drop</p>
                         </div>
                       )}
                     </div>
@@ -198,34 +198,34 @@ export function CertificateVerifier() {
 
                   {/* Certificate Details */}
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <p className="text-xs text-gray-600 mb-1">Certificate ID</p>
-                      <p className="font-mono text-sm text-gray-900 break-all">
+                    <div className="p-3 bg-neutral-50 rounded-lg">
+                      <p className="text-xs text-neutral-600 mb-1">Certificate ID</p>
+                      <p className="font-mono text-sm text-neutral-900 break-all">
                         {verificationResult.verification.certificateId}
                       </p>
                     </div>
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <p className="text-xs text-gray-600 mb-1">Block Index</p>
-                      <p className="font-semibold text-gray-900">
+                    <div className="p-3 bg-neutral-50 rounded-lg">
+                      <p className="text-xs text-neutral-600 mb-1">Block Index</p>
+                      <p className="font-semibold text-neutral-900">
                         #{verificationResult.verification.blockIndex}
                       </p>
                     </div>
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <p className="text-xs text-gray-600 mb-1">Certificate Type</p>
-                      <p className="font-semibold text-gray-900 capitalize">
+                    <div className="p-3 bg-neutral-50 rounded-lg">
+                      <p className="text-xs text-neutral-600 mb-1">Certificate Type</p>
+                      <p className="font-semibold text-neutral-900 capitalize">
                         {verificationResult.verification.certificateType}
                       </p>
                     </div>
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <p className="text-xs text-gray-600 mb-1">Entity Name</p>
-                      <p className="font-semibold text-gray-900">
+                    <div className="p-3 bg-neutral-50 rounded-lg">
+                      <p className="text-xs text-neutral-600 mb-1">Entity Name</p>
+                      <p className="font-semibold text-neutral-900">
                         {verificationResult.verification.entityName}
                       </p>
                     </div>
                     {verificationResult.verification.issuedDate && (
-                      <div className="p-3 bg-gray-50 rounded-lg col-span-2">
-                        <p className="text-xs text-gray-600 mb-1">Issue Date</p>
-                        <p className="font-semibold text-gray-900">
+                      <div className="p-3 bg-neutral-50 rounded-lg col-span-2">
+                        <p className="text-xs text-neutral-600 mb-1">Issue Date</p>
+                        <p className="font-semibold text-neutral-900">
                           {new Date(verificationResult.verification.issuedDate).toLocaleDateString('en-US', {
                             year: 'numeric',
                             month: 'long',
@@ -240,19 +240,19 @@ export function CertificateVerifier() {
 
                   {/* Verification Checks */}
                   <div className="space-y-2">
-                    <h4 className="font-semibold text-gray-900 text-sm">Verification Checks:</h4>
+                    <h4 className="font-semibold text-neutral-900 text-sm">Verification Checks:</h4>
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 text-sm">
                         <CheckCircle className="h-4 w-4 text-green-600" />
-                        <span className="text-gray-700">PDF hash matches blockchain record</span>
+                        <span className="text-neutral-700">PDF hash matches blockchain record</span>
                       </div>
                       <div className="flex items-center gap-2 text-sm">
                         <CheckCircle className="h-4 w-4 text-green-600" />
-                        <span className="text-gray-700">Blockchain block integrity verified</span>
+                        <span className="text-neutral-700">Blockchain block integrity verified</span>
                       </div>
                       <div className="flex items-center gap-2 text-sm">
                         <CheckCircle className="h-4 w-4 text-green-600" />
-                        <span className="text-gray-700">Certificate exists in blockchain</span>
+                        <span className="text-neutral-700">Certificate exists in blockchain</span>
                       </div>
                     </div>
                   </div>
@@ -260,13 +260,13 @@ export function CertificateVerifier() {
               ) : (
                 // FAILURE - Certificate is Invalid or Tampered
                 <div className="space-y-4">
-                  <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
-                    <XCircle className="h-8 w-8 text-red-600 flex-shrink-0" />
+                  <div className="flex items-center gap-3 p-4 bg-error-50 border border-error-200 rounded-lg">
+                    <XCircle className="h-8 w-8 text-error-600 flex-shrink-0" />
                     <div className="flex-1">
-                      <h3 className="font-semibold text-red-900 text-lg">
+                      <h3 className="font-semibold text-error-900 text-lg">
                         ❌ Certificate Verification Failed
                       </h3>
-                      <p className="text-sm text-red-700 mt-1">
+                      <p className="text-sm text-error-700 mt-1">
                         {verificationResult.verification?.message || verificationResult.error || 
                          'This certificate could not be verified or has been tampered with.'}
                       </p>
@@ -275,28 +275,28 @@ export function CertificateVerifier() {
 
                   {verificationResult.verification && (
                     <div className="space-y-2">
-                      <h4 className="font-semibold text-gray-900 text-sm">Verification Issues:</h4>
+                      <h4 className="font-semibold text-neutral-900 text-sm">Verification Issues:</h4>
                       <div className="space-y-1">
                         {!verificationResult.verification.pdfHashMatch && (
                           <div className="flex items-center gap-2 text-sm">
-                            <XCircle className="h-4 w-4 text-red-600" />
-                            <span className="text-gray-700">
+                            <XCircle className="h-4 w-4 text-error-600" />
+                            <span className="text-neutral-700">
                               <strong>PDF has been modified</strong> - Hash does not match blockchain record
                             </span>
                           </div>
                         )}
                         {!verificationResult.verification.blockIntegrity && (
                           <div className="flex items-center gap-2 text-sm">
-                            <XCircle className="h-4 w-4 text-red-600" />
-                            <span className="text-gray-700">
+                            <XCircle className="h-4 w-4 text-error-600" />
+                            <span className="text-neutral-700">
                               <strong>Blockchain block corrupted</strong> - Block integrity check failed
                             </span>
                           </div>
                         )}
                         {!verificationResult.verification.blockIndex && (
                           <div className="flex items-center gap-2 text-sm">
-                            <XCircle className="h-4 w-4 text-red-600" />
-                            <span className="text-gray-700">
+                            <XCircle className="h-4 w-4 text-error-600" />
+                            <span className="text-neutral-700">
                               <strong>Certificate not found</strong> - No blockchain record exists
                             </span>
                           </div>

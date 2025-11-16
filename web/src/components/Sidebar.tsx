@@ -6,13 +6,13 @@ import {
   MapPin,
   User,
   LogOut,
-  ChevronDown,
   Building2,
+  BarChart3,
   Sliders,
   Activity,
-  BarChart3,
   Verified,
-  ShieldCheck
+  ShieldCheck,
+  ChevronDown,
 } from 'lucide-react'
 import { LogoutModal } from './LogoutModal'
 import { AuthService } from '@/services/authService'
@@ -28,13 +28,50 @@ interface CurrentUser {
   avatar?: string;
 }
 
-export function Sidebar() {
+// Inline logo component (hexagon + inner circle) — used in desktop header (and can be reused elsewhere)
+const LogoIcon = ({ className = "w-8 h-8" }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden>
+    <defs>
+      <linearGradient id="rcvGrad" x1="0" x2="1" y1="0" y2="1">
+        <stop offset="0%" stopColor="#005440" />
+        <stop offset="100%" stopColor="#00B087" />
+      </linearGradient>
+    </defs>
+    <polygon points="12,2 20,7 20,17 12,22 4,17 4,7" fill="url(#rcvGrad)" stroke="#0b3b2f" strokeWidth="0.5" />
+    <circle cx="12" cy="12" r="3.1" fill="white" />
+  </svg>
+);
+
+export function Sidebar({ open, onClose }: { open?: boolean; onClose?: () => void } = {}) {
   const location = useLocation();
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  // --- added: controlled / uncontrolled drawer support ---
+  const [internalOpen, setInternalOpen] = useState<boolean>(false);
+  const visible = typeof open === "boolean" ? open : internalOpen;
+
+  useEffect(() => {
+    if (typeof open === "boolean") setInternalOpen(open);
+  }, [open]);
+
+  const openDrawer = () => {
+    if (typeof open === "boolean") {
+      // parent controlled - still keep internal for fallback
+      setInternalOpen(true);
+    } else {
+      setInternalOpen(true);
+    }
+  };
+
+  const closeDrawer = () => {
+    if (typeof open === "boolean") onClose?.();
+    setInternalOpen(false);
+  };
+  // --- end added ---
 
   useEffect(() => {
     fetchCurrentUser();
@@ -121,14 +158,8 @@ export function Sidebar() {
     { path: '/verify-certificate', label: 'Verify Certificate', icon: ShieldCheck },
   ];
 
-  const profileMenuItems = [
-    { path: "/profile", label: "View Profile", icon: User },
-    // { path: "/notifications", label: "Notifications", icon: Bell },
-  ];
-
   const handleLogout = async () => {
     setShowLogoutModal(false);
-    setShowProfileMenu(false);
 
     try {
       toast.info("Signing out...");
@@ -141,19 +172,79 @@ export function Sidebar() {
 
   return (
     <>
-      <div className="flex flex-col h-full">
-        {/* Header */}
-        <div className="p-6 border-b border-slate-700">
-          <div className="mb-1">
-            <h2 className="text-xl font-bold text-white">RCV System</h2>
-            <p className="text-slate-400 text-sm font-medium">
-              Product Verification
-            </p>
+      {/* added: floating hamburger visible below lg */}
+      <button
+        type="button"
+        onClick={openDrawer}
+        className="lg:hidden fixed left-3 top-3 z-50 p-2 bg-white rounded-md shadow-sm text-slate-700 hover:bg-slate-50 focus:outline-none"
+        aria-label="Open menu"
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+
+      {/* changed breakpoint: desktop visible on lg+; ensure full height to remove bottom dark area */}
+      <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:min-h-screen bg-white border-r">
+        {/* Logo Section */}
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center gap-2">
+            {/* Figma-style logo */}
+            <div className="flex items-center justify-center">
+              <LogoIcon className="w-8 h-8" />
+            </div>
+            <span className="text-xl font-semibold text-[#005440]">RCV</span>
+            <span className="text-xs text-gray-400">v.01</span>
           </div>
         </div>
 
-        {/* Main Navigation */}
-        <nav className="flex-1 px-4 py-6">
+        {/* User Profile Section (click to open profile menu) */}
+        <div className="p-6 border-b border-gray-200 relative">
+          <button
+            type="button"
+            onClick={() => setShowProfileMenu((s) => !s)}
+            className="w-full flex items-center gap-3 text-left focus:outline-none"
+          >
+            <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-300 flex items-center justify-center flex-shrink-0">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="Avatar" className="w-10 h-10 object-cover" />
+              ) : (
+                <User size={20} className="text-gray-600" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-gray-800 text-sm truncate">{loading ? "Loading..." : getFullName()}</p>
+              <p className="text-xs text-gray-500">{loading ? "Please wait..." : getRoleName()}</p>
+            </div>
+            <ChevronDown size={16} className={`transition-transform ${showProfileMenu ? "rotate-180" : ""}`} />
+          </button>
+
+          {/* Profile dropdown (desktop) */}
+          {showProfileMenu && (
+            <div className="absolute left-4 bottom-0 translate-y-full mt-2 w-48 bg-white border rounded-lg shadow-lg overflow-hidden z-50">
+              <div className="py-1">
+                <Link
+                  to="/profile"
+                  onClick={() => setShowProfileMenu(false)}
+                  className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50"
+                >
+                  <User size={16} />
+                  <span className="text-sm">View Profile</span>
+                </Link>
+                <button
+                  onClick={() => { setShowProfileMenu(false); setShowLogoutModal(true); }}
+                  className="w-full flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50"
+                >
+                  <LogOut size={16} />
+                  <span className="text-sm">Sign Out</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Navigation Menu */}
+        <nav className="flex-1 p-4">
           <div className="space-y-1">
             {menuItems.map((item) => {
               const Icon = item.icon;
@@ -163,107 +254,111 @@ export function Sidebar() {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${
+                  className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
                     isActive
-                      ? "bg-teal-600 text-white shadow-lg shadow-teal-600/25"
-                      : "text-slate-300 hover:bg-slate-700/50 hover:text-white"
+                      ? "app-bg-primary text-white"
+                      : "text-gray-600 hover:bg-gray-100"
                   }`}
                 >
-                  <Icon
-                    size={20}
-                    className={`transition-colors ${
-                      isActive
-                        ? "text-white"
-                        : "text-slate-400 group-hover:text-white"
-                    }`}
-                  />
-                  <span className="font-medium">{item.label}</span>
+                  <div className="flex items-center gap-3">
+                    <Icon size={20} />
+                    <span className="font-medium">{item.label}</span>
+                  </div>
+                  <span className="text-xs">›</span>
                 </Link>
               );
             })}
           </div>
         </nav>
+      </aside>
 
-        {/* Profile Section */}
-        <div className="p-4 border-t border-slate-700">
-          <div className="relative">
-            <button
-              onClick={() => setShowProfileMenu(!showProfileMenu)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                showProfileMenu
-                  ? "bg-slate-700 text-white"
-                  : "text-slate-300 hover:bg-slate-700/50 hover:text-white"
-              }`}
-            >
-              <div className="w-10 h-10 rounded-full overflow-hidden bg-teal-600 flex items-center justify-center">
-                {avatarUrl ? (
-                  <img
-                    src={avatarUrl}
-                    alt="Avatar"
-                    className="w-10 h-10 object-cover"
-                  />
-                ) : (
-                  <User size={16} className="text-white" />
-                )}
+      {/* mobile/tablet drawer: visible below lg, use visible & closeDrawer */}
+      <div
+        className={`fixed inset-0 z-40 lg:hidden transition-opacity ${visible ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
+        aria-hidden={!visible}
+      >
+        {/* Backdrop */}
+        <div
+          className={`absolute inset-0 bg-black/40 transition-opacity ${visible ? "opacity-100" : "opacity-0"}`}
+          onClick={closeDrawer}
+        />
+
+        {/* Drawer: full width on xs, constrained on sm/md */}
+        <div className={`absolute left-0 top-0 h-full w-full sm:max-w-xs md:max-w-sm bg-white shadow-lg transform transition-transform ${visible ? "translate-x-0" : "-translate-x-full"} overflow-y-auto`}>
+          {/* Drawer header: logo + title + close button */}
+          <div className="flex items-center justify-between px-4 py-4 border-b">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 flex items-center justify-center">
+                <LogoIcon className="w-6 h-6" />
               </div>
-              <div className="flex-1 text-left">
-                <p className="font-medium text-sm">
-                  {loading ? "Loading..." : getFullName()}
-                </p>
-                <p className="text-xs text-slate-400">
-                  {loading ? "Please wait..." : getRoleName()}
-                </p>
-              </div>
-              <ChevronDown
-                size={16}
-                className={`transition-transform duration-200 ${
-                  showProfileMenu ? "rotate-180" : ""
-                }`}
-              />
+              <div className="text-sm font-semibold text-slate-800">RCV</div>
+            </div>
+            <button onClick={closeDrawer} className="p-1 text-slate-600" aria-label="Close menu">
+              <ChevronDown size={18} className="rotate-90" />
             </button>
+          </div>
 
-            {/* Profile Dropdown */}
-            {showProfileMenu && (
-              <div className="absolute bottom-full left-0 right-0 mb-2 bg-slate-800 border border-slate-700 rounded-xl shadow-lg overflow-hidden">
-                <div className="py-2">
-                  {profileMenuItems.map((item) => {
-                    const Icon = item.icon;
-                    const isActive = location.pathname === item.path;
+          {/* Drawer nav: reuse menuItems, ensure links call closeDrawer */}
+          <nav className="px-2 py-4 space-y-1">
+            {menuItems.map((m) => {
+              const Icon = m.icon;
+              const isActive = location.pathname === m.path;
+              return (
+                <Link
+                  key={m.path}
+                  to={m.path}
+                  onClick={() => { closeDrawer(); }}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg ${isActive ? "app-bg-primary-soft app-text-primary" : "text-slate-700 hover:bg-slate-100"}`}
+                >
+                  <Icon size={18} />
+                  <span className="font-medium">{m.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
 
-                    return (
-                      <Link
-                        key={item.path}
-                        to={item.path}
-                        onClick={() => setShowProfileMenu(false)}
-                        className={`w-full flex items-center gap-3 px-4 py-2 transition-colors ${
-                          isActive
-                            ? "bg-teal-600/10 text-teal-400"
-                            : "text-slate-300 hover:bg-slate-700 hover:text-white"
-                        }`}
-                      >
-                        <Icon size={16} />
-                        <span className="text-sm font-medium">
-                          {item.label}
-                        </span>
-                      </Link>
-                    );
-                  })}
+          {/* Drawer profile + logout (mobile) */}
+          <div className="px-4 mt-auto pb-6">
+            <div className="border-t pt-4">
+              {/* make profile row toggleable on mobile */}
+              <div className="mb-2">
+                <button
+                  type="button"
+                  onClick={() => setShowProfileMenu((s) => !s)}
+                  className="w-full flex items-center gap-3 text-left focus:outline-none"
+                >
+                  <div className="w-10 h-10 rounded-full overflow-hidden app-bg-primary flex items-center justify-center">
+                    {avatarUrl ? <img src={avatarUrl} alt="Avatar" className="w-10 h-10 object-cover" /> : <User size={16} className="text-white" />}
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium">{loading ? "Loading..." : getFullName()}</div>
+                    <div className="text-xs text-slate-500">{loading ? "Please wait..." : getRoleName()}</div>
+                  </div>
+                  <ChevronDown size={16} className={`${showProfileMenu ? "rotate-180" : ""}`} />
+                </button>
 
-                  <div className="border-t border-slate-700 mt-2 pt-2">
+                {/* mobile inline profile menu */}
+                {showProfileMenu && (
+                  <div className="mt-2 rounded-md bg-slate-50 p-2">
+                    <Link
+                      to="/profile"
+                      onClick={() => { setShowProfileMenu(false); closeDrawer?.(); }}
+                      className="flex items-center gap-3 px-3 py-2 text-slate-700 hover:bg-slate-100 rounded"
+                    >
+                      <User size={16} />
+                      <span>View Profile</span>
+                    </Link>
                     <button
-                      onClick={() => {
-                        setShowProfileMenu(false);
-                        setShowLogoutModal(true);
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-2 text-slate-300 hover:bg-red-600/10 hover:text-red-400 transition-colors"
+                      onClick={() => { setShowProfileMenu(false); setShowLogoutModal(true); closeDrawer?.(); }}
+                      className="w-full flex items-center gap-3 px-3 py-2 text-red-600 hover:bg-red-50 rounded mt-1"
                     >
                       <LogOut size={16} />
-                      <span className="text-sm font-medium">Sign Out</span>
+                      <span>Sign Out</span>
                     </button>
                   </div>
-                </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
         </div>
       </div>
@@ -278,3 +373,5 @@ export function Sidebar() {
     </>
   );
 }
+
+export default Sidebar;
