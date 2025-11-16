@@ -14,6 +14,7 @@
   "license": "ISC",
   "dependencies": {
     "@types/nodemailer": "^7.0.2",
+    "@types/redis": "^4.0.10",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
@@ -28,6 +29,7 @@
     "nodemailer": "^7.0.7",
     "openai": "^6.3.0",
     "qrcode": "^1.5.4",
+    "redis": "^5.9.0",
     "reflect-metadata": "^0.2.2",
     "typeorm": "^0.3.20",
     "uuid": "^10.0.0",
