@@ -27,6 +27,7 @@ export function Companies(props: CompaniesProps) {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pagination, setPagination] = useState<any | null>(null);
   const pageSize = 10;
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Disable body scroll when a modal is open
   useEffect(() => {
@@ -48,7 +49,18 @@ export function Companies(props: CompaniesProps) {
       // fetch first page if parent didn't provide companies
       fetchCompaniesPage(1);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.companies]);
+
+  // Debounce search query changes (server-side fetch)
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      fetchCompaniesPage(1);
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
 
   // Fallback: Sometimes initial response/set doesn't include pagination yet (or parent passed just a single page array)
   // causing totalPages to evaluate to 1 and hiding the pagination controls until a manual refresh.
@@ -68,7 +80,7 @@ export function Companies(props: CompaniesProps) {
   const fetchCompaniesPage = async (page: number) => {
     setLoading(true);
     try {
-      const resp = await CompanyService.getCompaniesPage(page, pageSize);
+      const resp = await CompanyService.getCompaniesPage(page, pageSize, searchQuery);
       // debug: log server response for pagination diagnosis
       // eslint-disable-next-line no-console
       console.debug("Companies.fetchCompaniesPage response:", resp);
@@ -192,8 +204,8 @@ export function Companies(props: CompaniesProps) {
   ];
 
   const onSearch = (query: string) => {
-    // Search functionality can be implemented here
-    console.log("Search query:", query);
+    // Server-side search implementation (same as Products)
+    setSearchQuery(query);
   };
 
   const totalItems = pagination?.total_items ?? companies.length;
@@ -210,32 +222,23 @@ export function Companies(props: CompaniesProps) {
         title="Companies"
         description="Manage and view all registered companies in the system."
       >
-        {/* Header Actions */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-          <div className="flex items-center gap-2">
-            <Button onClick={() => setShowAddModal(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Company
-            </Button>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <div className="text-sm text-gray-600">
-              <span className="font-medium">
-                {pagination?.total_items ?? companies.length}
-              </span>{" "}
-              {(pagination?.total_items ?? companies.length) === 1
-                ? "company"
-                : "companies"}{" "}
-              registered
-            </div>
+        {/* Header Summary */}
+        <div className="flex items-center justify-end mb-4">
+          <div className="text-sm text-gray-600">
+            <span className="font-medium">
+              {pagination?.total_items ?? companies.length}
+            </span>{" "}
+            {(pagination?.total_items ?? companies.length) === 1
+              ? "company"
+              : "companies"}{" "}
+            registered
           </div>
         </div>
 
         {/* Data Table */}
         <>
           <DataTable
-            title=""
+            title="Company List"
             columns={columns}
             data={pagedCompanies}
             searchPlaceholder="Search companies..."
@@ -243,16 +246,25 @@ export function Companies(props: CompaniesProps) {
             loading={loading}
             emptyStateTitle="No Companies Found"
             emptyStateDescription="Try adjusting your search or add a new company to get started."
+            customControls={
+              <Button
+                onClick={() => setShowAddModal(true)}
+                className="whitespace-nowrap"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Company
+              </Button>
+            }
           />
 
-          <div className="mt-4 flex items-center justify-between">
-            <div>
+          <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="hidden sm:block">
               <span className="text-sm">
                 Page {currentPage} of {totalPages}
               </span>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 justify-center sm:justify-end w-full sm:w-auto">
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}

@@ -37,10 +37,10 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
   const isExpired = status.label === "Expired";
 
   return (
-    <Card className="hover:shadow-md transition-shadow cursor-pointer">
+    <Card className="hover:shadow-md transition-shadow cursor-pointer overflow-hidden">
       <CardContent className="p-4" onClick={() => onClick?.(product)}>
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-3">
+        <div className="flex items-start justify-between mb-3 min-w-0">
+          <div className="flex items-center gap-3 min-w-0">
             <div
               className={`w-10 h-10 rounded-lg flex items-center justify-center ${
                 isExpired ? "bg-red-100" : "bg-blue-100"
@@ -54,16 +54,16 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
             </div>
             <div className="flex-1 min-w-0 pr-2">
               <h3
-                className="font-semibold text-gray-900 truncate w-full max-w-[240px]"
+                className="font-semibold text-gray-900 truncate w-full"
                 title={product.productName}
               >
-                {truncate(product.productName, 20)}
+                {truncate(product.productName, 40)}
               </h3>
               <p
-                className="text-sm text-gray-600 truncate w-full max-w-[240px]"
+                className="text-sm text-gray-600 truncate w-full"
                 title={product.brandName}
               >
-                {truncate(product.brandName || "", 20)}
+                {truncate(product.brandName || "", 40)}
               </p>
             </div>
           </div>
@@ -73,19 +73,19 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
         </div>
 
         <div className="space-y-2 mb-3">
-          <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center justify-between text-sm min-w-0 gap-2">
             <span className="text-gray-500">LTO Number:</span>
             <span
-              className="font-medium text-gray-900 truncate max-w-[160px]"
+              className="font-medium text-gray-900 truncate min-w-0"
               title={product.LTONumber}
             >
               {product.LTONumber}
             </span>
           </div>
-          <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center justify-between text-sm min-w-0 gap-2">
             <span className="text-gray-500">Lot Number:</span>
             <span
-              className="font-medium text-gray-900 truncate max-w-[160px]"
+              className="font-medium text-gray-900 truncate min-w-0"
               title={product.lotNumber}
             >
               {product.lotNumber}
@@ -93,11 +93,11 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
           </div>
         </div>
 
-        <div className="flex items-center justify-between text-sm text-gray-500 pt-3 border-t">
-          <div className="flex items-center gap-1">
+        <div className="flex items-center justify-between text-sm text-gray-500 pt-3 border-t min-w-0 gap-2">
+          <div className="flex items-center gap-1 min-w-0">
             <Building2 className="h-4 w-4" />
-            <span className="truncate max-w-[150px]">
-              {product.company?.name || "N/A"}
+            <span className="truncate min-w-0" title={product.company?.name}>
+              {truncate(product.company?.name || "N/A", 40)}
             </span>
           </div>
           <div className="flex items-center gap-1">

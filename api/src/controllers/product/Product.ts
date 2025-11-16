@@ -9,6 +9,7 @@ import {
   buildLinks,
 } from "../../utils/pagination";
 import { AuditLogService } from "../../services/auditLogService";
+import { redisService } from "../../services/redisService";
 
 export const getAllProducts = async (
   req: Request,
@@ -19,6 +20,16 @@ export const getAllProducts = async (
     const { page, limit, skip } = parsePageParams(req, 10);
     const search =
       typeof req.query.search === "string" ? req.query.search.trim() : "";
+
+    // Try to get from cache first
+    try {
+      const cachedData = await redisService.getCachedProducts(page, limit, search);
+      if (cachedData) {
+        return res.status(200).json(cachedData);
+      }
+    } catch (redisError) {
+      console.warn("Redis cache failed, using database:", redisError instanceof Error ? redisError.message : 'Unknown error');
+    }
 
     let products: any[] = [];
     let total = 0;
@@ -31,6 +42,12 @@ export const getAllProducts = async (
           q: `%${search}%`,
         })
         .orWhere("LOWER(product.brandName) LIKE LOWER(:q)", {
+          q: `%${search}%`,
+        })
+        .orWhere("LOWER(product.lotNumber) LIKE LOWER(:q)", {
+          q: `%${search}%`,
+        })
+        .orWhere("LOWER(company.name) LIKE LOWER(:q)", {
           q: `%${search}%`,
         })
         .orderBy("product.dateOfRegistration", "DESC")
@@ -48,9 +65,16 @@ export const getAllProducts = async (
 
     const meta = buildPaginationMeta(page, limit, total);
     const links = buildLinks(req, page, limit, meta.total_pages);
-    res
-      .status(200)
-      .json({ success: true, data: products, pagination: meta, links });
+    const responseData = { success: true, data: products, pagination: meta, links };
+
+    // Cache the result for 5 minutes
+    try {
+      await redisService.setCachedProducts(page, limit, responseData, search, 300);
+    } catch (redisError) {
+      console.warn("Failed to cache products:", redisError instanceof Error ? redisError.message : 'Unknown error');
+    }
+
+    res.status(200).json(responseData);
   } catch (error) {
     console.error("Error fetching products:", error);
     return next(new CustomError(500, "Failed to retrieve products"));
@@ -140,6 +164,13 @@ export const createProduct = async (
 
     // Save product
     const savedProduct = await ProductRepo.save(validatedProduct.data);
+
+    // Clear products cache when new product is created
+    try {
+      await redisService.invalidateProductsCache();
+    } catch (redisError) {
+      console.warn("Failed to clear products cache:", redisError instanceof Error ? redisError.message : 'Unknown error');
+    }
 
     console.log("Product created successfully:", savedProduct._id);
 
@@ -264,20 +295,4 @@ export const searchProduct = async (
   } catch (error) {
     return new CustomError(500, "Failed to search products");
   }
-};
-
-export const searchProductByCompany = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  // TO DO if requirements need it
-};
-
-export const sortProducType = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  // TO DO if requirements need it
 };

@@ -34,8 +34,6 @@ export function MapComponent({
   loading = false,
 }: MapComponentProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [filteredInspectors, setFilteredInspectors] =
-    useState<Inspector[]>(inspectors);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
@@ -44,23 +42,7 @@ export function MapComponent({
   const infoWindowRef = useRef<any>(null);
   const markersByIdRef = useRef<Map<string, any>>(new Map());
 
-  useEffect(() => {
-    if (!searchQuery.trim()) {
-      setFilteredInspectors(inspectors);
-    } else {
-      const filtered = inspectors.filter(
-        (inspector) =>
-          inspector.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          inspector.location.city
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase()) ||
-          inspector.location.address
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase())
-      );
-      setFilteredInspectors(filtered);
-    }
-  }, [searchQuery, inspectors]);
+  // Use inspectors directly from props (already filtered by parent component)
 
   useEffect(() => {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
@@ -118,6 +100,7 @@ export function MapComponent({
     googleMapRef.current = new window.google.maps.Map(mapRef.current, {
       center,
       zoom: 12,
+      mapTypeId: window.google.maps.MapTypeId.SATELLITE,
       mapTypeControl: true,
       streetViewControl: true,
       fullscreenControl: true,
@@ -150,7 +133,7 @@ export function MapComponent({
       return `data:image/svg+xml;charset=UTF-8,${svg}`;
     };
 
-    filteredInspectors.forEach((inspector) => {
+    inspectors.forEach((inspector) => {
       const color = inspector.status === "active" ? "#10b981" : "#ef4444";
       const iconUrl = svgMarkerDataUrl(color, 48);
       const marker = new window.google.maps.Marker({
@@ -194,14 +177,22 @@ export function MapComponent({
       });
       markersRef.current.push(marker);
     });
-    if (filteredInspectors.length > 0) {
-      const bounds = new window.google.maps.LatLngBounds();
-      filteredInspectors.forEach((i) =>
-        bounds.extend({ lat: i.location.lat, lng: i.location.lng })
-      );
-      googleMapRef.current.fitBounds(bounds);
+    if (inspectors.length > 0) {
+      if (inspectors.length === 1) {
+        const inspector = inspectors[0];
+        const position = { lat: inspector.location.lat, lng: inspector.location.lng };
+        
+        googleMapRef.current.panTo(position);
+        googleMapRef.current.setZoom(16);
+      } else {
+        const bounds = new window.google.maps.LatLngBounds();
+        inspectors.forEach((i) =>
+          bounds.extend({ lat: i.location.lat, lng: i.location.lng })
+        );
+        googleMapRef.current.fitBounds(bounds);
+      }
     }
-  }, [filteredInspectors, mapLoaded, onInspectorClick]);
+  }, [inspectors, mapLoaded, onInspectorClick]);
 
   if (loading)
     return (
@@ -223,7 +214,7 @@ export function MapComponent({
   return (
     <div className="relative w-full h-full">
       <div ref={mapRef} className="w-full h-full" />
-      <div className="absolute top-15 left-2 z-10 w-96">
+      <div className="absolute top-15 left-3 z-10 w-96">
         <Card className="bg-white rounded-lg border-0 shadow-none">
           <div className="relative p-2">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -231,23 +222,27 @@ export function MapComponent({
               placeholder="Search inspectors..."
               value={searchQuery}
               onChange={(e) => {
-                setSearchQuery(e.target.value);
-                onSearch?.(e.target.value);
+                const value = e.target.value;
+                setSearchQuery(value);
+                setTimeout(() => onSearch?.(value), 50);
               }}
               className="pl-12 pr-10 bg-white rounded-md border-0 shadow-none focus:outline-none focus:ring-0 focus-visible:ring-0"
             />
             {searchQuery && (
               <button
-                onClick={() => setSearchQuery("")}
+                onClick={() => {
+                  setSearchQuery("");
+                  onSearch?.("");
+                }}
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"
               >
                 <X className="h-4 w-4" />
               </button>
             )}
           </div>
-          {searchQuery && filteredInspectors.length > 0 && (
+          {searchQuery && inspectors.length > 0 && (
             <div className="mt-1 max-h-60 overflow-y-auto bg-white rounded-b-lg shadow-sm">
-              {filteredInspectors.map((i) => (
+              {inspectors.map((i) => (
                 <button
                   key={i.id}
                   onClick={() => {
@@ -298,11 +293,11 @@ export function MapComponent({
         </Card>
       </div>
       <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
-        <Card className="shadow-lg px-4 py-2">
+        <Card className="bg-white shadow-lg px-4 py-2">
           <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 bg-white text-teal-600" />
+            <MapPin className="h-4 w-4 text-teal-600" />
             <span className="text-sm font-semibold">
-              {filteredInspectors.length} Inspectors
+              {inspectors.length} Inspectors
             </span>
           </div>
         </Card>

@@ -5,7 +5,10 @@ import type { User } from "@/typeorm/entities/user.entity";
 import { Button } from "@/components/ui/button";
 import { AuthService } from "@/services/authService";
 import { Pagination } from "@/components/Pagination";
-import { DashboardService, type DashboardStats } from "@/services/dashboardService";
+import {
+  DashboardService,
+  type DashboardStats,
+} from "@/services/dashboardService";
 import { UserDetailModal } from "@/components/UserDetailModal";
 import { UserPageService } from "@/services/userPageService";
 import { toast } from "react-toastify";
@@ -29,14 +32,18 @@ export interface DashboardProps {
 }
 
 export function Dashboard(props: DashboardProps) {
-   const [, setSearch] = useState<string>("");
-   const [currentUser, setCurrentUser] = useState<any>(null);
-   const [currentPage, setCurrentPage] = useState<number>(1);
-   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-   const [stats, setStats] = useState<DashboardStats | null>(null);
-   const [statsLoading, setStatsLoading] = useState<boolean>(true);
-   const pageSize = 10;
+  const [, setSearch] = useState<string>("");
+  const [sortKey, setSortKey] = useState<"lastName" | "email" | "status">(
+    "lastName"
+  );
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState<boolean>(true);
+  const pageSize = 10;
+
 
   useEffect(() => {
     fetchCurrentUser();
@@ -82,34 +89,47 @@ export function Dashboard(props: DashboardProps) {
     {
       key: "email",
       label: "Email",
+      render: (value: string) => (
+        <span
+          className="block max-w-[180px] sm:max-w-none truncate"
+          title={value}
+        >
+          {value}
+        </span>
+      ),
     },
     {
       key: "status",
       label: "Status",
       sortable: true,
-      render: (value: 'Archived' | 'Active' | 'Pending') => {
+      render: (value: "Archived" | "Active" | "Pending") => {
         const statusConfig: {
           [key: string]: {
             label: string;
             className: string;
           };
         } = {
-          Pending: { 
-            label: "Pending", 
-            className: "border-amber-500 text-amber-700 bg-amber-50 hover:bg-amber-100" 
+          Pending: {
+            label: "Pending",
+            className:
+              "border-amber-500 text-amber-700 bg-amber-50 hover:bg-amber-100",
           },
-          Active: { 
-            label: "Active", 
-            className: "border-green-500 text-green-700 bg-green-50 hover:bg-green-100" 
+          Active: {
+            label: "Active",
+            className:
+              "border-green-500 text-green-700 bg-green-50 hover:bg-green-100",
           },
-          Archived: { 
-            label: "Archived", 
-            className: "border-gray-500 text-gray-700 bg-gray-50 hover:bg-gray-100" 
+          Archived: {
+            label: "Archived",
+            className:
+              "border-gray-500 text-gray-700 bg-gray-50 hover:bg-gray-100",
           },
         };
-        const config = statusConfig[value] || statusConfig['Pending'];
+        const config = statusConfig[value] || statusConfig["Pending"];
         return (
-          <span className={`inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium border min-w-[80px] ${config.className}`}>
+          <span
+            className={`inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium border min-w-[80px] ${config.className}`}
+          >
             {config.label}
           </span>
         );
@@ -119,18 +139,18 @@ export function Dashboard(props: DashboardProps) {
       key: "createdAt",
       label: "Created At",
       render: (value: string | Date) => {
-        if (!value) return 'N/A';
+        if (!value) return "N/A";
         try {
           const date = new Date(value);
           // Check if date is valid
-          if (isNaN(date.getTime())) return 'Invalid Date';
+          if (isNaN(date.getTime())) return "Invalid Date";
           return date.toLocaleDateString("en-US", {
             year: "numeric",
             month: "short",
             day: "numeric",
           });
         } catch (error) {
-          return 'Invalid Date';
+          return "Invalid Date";
         }
       },
     },
@@ -161,37 +181,41 @@ export function Dashboard(props: DashboardProps) {
 
   const handleApprove = async (user: User) => {
     if (!user._id) {
-      toast.error('User ID is missing');
+      toast.error("User ID is missing");
       return;
     }
-    
+
     try {
       await UserPageService.approveUser(user._id);
-      toast.success(`${user.firstName} ${user.lastName}'s account has been approved!`);
+      toast.success(
+        `${user.firstName} ${user.lastName}'s account has been approved!`
+      );
       setIsModalOpen(false);
       // Refresh the user list
       await fetchPage(currentPage);
     } catch (error) {
-      console.error('Error approving user:', error);
-      toast.error('Failed to approve user. Please try again.');
+      console.error("Error approving user:", error);
+      toast.error("Failed to approve user. Please try again.");
     }
   };
 
   const handleReject = async (user: User) => {
     if (!user._id) {
-      toast.error('User ID is missing');
+      toast.error("User ID is missing");
       return;
     }
-    
+
     try {
       await UserPageService.rejectUser(user._id);
-      toast.success(`${user.firstName} ${user.lastName}'s account has been rejected.`);
+      toast.success(
+        `${user.firstName} ${user.lastName}'s account has been rejected.`
+      );
       setIsModalOpen(false);
       // Refresh the user list
       await fetchPage(currentPage);
     } catch (error) {
-      console.error('Error rejecting user:', error);
-      toast.error('Failed to reject user. Please try again.');
+      console.error("Error rejecting user:", error);
+      toast.error("Failed to reject user. Please try again.");
     }
   };
 
@@ -216,7 +240,7 @@ export function Dashboard(props: DashboardProps) {
   // Filter out the current user from the list
   const usersArray: User[] = (() => {
     let allUsers: User[] = [];
-    
+
     if (users && users.length > 0) {
       allUsers = users;
     } else if (isPaginatedPayload(props.users)) {
@@ -227,11 +251,30 @@ export function Dashboard(props: DashboardProps) {
 
     // Filter out the current user
     if (currentUser && currentUser._id) {
-      return allUsers.filter(user => user._id !== currentUser._id);
+      return allUsers.filter((user) => user._id !== currentUser._id);
     }
 
     return allUsers;
   })();
+
+  // Apply ascending sorting by selected key
+  const sortedUsers = [...usersArray].sort((a, b) => {
+    let av = "";
+    let bv = "";
+    if (sortKey === "lastName") {
+      av = (a.lastName || "").toLowerCase();
+      bv = (b.lastName || "").toLowerCase();
+    } else if (sortKey === "email") {
+      av = (a.email || "").toLowerCase();
+      bv = (b.email || "").toLowerCase();
+    } else if (sortKey === "status") {
+      av = (a.status || "").toLowerCase();
+      bv = (b.status || "").toLowerCase();
+    }
+    if (av < bv) return -1;
+    if (av > bv) return 1;
+    return 0;
+  });
 
   const totalItems = (() => {
     if (pagination?.total_items != null) return pagination.total_items;
@@ -245,7 +288,7 @@ export function Dashboard(props: DashboardProps) {
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
 
   // Fetch a page from server
-  const   fetchPage = async (page: number) => {
+  const fetchPage = async (page: number) => {
     setLoading(true);
     try {
       const resp = await DashboardService.getUsersPage(page, pageSize);
@@ -287,16 +330,21 @@ export function Dashboard(props: DashboardProps) {
   // Single-sidebar layout: render page content directly (global layout provides sidebar)
   return (
     <>
-      <PageContainer title="Dashboard" description="Overview of system statistics and user management">
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {/* Total Users */}
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Total Users</p>
-                  <p className="text-3xl font-bold text-gray-900 mt-2">
+      <PageContainer
+        title="Dashboard"
+        description="Overview of system statistics and user management"
+      >
+        {/* Statistics Cards: rectangle for Total Users, smaller squares for others on mobile */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-8">
+          {/* Total Users (full-width rectangle on mobile) */}
+          <Card className="col-span-2 md:col-span-1 h-28 sm:h-auto shadow-lg border-transparent">
+            <CardContent className="p-4 sm:p-6 h-full flex flex-col justify-center">
+              <div className="flex items-start justify-between">
+                <div className="text-left">
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">
+                    Total Users
+                  </p>
+                  <p className="text-2xl sm:text-3xl font-bold text-gray-900 mt-1 sm:mt-2">
                     {statsLoading ? (
                       <span className="animate-pulse">...</span>
                     ) : (
@@ -304,20 +352,22 @@ export function Dashboard(props: DashboardProps) {
                     )}
                   </p>
                 </div>
-                <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Users className="h-6 w-6 text-blue-600" />
+                <div className="h-10 w-10 sm:h-12 sm:w-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <Users className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Total Products */}
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Total Products</p>
-                  <p className="text-3xl font-bold text-gray-900 mt-2">
+          {/* Total Products (compact square) */}
+          <Card className="h-28 sm:h-auto shadow-lg border-transparent flex flex-col">
+            <CardContent className="p-3 sm:p-6 flex-1 flex flex-col justify-between">
+              <div className="flex items-start justify-between">
+                <div className="text-left">
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">
+                    Total Products
+                  </p>
+                  <p className="text-xl sm:text-3xl font-bold text-gray-900 mt-1 sm:mt-2">
                     {statsLoading ? (
                       <span className="animate-pulse">...</span>
                     ) : (
@@ -325,20 +375,22 @@ export function Dashboard(props: DashboardProps) {
                     )}
                   </p>
                 </div>
-                <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
-                  <Package className="h-6 w-6 text-green-600" />
+                <div className="h-9 w-9 sm:h-12 sm:w-12 bg-green-100 rounded-lg flex items-center justify-center">
+                  <Package className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Total Companies */}
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Total Companies</p>
-                  <p className="text-3xl font-bold text-gray-900 mt-2">
+          {/* Total Companies (compact square) */}
+          <Card className="h-28 sm:h-auto shadow-lg border-transparent flex flex-col">
+            <CardContent className="p-3 sm:p-6 flex-1 flex flex-col justify-between">
+              <div className="flex items-start justify-between">
+                <div className="text-left">
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">
+                    Total Companies
+                  </p>
+                  <p className="text-xl sm:text-3xl font-bold text-gray-900 mt-1 sm:mt-2">
                     {statsLoading ? (
                       <span className="animate-pulse">...</span>
                     ) : (
@@ -346,8 +398,8 @@ export function Dashboard(props: DashboardProps) {
                     )}
                   </p>
                 </div>
-                <div className="h-12 w-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <Building2 className="h-6 w-6 text-purple-600" />
+                <div className="h-9 w-9 sm:h-12 sm:w-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <Building2 className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
                 </div>
               </div>
             </CardContent>
@@ -355,25 +407,41 @@ export function Dashboard(props: DashboardProps) {
         </div>
 
         {/* Users Table */}
-        <DataTable
-          title="Users"
-          columns={columns}
-          data={usersArray}
-          searchPlaceholder="Search users..."
-          onSearch={(query) => onSearch(query)}
-          loading={loading}
-          emptyStateTitle="No Users Found"
-          emptyStateDescription="You may try to input different keywords, check for typos, or adjust your filters."
-          onRowClick={handleRowClick}
-        />
-        <div className="mt-4 flex items-center justify-between">
-          <div>
+        <div className="w-full">
+          <DataTable
+            title="User Accounts"
+            columns={columns}
+            data={sortedUsers}
+            searchPlaceholder="Search users..."
+            onSearch={(query) => onSearch(query)}
+            loading={loading}
+            emptyStateTitle="No Users Found"
+            emptyStateDescription="You may try to input different keywords, check for typos, or adjust your filters."
+            customControls={
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <select
+                  value={sortKey}
+                  onChange={(e) => setSortKey(e.target.value as any)}
+                  className="h-10 px-2 text-sm border-shadow shadow-md rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 w-full sm:w-auto min-w-[180px]"
+                >
+                  <option value="lastName">Sort: Name (A→Z)</option>
+                  <option value="email">Sort: Email (A→Z)</option>
+                  <option value="status">Sort: Status</option>
+                  <option value="status">Sort: All</option>
+                </select>
+              </div>
+            }
+            onRowClick={handleRowClick}
+          />
+        </div>
+        <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="text-center sm:text-left hidden sm:block">
             <span className="text-sm">
               Page {currentPage} of {totalPages}
             </span>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 justify-center sm:justify-end w-full sm:w-auto">
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}
