@@ -7,7 +7,7 @@ import { LoadingSpinner } from "@/components/LoadingSpinner";
 export function Maps() {
   const [inspectors, setInspectors] = useState<Inspector[]>([]);
   const [filteredInspectors, setFilteredInspectors] = useState<Inspector[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
