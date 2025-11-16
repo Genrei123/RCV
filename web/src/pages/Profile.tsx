@@ -172,7 +172,68 @@ export function Profile({
     setShowEditModal(true);
   };
 
+  // Validation helpers
+  const validateEmail = (email?: string) => {
+    if (!email) return false;
+    // simple RFC-like regex
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
+  const validateName = (name?: string) => {
+    if (!name) return false;
+    const trimmed = name.trim();
+    return trimmed.length >= 2 && trimmed.length <= 50;
+  };
+
+  const validatePhone = (phone?: string) => {
+    if (!phone) return true; // optional
+    // allow digits, spaces, +, -, ()
+    return /^[\d\s+\-().]{6,20}$/.test(phone);
+  };
+
+  const validateBadgeId = (badge?: string) => {
+    if (!badge) return true; // optional
+    return /^[a-zA-Z0-9\-_.]{2,30}$/.test(badge);
+  };
+
+  const validateDOB = (dob?: string) => {
+    if (!dob) return true;
+    const d = new Date(dob);
+    return !isNaN(d.getTime());
+  };
+
   const handleSaveProfile = async (updatedUser: Partial<ProfileUser>) => {
+    // client-side validations
+    // Required name fields
+    if (!validateName(updatedUser.firstName)) {
+      toast.error("First name is required (2-50 characters).");
+      return;
+    }
+    if (!validateName(updatedUser.lastName)) {
+      toast.error("Last name is required (2-50 characters).");
+      return;
+    }
+    // Email
+    if (!validateEmail(updatedUser.email)) {
+      toast.error("Please enter a valid email address.");
+      return;
+    }
+    // Phone (optional)
+    if (!validatePhone(updatedUser.phoneNumber)) {
+      toast.error("Please enter a valid phone number (6-20 digits).");
+      return;
+    }
+    // Badge ID (optional)
+    if (!validateBadgeId(updatedUser.badgeId)) {
+      toast.error("Badge ID may only contain letters, numbers, - _ . and be 2-30 chars.");
+      return;
+    }
+    // Date of birth (optional)
+    if (!validateDOB(updatedUser.dateOfBirth)) {
+      toast.error("Date of birth is invalid.");
+      return;
+    }
+
     try {
       // Convert ProfileUser to UserProfile format
       const profileData: Partial<UserProfile> = {
