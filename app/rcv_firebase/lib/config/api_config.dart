@@ -3,7 +3,7 @@
 /// Contains all API endpoints and configuration settings
 class ApiConfig {
   // Base URL - change this based on environment
-  static const String baseUrl = 'https://39b1f0dd99f9.ngrok-free.app'; // For local development
+  static const String baseUrl = 'https://rcv-production-cbd6.up.railway.app'; // For local development
   // static const String baseUrl = 'http://10.0.2.2:3000'; // For Android emulator
   // static const String baseUrl = 'http://YOUR_IP:3000'; // For physical device
   

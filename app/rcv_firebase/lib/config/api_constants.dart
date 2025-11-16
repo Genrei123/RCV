@@ -3,9 +3,9 @@
 
 class ApiConstants {
   // Environment-specific base URLs
-  static const String developmentUrl = 'https://39b1f0dd99f9.ngrok-free.app/api/v1';  // Android emulator
-  static const String stagingUrl = 'https://39b1f0dd99f9.ngrok-free.app/api/v1';
-  static const String productionUrl = 'https://39b1f0dd99f9.ngrok-free.app/api/v1';
+  static const String developmentUrl = 'https://rcv-production-cbd6.up.railway.app/api/v1';  // Android emulator
+  static const String stagingUrl = 'https://rcv-production-cbd6.up.railway.app/api/v1';
+  static const String productionUrl = 'https://rcv-production-cbd6.up.railway.app/api/v1';
   
   // Current environment (change this based on your build configuration)
   static const Environment currentEnvironment = Environment.development;
