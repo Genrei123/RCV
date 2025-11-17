@@ -1,0 +1,376 @@
+import { Link, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
+import {
+  LayoutDashboard,
+  Package,
+  MapPin,
+  User,
+  LogOut,
+  Building2,
+  BarChart3,
+  Sliders,
+  Verified,
+  ShieldCheck,
+  ChevronDown,
+} from 'lucide-react'
+import { LogoutModal } from './LogoutModal'
+import { AuthService } from '@/services/authService'
+import { toast } from 'react-toastify'
+
+interface CurrentUser {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  middleName?: string;
+  email: string;
+  role?: number;
+  avatar?: string;
+}
+
+// Inline logo component (hexagon + inner circle) — used in desktop header (and can be reused elsewhere)
+const LogoIcon = ({ className = "w-8 h-8" }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden>
+    <defs>
+      <linearGradient id="rcvGrad" x1="0" x2="1" y1="0" y2="1">
+        <stop offset="0%" stopColor="#005440" />
+        <stop offset="100%" stopColor="#00B087" />
+      </linearGradient>
+    </defs>
+    <polygon points="12,2 20,7 20,17 12,22 4,17 4,7" fill="url(#rcvGrad)" stroke="#0b3b2f" strokeWidth="0.5" />
+    <circle cx="12" cy="12" r="3.1" fill="white" />
+  </svg>
+);
+
+export function Sidebar({ open, onClose }: { open?: boolean; onClose?: () => void } = {}) {
+  const location = useLocation();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  // --- added: controlled / uncontrolled drawer support ---
+  const [internalOpen, setInternalOpen] = useState<boolean>(false);
+  const visible = typeof open === "boolean" ? open : internalOpen;
+
+  useEffect(() => {
+    if (typeof open === "boolean") setInternalOpen(open);
+  }, [open]);
+
+  const openDrawer = () => {
+    if (typeof open === "boolean") {
+      // parent controlled - still keep internal for fallback
+      setInternalOpen(true);
+    } else {
+      setInternalOpen(true);
+    }
+  };
+
+  const closeDrawer = () => {
+    if (typeof open === "boolean") onClose?.();
+    setInternalOpen(false);
+  };
+  // --- end added ---
+
+  useEffect(() => {
+    fetchCurrentUser();
+  }, []);
+
+  // Load avatar from localStorage first, else fallback to user avatar
+  useEffect(() => {
+    const loadAvatar = () => {
+      try {
+        const saved = localStorage.getItem("profile_avatar_data");
+        if (saved) {
+          setAvatarUrl(saved);
+        } else if (currentUser?.avatar) {
+          setAvatarUrl(currentUser.avatar);
+        } else {
+          setAvatarUrl(null);
+        }
+      } catch {
+        setAvatarUrl(currentUser?.avatar || null);
+      }
+    };
+    loadAvatar();
+
+    const handler = () => loadAvatar();
+    window.addEventListener("storage", handler);
+    window.addEventListener("profile-avatar-updated", handler as EventListener);
+    return () => {
+      window.removeEventListener("storage", handler);
+      window.removeEventListener(
+        "profile-avatar-updated",
+        handler as EventListener
+      );
+    };
+  }, [currentUser]);
+
+  const fetchCurrentUser = async () => {
+    setLoading(true);
+    try {
+      const user = await AuthService.getCurrentUser();      
+      if (user) {
+        setCurrentUser(user);
+      }
+    } catch (error) {
+      console.error("Error fetching current user:", error);
+      toast.error("Failed to load user information");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getFullName = (): string => {
+    if (!currentUser) return "Loading...";
+    const parts = [
+      currentUser.firstName,
+      currentUser.middleName,
+      currentUser.lastName,
+    ].filter(Boolean);
+    return parts.join(" ") || "User";
+  };
+
+  const getRoleName = (): string => {
+    if (!currentUser) return "Loading...";
+    if (currentUser.role === undefined || currentUser.role === null)
+      return "Agent";
+
+    const roleMap: { [key: number]: string } = {
+      1: "Agent",
+      2: "Admin",
+      3: "Super Admin",
+    };
+    return roleMap[currentUser.role] || "Agent";
+  };
+
+  const menuItems = [
+    { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/products', label: 'Products', icon: Package },
+    { path: '/companies', label: 'Companies', icon: Building2 },
+    { path: '/maps', label: 'Maps', icon: MapPin },
+    { path: '/analytics', label: 'Analytics', icon: BarChart3 },
+    { path: '/remote-config', label: 'Mobile Config', icon: Sliders },
+    // { path: '/kiosk-monitor', label: 'Kiosk Monitor', icon: Activity },
+    // { path: '/users', label: 'Users', icon: Users },
+    { path: '/blockchain', label: 'Blockchain', icon: Verified },
+    { path: '/verify-certificate', label: 'Verify Certificate', icon: ShieldCheck },
+  ];
+
+  const handleLogout = async () => {
+    setShowLogoutModal(false);
+
+    try {
+      toast.info("Signing out...");
+      await AuthService.logout();
+    } catch (error) {
+      console.error("Logout error:", error);
+      toast.error("Failed to logout. Please try again.");
+    }
+  };
+
+  return (
+    <>
+      {/* added: floating hamburger visible below lg */}
+      <button
+        type="button"
+        onClick={openDrawer}
+        className="lg:hidden fixed left-3 top-3 z-50 p-2 bg-white rounded-md shadow-sm text-slate-700 hover:bg-slate-50 focus:outline-none"
+        aria-label="Open menu"
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+
+      {/* changed breakpoint: desktop visible on lg+; ensure full height to remove bottom dark area */}
+      <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:min-h-screen bg-white border-r">
+        {/* Logo Section */}
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center gap-2">
+            {/* Figma-style logo */}
+            <div className="flex items-center justify-center">
+              <LogoIcon className="w-8 h-8" />
+            </div>
+            <span className="text-xl font-semibold text-[#005440]">RCV</span>
+            <span className="text-xs text-gray-400">v.01</span>
+          </div>
+        </div>
+
+        {/* User Profile Section (click to open profile menu) */}
+        <div className="p-6 border-b border-gray-200 relative">
+          <button
+            type="button"
+            onClick={() => setShowProfileMenu((s) => !s)}
+            className="w-full flex items-center gap-3 text-left focus:outline-none"
+          >
+            <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-300 flex items-center justify-center flex-shrink-0">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="Avatar" className="w-10 h-10 object-cover" />
+              ) : (
+                <User size={20} className="text-gray-600" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-gray-800 text-sm truncate">{loading ? "Loading..." : getFullName()}</p>
+              <p className="text-xs text-gray-500">{loading ? "Please wait..." : getRoleName()}</p>
+            </div>
+            <ChevronDown size={16} className={`transition-transform ${showProfileMenu ? "rotate-180" : ""}`} />
+          </button>
+
+          {/* Profile dropdown (desktop) */}
+          {showProfileMenu && (
+            <div className="absolute left-4 bottom-0 translate-y-full mt-2 w-48 bg-white border rounded-lg shadow-lg overflow-hidden z-50">
+              <div className="py-1">
+                <Link
+                  to="/profile"
+                  onClick={() => setShowProfileMenu(false)}
+                  className="flex items-center gap-3 px-4 py-2 text-slate-700 hover:bg-slate-50"
+                >
+                  <User size={16} />
+                  <span className="text-sm">View Profile</span>
+                </Link>
+                <button
+                  onClick={() => { setShowProfileMenu(false); setShowLogoutModal(true); }}
+                  className="w-full flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50"
+                >
+                  <LogOut size={16} />
+                  <span className="text-sm">Sign Out</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Navigation Menu */}
+        <nav className="flex-1 p-4">
+          <div className="space-y-1">
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = location.pathname === item.path;
+
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
+                    isActive
+                      ? "app-bg-primary text-white"
+                      : "text-gray-600 hover:bg-gray-100"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon size={20} />
+                    <span className="font-medium">{item.label}</span>
+                  </div>
+                  <span className="text-xs">›</span>
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
+      </aside>
+
+      {/* mobile/tablet drawer: visible below lg, use visible & closeDrawer */}
+      <div
+        className={`fixed inset-0 z-40 lg:hidden transition-opacity ${visible ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
+        aria-hidden={!visible}
+      >
+        {/* Backdrop */}
+        <div
+          className={`absolute inset-0 bg-black/40 transition-opacity ${visible ? "opacity-100" : "opacity-0"}`}
+          onClick={closeDrawer}
+        />
+
+        {/* Drawer: full width on xs, constrained on sm/md */}
+        <div className={`absolute left-0 top-0 h-full w-full sm:max-w-xs md:max-w-sm bg-white shadow-lg transform transition-transform ${visible ? "translate-x-0" : "-translate-x-full"} overflow-y-auto`}>
+          {/* Drawer header: logo + title + close button */}
+          <div className="flex items-center justify-between px-4 py-4 border-b">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 flex items-center justify-center">
+                <LogoIcon className="w-6 h-6" />
+              </div>
+              <div className="text-sm font-semibold text-slate-800">RCV</div>
+            </div>
+            <button onClick={closeDrawer} className="p-1 text-slate-600" aria-label="Close menu">
+              <ChevronDown size={18} className="rotate-90" />
+            </button>
+          </div>
+
+          {/* Drawer nav: reuse menuItems, ensure links call closeDrawer */}
+          <nav className="px-2 py-4 space-y-1">
+            {menuItems.map((m) => {
+              const Icon = m.icon;
+              const isActive = location.pathname === m.path;
+              return (
+                <Link
+                  key={m.path}
+                  to={m.path}
+                  onClick={() => { closeDrawer(); }}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg ${isActive ? "app-bg-primary-soft app-text-primary" : "text-slate-700 hover:bg-slate-100"}`}
+                >
+                  <Icon size={18} />
+                  <span className="font-medium">{m.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* Drawer profile + logout (mobile) */}
+          <div className="px-4 mt-auto pb-6">
+            <div className="border-t pt-4">
+              {/* make profile row toggleable on mobile */}
+              <div className="mb-2">
+                <button
+                  type="button"
+                  onClick={() => setShowProfileMenu((s) => !s)}
+                  className="w-full flex items-center gap-3 text-left focus:outline-none"
+                >
+                  <div className="w-10 h-10 rounded-full overflow-hidden app-bg-primary flex items-center justify-center">
+                    {avatarUrl ? <img src={avatarUrl} alt="Avatar" className="w-10 h-10 object-cover" /> : <User size={16} className="text-white" />}
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium">{loading ? "Loading..." : getFullName()}</div>
+                    <div className="text-xs text-slate-500">{loading ? "Please wait..." : getRoleName()}</div>
+                  </div>
+                  <ChevronDown size={16} className={`${showProfileMenu ? "rotate-180" : ""}`} />
+                </button>
+
+                {/* mobile inline profile menu */}
+                {showProfileMenu && (
+                  <div className="mt-2 rounded-md bg-slate-50 p-2">
+                    <Link
+                      to="/profile"
+                      onClick={() => { setShowProfileMenu(false); closeDrawer?.(); }}
+                      className="flex items-center gap-3 px-3 py-2 text-slate-700 hover:bg-slate-100 rounded"
+                    >
+                      <User size={16} />
+                      <span>View Profile</span>
+                    </Link>
+                    <button
+                      onClick={() => { setShowProfileMenu(false); setShowLogoutModal(true); closeDrawer?.(); }}
+                      className="w-full flex items-center gap-3 px-3 py-2 text-red-600 hover:bg-red-50 rounded mt-1"
+                    >
+                      <LogOut size={16} />
+                      <span>Sign Out</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Logout Modal */}
+      <LogoutModal
+        isOpen={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={handleLogout}
+        userName={getFullName()}
+      />
+    </>
+  );
+}
+
+export default Sidebar;

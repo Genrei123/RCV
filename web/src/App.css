@@ -1,0 +1,477 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* Custom responsive layout adjustments */
+@media (max-width: 768px) {
+  .app-grid {
+    grid-template-columns: 1fr !important;
+    grid-template-areas:
+      "main"
+      "footer" !important;
+  }
+
+  .sidebar-mobile {
+    display: none;
+  }
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  --radius: 0.625rem;
+  /* App brand palette (aligned with Flutter AppColors) */
+  --app-primary: #005440;
+  --app-primary-light: #00ba8e;
+  --app-accent: #002d72;
+  --app-secondary: #a5c9a1;
+  --app-neutral: #f0f2f5;
+  --app-text: #000000;
+  --app-white: #ffffff;
+  --app-muted: #b7b7b7;
+  --app-error: #d64541;
+  --app-success: #4c9f70;
+  /* Derived soft backgrounds */
+  --app-primary-soft: color-mix(in srgb, var(--app-primary) 14%, white);
+  --app-accent-soft: color-mix(in srgb, var(--app-accent) 14%, white);
+  --app-secondary-soft: color-mix(in srgb, var(--app-secondary) 24%, white);
+  --app-success-soft: color-mix(in srgb, var(--app-success) 14%, white);
+  --app-error-soft: color-mix(in srgb, var(--app-error) 14%, white);
+  /* Unified gray/neutral scale */
+  --app-gray-50: color-mix(in srgb, var(--app-text) 4%, white);
+  --app-gray-100: color-mix(in srgb, var(--app-text) 7%, white);
+  --app-gray-200: color-mix(in srgb, var(--app-text) 12%, white);
+  --app-gray-300: color-mix(in srgb, var(--app-text) 20%, white);
+  --app-gray-400: color-mix(in srgb, var(--app-text) 32%, white);
+  --app-gray-500: color-mix(in srgb, var(--app-text) 45%, white);
+  --app-gray-600: color-mix(in srgb, var(--app-text) 60%, white);
+  --app-gray-700: color-mix(in srgb, var(--app-text) 70%, white);
+  --app-gray-800: color-mix(in srgb, var(--app-text) 82%, white);
+  --app-gray-900: var(--app-text);
+  --app-neutral-soft: color-mix(in srgb, var(--app-neutral) 60%, white);
+  /* Global app background (light mode) */
+  --background: #fafbff;
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(100% 0.00011 271.152);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(0.269 0 0);
+  --input: oklch(0.269 0 0);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(0.269 0 0);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* --- App palette utility classes --- */
+@layer utilities {
+  .app-bg-primary {
+    background-color: var(--app-primary);
+  }
+  .app-text-primary {
+    color: var(--app-primary);
+  }
+  .app-border-primary {
+    border-color: var(--app-primary);
+  }
+
+  .app-bg-primary-soft {
+    background-color: var(--app-primary-soft);
+  }
+  .app-bg-accent {
+    background-color: var(--app-accent);
+  }
+  .app-text-accent {
+    color: var(--app-accent);
+  }
+  .app-bg-accent-soft {
+    background-color: var(--app-accent-soft);
+  }
+
+  .app-bg-secondary {
+    background-color: var(--app-secondary);
+  }
+  .app-text-secondary {
+    color: var(--app-secondary);
+  }
+  .app-bg-secondary-soft {
+    background-color: var(--app-secondary-soft);
+  }
+
+  .app-bg-success {
+    background-color: var(--app-success);
+  }
+  .app-text-success {
+    color: var(--app-success);
+  }
+  .app-bg-success-soft {
+    background-color: var(--app-success-soft);
+  }
+
+  .app-bg-error {
+    background-color: var(--app-error);
+  }
+  .app-text-error {
+    color: var(--app-error);
+  }
+  .app-bg-error-soft {
+    background-color: var(--app-error-soft);
+  }
+
+  /* Neutral utilities */
+  .app-text {
+    color: var(--app-text);
+  }
+  .app-text-muted {
+    color: var(--app-muted);
+  }
+  .app-text-subtle {
+    color: var(--app-gray-600);
+  }
+  .app-bg-neutral {
+    background-color: var(--app-neutral);
+  }
+  .app-bg-neutral-soft {
+    background-color: var(--app-neutral-soft);
+  }
+  .app-bg-surface {
+    background-color: var(--app-white);
+  }
+  .app-border-neutral {
+    border-color: var(--app-neutral);
+  }
+}
+
+/* --- Map existing random Tailwind colors to app palette globally --- */
+/* Blues & Purples -> Primary */
+.bg-blue-50,
+.bg-blue-100,
+.bg-purple-50,
+.bg-purple-100 {
+  background-color: var(--app-primary-soft) !important;
+}
+.text-blue-600,
+.text-blue-400,
+.text-blue-700,
+.text-blue-900,
+.text-purple-600,
+.text-purple-700 {
+  color: var(--app-primary) !important;
+}
+/* Blue borders */
+.border-blue-200 {
+  border-color: var(--app-primary-soft) !important;
+}
+
+/* Indigo -> Accent */
+.bg-indigo-50,
+.bg-indigo-100 {
+  background-color: var(--app-accent-soft) !important;
+}
+.text-indigo-500,
+.text-indigo-600,
+.text-indigo-700,
+.text-indigo-900 {
+  color: var(--app-accent) !important;
+}
+.bg-indigo-500,
+.bg-indigo-600,
+.hover\:bg-indigo-600:hover,
+.hover\:bg-indigo-700:hover {
+  background-color: var(--app-accent) !important;
+}
+
+/* Greens -> Success/Primary depending on context */
+.bg-green-50,
+.bg-green-100 {
+  background-color: var(--app-success-soft) !important;
+}
+.text-green-400,
+.text-green-500,
+.text-green-600,
+.text-green-700,
+.text-green-800 {
+  color: var(--app-success) !important;
+}
+.bg-green-500,
+.bg-green-600,
+.hover\:bg-green-600:hover,
+.hover\:bg-green-700:hover {
+  background-color: var(--app-primary) !important;
+}
+
+/* Emerald -> Primary */
+.bg-emerald-50 {
+  background-color: var(--app-primary-soft) !important;
+}
+.text-emerald-600 {
+  color: var(--app-primary) !important;
+}
+.bg-emerald-600,
+.hover\:bg-emerald-600:hover {
+  background-color: var(--app-primary) !important;
+}
+
+/* Oranges/Yellows -> Secondary (used as a muted warning) */
+.bg-yellow-50,
+.bg-yellow-100,
+.bg-orange-50,
+.bg-orange-100 {
+  background-color: var(--app-secondary-soft) !important;
+}
+.text-yellow-600,
+.text-yellow-700,
+.text-yellow-800,
+.text-orange-600,
+.text-orange-700,
+.text-orange-800 {
+  color: var(--app-secondary) !important;
+}
+.bg-yellow-500,
+.bg-yellow-600,
+.bg-orange-500,
+.bg-orange-600,
+.hover\:bg-yellow-700:hover,
+.hover\:bg-orange-600:hover {
+  background-color: var(--app-primary-light) !important;
+}
+/* Amber -> Secondary */
+.bg-amber-50,
+.bg-amber-100 {
+  background-color: var(--app-secondary-soft) !important;
+}
+.text-amber-600,
+.text-amber-700,
+.text-amber-800 {
+  color: var(--app-secondary) !important;
+}
+.border-amber-500 {
+  border-color: var(--app-secondary) !important;
+}
+
+/* Reds -> Error */
+.bg-red-50,
+.bg-red-100 {
+  background-color: var(--app-error-soft) !important;
+}
+.text-red-500,
+.text-red-600,
+.text-red-700,
+.text-red-800 {
+  color: var(--app-error) !important;
+}
+.bg-red-500,
+.bg-red-600,
+.hover\:bg-red-600:hover,
+.hover\:bg-red-700:hover {
+  background-color: var(--app-error) !important;
+}
+
+/* Neutralize slate/zinc randoms to neutral */
+.bg-slate-100,
+.bg-zinc-100 {
+  background-color: var(--app-neutral) !important;
+}
+.text-slate-700,
+.text-zinc-700 {
+  color: var(--app-text) !important;
+}
+
+/* Teal -> Primary */
+.bg-teal-50,
+.bg-teal-100 {
+  background-color: var(--app-primary-soft) !important;
+}
+.text-teal-600,
+.text-teal-700 {
+  color: var(--app-primary) !important;
+}
+.bg-teal-600,
+.bg-teal-700,
+.hover\:bg-teal-700:hover {
+  background-color: var(--app-primary) !important;
+}
+.border-teal-500 {
+  border-color: var(--app-primary) !important;
+}
+.focus\:ring-teal-500:focus {
+  --tw-ring-color: var(--app-primary) !important;
+}
+
+/* Slate 50 */
+.bg-slate-50 {
+  background-color: var(--app-white) !important;
+}
+
+/* Replace Tailwind grays with unified app neutrals */
+/* Text */
+.text-gray-900,
+.text-slate-900,
+.text-zinc-900 {
+  color: var(--app-gray-900) !important;
+}
+.text-gray-800,
+.text-slate-800,
+.text-zinc-800 {
+  color: var(--app-gray-800) !important;
+}
+.text-gray-700,
+.text-slate-700,
+.text-zinc-700 {
+  color: var(--app-gray-700) !important;
+}
+.text-gray-600,
+.text-slate-600,
+.text-zinc-600 {
+  color: var(--app-gray-600) !important;
+}
+.text-gray-500,
+.text-slate-500,
+.text-zinc-500 {
+  color: var(--app-muted) !important;
+}
+/* Lighter gray text */
+.text-gray-400,
+.text-slate-400,
+.text-zinc-400 {
+  color: var(--app-gray-400) !important;
+}
+.text-gray-300,
+.text-slate-300,
+.text-zinc-300 {
+  color: var(--app-gray-300) !important;
+}
+.text-gray-200,
+.text-slate-200,
+.text-zinc-200 {
+  color: var(--app-gray-200) !important;
+}
+.text-gray-100,
+.text-slate-100,
+.text-zinc-100 {
+  color: var(--app-gray-100) !important;
+}
+.text-gray-50,
+.text-slate-50,
+.text-zinc-50 {
+  color: var(--app-gray-50) !important;
+}
+
+/* Backgrounds */
+.bg-gray-50 {
+  background-color: var(--app-white) !important;
+}
+.bg-gray-100 {
+  background-color: var(--app-neutral) !important;
+}
+.bg-gray-200 {
+  background-color: var(--app-neutral-soft) !important;
+}
+
+/* Borders */
+.border-gray-200 {
+  border-color: var(--app-neutral) !important;
+}
+.border-gray-300 {
+  border-color: var(--app-neutral-soft) !important;
+}

@@ -1,25 +1,159 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../widgets/app_buttons.dart';
-import '../widgets/animated_form_field.dart'; // Your stateless animated form field
+import '../widgets/animated_form_field.dart';
 import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
+import '../widgets/navigation_bar.dart';
+import '../widgets/processing_modal.dart';
+import '../services/auth_service.dart';
+import '../services/audit_log_service.dart';
+import 'package:flutter/scheduler.dart';
 
-// Define AppColors if not already defined elsewhere
+NavBarRole? appRole;
+
 class AppColors {
-  static const Color primary = Color(
-    0xFF00BA8E,
-  ); // Use your desired primary color
+  static const Color primary = Color(0xFF00BA8E);
 }
 
-class LoginPage extends StatelessWidget {
+class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
   @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
+  final emailFocusNode = FocusNode();
+  final passwordFocusNode = FocusNode();
+
+  String? emailError;
+  String? passwordError;
+  bool hasEmailError = false;
+  bool hasPasswordError = false;
+
+  bool obscureText = true;
+  final AuthService _authService = AuthService();
+
+  Future<bool> validateLogin(
+    String email,
+    String password,
+    BuildContext context,
+  ) async {
+    setState(() {
+      emailError = null;
+      passwordError = null;
+      hasEmailError = false;
+      hasPasswordError = false;
+    });
+
+    bool hasErrors = false;
+    if (email.trim().isEmpty) {
+      setState(() {
+        emailError = 'Email is required';
+        hasEmailError = true;
+      });
+      hasErrors = true;
+    } else if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
+      setState(() {
+        emailError = 'Please enter a valid email';
+        hasEmailError = true;
+      });
+      hasErrors = true;
+    }
+
+    if (password.trim().isEmpty) {
+      setState(() {
+        passwordError = 'Password is required';
+        hasPasswordError = true;
+      });
+      hasErrors = true;
+    }
+
+    if (hasErrors) {
+      return false;
+    }
+
+    // Call real backend API
+    final result = await _authService.login(email, password);
+
+    if (result['success'] == true) {
+      print('✓ Login successful');
+      print('✓ Token: ${result['token']}');
+      print('✓ User: ${result['user']}');
+
+      // Determine user role from backend response
+      final user = result['user'];
+      if (user['role'] == 'ADMIN') {
+        appRole = NavBarRole.admin;
+      } else {
+        appRole = NavBarRole.user;
+      }
+
+      // Log the login action to audit trail
+      AuditLogService.logLogin();
+
+      return true;
+    } else {
+      // Handle different error cases
+      if (result['approved'] == false) {
+        // Account pending approval
+        setState(() {
+          emailError = 'Account pending approval';
+          passwordError = 'Please wait for admin approval';
+          hasEmailError = true;
+          hasPasswordError = true;
+        });
+      } else {
+        // Invalid credentials or other error
+        setState(() {
+          emailError = result['message'] ?? 'Login failed';
+          passwordError = result['message'] ?? 'Please check your credentials';
+          hasEmailError = true;
+          hasPasswordError = true;
+        });
+      }
+      return false;
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    emailController.addListener(() {
+      if (hasEmailError) {
+        setState(() {
+          emailError = null;
+          hasEmailError = false;
+        });
+      }
+    });
+    passwordController.addListener(() {
+      if (hasPasswordError) {
+        setState(() {
+          passwordError = null;
+          hasPasswordError = false;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    emailFocusNode.dispose();
+    passwordFocusNode.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final emailController = TextEditingController();
-    final passwordController = TextEditingController();
     return Scaffold(
       body: Container(
+        width: double.infinity,
+        height: double.infinity,
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
@@ -31,99 +165,152 @@ class LoginPage extends StatelessWidget {
           ),
         ),
         child: SafeArea(
-          child: Column(
-            children: [
-              Container(
-                margin: EdgeInsets.only(
-                  top: MediaQuery.of(context).size.height * 0.2,
-                ),
-                alignment: Alignment.topCenter,
-                child: SvgPicture.asset(
-                  'assets/landinglogo.svg',
-                  width: 190,
-                  height: 190,
-                ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.only(bottom: 24.0),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight:
+                    MediaQuery.of(context).size.height -
+                    MediaQuery.of(context).padding.top -
+                    MediaQuery.of(context).padding.bottom -
+                    48,
               ),
-              SizedBox(height: 30),
-              Text(
-                'LOG IN',
-                style: TextStyle(
-                  fontSize: 22,
-                  color: Colors.white,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 1.2,
-                ),
-              ),
-              SizedBox(height: 24),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 32),
-                child: Column(
-                  children: [
-                    AnimatedFormField(
-                      label: 'Email',
-                      hint: 'Email',
-                      controller: emailController,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    margin: EdgeInsets.only(
+                      top: MediaQuery.of(context).size.height * 0.1,
                     ),
-                    SizedBox(height: 16),
-                    AnimatedFormField(
-                      label: 'Password',
-                      hint: 'Password',
-                      controller: passwordController,
-                      obscureText: true,
-                      suffixIcon: ValueListenableBuilder<TextEditingValue>(
-                        valueListenable: passwordController,
-                        builder: (context, value, child) {
-                          return value.text.isNotEmpty
-                              ? Icon(Icons.visibility)
-                              : SizedBox.shrink();
-                        },
-                      ),
+                    alignment: Alignment.topCenter,
+                    child: SvgPicture.asset(
+                      'assets/landinglogo.svg',
+                      width: 190,
+                      height: 190,
                     ),
-                    SizedBox(height: 24),
-                    AppButtons(
-                      text: 'Log In',
-                      size: 48,
-                      textColor: app_colors.AppColors.text,
-                      backgroundColor: Colors.white,
-                      borderColor: Color(0xFF005440),
-                      icon: Icon(Icons.login, color: app_colors.AppColors.text),
-                      onPressed: () {
-                        // TODO: Implement proper authentication
-                        // For now, navigate to user home page
-                        Navigator.pushReplacementNamed(context, '/user-home');
-                      },
+                  ),
+                  SizedBox(height: 30),
+                  Text(
+                    'LOG IN',
+                    style: TextStyle(
+                      fontSize: 22,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 1.2,
                     ),
-                    SizedBox(height: 16),
-                    // Demo Admin Login Button
-                    AppButtons(
-                      text: 'Admin Demo',
-                      size: 48,
-                      textColor: Colors.white,
-                      backgroundColor: Colors.transparent,
-                      borderColor: Colors.white,
-                      icon: Icon(Icons.admin_panel_settings, color: Colors.white),
-                      onPressed: () {
-                        Navigator.pushReplacementNamed(context, '/admin-home');
-                      },
-                    ),
-                    SizedBox(height: 24),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.pushNamed(context, '/reset-password');
-                      },
-                      child: Text(
-                        'Forgot your Password?',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontStyle: FontStyle.italic,
-                          decoration: TextDecoration.underline,
+                  ),
+                  SizedBox(height: 24),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: Column(
+                      children: [
+                        AnimatedFormField(
+                          label: 'Email',
+                          hint: 'Email',
+                          controller: emailController,
+                          focusNode: emailFocusNode,
+                          hasError: hasEmailError,
+                          errorText: emailError,
+                          errorTextColor: Colors.white,
                         ),
-                      ),
+                        SizedBox(height: 16),
+                        AnimatedFormField(
+                          label: 'Password',
+                          hint: 'Password',
+                          controller: passwordController,
+                          focusNode: passwordFocusNode,
+                          obscureText: obscureText,
+                          hasError: hasPasswordError,
+                          errorText: passwordError,
+                          errorTextColor: Colors.white,
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              obscureText
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                obscureText = !obscureText;
+                              });
+                            },
+                          ),
+                        ),
+                        SizedBox(height: 24),
+                        AppButtons(
+                          text: 'Log In',
+                          size: 48,
+                          textColor: app_colors.AppColors.text,
+                          backgroundColor: Colors.white,
+                          borderColor: Color(0xFF005440),
+                          icon: Icon(
+                            Icons.login,
+                            color: app_colors.AppColors.text,
+                          ),
+                          onPressed: () async {
+                            // Show processing modal
+                            showProcessingModal(
+                              context,
+                              message: 'Signing in...',
+                            );
+
+                            // Allow a frame to render so the processing dialog appears
+                            await SchedulerBinding.instance.endOfFrame;
+                            final ok = await validateLogin(
+                              emailController.text,
+                              passwordController.text,
+                              context,
+                            );
+
+                            // Hide processing modal
+                            hideProcessingModal(context);
+
+                            // Wait a frame so the dialog has time to dismiss cleanly
+                            await SchedulerBinding.instance.endOfFrame;
+
+                            if (ok) {
+                              // Direct navigation without status modal
+                              if (mounted) {
+                                Navigator.pushNamedAndRemoveUntil(
+                                  context,
+                                  '/user-home',
+                                  (route) => false,
+                                );
+                              }
+                            } else {
+                              // Show a lightweight SnackBar instead of a modal (optional)
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Login failed. Please check your credentials.',
+                                    ),
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                        ),
+                        SizedBox(height: 24),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.pushNamed(context, '/reset-password');
+                          },
+                          child: Text(
+                            'Forgot your Password?',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontStyle: FontStyle.italic,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),

@@ -1,18 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
+import 'package:flutter_svg/flutter_svg.dart';
 
 class GradientHeaderAppBar extends StatelessWidget
     implements PreferredSizeWidget {
   final String greeting;
   final String user;
   final VoidCallback? onBack;
+  final bool showBackButton;
+  final bool showBranding; // New parameter for showing simplified branding
 
   const GradientHeaderAppBar({
-    Key? key,
+    super.key,
     this.greeting = 'Welcome back',
-    this.user = 'Agent user',
+    this.user = 'user',
     this.onBack,
-  }) : super(key: key);
+    this.showBackButton = true,
+    this.showBranding = false, // Default to false for backward compatibility
+  });
 
   @override
   Size get preferredSize => const Size.fromHeight(100);
@@ -31,38 +36,74 @@ class GradientHeaderAppBar extends StatelessWidget
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          IconButton(
-            icon: Icon(
-              Icons.arrow_back_ios_new_rounded,
-              color: app_colors.AppColors.neutral,
+          if (showBackButton) ...[
+            IconButton(
+              icon: Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: app_colors.AppColors.neutral,
+              ),
+              onPressed: onBack ?? () => Navigator.of(context).maybePop(),
             ),
-            onPressed: onBack ?? () => Navigator.of(context).maybePop(),
-          ),
-          const SizedBox(width: 8),
+            const SizedBox(width: 8),
+          ],
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  greeting,
-                  style: TextStyle(
-                    color: app_colors.AppColors.neutral,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w400,
+            child: showBranding
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SvgPicture.asset(
+                              'assets/landinglogo.svg',
+                              width: 40,
+                              height: 40,
+                              colorFilter: ColorFilter.mode(
+                                app_colors.AppColors.neutral,
+                                BlendMode.srcIn,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'RCV - Verification System',
+                              style: TextStyle(
+                                color: app_colors.AppColors.neutral,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (greeting.isNotEmpty)
+                        Text(
+                          greeting,
+                          style: TextStyle(
+                            color: app_colors.AppColors.neutral,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      if (greeting.isNotEmpty) const SizedBox(height: 2),
+                      if (user.isNotEmpty)
+                        Text(
+                          user,
+                          style: TextStyle(
+                            color: app_colors.AppColors.neutral,
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  user,
-                  style: TextStyle(
-                    color: app_colors.AppColors.neutral,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
           ),
         ],
       ),

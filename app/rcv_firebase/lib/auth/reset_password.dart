@@ -6,6 +6,7 @@ import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
 
 class ResetPasswordPage extends StatelessWidget {
   final TextEditingController emailController = TextEditingController();
+  final FocusNode emailFocusNode = FocusNode();
 
   ResetPasswordPage({super.key});
 
@@ -69,12 +70,13 @@ class ResetPasswordPage extends StatelessWidget {
                             ),
                             textAlign: TextAlign.center,
                           ),
-                          SizedBox(height: 32),
                           AnimatedFormField(
                             label: 'EMAIL',
                             hint: 'Email',
                             controller: emailController,
+                            focusNode: emailFocusNode,
                           ),
+
                           SizedBox(height: 24),
                           AppButtons(
                             text: 'Submit',

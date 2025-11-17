@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import jwt, { Jwt } from 'jsonwebtoken';
 import { UserRepo } from '../typeorm/data-source';
 import CustomError from '../utils/CustomError';
+import { verifyToken } from '../utils/JWT';
 
 /**
  * Middleware to verify user authentication using JWT.
@@ -28,25 +29,33 @@ export const verifyUser = async (
   next: NextFunction
 ) => {
   try {
+    // Try to get token from Authorization header first, then from cookie
+    let token: string | undefined;
+    
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.split(' ')[1];
+    } else if (req.cookies && req.cookies.token) {
+      // Fallback to cookie if no Authorization header
+      token = req.cookies.token;
+    }
+    
+    if (!token) {
       throw new CustomError(
         401,
-        'No token provided in the Authorization Header',
+        'No token provided in Authorization header or cookies',
         { success: false }
       );
     }
 
-    const token = authHeader.split(' ')[1];
-
     // Verify the token
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET as string
-    ) as jwt.JwtPayload;
+    const decoded = verifyToken(token);
+    if (!decoded || !decoded.success || !decoded.data) {
+      throw new CustomError(401, 'Invalid token', { success: false });
+    }
 
-    const user = await UserRepo.findOne({ where: { id: decoded.userId } });
-
+    const userId = decoded.data.sub;
+    const user = await UserRepo.findOne({ where: { _id: userId } });
     if (!user) throw new CustomError(404, 'User not found', { success: false });
 
     // Add the user to the request object
@@ -78,3 +87,31 @@ export const verifyUser = async (
     );
   }
 };
+
+export const isAdmin = (req: Request, res: Response, next: NextFunction) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ success: false, message: 'No token provided' });
+  }
+
+  try {
+    const decoded = verifyToken(token) as jwt.JwtPayload;
+    if (decoded.role !== true) { // Assuming role 'true' indicates admin
+      return res.status(403).json({ success: false, message: 'Access denied. Admins only.' });
+    }
+    next();
+  } catch (error) {
+    return res.status(401).json({ success: false, message: 'Invalid token' });
+  }
+  
+}
+
+const extractRole = (role: number) => {
+  switch (role) {
+    case 0:
+      return 'Admin';
+    case 1:
+      return 'Agent';
+  }
+}
+

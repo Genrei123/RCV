@@ -1,5 +1,5 @@
 name: rcv_firebase
-description: "A new Flutter project."
+description: "RCV - Product Verification System"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: "none" # Remove this line if you wish to publish to pub.dev
@@ -30,14 +30,20 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
+  graphql_flutter: ^5.2.0
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   firebase_core: ^2.24.0
+  firebase_remote_config: ^4.4.6
+  firebase_storage: ^11.6.5
   lucide_icons: ^0.257.0
   flutter_svg: ^2.2.0
-  dio: ^4.0.0
+  qr_flutter: ^4.1.0 # Added for QR code generation
+  dio: ^5.9.0
+  cookie_jar: ^4.0.8
+  dio_cookie_manager: ^3.1.1
+  http: ^1.1.0
   flutter_polyline_points: ^3.0.1
   google_maps_flutter: ^2.3.0
   mobile_scanner: ^3.5.2
@@ -45,8 +51,18 @@ dependencies:
   google_mlkit_text_recognition: 0.15.0
   image_picker: ^1.0.4
   google_mlkit_commons: ^0.11.0
-
-
+  flutter_dotenv: ^5.1.0  # For .env file support
+  path_provider: ^2.1.1
+  fl_chart: ^1.1.1
+  provider: ^6.1.5+1
+  google_fonts: ^6.3.1
+  footer:
+  location: ^8.0.1
+  shared_preferences: ^2.5.3
+  cloud_firestore: ^4.17.5
+  flutter_tesseract_ocr: 0.4.30
+  crop_your_image: ^2.0.0
+  image: ^4.2.0
 
 dev_dependencies:
   flutter_test:
@@ -58,6 +74,16 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.13.1
+
+# Flutter Launcher Icons configuration
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/RCV.png"
+  adaptive_icon_background: "#005440"
+  adaptive_icon_foreground: "assets/RCV.png"
+  remove_alpha_ios: true
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -69,8 +95,20 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  # To add assets to your application, add an assets section, like this:
   assets:
+    - .env
     - assets/
+    # for users.json
+    # - assets/users.json
+    # Explicitly include Tesseract traineddata files
+    - assets/tessdata/eng.traineddata
+    - assets/tessdata/fil.traineddata
+    - assets/tessdata/tgl.traineddata
+    - assets/tessdata/thai.traineddata
+    - assets/tessdata/vie.traineddata
+    - assets/tessdata/ind.traineddata
+    - assets/tessdata_config.json
 
   # To add assets to your application, add an assets section, like this:
   # assets:

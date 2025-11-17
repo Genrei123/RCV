@@ -3,3 +3,4 @@ node_modules
 
 # Don't push migration files
 17248**.ts
+dist

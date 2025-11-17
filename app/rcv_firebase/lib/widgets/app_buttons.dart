@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:rcv_firebase/themes/app_colors.dart';
 
 class AppButtons extends StatelessWidget {
   final Color textColor;
@@ -14,9 +13,11 @@ class AppButtons extends StatelessWidget {
 
   // Main button: filled, no border
   final String? subTitle;
+  final TextStyle? textStyle;
+  final TextStyle? subTitleStyle;
 
   const AppButtons.main({
-    Key? key,
+    super.key,
     required this.text,
     this.subTitle,
     required this.size,
@@ -26,13 +27,14 @@ class AppButtons extends StatelessWidget {
     this.onPressed,
     this.margin,
     this.contentAlignment = MainAxisAlignment.start,
+    this.textStyle,
+    this.subTitleStyle,
   }) : backgroundColor = color,
-       borderColor = Colors.transparent,
-       super(key: key);
+       borderColor = Colors.transparent;
 
   // Outline button: transparent, colored border
   const AppButtons.outline({
-    Key? key,
+    super.key,
     required this.text,
     required this.size,
     required this.textColor,
@@ -42,13 +44,14 @@ class AppButtons extends StatelessWidget {
     this.margin,
     this.contentAlignment = MainAxisAlignment.start,
     this.subTitle,
+    this.textStyle,
+    this.subTitleStyle,
   }) : backgroundColor = Colors.transparent,
-       borderColor = outlineColor,
-       super(key: key);
+       borderColor = outlineColor;
 
   // Default constructor (for custom use)
   const AppButtons({
-    Key? key,
+    super.key,
     required this.text,
     required this.size,
     required this.textColor,
@@ -59,7 +62,9 @@ class AppButtons extends StatelessWidget {
     this.onPressed,
     this.margin,
     this.contentAlignment = MainAxisAlignment.center,
-  }) : super(key: key);
+    this.textStyle,
+    this.subTitleStyle,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -89,28 +94,29 @@ class AppButtons extends StatelessWidget {
             children: [
               icon,
               const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    text,
+                    style:
+                        textStyle ?? TextStyle(color: textColor, fontSize: 16),
+                  ),
+                  if (subTitle != null)
                     Text(
-                      text,
-                      style: TextStyle(color: textColor, fontSize: 16),
+                      subTitle!,
+                      style:
+                          subTitleStyle ??
+                          TextStyle(
+                            color: textColor.withOpacity(0.8),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
+                          ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    if (subTitle != null)
-                      Text(
-                        subTitle!,
-                        style: TextStyle(
-                          color: textColor.withOpacity(0.8),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w400,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                  ],
-                ),
+                ],
               ),
             ],
           ),

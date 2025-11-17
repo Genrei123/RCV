@@ -1,0 +1,2008 @@
+{
+  "reports": [
+    {
+      "_id": "d7211186-5a16-48a6-9f07-45ef6ae2dc32",
+      "lat": 17.956895,
+      "long": 120.686817,
+      "product": "STEAMED BROTH BITES (DUCK + EGG YOLK)",
+      "scannedBy": "Eugene Gomez",
+      "scannedAt": "2025-10-27T21:48:20Z",
+      "scanResult": 1,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "b4c927db-6c87-4027-a98c-f9c1852723e7",
+      "lat": 14.035087,
+      "long": 120.614149,
+      "product": "AROMEX PRO",
+      "scannedBy": "Lara Mendoza",
+      "scannedAt": "2025-10-16T00:45:46Z",
+      "scanResult": 1,
+      "remarks": "Awaiting inspection"
+    },
+    {
+      "_id": "7cf6e100-50f7-4e9e-8e09-f7deea19c20a",
+      "lat": 16.853745,
+      "long": 119.954889,
+      "product": "PROPHORCE SR 130",
+      "scannedBy": "Jj Mcdal Nabong",
+      "scannedAt": "2025-10-09T20:28:57Z",
+      "scanResult": 1,
+      "remarks": "Awaiting inspection"
+    },
+    {
+      "_id": "49770d7b-4d18-4d3b-a246-0a4dee821768",
+      "lat": 17.606605,
+      "long": 120.812504,
+      "product": "PROPHORCE SR 130",
+      "scannedBy": "Jj Mcdal Nabong",
+      "scannedAt": "2025-10-28T14:20:52Z",
+      "scanResult": 1,
+      "remarks": "Matched database record"
+    },
+    {
+      "_id": "6844f804-ce59-4ccd-b865-56293932494a",
+      "lat": 12.7603,
+      "long": 123.888737,
+      "product": "BIOSTRONG COMFORT",
+      "scannedBy": "Jj Mcdal Nabong",
+      "scannedAt": "2025-09-27T14:26:31Z",
+      "scanResult": 0,
+      "remarks": "Under manual review"
+    },
+    {
+      "_id": "99bd05d1-6dfc-4e05-ac94-b08584dec7b8",
+      "lat": 15.780699,
+      "long": 120.669389,
+      "product": "CANNED CAT FOOD - SARDINE FLAVOR",
+      "scannedBy": "Eugene Gomez",
+      "scannedAt": "2025-09-30T22:06:12Z",
+      "scanResult": 2,
+      "remarks": "Pending verification"
+    },
+    {
+      "_id": "045fffcd-3e35-401d-9756-a2b8cdbf7395",
+      "lat": 14.151426,
+      "long": 122.71633,
+      "product": "ALL MEAT SHREDDY(CHEESE & EGG YOLK)",
+      "scannedBy": "Karina Jimin",
+      "scannedAt": "2025-10-01T05:01:26Z",
+      "scanResult": 2,
+      "remarks": "Product verified authentic"
+    },
+    {
+      "_id": "d6117eb9-ddfa-4ab0-86bf-2b432d34e15f",
+      "lat": 15.342467,
+      "long": 120.899,
+      "product": "CANNED CAT FOOD - CHICKEN FLAVOR",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-09-08T02:47:56Z",
+      "scanResult": 1,
+      "remarks": "Under manual review"
+    },
+    {
+      "_id": "2392be9a-705d-4336-ac4c-0994617866b4",
+      "lat": 15.851823,
+      "long": 121.033462,
+      "product": "CANNED CAT FOOD - SARDINE FLAVOR",
+      "scannedBy": "Eugene Gomez",
+      "scannedAt": "2025-10-23T11:17:35Z",
+      "scanResult": 1,
+      "remarks": "Scan successful"
+    },
+    {
+      "_id": "b4ae6f2d-37eb-4286-bc13-3f702c0df8cd",
+      "lat": 16.388565,
+      "long": 120.368131,
+      "product": "BIOSTRONG COMFORT",
+      "scannedBy": "Lara Mendoza",
+      "scannedAt": "2025-10-31T18:11:02Z",
+      "scanResult": 1,
+      "remarks": "Under manual review"
+    },
+    {
+      "_id": "db94731d-f96a-4bb9-a005-3ea9d8dcd5f8",
+      "lat": 15.123784,
+      "long": 121.052274,
+      "product": "CHICKEN BLUEBERRY FLAVOUR STICK",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-09-09T13:47:20Z",
+      "scanResult": 0,
+      "remarks": "Counterfeit suspected"
+    },
+    {
+      "_id": "2d473c8e-fdc6-4955-832b-7267586ee020",
+      "lat": 13.145533,
+      "long": 123.688368,
+      "product": "PROPHORCE SR 130",
+      "scannedBy": "Karina Jimin",
+      "scannedAt": "2025-11-01T20:31:14Z",
+      "scanResult": 1,
+      "remarks": "Product verified authentic"
+    },
+    {
+      "_id": "b8f0c25c-1c78-4732-9ca4-bb580ad305dd",
+      "lat": 15.804702,
+      "long": 120.533333,
+      "product": "CHICKEN BLUEBERRY FLAVOUR STICK",
+      "scannedBy": "Lara Mendoza",
+      "scannedAt": "2025-10-27T03:13:53Z",
+      "scanResult": 1,
+      "remarks": "Matched database record"
+    },
+    {
+      "_id": "719a2d99-29dd-4261-9c16-56562d27b1f4",
+      "lat": 16.094642,
+      "long": 120.148921,
+      "product": "BIOSTRONG COMFORT",
+      "scannedBy": "Rico Santos",
+      "scannedAt": "2025-09-22T08:17:20Z",
+      "scanResult": 2,
+      "remarks": "Pending verification"
+    },
+    {
+      "_id": "7256964a-82b5-4001-9a27-430574430ab5",
+      "lat": 13.108155,
+      "long": 123.699673,
+      "product": "AROMEX PRO",
+      "scannedBy": "Genrey Cristobal",
+      "scannedAt": "2025-09-20T16:26:11Z",
+      "scanResult": 2,
+      "remarks": "Product verified authentic"
+    },
+    {
+      "_id": "1998634a-b85c-494f-8ba7-11931a50b383",
+      "lat": 18.187245,
+      "long": 120.245681,
+      "product": "CANNED CAT FOOD - SARDINE FLAVOR",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-10-04T20:33:35Z",
+      "scanResult": 0,
+      "remarks": "Passed authentication"
+    },
+    {
+      "_id": "410d5545-9007-4de2-88c4-e0adf0598d52",
+      "lat": 15.436155,
+      "long": 120.277688,
+      "product": "ALL MEAT SHREDDY(CHEESE & EGG YOLK)",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-09-11T17:16:36Z",
+      "scanResult": 2,
+      "remarks": "Counterfeit suspected"
+    },
+    {
+      "_id": "065f505b-bc78-47c9-a3d1-efa783379a15",
+      "lat": 17.018764,
+      "long": 120.011514,
+      "product": "STEAMED BROTH BITES (DUCK + EGG YOLK)",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-11-02T21:27:58Z",
+      "scanResult": 1,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "ab179300-ccca-4121-a384-25a9574ae807",
+      "lat": 13.794481,
+      "long": 123.377554,
+      "product": "PROPHORCE SR 130",
+      "scannedBy": "Lara Mendoza",
+      "scannedAt": "2025-10-11T06:07:58Z",
+      "scanResult": 1,
+      "remarks": "Product verified authentic"
+    },
+    {
+      "_id": "d168a8e0-7853-4f82-a731-9c4f1ee11671",
+      "lat": 13.508828,
+      "long": 120.912577,
+      "product": "STEAMED BROTH BITES (DUCK + EGG YOLK)",
+      "scannedBy": "Eugene Gomez",
+      "scannedAt": "2025-11-01T03:09:53Z",
+      "scanResult": 0,
+      "remarks": "Passed authentication"
+    },
+    {
+      "_id": "3ea4ade6-dc3a-4347-9c47-f27f3b57e039",
+      "lat": 17.218586,
+      "long": 121.33756,
+      "product": "CO-BIND (FG)",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-10-07T01:57:15Z",
+      "scanResult": 0,
+      "remarks": "Product verified authentic"
+    },
+    {
+      "_id": "6867d2b2-c2f4-4477-a1b1-e24bb658265c",
+      "lat": 15.020773,
+      "long": 120.685911,
+      "product": "ALL MEAT SHREDDY(CHEESE & EGG YOLK)",
+      "scannedBy": "Eugene Gomez",
+      "scannedAt": "2025-10-20T22:06:24Z",
+      "scanResult": 1,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "ef789431-24fb-45d5-88be-e70f8b0e8729",
+      "lat": 16.340246,
+      "long": 120.527221,
+      "product": "ALL MEAT SHREDDY(CHEESE & EGG YOLK)",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-09-10T06:13:40Z",
+      "scanResult": 2,
+      "remarks": "Pending verification"
+    },
+    {
+      "_id": "981fb284-54bd-4753-a391-d436340a6f16",
+      "lat": 17.429372,
+      "long": 120.712205,
+      "product": "CANNED CAT FOOD - CHICKEN FLAVOR",
+      "scannedBy": "Eugene Gomez",
+      "scannedAt": "2025-09-23T11:13:07Z",
+      "scanResult": 2,
+      "remarks": "Scan successful"
+    },
+    {
+      "_id": "dab6d965-d511-4545-9f8e-ca631d11614d",
+      "lat": 16.417291,
+      "long": 120.087726,
+      "product": "CHICKEN BLUEBERRY FLAVOUR STICK",
+      "scannedBy": "Karina Jimin",
+      "scannedAt": "2025-10-28T10:21:03Z",
+      "scanResult": 0,
+      "remarks": "Passed authentication"
+    },
+    {
+      "_id": "2d701e51-fa35-434a-9456-9a4e2e5f9d38",
+      "lat": 13.285525,
+      "long": 124.023697,
+      "product": "CANNED CAT FOOD - CHICKEN FLAVOR",
+      "scannedBy": "Eugene Gomez",
+      "scannedAt": "2025-10-14T11:00:48Z",
+      "scanResult": 1,
+      "remarks": "Scan successful"
+    },
+    {
+      "_id": "5cd46e69-72ff-4e48-a81d-07e754b0ffc3",
+      "lat": 15.507399,
+      "long": 120.282773,
+      "product": "CO-BIND (FG)",
+      "scannedBy": "Karina Jimin",
+      "scannedAt": "2025-09-30T17:58:04Z",
+      "scanResult": 1,
+      "remarks": "Awaiting inspection"
+    },
+    {
+      "_id": "dc875719-d0cc-481d-93e4-4746a866fd72",
+      "lat": 15.046555,
+      "long": 120.537025,
+      "product": "ALL MEAT SHREDDY(CHEESE & EGG YOLK)",
+      "scannedBy": "Eugene Gomez",
+      "scannedAt": "2025-09-23T10:29:38Z",
+      "scanResult": 1,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "d4349e23-54e1-4d2b-9055-ad180fffb8ea",
+      "lat": 17.611976,
+      "long": 120.609878,
+      "product": "CO-BIND (FG)",
+      "scannedBy": "Jj Mcdal Nabong",
+      "scannedAt": "2025-10-31T17:13:56Z",
+      "scanResult": 1,
+      "remarks": "Product verified authentic"
+    },
+    {
+      "_id": "4f98db79-3957-444d-8876-35d3765f65c1",
+      "lat": 14.626101,
+      "long": 120.7632,
+      "product": "AROMEX PRO",
+      "scannedBy": "Jj Mcdal Nabong",
+      "scannedAt": "2025-11-01T18:31:56Z",
+      "scanResult": 0,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "8b3a827f-4713-4aac-b346-0c5d33aa7c26",
+      "lat": 14.884559,
+      "long": 120.771594,
+      "product": "CO-BIND (FG)",
+      "scannedBy": "Rico Santos",
+      "scannedAt": "2025-09-12T23:02:06Z",
+      "scanResult": 1,
+      "remarks": "Product verified authentic"
+    },
+    {
+      "_id": "bd1d27fa-a591-4b1f-af61-79ccb97a8d44",
+      "lat": 14.333333,
+      "long": 121.178773,
+      "product": "CANNED CAT FOOD - CHICKEN FLAVOR",
+      "scannedBy": "Genrey Cristobal",
+      "scannedAt": "2025-10-13T10:14:52Z",
+      "scanResult": 0,
+      "remarks": "Awaiting inspection"
+    },
+    {
+      "_id": "06fe3998-469a-44cb-8f44-bc0407a767bf",
+      "lat": 13.983278,
+      "long": 120.673589,
+      "product": "ALL MEAT SHREDDY(CHEESE & EGG YOLK)",
+      "scannedBy": "Rico Santos",
+      "scannedAt": "2025-10-29T15:52:12Z",
+      "scanResult": 0,
+      "remarks": "Pending verification"
+    },
+    {
+      "_id": "830d8781-6fe2-40b0-8f10-671f76cf432d",
+      "lat": 13.41228,
+      "long": 123.575833,
+      "product": "CHICKEN BLUEBERRY FLAVOUR STICK",
+      "scannedBy": "Eugene Gomez",
+      "scannedAt": "2025-10-10T21:03:37Z",
+      "scanResult": 1,
+      "remarks": "Counterfeit suspected"
+    },
+    {
+      "_id": "1d23650f-1a7a-44c1-abb0-9a61d84d0b41",
+      "lat": 13.939786,
+      "long": 121.15881,
+      "product": "STEAMED BROTH BITES (DUCK + EGG YOLK)",
+      "scannedBy": "Jj Mcdal Nabong",
+      "scannedAt": "2025-10-28T20:19:01Z",
+      "scanResult": 1,
+      "remarks": "Pending verification"
+    },
+    {
+      "_id": "6c848fc4-f783-49e6-bbfe-d1d0c799bb88",
+      "lat": 16.967341,
+      "long": 120.531075,
+      "product": "AROMEX PRO",
+      "scannedBy": "Genrey Cristobal",
+      "scannedAt": "2025-10-02T08:32:22Z",
+      "scanResult": 2,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "aa6e3fd1-f254-4649-83bb-d3ed771ae4b9",
+      "lat": 14.720314,
+      "long": 120.771786,
+      "product": "ALL MEAT SHREDDY(CHEESE & EGG YOLK)",
+      "scannedBy": "Genrey Cristobal",
+      "scannedAt": "2025-09-09T22:22:12Z",
+      "scanResult": 0,
+      "remarks": "Under manual review"
+    },
+    {
+      "_id": "d46cad82-8d45-4947-93f8-ff60309464e5",
+      "lat": 15.470013,
+      "long": 120.950849,
+      "product": "BIOSTRONG COMFORT",
+      "scannedBy": "Eugene Gomez",
+      "scannedAt": "2025-10-17T21:33:04Z",
+      "scanResult": 2,
+      "remarks": "Under manual review"
+    },
+    {
+      "_id": "18a4d09b-cd13-483c-aa1d-eff59ab3c3b0",
+      "lat": 13.598115,
+      "long": 123.208886,
+      "product": "AROMEX PRO",
+      "scannedBy": "Rico Santos",
+      "scannedAt": "2025-09-08T11:57:05Z",
+      "scanResult": 1,
+      "remarks": "Product verified authentic"
+    },
+    {
+      "_id": "3a0169df-dbf1-4687-bdf9-8094b0776c66",
+      "lat": 16.204246,
+      "long": 120.191086,
+      "product": "CO-BIND (FG)",
+      "scannedBy": "Genrey Cristobal",
+      "scannedAt": "2025-09-25T09:30:49Z",
+      "scanResult": 2,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "59ee5d64-529a-453c-ba48-7c385cd9bec5",
+      "lat": 17.112405,
+      "long": 122.114521,
+      "product": "PROPHORCE SR 130",
+      "scannedBy": "Rico Santos",
+      "scannedAt": "2025-09-20T00:08:07Z",
+      "scanResult": 0,
+      "remarks": "Counterfeit suspected"
+    },
+    {
+      "_id": "415177c0-ab6c-49d3-b6c7-544e19279b94",
+      "lat": 15.592808,
+      "long": 120.525508,
+      "product": "CANNED CAT FOOD - SARDINE FLAVOR",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-10-14T23:21:40Z",
+      "scanResult": 2,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "305a5e86-376a-4f53-92c7-8436fde29eac",
+      "lat": 15.66115,
+      "long": 120.867288,
+      "product": "CO-BIND (FG)",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-10-20T16:47:14Z",
+      "scanResult": 0,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "a29691d6-968d-494f-a44a-9e45c227bdbf",
+      "lat": 14.045083,
+      "long": 121.392491,
+      "product": "CANNED CAT FOOD - CHICKEN FLAVOR",
+      "scannedBy": "Jj Mcdal Nabong",
+      "scannedAt": "2025-09-23T18:01:30Z",
+      "scanResult": 1,
+      "remarks": "Matched database record"
+    },
+    {
+      "_id": "5110e39f-676d-4e33-87e8-9006f181fccf",
+      "lat": 15.9002,
+      "long": 120.774212,
+      "product": "STEAMED BROTH BITES (DUCK + EGG YOLK)",
+      "scannedBy": "Karina Jimin",
+      "scannedAt": "2025-10-27T01:28:23Z",
+      "scanResult": 1,
+      "remarks": "Passed authentication"
+    },
+    {
+      "_id": "e316dad9-57dd-4017-9a9a-a79f45cc5ae5",
+      "lat": 16.187394,
+      "long": 120.668531,
+      "product": "BIOSTRONG COMFORT",
+      "scannedBy": "Jj Mcdal Nabong",
+      "scannedAt": "2025-09-15T12:35:46Z",
+      "scanResult": 2,
+      "remarks": "Under manual review"
+    },
+    {
+      "_id": "3d5bd89c-f179-4911-ae13-2bd362611b20",
+      "lat": 14.50831,
+      "long": 121.139288,
+      "product": "STEAMED BROTH BITES (DUCK + EGG YOLK)",
+      "scannedBy": "Jj Mcdal Nabong",
+      "scannedAt": "2025-10-12T09:34:13Z",
+      "scanResult": 2,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "0aa68692-48e1-4604-9c3a-794eac275a0d",
+      "lat": 15.476163,
+      "long": 120.974195,
+      "product": "STEAMED BROTH BITES (DUCK + EGG YOLK)",
+      "scannedBy": "Lara Mendoza",
+      "scannedAt": "2025-09-24T03:07:30Z",
+      "scanResult": 1,
+      "remarks": "Under manual review"
+    },
+    {
+      "_id": "fd55a933-d6fc-4bec-974c-f7aa3a3d2b04",
+      "lat": 17.994294,
+      "long": 121.83774,
+      "product": "CHICKEN BLUEBERRY FLAVOUR STICK",
+      "scannedBy": "Lara Mendoza",
+      "scannedAt": "2025-10-04T03:48:05Z",
+      "scanResult": 2,
+      "remarks": "Awaiting inspection"
+    },
+    {
+      "_id": "8e689958-9846-426b-90cd-e5ef73458def",
+      "lat": 16.77246,
+      "long": 121.58489,
+      "product": "AROMEX PRO",
+      "scannedBy": "Eugene Gomez",
+      "scannedAt": "2025-10-15T19:42:39Z",
+      "scanResult": 2,
+      "remarks": "Under manual review"
+    },
+    {
+      "_id": "1c8b4e27-6723-4205-a2ec-5b117d7a4976",
+      "lat": 16.566925,
+      "long": 121.830995,
+      "product": "PROPHORCE SR 130",
+      "scannedBy": "Rico Santos",
+      "scannedAt": "2025-09-05T00:56:45Z",
+      "scanResult": 1,
+      "remarks": "Awaiting inspection"
+    },
+    {
+      "_id": "757af827-643e-4af1-b6b3-2432e961c1ab",
+      "lat": 15.217186,
+      "long": 120.723835,
+      "product": "ALL MEAT SHREDDY(CHEESE & EGG YOLK)",
+      "scannedBy": "Karina Jimin",
+      "scannedAt": "2025-10-17T22:18:25Z",
+      "scanResult": 2,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "dca5933d-13b2-40d6-bb76-31ca1aeb4fe3",
+      "lat": 14.572463,
+      "long": 121.407522,
+      "product": "AROMEX PRO",
+      "scannedBy": "Lara Mendoza",
+      "scannedAt": "2025-09-13T05:35:16Z",
+      "scanResult": 1,
+      "remarks": "Product verified authentic"
+    },
+    {
+      "_id": "7206d3da-f337-4b1e-b89c-8c58d0534e4d",
+      "lat": 16.711969,
+      "long": 122.055381,
+      "product": "CANNED CAT FOOD - CHICKEN FLAVOR",
+      "scannedBy": "Lara Mendoza",
+      "scannedAt": "2025-10-05T03:19:47Z",
+      "scanResult": 0,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "4082ccf7-e39e-4518-a61c-ffcc1b7d76b1",
+      "lat": 16.601291,
+      "long": 120.311408,
+      "product": "CHICKEN BLUEBERRY FLAVOUR STICK",
+      "scannedBy": "Karina Jimin",
+      "scannedAt": "2025-10-15T05:43:03Z",
+      "scanResult": 2,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "c77709ff-bb68-4ce2-b2f5-6eaaccadb030",
+      "lat": 14.302886,
+      "long": 121.140452,
+      "product": "CO-BIND (FG)",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-09-15T08:21:59Z",
+      "scanResult": 1,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "b2e3d2d0-ead5-456d-b892-f7c6a00bdcb4",
+      "lat": 16.196821,
+      "long": 120.280695,
+      "product": "STEAMED BROTH BITES (DUCK + EGG YOLK)",
+      "scannedBy": "Eugene Gomez",
+      "scannedAt": "2025-09-16T18:47:09Z",
+      "scanResult": 1,
+      "remarks": "Counterfeit suspected"
+    },
+    {
+      "_id": "ec543cd0-0ceb-42bb-baf4-78b9786d414a",
+      "lat": 14.195703,
+      "long": 121.144207,
+      "product": "ALL MEAT SHREDDY(CHEESE & EGG YOLK)",
+      "scannedBy": "Rico Santos",
+      "scannedAt": "2025-10-24T00:13:06Z",
+      "scanResult": 1,
+      "remarks": "Product verified authentic"
+    },
+    {
+      "_id": "189bc191-48ee-4ef6-a34f-83835f818248",
+      "lat": 13.97589,
+      "long": 121.035507,
+      "product": "BIOSTRONG COMFORT",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-09-29T00:06:37Z",
+      "scanResult": 2,
+      "remarks": "Awaiting inspection"
+    },
+    {
+      "_id": "3cd1cc7b-069c-4f19-ba92-63829750fc2c",
+      "lat": 13.976721,
+      "long": 121.086985,
+      "product": "BIOSTRONG COMFORT",
+      "scannedBy": "Eugene Gomez",
+      "scannedAt": "2025-10-01T09:08:31Z",
+      "scanResult": 1,
+      "remarks": "Matched database record"
+    },
+    {
+      "_id": "aae6bab9-7fe7-48f8-96e4-f33209f30b14",
+      "lat": 13.309348,
+      "long": 123.080632,
+      "product": "AROMEX PRO",
+      "scannedBy": "Lara Mendoza",
+      "scannedAt": "2025-09-25T18:32:46Z",
+      "scanResult": 0,
+      "remarks": "Under manual review"
+    },
+    {
+      "_id": "7b336aa4-5271-4f4f-9d50-0d37bc518ca2",
+      "lat": 14.808432,
+      "long": 119.888039,
+      "product": "PROPHORCE SR 130",
+      "scannedBy": "Karina Jimin",
+      "scannedAt": "2025-10-31T17:00:13Z",
+      "scanResult": 2,
+      "remarks": "Passed authentication"
+    },
+    {
+      "_id": "0d906478-5165-49d7-a8bd-58039e7befcd",
+      "lat": 12.703006,
+      "long": 123.610183,
+      "product": "PROPHORCE SR 130",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-10-15T16:23:25Z",
+      "scanResult": 2,
+      "remarks": "Product verified authentic"
+    },
+    {
+      "_id": "965bfc3a-4bf2-423f-b3d4-2db8be4b516f",
+      "lat": 14.110107,
+      "long": 122.741642,
+      "product": "ALL MEAT SHREDDY(CHEESE & EGG YOLK)",
+      "scannedBy": "Jj Mcdal Nabong",
+      "scannedAt": "2025-10-12T18:06:10Z",
+      "scanResult": 1,
+      "remarks": "Under manual review"
+    },
+    {
+      "_id": "fcba3438-d9a7-4d9c-a859-c2798c82682a",
+      "lat": 16.398087,
+      "long": 120.74525,
+      "product": "STEAMED BROTH BITES (DUCK + EGG YOLK)",
+      "scannedBy": "Jj Mcdal Nabong",
+      "scannedAt": "2025-10-13T06:08:01Z",
+      "scanResult": 2,
+      "remarks": "Passed authentication"
+    },
+    {
+      "_id": "d3271b4c-edfd-4bbd-a91a-76764aefe6a5",
+      "lat": 17.28773,
+      "long": 121.692429,
+      "product": "CO-BIND (FG)",
+      "scannedBy": "Genrey Cristobal",
+      "scannedAt": "2025-10-11T19:22:33Z",
+      "scanResult": 1,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "fe91579c-cc14-4f47-aefe-22c175873ec3",
+      "lat": 13.991707,
+      "long": 120.949514,
+      "product": "PROPHORCE SR 130",
+      "scannedBy": "Genrey Cristobal",
+      "scannedAt": "2025-09-12T22:51:19Z",
+      "scanResult": 1,
+      "remarks": "Passed authentication"
+    },
+    {
+      "_id": "40a755a6-ef55-4578-938c-43f3fad466cb",
+      "lat": 13.650715,
+      "long": 123.169353,
+      "product": "CHICKEN BLUEBERRY FLAVOUR STICK",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-09-08T21:48:29Z",
+      "scanResult": 0,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "3f3f0633-6ddf-4a97-949d-8a0edc37fd81",
+      "lat": 15.254402,
+      "long": 120.34929,
+      "product": "ALL MEAT SHREDDY(CHEESE & EGG YOLK)",
+      "scannedBy": "Lara Mendoza",
+      "scannedAt": "2025-09-16T02:32:48Z",
+      "scanResult": 2,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "c008dc96-73fd-4b3e-8290-727a93916e0a",
+      "lat": 13.996808,
+      "long": 120.75931,
+      "product": "CHICKEN BLUEBERRY FLAVOUR STICK",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-09-20T21:36:07Z",
+      "scanResult": 1,
+      "remarks": "Pending verification"
+    },
+    {
+      "_id": "4d9ab863-342b-4b35-a8cd-86909dd2d1bc",
+      "lat": 13.136417,
+      "long": 123.754241,
+      "product": "PROPHORCE SR 130",
+      "scannedBy": "Karina Jimin",
+      "scannedAt": "2025-09-24T06:08:30Z",
+      "scanResult": 0,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "ad8b3921-71c2-45b0-ba55-1a6a282ca4a9",
+      "lat": 16.223724,
+      "long": 120.761833,
+      "product": "CHICKEN BLUEBERRY FLAVOUR STICK",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-10-29T22:43:06Z",
+      "scanResult": 0,
+      "remarks": "Matched database record"
+    },
+    {
+      "_id": "0efb725a-6dca-402f-aebe-adb3f2970c4e",
+      "lat": 13.507114,
+      "long": 123.191265,
+      "product": "CANNED CAT FOOD - SARDINE FLAVOR",
+      "scannedBy": "Jj Mcdal Nabong",
+      "scannedAt": "2025-10-15T18:48:28Z",
+      "scanResult": 1,
+      "remarks": "Pending verification"
+    },
+    {
+      "_id": "e862792c-847e-45b1-9a6c-cb4f1d7d1c12",
+      "lat": 14.961127,
+      "long": 120.577837,
+      "product": "AROMEX PRO",
+      "scannedBy": "Karina Jimin",
+      "scannedAt": "2025-09-22T02:25:43Z",
+      "scanResult": 2,
+      "remarks": "Product verified authentic"
+    },
+    {
+      "_id": "956fdd20-1b51-4f32-aabd-eb1ab4859feb",
+      "lat": 13.260479,
+      "long": 123.635956,
+      "product": "ALL MEAT SHREDDY(CHEESE & EGG YOLK)",
+      "scannedBy": "Karina Jimin",
+      "scannedAt": "2025-10-17T06:57:43Z",
+      "scanResult": 2,
+      "remarks": "Awaiting inspection"
+    },
+    {
+      "_id": "1825ae38-401f-423d-a33b-3e9e9a319d0f",
+      "lat": 14.897158,
+      "long": 120.612197,
+      "product": "ALL MEAT SHREDDY(CHEESE & EGG YOLK)",
+      "scannedBy": "Eugene Gomez",
+      "scannedAt": "2025-10-20T02:50:57Z",
+      "scanResult": 2,
+      "remarks": "Under manual review"
+    },
+    {
+      "_id": "47d26721-d722-400a-8b6d-990b674887a5",
+      "lat": 14.620557,
+      "long": 120.96511,
+      "product": "CANNED CAT FOOD - CHICKEN FLAVOR",
+      "scannedBy": "Genrey Cristobal",
+      "scannedAt": "2025-09-30T02:00:17Z",
+      "scanResult": 1,
+      "remarks": "Awaiting inspection"
+    },
+    {
+      "_id": "e4bacb16-9ed8-4638-b083-229161eae725",
+      "lat": 13.919342,
+      "long": 122.505136,
+      "product": "CANNED CAT FOOD - CHICKEN FLAVOR",
+      "scannedBy": "Jj Mcdal Nabong",
+      "scannedAt": "2025-09-28T10:24:01Z",
+      "scanResult": 2,
+      "remarks": "Under manual review"
+    },
+    {
+      "_id": "2d795569-95f3-4612-aa51-6037b3027792",
+      "lat": 13.707692,
+      "long": 121.588184,
+      "product": "ALL MEAT SHREDDY(CHEESE & EGG YOLK)",
+      "scannedBy": "Karina Jimin",
+      "scannedAt": "2025-09-06T16:10:46Z",
+      "scanResult": 0,
+      "remarks": "Awaiting inspection"
+    },
+    {
+      "_id": "2a591d64-6414-4ca6-97e2-1b104e152edd",
+      "lat": 14.802875,
+      "long": 120.798164,
+      "product": "CANNED CAT FOOD - SARDINE FLAVOR",
+      "scannedBy": "Karina Jimin",
+      "scannedAt": "2025-10-28T17:41:07Z",
+      "scanResult": 2,
+      "remarks": "Matched database record"
+    },
+    {
+      "_id": "4d4e58e0-dbae-4670-9e5b-5a5087a78e72",
+      "lat": 14.88445,
+      "long": 120.148629,
+      "product": "ALL MEAT SHREDDY(CHEESE & EGG YOLK)",
+      "scannedBy": "Genrey Cristobal",
+      "scannedAt": "2025-10-04T18:29:00Z",
+      "scanResult": 1,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "415896ce-4f47-46a7-a4ce-1640e9d9b494",
+      "lat": 16.236293,
+      "long": 120.814593,
+      "product": "AROMEX PRO",
+      "scannedBy": "Eugene Gomez",
+      "scannedAt": "2025-09-26T00:12:45Z",
+      "scanResult": 2,
+      "remarks": "Scan successful"
+    },
+    {
+      "_id": "c0431f98-419a-4231-b9ae-ecf14400a913",
+      "lat": 15.908946,
+      "long": 120.995173,
+      "product": "BIOSTRONG COMFORT",
+      "scannedBy": "Jj Mcdal Nabong",
+      "scannedAt": "2025-09-23T20:19:36Z",
+      "scanResult": 1,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "7991871e-4621-4287-a5f7-024a70438468",
+      "lat": 14.238734,
+      "long": 121.074422,
+      "product": "BIOSTRONG COMFORT",
+      "scannedBy": "Jj Mcdal Nabong",
+      "scannedAt": "2025-09-10T07:03:17Z",
+      "scanResult": 2,
+      "remarks": "Awaiting inspection"
+    },
+    {
+      "_id": "c3ead3e7-7ad7-4068-93f9-532098f42901",
+      "lat": 16.844113,
+      "long": 119.955229,
+      "product": "CO-BIND (FG)",
+      "scannedBy": "Rico Santos",
+      "scannedAt": "2025-10-02T14:33:31Z",
+      "scanResult": 1,
+      "remarks": "Scan successful"
+    },
+    {
+      "_id": "d4330eec-e32f-4896-b8af-880f6644743f",
+      "lat": 14.175548,
+      "long": 120.835531,
+      "product": "ALL MEAT SHREDDY(CHEESE & EGG YOLK)",
+      "scannedBy": "Jj Mcdal Nabong",
+      "scannedAt": "2025-09-11T08:15:40Z",
+      "scanResult": 1,
+      "remarks": "Scan successful"
+    },
+    {
+      "_id": "e337e6c3-59be-4a96-bd56-b6551b3480af",
+      "lat": 17.783406,
+      "long": 121.413454,
+      "product": "BIOSTRONG COMFORT",
+      "scannedBy": "Jj Mcdal Nabong",
+      "scannedAt": "2025-09-29T02:19:36Z",
+      "scanResult": 0,
+      "remarks": "Product verified authentic"
+    },
+    {
+      "_id": "c6f54b4e-7436-495e-93cf-6fbebce220af",
+      "lat": 15.100767,
+      "long": 120.035118,
+      "product": "STEAMED BROTH BITES (DUCK + EGG YOLK)",
+      "scannedBy": "Karina Jimin",
+      "scannedAt": "2025-10-18T17:46:29Z",
+      "scanResult": 1,
+      "remarks": "Awaiting inspection"
+    },
+    {
+      "_id": "ec9450a6-7448-4ead-8853-2eb09b5dd9d3",
+      "lat": 12.972542,
+      "long": 123.852525,
+      "product": "CHICKEN BLUEBERRY FLAVOUR STICK",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-09-25T04:10:51Z",
+      "scanResult": 2,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "232ef383-b494-4f02-a3df-cfb4d83163a1",
+      "lat": 15.171351,
+      "long": 120.679432,
+      "product": "CHICKEN BLUEBERRY FLAVOUR STICK",
+      "scannedBy": "Eugene Gomez",
+      "scannedAt": "2025-09-05T06:14:05Z",
+      "scanResult": 1,
+      "remarks": "Scan successful"
+    },
+    {
+      "_id": "629171b3-f073-458e-a7ac-7ba5e4b5844e",
+      "lat": 13.700076,
+      "long": 122.755294,
+      "product": "BIOSTRONG COMFORT",
+      "scannedBy": "Lara Mendoza",
+      "scannedAt": "2025-10-19T01:58:10Z",
+      "scanResult": 0,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "f02ebb2e-23c5-42fc-9621-ba1a88d75c8b",
+      "lat": 15.592552,
+      "long": 121.118065,
+      "product": "CANNED CAT FOOD - CHICKEN FLAVOR",
+      "scannedBy": "Karina Jimin",
+      "scannedAt": "2025-09-16T03:26:53Z",
+      "scanResult": 2,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "2b4e61a8-b11b-4511-b7ca-fe9c67868077",
+      "lat": 12.772169,
+      "long": 123.279613,
+      "product": "CO-BIND (FG)",
+      "scannedBy": "Eugene Gomez",
+      "scannedAt": "2025-10-04T20:47:14Z",
+      "scanResult": 2,
+      "remarks": "Awaiting inspection"
+    },
+    {
+      "_id": "fababa6c-aaa2-4e0d-8f90-3f384bf035b7",
+      "lat": 13.92641,
+      "long": 121.23806,
+      "product": "BIOSTRONG COMFORT",
+      "scannedBy": "Rico Santos",
+      "scannedAt": "2025-10-27T10:14:53Z",
+      "scanResult": 1,
+      "remarks": "Scan successful"
+    },
+    {
+      "_id": "265fffab-a27e-48ef-ab4b-9dee3d1e788a",
+      "lat": 17.966081,
+      "long": 121.937981,
+      "product": "BIOSTRONG COMFORT",
+      "scannedBy": "Jj Mcdal Nabong",
+      "scannedAt": "2025-09-13T20:48:25Z",
+      "scanResult": 0,
+      "remarks": "Passed authentication"
+    },
+    {
+      "_id": "72096c58-2796-4c0a-b88d-fa2aca5a35dc",
+      "lat": 16.928922,
+      "long": 122.005598,
+      "product": "AROMEX PRO",
+      "scannedBy": "Karina Jimin",
+      "scannedAt": "2025-10-25T09:16:24Z",
+      "scanResult": 2,
+      "remarks": "Scan successful"
+    },
+    {
+      "_id": "3cad05a7-52b3-4239-b0eb-cbf338e1d380",
+      "lat": 15.556797,
+      "long": 121.094306,
+      "product": "ALL MEAT SHREDDY(CHEESE & EGG YOLK)",
+      "scannedBy": "Jj Mcdal Nabong",
+      "scannedAt": "2025-10-20T15:12:12Z",
+      "scanResult": 1,
+      "remarks": "Under manual review"
+    },
+    {
+      "_id": "c7ec91b5-0e39-43ef-99bd-64776b5a0bef",
+      "lat": 14.24364,
+      "long": 120.678942,
+      "product": "PROPHORCE SR 130",
+      "scannedBy": "Lara Mendoza",
+      "scannedAt": "2025-10-23T02:31:35Z",
+      "scanResult": 1,
+      "remarks": "Under manual review"
+    },
+    {
+      "_id": "cefccdfb-4fdd-4cd6-a0df-217789841656",
+      "lat": 13.598884,
+      "long": 123.171044,
+      "product": "CHICKEN BLUEBERRY FLAVOUR STICK",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-10-14T05:47:46Z",
+      "scanResult": 2,
+      "remarks": "Passed authentication"
+    },
+    {
+      "_id": "541fdd08-21bd-4fc4-b6fd-9d4ce2c972ed",
+      "lat": 16.826079,
+      "long": 121.367584,
+      "product": "STEAMED BROTH BITES (DUCK + EGG YOLK)",
+      "scannedBy": "Genrey Cristobal",
+      "scannedAt": "2025-11-04T10:50:31Z",
+      "scanResult": 1,
+      "remarks": "Scan successful"
+    },
+    {
+      "_id": "972b4b73-e358-443e-bca0-7eca13f8c2bc",
+      "lat": 17.618298,
+      "long": 120.771605,
+      "product": "ALL MEAT SHREDDY(CHEESE & EGG YOLK)",
+      "scannedBy": "Lara Mendoza",
+      "scannedAt": "2025-10-22T01:27:37Z",
+      "scanResult": 0,
+      "remarks": "Passed authentication"
+    },
+    {
+      "_id": "5501a32e-242c-4704-b49c-1633906ad780",
+      "lat": 12.748468,
+      "long": 123.29414,
+      "product": "STEAMED BROTH BITES (DUCK + EGG YOLK)",
+      "scannedBy": "Jj Mcdal Nabong",
+      "scannedAt": "2025-10-28T14:50:20Z",
+      "scanResult": 1,
+      "remarks": "Pending verification"
+    },
+    {
+      "_id": "fade3522-c6eb-4d4a-87c7-1bfd0a1e1aef",
+      "lat": 15.405537,
+      "long": 120.615903,
+      "product": "CHICKEN BLUEBERRY FLAVOUR STICK",
+      "scannedBy": "Lara Mendoza",
+      "scannedAt": "2025-09-19T22:46:43Z",
+      "scanResult": 1,
+      "remarks": "Awaiting inspection"
+    },
+    {
+      "_id": "4b8e1db5-0414-4b98-a451-12f6d5547653",
+      "lat": 14.135341,
+      "long": 121.12535,
+      "product": "ALL MEAT SHREDDY(CHEESE & EGG YOLK)",
+      "scannedBy": "Eugene Gomez",
+      "scannedAt": "2025-10-19T08:23:22Z",
+      "scanResult": 2,
+      "remarks": "Counterfeit suspected"
+    },
+    {
+      "_id": "8cd11a40-2bd4-40dc-b41c-034be83fd432",
+      "lat": 14.62274,
+      "long": 121.221663,
+      "product": "AROMEX PRO",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-09-11T18:40:09Z",
+      "scanResult": 1,
+      "remarks": "Under manual review"
+    },
+    {
+      "_id": "fc62598d-8e68-4829-8752-ad56c2dfb98c",
+      "lat": 14.606464,
+      "long": 121.272695,
+      "product": "BIOSTRONG COMFORT",
+      "scannedBy": "Lara Mendoza",
+      "scannedAt": "2025-10-03T23:41:07Z",
+      "scanResult": 2,
+      "remarks": "Scan successful"
+    },
+    {
+      "_id": "bb9441db-8615-4101-a47e-531be49b8cb0",
+      "lat": 16.602507,
+      "long": 120.162096,
+      "product": "STEAMED BROTH BITES (DUCK + EGG YOLK)",
+      "scannedBy": "Karina Jimin",
+      "scannedAt": "2025-10-19T05:01:47Z",
+      "scanResult": 1,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "defd2557-2a44-4069-99ed-eada8fe8cfb1",
+      "lat": 14.794106,
+      "long": 120.89859,
+      "product": "CO-BIND (FG)",
+      "scannedBy": "Genrey Cristobal",
+      "scannedAt": "2025-10-20T22:06:52Z",
+      "scanResult": 2,
+      "remarks": "Under manual review"
+    },
+    {
+      "_id": "8b6d9dce-1b34-4152-b6d6-aa3e90e31b68",
+      "lat": 14.796454,
+      "long": 121.136817,
+      "product": "AROMEX PRO",
+      "scannedBy": "Karina Jimin",
+      "scannedAt": "2025-09-08T14:15:43Z",
+      "scanResult": 0,
+      "remarks": "Product verified authentic"
+    },
+    {
+      "_id": "ea9a2375-428b-42a4-9ed9-1ed835efaa83",
+      "lat": 12.788028,
+      "long": 124.054135,
+      "product": "CHICKEN BLUEBERRY FLAVOUR STICK",
+      "scannedBy": "Rico Santos",
+      "scannedAt": "2025-10-19T08:43:10Z",
+      "scanResult": 0,
+      "remarks": "Counterfeit suspected"
+    },
+    {
+      "_id": "40a5b0ce-41b0-4d2a-8bfa-fa4e1280bf95",
+      "lat": 15.262061,
+      "long": 119.899345,
+      "product": "BIOSTRONG COMFORT",
+      "scannedBy": "Genrey Cristobal",
+      "scannedAt": "2025-11-04T12:17:58Z",
+      "scanResult": 2,
+      "remarks": "Under manual review"
+    },
+    {
+      "_id": "2d1f8d26-053f-408e-8cb0-2b353d6ce5d5",
+      "lat": 12.828809,
+      "long": 123.758522,
+      "product": "STEAMED BROTH BITES (DUCK + EGG YOLK)",
+      "scannedBy": "Karina Jimin",
+      "scannedAt": "2025-10-05T17:52:26Z",
+      "scanResult": 2,
+      "remarks": "Scan successful"
+    },
+    {
+      "_id": "0546c1bc-40db-488b-95fc-03775e17bba8",
+      "lat": 13.597705,
+      "long": 123.19377,
+      "product": "BIOSTRONG COMFORT",
+      "scannedBy": "Eugene Gomez",
+      "scannedAt": "2025-09-13T18:35:56Z",
+      "scanResult": 1,
+      "remarks": "Pending verification"
+    },
+    {
+      "_id": "672584b2-3832-4e19-a64b-925c6cc37c8f",
+      "lat": 12.623557,
+      "long": 123.301328,
+      "product": "BIOSTRONG COMFORT",
+      "scannedBy": "Jj Mcdal Nabong",
+      "scannedAt": "2025-09-09T11:10:00Z",
+      "scanResult": 1,
+      "remarks": "Passed authentication"
+    },
+    {
+      "_id": "8aef9484-8497-42b9-8daf-ef3f8b50404d",
+      "lat": 15.426418,
+      "long": 120.359778,
+      "product": "PROPHORCE SR 130",
+      "scannedBy": "Rico Santos",
+      "scannedAt": "2025-09-22T11:33:46Z",
+      "scanResult": 0,
+      "remarks": "Counterfeit suspected"
+    },
+    {
+      "_id": "7d74f201-c744-43d0-898e-03834aa0012d",
+      "lat": 17.50989,
+      "long": 121.891721,
+      "product": "ALL MEAT SHREDDY(CHEESE & EGG YOLK)",
+      "scannedBy": "Rico Santos",
+      "scannedAt": "2025-09-18T21:29:18Z",
+      "scanResult": 0,
+      "remarks": "Scan successful"
+    },
+    {
+      "_id": "b89b3819-e370-4867-a665-2411957e000d",
+      "lat": 12.762894,
+      "long": 123.160058,
+      "product": "ALL MEAT SHREDDY(CHEESE & EGG YOLK)",
+      "scannedBy": "Genrey Cristobal",
+      "scannedAt": "2025-10-28T01:39:57Z",
+      "scanResult": 0,
+      "remarks": "Pending verification"
+    },
+    {
+      "_id": "8e656b54-ec06-4c10-8160-6862260f264f",
+      "lat": 14.195487,
+      "long": 120.877539,
+      "product": "PROPHORCE SR 130",
+      "scannedBy": "Lara Mendoza",
+      "scannedAt": "2025-09-29T06:46:15Z",
+      "scanResult": 1,
+      "remarks": "Awaiting inspection"
+    },
+    {
+      "_id": "085803bf-c88e-40a1-aede-303f01197c27",
+      "lat": 15.463202,
+      "long": 120.230588,
+      "product": "PROPHORCE SR 130",
+      "scannedBy": "Rico Santos",
+      "scannedAt": "2025-10-09T20:26:07Z",
+      "scanResult": 2,
+      "remarks": "Awaiting inspection"
+    },
+    {
+      "_id": "e835b377-0c75-4216-b32d-2e7388dc2c08",
+      "lat": 15.508602,
+      "long": 120.583748,
+      "product": "CO-BIND (FG)",
+      "scannedBy": "Rico Santos",
+      "scannedAt": "2025-09-09T18:16:52Z",
+      "scanResult": 2,
+      "remarks": "Scan successful"
+    },
+    {
+      "_id": "c7983f57-429f-4b35-9a1c-3a6fcd925c2e",
+      "lat": 15.245907,
+      "long": 120.861739,
+      "product": "CANNED CAT FOOD - CHICKEN FLAVOR",
+      "scannedBy": "Lara Mendoza",
+      "scannedAt": "2025-09-23T11:02:22Z",
+      "scanResult": 2,
+      "remarks": "Awaiting inspection"
+    },
+    {
+      "_id": "5f70e9a2-9a95-4904-a257-0d3c2ac0a3e2",
+      "lat": 17.101024,
+      "long": 121.93157,
+      "product": "AROMEX PRO",
+      "scannedBy": "Lara Mendoza",
+      "scannedAt": "2025-09-14T10:24:30Z",
+      "scanResult": 2,
+      "remarks": "Passed authentication"
+    },
+    {
+      "_id": "70ca9f77-0280-4c8f-9d04-a0b4493a68a1",
+      "lat": 15.068828,
+      "long": 120.468375,
+      "product": "AROMEX PRO",
+      "scannedBy": "Jj Mcdal Nabong",
+      "scannedAt": "2025-10-03T15:39:25Z",
+      "scanResult": 1,
+      "remarks": "Under manual review"
+    },
+    {
+      "_id": "0c9a667a-e1c7-4e43-bd1b-28aa76e21bc2",
+      "lat": 16.278362,
+      "long": 120.651415,
+      "product": "CANNED CAT FOOD - SARDINE FLAVOR",
+      "scannedBy": "Rico Santos",
+      "scannedAt": "2025-10-23T17:15:59Z",
+      "scanResult": 1,
+      "remarks": "Counterfeit suspected"
+    },
+    {
+      "_id": "be4c0fdc-ead1-4b6b-af88-8b2fe73ce248",
+      "lat": 15.879769,
+      "long": 121.393646,
+      "product": "BIOSTRONG COMFORT",
+      "scannedBy": "Lara Mendoza",
+      "scannedAt": "2025-10-07T21:15:49Z",
+      "scanResult": 0,
+      "remarks": "Scan successful"
+    },
+    {
+      "_id": "b8c2db1a-6c67-439b-8605-dcab09f9a2af",
+      "lat": 18.03545,
+      "long": 122.051027,
+      "product": "PROPHORCE SR 130",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-10-29T02:37:57Z",
+      "scanResult": 1,
+      "remarks": "Pending verification"
+    },
+    {
+      "_id": "1f7cbec4-055a-4942-a5de-e9bdd07fa6da",
+      "lat": 14.535494,
+      "long": 120.997287,
+      "product": "BIOSTRONG COMFORT",
+      "scannedBy": "Rico Santos",
+      "scannedAt": "2025-10-11T23:51:13Z",
+      "scanResult": 2,
+      "remarks": "Matched database record"
+    },
+    {
+      "_id": "ec6b7d41-e018-41f0-9ace-6cd00060eab8",
+      "lat": 16.376629,
+      "long": 120.703592,
+      "product": "STEAMED BROTH BITES (DUCK + EGG YOLK)",
+      "scannedBy": "Genrey Cristobal",
+      "scannedAt": "2025-11-03T05:35:40Z",
+      "scanResult": 0,
+      "remarks": "Pending verification"
+    },
+    {
+      "_id": "5182d87e-7118-4869-8485-0a0174cce71f",
+      "lat": 13.351549,
+      "long": 123.423571,
+      "product": "PROPHORCE SR 130",
+      "scannedBy": "Jj Mcdal Nabong",
+      "scannedAt": "2025-09-18T13:42:14Z",
+      "scanResult": 0,
+      "remarks": "Passed authentication"
+    },
+    {
+      "_id": "e5c41359-3c9b-4e0f-837d-d410eebcbe53",
+      "lat": 15.143308,
+      "long": 120.35132,
+      "product": "STEAMED BROTH BITES (DUCK + EGG YOLK)",
+      "scannedBy": "Eugene Gomez",
+      "scannedAt": "2025-10-12T17:36:37Z",
+      "scanResult": 1,
+      "remarks": "Matched database record"
+    },
+    {
+      "_id": "786532e9-529a-4158-b74b-4bf19c6bbf55",
+      "lat": 17.037136,
+      "long": 121.804973,
+      "product": "AROMEX PRO",
+      "scannedBy": "Karina Jimin",
+      "scannedAt": "2025-09-14T14:44:13Z",
+      "scanResult": 1,
+      "remarks": "Under manual review"
+    },
+    {
+      "_id": "9642ec8f-b762-485d-8e09-3a65525d545d",
+      "lat": 15.472232,
+      "long": 120.969603,
+      "product": "CANNED CAT FOOD - CHICKEN FLAVOR",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-10-10T05:07:11Z",
+      "scanResult": 0,
+      "remarks": "Matched database record"
+    },
+    {
+      "_id": "951214b4-883e-45bb-adba-a88c031537c8",
+      "lat": 13.753944,
+      "long": 122.790395,
+      "product": "BIOSTRONG COMFORT",
+      "scannedBy": "Eugene Gomez",
+      "scannedAt": "2025-09-16T20:39:09Z",
+      "scanResult": 1,
+      "remarks": "Pending verification"
+    },
+    {
+      "_id": "81d5a849-6055-42db-b3d9-6bf0a2a81715",
+      "lat": 16.985844,
+      "long": 122.192784,
+      "product": "CO-BIND (FG)",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-10-07T09:07:57Z",
+      "scanResult": 0,
+      "remarks": "Counterfeit suspected"
+    },
+    {
+      "_id": "b71e8e42-97e1-4b7a-88ca-415928509085",
+      "lat": 13.444536,
+      "long": 123.792387,
+      "product": "CANNED CAT FOOD - CHICKEN FLAVOR",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-09-27T14:55:34Z",
+      "scanResult": 1,
+      "remarks": "Counterfeit suspected"
+    },
+    {
+      "_id": "46122a95-b59b-4379-a902-57f086f91ef5",
+      "lat": 14.142204,
+      "long": 122.924681,
+      "product": "AROMEX PRO",
+      "scannedBy": "Rico Santos",
+      "scannedAt": "2025-09-29T08:03:59Z",
+      "scanResult": 0,
+      "remarks": "Pending verification"
+    },
+    {
+      "_id": "93d57f6e-266d-4f20-936e-6bf8f4dc63d0",
+      "lat": 16.528923,
+      "long": 121.641218,
+      "product": "CANNED CAT FOOD - CHICKEN FLAVOR",
+      "scannedBy": "Rico Santos",
+      "scannedAt": "2025-10-06T10:26:31Z",
+      "scanResult": 0,
+      "remarks": "Counterfeit suspected"
+    },
+    {
+      "_id": "f4d4d28f-b7e4-4c76-b5ac-2573e9673617",
+      "lat": 15.494503,
+      "long": 120.974565,
+      "product": "CHICKEN BLUEBERRY FLAVOUR STICK",
+      "scannedBy": "Karina Jimin",
+      "scannedAt": "2025-10-18T12:33:25Z",
+      "scanResult": 1,
+      "remarks": "Product verified authentic"
+    },
+    {
+      "_id": "709edbf5-7e41-4e93-994c-6a7cb39237df",
+      "lat": 13.151155,
+      "long": 124.144474,
+      "product": "CO-BIND (FG)",
+      "scannedBy": "Lara Mendoza",
+      "scannedAt": "2025-10-25T15:04:09Z",
+      "scanResult": 1,
+      "remarks": "Scan successful"
+    },
+    {
+      "_id": "ff16283a-3964-45be-aab9-5128d6b04871",
+      "lat": 12.587843,
+      "long": 123.582684,
+      "product": "PROPHORCE SR 130",
+      "scannedBy": "Karina Jimin",
+      "scannedAt": "2025-09-15T11:34:09Z",
+      "scanResult": 1,
+      "remarks": "Scan successful"
+    },
+    {
+      "_id": "dded9527-45ad-4767-85d6-f214832ccd1e",
+      "lat": 17.455501,
+      "long": 121.4104,
+      "product": "AROMEX PRO",
+      "scannedBy": "Genrey Cristobal",
+      "scannedAt": "2025-11-04T14:45:54Z",
+      "scanResult": 2,
+      "remarks": "Product verified authentic"
+    },
+    {
+      "_id": "27d475bc-a783-4ab8-ba00-df3e8f3b7259",
+      "lat": 14.687153,
+      "long": 120.799608,
+      "product": "STEAMED BROTH BITES (DUCK + EGG YOLK)",
+      "scannedBy": "Rico Santos",
+      "scannedAt": "2025-10-16T18:26:13Z",
+      "scanResult": 0,
+      "remarks": "Pending verification"
+    },
+    {
+      "_id": "74884a84-24e0-4910-b2a1-2e09b797da17",
+      "lat": 13.225166,
+      "long": 123.800356,
+      "product": "CANNED CAT FOOD - CHICKEN FLAVOR",
+      "scannedBy": "Karina Jimin",
+      "scannedAt": "2025-10-18T20:11:57Z",
+      "scanResult": 0,
+      "remarks": "Under manual review"
+    },
+    {
+      "_id": "b35e2a6b-86ba-42d1-8f28-f4dd61107708",
+      "lat": 14.508357,
+      "long": 121.190851,
+      "product": "CANNED CAT FOOD - SARDINE FLAVOR",
+      "scannedBy": "Karina Jimin",
+      "scannedAt": "2025-10-05T08:13:57Z",
+      "scanResult": 2,
+      "remarks": "Awaiting inspection"
+    },
+    {
+      "_id": "a9e05f4b-54d1-41c5-bda5-8f60e32268ce",
+      "lat": 14.844139,
+      "long": 121.020541,
+      "product": "CHICKEN BLUEBERRY FLAVOUR STICK",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-09-13T06:54:48Z",
+      "scanResult": 0,
+      "remarks": "Under manual review"
+    },
+    {
+      "_id": "329256ca-1958-49e5-905c-fada0183ac70",
+      "lat": 16.287682,
+      "long": 120.263104,
+      "product": "CO-BIND (FG)",
+      "scannedBy": "Rico Santos",
+      "scannedAt": "2025-10-29T12:35:28Z",
+      "scanResult": 2,
+      "remarks": "Matched database record"
+    },
+    {
+      "_id": "cb1b82d5-9edd-4d4c-9dfa-60389def323a",
+      "lat": 16.728538,
+      "long": 121.917606,
+      "product": "PROPHORCE SR 130",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-09-09T23:52:40Z",
+      "scanResult": 1,
+      "remarks": "Awaiting inspection"
+    },
+    {
+      "_id": "10e7a935-888d-404e-8a64-a9c71df2e4d0",
+      "lat": 14.682671,
+      "long": 120.732957,
+      "product": "ALL MEAT SHREDDY(CHEESE & EGG YOLK)",
+      "scannedBy": "Eugene Gomez",
+      "scannedAt": "2025-09-15T12:10:01Z",
+      "scanResult": 1,
+      "remarks": "Product verified authentic"
+    },
+    {
+      "_id": "59dc0692-bc02-42d3-969c-3bef7b7faceb",
+      "lat": 14.476711,
+      "long": 120.797243,
+      "product": "PROPHORCE SR 130",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-10-29T11:08:41Z",
+      "scanResult": 2,
+      "remarks": "Product verified authentic"
+    },
+    {
+      "_id": "38ba8a2e-5232-4d53-a0c6-9fdf8326c505",
+      "lat": 18.339548,
+      "long": 120.769124,
+      "product": "CO-BIND (FG)",
+      "scannedBy": "Eugene Gomez",
+      "scannedAt": "2025-10-01T12:45:58Z",
+      "scanResult": 2,
+      "remarks": "Awaiting inspection"
+    },
+    {
+      "_id": "6a3560ff-7d6f-41e3-8b7d-b356dcd03583",
+      "lat": 14.312765,
+      "long": 120.663126,
+      "product": "PROPHORCE SR 130",
+      "scannedBy": "Jj Mcdal Nabong",
+      "scannedAt": "2025-09-18T18:35:30Z",
+      "scanResult": 2,
+      "remarks": "Passed authentication"
+    },
+    {
+      "_id": "c23cadfe-a626-4838-8395-b491ea1cd798",
+      "lat": 17.35922,
+      "long": 121.654749,
+      "product": "CANNED CAT FOOD - SARDINE FLAVOR",
+      "scannedBy": "Eugene Gomez",
+      "scannedAt": "2025-10-10T22:17:10Z",
+      "scanResult": 1,
+      "remarks": "Matched database record"
+    },
+    {
+      "_id": "abe58a10-b2da-40a0-bc24-5de489b1590a",
+      "lat": 13.492708,
+      "long": 123.433622,
+      "product": "CO-BIND (FG)",
+      "scannedBy": "Lara Mendoza",
+      "scannedAt": "2025-09-12T22:05:55Z",
+      "scanResult": 1,
+      "remarks": "Scan successful"
+    },
+    {
+      "_id": "5ac24ffe-a4e4-49ff-ab11-6948a4ba39e0",
+      "lat": 16.956668,
+      "long": 121.691565,
+      "product": "CANNED CAT FOOD - CHICKEN FLAVOR",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-10-24T17:51:12Z",
+      "scanResult": 0,
+      "remarks": "Matched database record"
+    },
+    {
+      "_id": "6957d818-ace9-4c65-9db2-1c8405905fbc",
+      "lat": 14.999496,
+      "long": 120.365821,
+      "product": "STEAMED BROTH BITES (DUCK + EGG YOLK)",
+      "scannedBy": "Lara Mendoza",
+      "scannedAt": "2025-10-04T22:40:09Z",
+      "scanResult": 0,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "9968e26c-8ce6-4ddd-a41f-685e4083f81d",
+      "lat": 14.132604,
+      "long": 120.733981,
+      "product": "CANNED CAT FOOD - CHICKEN FLAVOR",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-09-18T07:46:48Z",
+      "scanResult": 1,
+      "remarks": "Awaiting inspection"
+    },
+    {
+      "_id": "2088ea18-e294-4f00-95eb-6b1c5fc976d2",
+      "lat": 14.597147,
+      "long": 120.92179,
+      "product": "AROMEX PRO",
+      "scannedBy": "Karina Jimin",
+      "scannedAt": "2025-10-26T17:00:24Z",
+      "scanResult": 2,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "27e865b2-9037-4fe2-a879-8de67a15d932",
+      "lat": 14.362643,
+      "long": 121.00985,
+      "product": "PROPHORCE SR 130",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-09-09T02:34:17Z",
+      "scanResult": 1,
+      "remarks": "Passed authentication"
+    },
+    {
+      "_id": "b9b10831-773d-4b9e-9ae6-73f4e0f416cc",
+      "lat": 14.082499,
+      "long": 121.126483,
+      "product": "PROPHORCE SR 130",
+      "scannedBy": "Lara Mendoza",
+      "scannedAt": "2025-10-15T13:17:50Z",
+      "scanResult": 1,
+      "remarks": "Pending verification"
+    },
+    {
+      "_id": "15264f31-ab92-4f44-a28e-ae15e5d1c497",
+      "lat": 14.522786,
+      "long": 121.018079,
+      "product": "ALL MEAT SHREDDY(CHEESE & EGG YOLK)",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-10-10T03:10:40Z",
+      "scanResult": 0,
+      "remarks": "Under manual review"
+    },
+    {
+      "_id": "347cda73-d23b-4e1e-a61e-510ec8cde138",
+      "lat": 10.187358,
+      "long": 123.929836,
+      "product": "STEAMED BROTH BITES (DUCK + EGG YOLK)",
+      "scannedBy": "Jj Mcdal Nabong",
+      "scannedAt": "2025-10-13T10:12:11Z",
+      "scanResult": 1,
+      "remarks": "Matched database record"
+    },
+    {
+      "_id": "e01bd94f-6679-4655-bfa4-cb2c795c25de",
+      "lat": 10.241534,
+      "long": 123.788166,
+      "product": "STEAMED BROTH BITES (DUCK + EGG YOLK)",
+      "scannedBy": "Lara Mendoza",
+      "scannedAt": "2025-09-16T01:42:04Z",
+      "scanResult": 2,
+      "remarks": "Product verified authentic"
+    },
+    {
+      "_id": "7072e6d7-7154-4f32-883d-bbfc5d08e148",
+      "lat": 10.527961,
+      "long": 123.878788,
+      "product": "AROMEX PRO",
+      "scannedBy": "Eugene Gomez",
+      "scannedAt": "2025-09-14T23:33:06Z",
+      "scanResult": 0,
+      "remarks": "Awaiting inspection"
+    },
+    {
+      "_id": "5d219723-8e75-44b0-8e74-f8343a58f369",
+      "lat": 10.16175,
+      "long": 123.780535,
+      "product": "CHICKEN BLUEBERRY FLAVOUR STICK",
+      "scannedBy": "Eugene Gomez",
+      "scannedAt": "2025-11-04T23:13:36Z",
+      "scanResult": 1,
+      "remarks": "Scan successful"
+    },
+    {
+      "_id": "e8948c3a-dbc0-4e7d-8e84-09e8efb13b3d",
+      "lat": 11.374839,
+      "long": 124.975553,
+      "product": "CANNED CAT FOOD - SARDINE FLAVOR",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-11-04T21:31:20Z",
+      "scanResult": 1,
+      "remarks": "Counterfeit suspected"
+    },
+    {
+      "_id": "a321e76f-14ab-4a0c-8123-a7b57a35f439",
+      "lat": 9.091043,
+      "long": 123.276504,
+      "product": "BIOSTRONG COMFORT",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-10-01T16:02:09Z",
+      "scanResult": 2,
+      "remarks": "Passed authentication"
+    },
+    {
+      "_id": "3fc8d8a4-3a2e-40b8-839b-d47bd079989d",
+      "lat": 10.723868,
+      "long": 122.467304,
+      "product": "ALL MEAT SHREDDY(CHEESE & EGG YOLK)",
+      "scannedBy": "Jj Mcdal Nabong",
+      "scannedAt": "2025-09-10T12:33:48Z",
+      "scanResult": 1,
+      "remarks": "Awaiting inspection"
+    },
+    {
+      "_id": "fa3a17ac-1de3-424e-ba5b-7327b869c2f4",
+      "lat": 10.388033,
+      "long": 124.124084,
+      "product": "CHICKEN BLUEBERRY FLAVOUR STICK",
+      "scannedBy": "Rico Santos",
+      "scannedAt": "2025-11-01T16:18:22Z",
+      "scanResult": 2,
+      "remarks": "Under manual review"
+    },
+    {
+      "_id": "4cca04d9-dc13-4aaa-a11f-357f1c4d2565",
+      "lat": 9.347065,
+      "long": 123.532516,
+      "product": "CO-BIND (FG)",
+      "scannedBy": "Karina Jimin",
+      "scannedAt": "2025-10-30T12:03:23Z",
+      "scanResult": 2,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "c8738d58-ef6d-42db-ae2a-e7b492354ea4",
+      "lat": 10.772703,
+      "long": 122.562784,
+      "product": "CO-BIND (FG)",
+      "scannedBy": "Karina Jimin",
+      "scannedAt": "2025-09-15T01:10:36Z",
+      "scanResult": 1,
+      "remarks": "Pending verification"
+    },
+    {
+      "_id": "4e2f3213-b12f-475b-bdad-1992983d771c",
+      "lat": 11.317964,
+      "long": 124.770671,
+      "product": "ALL MEAT SHREDDY(CHEESE & EGG YOLK)",
+      "scannedBy": "Karina Jimin",
+      "scannedAt": "2025-10-25T21:10:05Z",
+      "scanResult": 2,
+      "remarks": "Counterfeit suspected"
+    },
+    {
+      "_id": "6e01e3c8-f93e-4d70-a525-2ec7e122fe88",
+      "lat": 10.656626,
+      "long": 122.453547,
+      "product": "PROPHORCE SR 130",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-10-07T20:27:09Z",
+      "scanResult": 2,
+      "remarks": "Passed authentication"
+    },
+    {
+      "_id": "4a4050c1-af49-4ca4-9f3d-2a23b8a3f854",
+      "lat": 11.659653,
+      "long": 122.536556,
+      "product": "CHICKEN BLUEBERRY FLAVOUR STICK",
+      "scannedBy": "Rico Santos",
+      "scannedAt": "2025-10-12T12:45:35Z",
+      "scanResult": 1,
+      "remarks": "Awaiting inspection"
+    },
+    {
+      "_id": "5871013f-12e4-43d9-8d5e-2ea157e187cc",
+      "lat": 11.761783,
+      "long": 122.985805,
+      "product": "AROMEX PRO",
+      "scannedBy": "Genrey Cristobal",
+      "scannedAt": "2025-09-12T21:54:48Z",
+      "scanResult": 2,
+      "remarks": "Counterfeit suspected"
+    },
+    {
+      "_id": "da394de9-299e-40e9-a944-2f3965a57192",
+      "lat": 10.625316,
+      "long": 122.640127,
+      "product": "PROPHORCE SR 130",
+      "scannedBy": "Eugene Gomez",
+      "scannedAt": "2025-11-01T18:32:47Z",
+      "scanResult": 2,
+      "remarks": "Pending verification"
+    },
+    {
+      "_id": "be5842da-361e-42af-a688-195d177cc655",
+      "lat": 10.749661,
+      "long": 122.633847,
+      "product": "CANNED CAT FOOD - SARDINE FLAVOR",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-09-17T09:46:51Z",
+      "scanResult": 2,
+      "remarks": "Product verified authentic"
+    },
+    {
+      "_id": "e4036cf6-5edd-4bc6-9912-12b88f52687f",
+      "lat": 10.388712,
+      "long": 123.847103,
+      "product": "CANNED CAT FOOD - SARDINE FLAVOR",
+      "scannedBy": "Jj Mcdal Nabong",
+      "scannedAt": "2025-10-10T04:54:49Z",
+      "scanResult": 1,
+      "remarks": "Counterfeit suspected"
+    },
+    {
+      "_id": "8559b6e7-16a2-4f8a-9fb8-fd1e834d0177",
+      "lat": 10.245866,
+      "long": 124.087178,
+      "product": "CANNED CAT FOOD - CHICKEN FLAVOR",
+      "scannedBy": "Eugene Gomez",
+      "scannedAt": "2025-09-18T08:33:01Z",
+      "scanResult": 0,
+      "remarks": "Pending verification"
+    },
+    {
+      "_id": "79e2a626-8165-4127-9541-18ee1c5352ce",
+      "lat": 10.892414,
+      "long": 122.36267,
+      "product": "STEAMED BROTH BITES (DUCK + EGG YOLK)",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-10-26T02:54:27Z",
+      "scanResult": 0,
+      "remarks": "Matched database record"
+    },
+    {
+      "_id": "f05524d2-9e1a-4bdb-9d56-a7a7c8b10523",
+      "lat": 11.060425,
+      "long": 124.93946,
+      "product": "AROMEX PRO",
+      "scannedBy": "Eugene Gomez",
+      "scannedAt": "2025-11-04T15:45:02Z",
+      "scanResult": 0,
+      "remarks": "Scan successful"
+    },
+    {
+      "_id": "29d553a1-aa10-4e18-9320-d6a3f4afff93",
+      "lat": 10.271129,
+      "long": 123.973581,
+      "product": "CANNED CAT FOOD - CHICKEN FLAVOR",
+      "scannedBy": "Karina Jimin",
+      "scannedAt": "2025-11-03T06:47:25Z",
+      "scanResult": 1,
+      "remarks": "Scan successful"
+    },
+    {
+      "_id": "ec1bb23b-889f-4e54-91b7-3c2cdb184734",
+      "lat": 10.342006,
+      "long": 123.858834,
+      "product": "ALL MEAT SHREDDY(CHEESE & EGG YOLK)",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-09-23T20:05:25Z",
+      "scanResult": 1,
+      "remarks": "Scan successful"
+    },
+    {
+      "_id": "f438c4ab-6384-4844-98fd-515774be4b99",
+      "lat": 9.441619,
+      "long": 123.444462,
+      "product": "STEAMED BROTH BITES (DUCK + EGG YOLK)",
+      "scannedBy": "Rico Santos",
+      "scannedAt": "2025-10-15T15:33:01Z",
+      "scanResult": 0,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "9174d593-c786-4b8e-9358-7cb3a9e784e3",
+      "lat": 11.064099,
+      "long": 124.876102,
+      "product": "ALL MEAT SHREDDY(CHEESE & EGG YOLK)",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-10-11T00:59:12Z",
+      "scanResult": 2,
+      "remarks": "Pending verification"
+    },
+    {
+      "_id": "3b4effdc-c9a4-408d-a960-a04f935fde49",
+      "lat": 11.758946,
+      "long": 122.929183,
+      "product": "BIOSTRONG COMFORT",
+      "scannedBy": "Jj Mcdal Nabong",
+      "scannedAt": "2025-09-20T13:33:17Z",
+      "scanResult": 1,
+      "remarks": "Scan successful"
+    },
+    {
+      "_id": "fab60c57-d98e-4d2e-9d22-9e084ea18a2f",
+      "lat": 11.068574,
+      "long": 124.969836,
+      "product": "CANNED CAT FOOD - CHICKEN FLAVOR",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-10-18T19:12:15Z",
+      "scanResult": 1,
+      "remarks": "Passed authentication"
+    },
+    {
+      "_id": "f3921f3c-c014-4912-ba90-156f04b10ad5",
+      "lat": 9.083528,
+      "long": 123.306404,
+      "product": "CANNED CAT FOOD - CHICKEN FLAVOR",
+      "scannedBy": "Karina Jimin",
+      "scannedAt": "2025-09-12T22:09:16Z",
+      "scanResult": 1,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "e7969245-7f8b-440a-b8f3-2d8c9219be9a",
+      "lat": 10.225042,
+      "long": 123.684942,
+      "product": "CANNED CAT FOOD - SARDINE FLAVOR",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-09-19T04:19:10Z",
+      "scanResult": 0,
+      "remarks": "Passed authentication"
+    },
+    {
+      "_id": "8c30d82c-bd3a-424e-a1e4-57cd72d80ec5",
+      "lat": 10.928898,
+      "long": 122.548327,
+      "product": "AROMEX PRO",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-10-20T13:06:20Z",
+      "scanResult": 1,
+      "remarks": "Passed authentication"
+    },
+    {
+      "_id": "fc0a47f8-5d7c-4fb8-9a17-4107df98f994",
+      "lat": 10.075202,
+      "long": 123.743227,
+      "product": "AROMEX PRO",
+      "scannedBy": "Rico Santos",
+      "scannedAt": "2025-11-03T02:47:36Z",
+      "scanResult": 2,
+      "remarks": "Under manual review"
+    },
+    {
+      "_id": "5b47a751-9207-4429-ae25-1261c81a3127",
+      "lat": 7.384021,
+      "long": 125.271648,
+      "product": "CHICKEN BLUEBERRY FLAVOUR STICK",
+      "scannedBy": "Jj Mcdal Nabong",
+      "scannedAt": "2025-09-28T03:36:15Z",
+      "scanResult": 1,
+      "remarks": "Scan successful"
+    },
+    {
+      "_id": "30e2a5f8-5310-4c8f-b5c2-df7b0640f796",
+      "lat": 6.918301,
+      "long": 125.738903,
+      "product": "STEAMED BROTH BITES (DUCK + EGG YOLK)",
+      "scannedBy": "Jj Mcdal Nabong",
+      "scannedAt": "2025-11-05T08:33:42Z",
+      "scanResult": 2,
+      "remarks": "Expired product detected"
+    },
+    {
+      "_id": "2ff992a7-013d-48b9-8d65-91c26e798ccd",
+      "lat": 8.30809,
+      "long": 124.282995,
+      "product": "CANNED CAT FOOD - SARDINE FLAVOR",
+      "scannedBy": "Eugene Gomez",
+      "scannedAt": "2025-10-30T09:44:34Z",
+      "scanResult": 1,
+      "remarks": "Counterfeit suspected"
+    },
+    {
+      "_id": "094b65e0-db1e-476f-9498-7560dea7b954",
+      "lat": 7.207139,
+      "long": 125.357723,
+      "product": "STEAMED BROTH BITES (DUCK + EGG YOLK)",
+      "scannedBy": "Rico Santos",
+      "scannedAt": "2025-10-24T06:09:33Z",
+      "scanResult": 2,
+      "remarks": "Product verified authentic"
+    },
+    {
+      "_id": "46d9b094-beee-465a-b6a1-cc3b86a76469",
+      "lat": 7.114018,
+      "long": 125.434395,
+      "product": "PROPHORCE SR 130",
+      "scannedBy": "Genrey Cristobal",
+      "scannedAt": "2025-09-29T15:02:52Z",
+      "scanResult": 2,
+      "remarks": "Passed authentication"
+    },
+    {
+      "_id": "3910792c-20df-44d8-a60f-48fb038cbc80",
+      "lat": 7.123364,
+      "long": 121.970362,
+      "product": "CHICKEN BLUEBERRY FLAVOUR STICK",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-10-31T11:55:58Z",
+      "scanResult": 2,
+      "remarks": "Matched database record"
+    },
+    {
+      "_id": "eeb48c1d-1549-40be-95a7-35f25deae550",
+      "lat": 8.135235,
+      "long": 124.66411,
+      "product": "AROMEX PRO",
+      "scannedBy": "Francis Dela Cruz",
+      "scannedAt": "2025-10-20T02:38:59Z",
+      "scanResult": 2,
+      "remarks": "Scan successful"
+    },
+    {
+      "_id": "c84ebcf6-d77e-42f7-8f77-a2a0998fdb74",
+      "lat": 8.672248,
+      "long": 124.32607,
+      "product": "ALL MEAT SHREDDY(CHEESE & EGG YOLK)",
+      "scannedBy": "Jj Mcdal Nabong",
+      "scannedAt": "2025-10-03T11:46:14Z",
+      "scanResult": 0,
+      "remarks": "Passed authentication"
+    },
+    {
+      "_id": "e638756d-a62f-433f-bab9-56386b307576",
+      "lat": 8.724253,
+      "long": 124.502817,
+      "product": "BIOSTRONG COMFORT",
+      "scannedBy": "Rico Santos",
+      "scannedAt": "2025-10-13T15:55:45Z",
+      "scanResult": 2,
+      "remarks": "Scan successful"
+    },
+    {
+      "_id": "7300b433-25e3-418a-b629-d3f60bc31a48",
+      "lat": 6.597035,
+      "long": 122.18183,
+      "product": "BIOSTRONG COMFORT",
+      "scannedBy": "Genrey Cristobal",
+      "scannedAt": "2025-09-09T15:23:29Z",
+      "scanResult": 2,
+      "remarks": "Matched database record"
+    }
+  ],
+  "parameters": {
+    "eps_km": 5.0,
+    "min_samples": 3
+  }
+}
