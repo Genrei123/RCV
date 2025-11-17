@@ -327,6 +327,13 @@ export function AuthPage() {
 
   const passwordStrength = getPasswordStrength(registerData.password);
 
+  // Additional small validators to return message or null
+  const emailValidator = (v: string) => (validateEmail(v) ? null : "Please enter a valid email address")
+  const passwordValidator = (v: string) => (validatePassword(v) ? null : "Min 8 chars, upper, lower and number")
+  const phoneValidator = (v: string) => (validatePhoneNumber(v) ? null : "Please enter a valid phone number")
+  const requiredTextValidator = (label: string) => (v: string) => (v && v.trim().length > 0 ? null : `${label} is required`)
+  const badgeValidator = (v: string) => (v && v.trim().length > 1 ? null : "Badge ID is required")
+
   // =========================================================================
   // RENDER
   // =========================================================================
@@ -402,6 +409,7 @@ export function AuthPage() {
                     className="pl-10 h-11"
                     value={loginData.email}
                     onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
+                    validator={emailValidator}
                     required
                   />
                 </div>
@@ -419,6 +427,7 @@ export function AuthPage() {
                     className="pl-10 pr-10 h-11"
                     value={loginData.password}
                     onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                    validator={(v) => (v ? null : "Password is required")}
                     required
                   />
                   <button
@@ -481,6 +490,7 @@ export function AuthPage() {
                       className={`pl-10 h-11 ${errors.firstName ? 'border-red-500' : ''}`}
                       value={registerData.firstName}
                       onChange={(e) => setRegisterData({ ...registerData, firstName: e.target.value })}
+                      validator={requiredTextValidator("First name")}
                       required
                     />
                   </div>
@@ -516,6 +526,7 @@ export function AuthPage() {
                       className={`pl-10 h-11 ${errors.lastName ? 'border-red-500' : ''}`}
                       value={registerData.lastName}
                       onChange={(e) => setRegisterData({ ...registerData, lastName: e.target.value })}
+                      validator={requiredTextValidator("Last name")}
                       required
                     />
                   </div>
@@ -552,6 +563,7 @@ export function AuthPage() {
                     className={`pl-10 h-11 ${errors.email ? 'border-red-500' : ''}`}
                     value={registerData.email}
                     onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
+                    validator={emailValidator}
                     required
                   />
                 </div>
@@ -571,6 +583,7 @@ export function AuthPage() {
                       className={`pl-10 pr-10 h-11 ${errors.password ? 'border-red-500' : ''}`}
                       value={registerData.password}
                       onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
+                      validator={passwordValidator}
                       required
                     />
                     <button
@@ -609,6 +622,7 @@ export function AuthPage() {
                       className={`pl-10 pr-10 h-11 ${errors.confirmPassword ? 'border-red-500' : ''}`}
                       value={registerData.confirmPassword}
                       onChange={(e) => setRegisterData({ ...registerData, confirmPassword: e.target.value })}
+                      validator={(v) => v === registerData.password ? null : "Passwords do not match"}
                       required
                     />
                     <button
@@ -642,6 +656,7 @@ export function AuthPage() {
                       className={`pl-10 h-11 ${errors.phoneNumber ? 'border-red-500' : ''}`}
                       value={registerData.phoneNumber}
                       onChange={(e) => setRegisterData({ ...registerData, phoneNumber: e.target.value })}
+                      validator={phoneValidator}
                       required
                     />
                   </div>
@@ -660,6 +675,7 @@ export function AuthPage() {
                       className={`pl-10 h-11 ${errors.location ? 'border-red-500' : ''}`}
                       value={registerData.location}
                       onChange={(e) => setRegisterData({ ...registerData, location: e.target.value })}
+                      validator={requiredTextValidator("Location")}
                       required
                     />
                   </div>
@@ -679,6 +695,7 @@ export function AuthPage() {
                       className={`pl-10 h-11 ${errors.dateOfBirth ? 'border-red-500' : ''}`}
                       value={registerData.dateOfBirth}
                       onChange={(e) => setRegisterData({ ...registerData, dateOfBirth: e.target.value })}
+                      validator={(v) => v ? null : "Date of birth is required"}
                       required
                     />
                   </div>
@@ -697,6 +714,7 @@ export function AuthPage() {
                       className={`pl-10 h-11 ${errors.badgeId ? 'border-red-500' : ''}`}
                       value={registerData.badgeId}
                       onChange={(e) => setRegisterData({ ...registerData, badgeId: e.target.value })}
+                      validator={badgeValidator}
                       required
                     />
                   </div>
