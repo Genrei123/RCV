@@ -1559,17 +1559,100 @@ class _QRScannerPageState extends State<QRScannerPage> {
           showDialog(
             context: context,
             barrierDismissible: false,
-            builder: (context) => const Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text(
-                    'Uploading images to Firebase...',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ],
+            builder: (context) => Dialog(
+              backgroundColor: Colors.transparent,
+              insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.25),
+                      blurRadius: 12,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header with icon
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF005440).withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const SizedBox(
+                            width: 28,
+                            height: 28,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 3,
+                              valueColor: AlwaysStoppedAnimation(Color(0xFF005440)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            'Uploading images',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF005440),
+                            ),
+                          ),
+                        ),
+                        // Optional minimal cancel icon (keeps barrierDismissible false)
+                        IconButton(
+                          icon: Icon(Icons.close, color: Colors.grey[600]),
+                          tooltip: 'Cancel upload',
+                          onPressed: () {
+                            // Close dialog and reset captured images so caller can handle cancellation
+                            Navigator.of(context).pop();
+                            if (mounted) {
+                              setState(() {
+                                _frontImagePath = null;
+                                _backImagePath = null;
+                                _frontImageUrl = null;
+                                _backImageUrl = null;
+                              });
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Message
+                    const Text(
+                      'Uploading images to Firebase. This may take a few seconds.',
+                      style: TextStyle(fontSize: 13, color: Colors.black87, height: 1.35),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Indeterminate progress bar with subtle styling
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: LinearProgressIndicator(
+                        minHeight: 8,
+                        backgroundColor: Colors.grey.shade200,
+                        valueColor: const AlwaysStoppedAnimation(Color(0xFF00A47D)),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Small helper note
+                    Text(
+                      'Please keep the app open until upload completes.',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
               ),
             ),
           );
