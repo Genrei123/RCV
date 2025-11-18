@@ -147,7 +147,7 @@ export function Products(props: ProductsProps) {
             size="sm"
             variant="outline"
             onClick={(e) => handleDownloadCertificate(row, e)}
-            className="text-teal-600 hover:text-teal-700 hover:bg-teal-50"
+            className="app-text-primary hover:app-text-primary hover:app-bg-primary-soft"
           >
             <Download className="h-4 w-4 mr-1" />
             Certificate

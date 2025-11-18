@@ -10,8 +10,7 @@ import { CertificateVerifier } from "./pages/CertificateVerifier";
 import { ScanHistory } from "./pages/ScanHistory";
 import { RemoteConfig } from "./pages/RemoteConfig";
 import { KioskMonitor } from "./pages/KioskMonitor";
-import { Sidebar } from "./components/Sidebar";
-import { Footer } from "./components/Footer";
+import { AppLayout } from "./components/AppLayout";
 import { GlobalLoadingIndicator } from "./components/GlobalLoadingIndicator";
 import { LoadingSpinner } from "./components/LoadingSpinner";
 import { AuthService } from "./services/authService";
@@ -143,10 +142,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Global Loading Indicator for all API requests */}
       <GlobalLoadingIndicator />
-
-      {/* Toast Notifications */}
       <ToastContainer
         position="top-right"
         autoClose={3000}
@@ -159,158 +155,154 @@ function App() {
         pauseOnHover
         theme="light"
       />
+      <Routes>
+        {/* Public Routes */}
+        <Route
+          path="/login"
+          element={
+            <PublicRoute>
+              <AuthPage />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/forgot-password"
+          element={
+            <PublicRoute>
+              <ForgotPasswordPage />
+            </PublicRoute>
+          }
+        />
+        <Route path="/pending-approval" element={<PendingApprovalPage />} />
 
-      <div
-        className={`flex-1 ${
-          isLoggedIn ? "grid grid-cols-1 md:grid-cols-[250px_1fr]" : ""
-        }`}
-      >
-        {/* Sidebar - Only show when logged in */}
-        {isLoggedIn && (
-          <aside className="hidden md:block bg-slate-800 text-white shadow-lg">
-            <Sidebar />
-          </aside>
-        )}
-
-        <main className="flex flex-col min-h-screen md:min-h-0 h-[100vh]">
-          <div className="flex-1 bg-white rounded-lg shadow-sm overflow-y-auto m-0">
-            <Routes>
-              {/* Public Routes */}
-              <Route
-                path="/login"
-                element={
-                  <PublicRoute>
-                    <AuthPage />
-                  </PublicRoute>
-                }
-              />
-              <Route
-                path="/forgot-password"
-                element={
-                  <PublicRoute>
-                    <ForgotPasswordPage />
-                  </PublicRoute>
-                }
-              />
-              <Route
-                path="/pending-approval"
-                element={<PendingApprovalPage />}
-              />
-
-              {/* Protected Routes */}
-              <Route
-                path="/"
-                element={
-                  <ProtectedRoutes>
-                    <Dashboard {...dashboardData} />
-                  </ProtectedRoutes>
-                }
-              />
-              <Route
-                path="/dashboard"
-                element={
-                  <ProtectedRoutes>
-                    <Dashboard {...dashboardData} />
-                  </ProtectedRoutes>
-                }
-              />
-              <Route
-                path="/products"
-                element={
-                  <ProtectedRoutes>
-                    <Products
-                      {...productsData}
-                      companies={companiesData?.companies}
-                      onRefresh={fetchProductsData}
-                    />
-                  </ProtectedRoutes>
-                }
-              />
-              <Route
-                path="/companies"
-                element={
-                  <ProtectedRoutes>
-                    <Companies
-                      {...companiesData}
-                      onRefresh={fetchCompaniesData}
-                    />
-                  </ProtectedRoutes>
-                }
-              />
-              <Route
-                path="/maps"
-                element={
-                  <ProtectedRoutes>
-                    <Maps />
-                  </ProtectedRoutes>
-                }
-              />
-              <Route
-                path="/analytics"
-                element={
-                  <ProtectedRoutes>
-                    <Analytics />
-                  </ProtectedRoutes>
-                }
-              />
-              <Route
-                path="/profile"
-                element={
-                  <ProtectedRoutes>
-                    <Profile />
-                  </ProtectedRoutes>
-                }
-              />
-              <Route
-                path="/blockchain"
-                element={
-                  <ProtectedRoutes>
-                    <Blockchain />
-                  </ProtectedRoutes>
-                }
-              />
-              <Route
-                path="/verify-certificate"
-                element={
-                  <ProtectedRoutes>
-                    <CertificateVerifier />
-                  </ProtectedRoutes>
-                }
-              />
-              <Route
-                path="/scan-history"
-                element={
-                  <ProtectedRoutes>
-                    <ScanHistory />
-                  </ProtectedRoutes>
-                }
-              />
-              <Route
-                path="/remote-config"
-                element={
-                  <ProtectedRoutes>
-                    <RemoteConfig />
-                  </ProtectedRoutes>
-                }
-              />
-              <Route
-                path="/kiosk-monitor"
-                element={
-                  <ProtectedRoutes>
-                    <KioskMonitor />
-                  </ProtectedRoutes>
-                }
-              />
-
-              {/* 404 Catch-all Route - Must be last */}
-              <Route path="*" element={<NotFoundPage />} />
-            </Routes>
-          </div>
-        </main>
-      </div>
-
-      {/* Footer */}
-      <Footer />
+        {/* Protected Routes wrapped with AppLayout */}
+        <Route
+          path="/"
+          element={
+            <ProtectedRoutes>
+              <AppLayout>
+                <Dashboard {...dashboardData} />
+              </AppLayout>
+            </ProtectedRoutes>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoutes>
+              <AppLayout>
+                <Dashboard {...dashboardData} />
+              </AppLayout>
+            </ProtectedRoutes>
+          }
+        />
+        <Route
+          path="/products"
+          element={
+            <ProtectedRoutes>
+              <AppLayout>
+                <Products
+                  {...productsData}
+                  companies={companiesData?.companies}
+                  onRefresh={fetchProductsData}
+                />
+              </AppLayout>
+            </ProtectedRoutes>
+          }
+        />
+        <Route
+          path="/companies"
+          element={
+            <ProtectedRoutes>
+              <AppLayout>
+                <Companies {...companiesData} onRefresh={fetchCompaniesData} />
+              </AppLayout>
+            </ProtectedRoutes>
+          }
+        />
+        <Route
+          path="/maps"
+          element={
+            <ProtectedRoutes>
+              <AppLayout fullBleed hideFooter>
+                <Maps />
+              </AppLayout>
+            </ProtectedRoutes>
+          }
+        />
+        <Route
+          path="/analytics"
+          element={
+            <ProtectedRoutes>
+              <AppLayout hideFooter fullBleed>
+                <Analytics />
+              </AppLayout>
+            </ProtectedRoutes>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoutes>
+              <AppLayout>
+                <Profile />
+              </AppLayout>
+            </ProtectedRoutes>
+          }
+        />
+        <Route
+          path="/blockchain"
+          element={
+            <ProtectedRoutes>
+              <AppLayout>
+                <Blockchain />
+              </AppLayout>
+            </ProtectedRoutes>
+          }
+        />
+        <Route
+          path="/verify-certificate"
+          element={
+            <ProtectedRoutes>
+              <AppLayout>
+                <CertificateVerifier />
+              </AppLayout>
+            </ProtectedRoutes>
+          }
+        />
+        <Route
+          path="/scan-history"
+          element={
+            <ProtectedRoutes>
+              <AppLayout>
+                <ScanHistory />
+              </AppLayout>
+            </ProtectedRoutes>
+          }
+        />
+        <Route
+          path="/remote-config"
+          element={
+            <ProtectedRoutes>
+              <AppLayout>
+                <RemoteConfig />
+              </AppLayout>
+            </ProtectedRoutes>
+          }
+        />
+        <Route
+          path="/kiosk-monitor"
+          element={
+            <ProtectedRoutes>
+              <AppLayout>
+                <KioskMonitor />
+              </AppLayout>
+            </ProtectedRoutes>
+          }
+        />
+        {/* 404 Catch-all */}
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
     </div>
   );
 }
