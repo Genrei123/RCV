@@ -29,3 +29,19 @@ export enum ScanResult {
     "Expired",
     "Unregistered",
 }
+
+//Analytics
+export enum ComplianceStatus {
+    COMPLIANT = 'COMPLIANT',
+    NON_COMPLIANT = 'NON_COMPLIANT',
+    FRAUDULENT = 'FRAUDULENT',
+}
+
+export enum NonComplianceReason {
+    NO_LTO_NUMBER = 'NO_LTO_NUMBER',
+    NO_CFPR_NUMBER = 'NO_CFPR_NUMBER',
+    EXPIRED_PRODUCT = 'EXPIRED_PRODUCT',
+    COUNTERFEIT = 'COUNTERFEIT',
+    MISLABELED = 'MISLABELED',
+    OTHERS = 'OTHERS',
+}
