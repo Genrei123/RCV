@@ -180,8 +180,11 @@ export function MapComponent({
     if (inspectors.length > 0) {
       if (inspectors.length === 1) {
         const inspector = inspectors[0];
-        const position = { lat: inspector.location.lat, lng: inspector.location.lng };
-        
+        const position = {
+          lat: inspector.location.lat,
+          lng: inspector.location.lng,
+        };
+
         googleMapRef.current.panTo(position);
         googleMapRef.current.setZoom(16);
       } else {
@@ -214,7 +217,8 @@ export function MapComponent({
   return (
     <div className="relative w-full h-full">
       <div ref={mapRef} className="w-full h-full" />
-      <div className="absolute top-15 left-3 z-10 w-96">
+      {/* Search panel: responsive width and offset below header on mobile */}
+      <div className="absolute top-16 sm:top-20 left-3 sm:left-4 z-10 w-[calc(100vw-2rem)] sm:w-80 md:w-96 max-w-[28rem]">
         <Card className="bg-white rounded-lg border-0 shadow-none">
           <div className="relative p-2">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -292,10 +296,10 @@ export function MapComponent({
           )}
         </Card>
       </div>
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
+      <div className="absolute top-4 sm:top-6 left-1/2 -translate-x-1/2 z-10">
         <Card className="bg-white shadow-lg px-4 py-2">
           <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-teal-600" />
+            <MapPin className="h-4 w-4 app-text-primary" />
             <span className="text-sm font-semibold">
               {inspectors.length} Inspectors
             </span>

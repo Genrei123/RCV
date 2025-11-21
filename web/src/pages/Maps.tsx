@@ -10,18 +10,7 @@ export function Maps() {
   const [, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Disable page scrolling while on the Maps page to avoid revealing any footer,
-    // but keep the map itself fully interactive (panning/zooming still works).
-    const prevBodyOverflow = document.body.style.overflow;
-    const prevHtmlOverflow = document.documentElement.style.overflow;
-    document.body.style.overflow = "hidden";
-    document.documentElement.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prevBodyOverflow;
-      document.documentElement.style.overflow = prevHtmlOverflow;
-    };
-  }, []);
+  // Layout handles sizing/scroll; no body scroll hacks here
 
   useEffect(() => {
     const loadInspectors = async () => {
@@ -79,25 +68,24 @@ export function Maps() {
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
-    
+
     if (!query.trim()) {
       setFilteredInspectors(inspectors);
       return;
     }
-    
+
     try {
       // yung search dito inspector names lang
-      const filtered = inspectors.filter(inspector => {
+      const filtered = inspectors.filter((inspector) => {
         if (!inspector || !inspector.name) return false;
-        
+
         const searchLower = query.toLowerCase();
         const name = inspector.name.toLowerCase();
-        
+
         return name.includes(searchLower);
       });
-      
+
       setFilteredInspectors(filtered);
-      
     } catch (error) {
       console.error("Search error:", error);
       setFilteredInspectors(inspectors);
