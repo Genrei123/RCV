@@ -5,6 +5,7 @@ import { Companies, type CompaniesProps } from "./pages/Companies";
 import { Maps } from "./pages/Maps";
 import { Analytics } from "./pages/Analytics";
 import { Profile } from "./pages/Profile";
+import { UserProfileView } from "./pages/UserProfileView";
 import { Blockchain } from "./pages/Blockchain";
 import { CertificateVerifier } from "./pages/CertificateVerifier";
 import { ScanHistory } from "./pages/ScanHistory";
@@ -246,6 +247,16 @@ function App() {
             <ProtectedRoutes>
               <AppLayout>
                 <Profile />
+              </AppLayout>
+            </ProtectedRoutes>
+          }
+        />
+        <Route
+          path="/users/:id"
+          element={
+            <ProtectedRoutes>
+              <AppLayout>
+                <UserProfileView />
               </AppLayout>
             </ProtectedRoutes>
           }
