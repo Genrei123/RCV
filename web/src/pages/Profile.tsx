@@ -303,7 +303,7 @@ export function Profile({
   // Helper function to get role name
   const getRoleName = (role?: string | number): string => {
     if (typeof role === "string") return role;
-    const roleMap: { [key: number]: string } = {  
+    const roleMap: { [key: number]: string } = {
       1: "Agent",
       2: "Admin",
       3: "Super Admin",
