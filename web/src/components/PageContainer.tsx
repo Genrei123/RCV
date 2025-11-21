@@ -32,18 +32,18 @@ export function PageContainer({
 
   return (
     <div className={cn(
-      "min-h-[calc(100vh-12rem)]",
+      "min-h-full",
       "w-full",
       "mx-auto",
       "px-4 sm:px-6 lg:px-8",
       "py-6 md:py-8",
-      "space-y-6",
+      "flex flex-col",
       maxWidthClasses[maxWidth],
       className
     )}>
       {/* Page Header */}
       {(title || description || headerAction) && (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 flex-shrink-0">
           <div className="flex-1 min-w-0">
             {title && (
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
@@ -65,7 +65,7 @@ export function PageContainer({
       )}
       
       {/* Page Content */}
-      <div className="space-y-6">
+      <div className="flex-1 flex flex-col space-y-6 min-h-0">
         {children}
       </div>
     </div>

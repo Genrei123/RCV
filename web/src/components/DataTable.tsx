@@ -173,8 +173,8 @@ export function DataTable({
   };
 
   return (
-    <Card className="border-0 shadow-sm">
-      <CardHeader className="pb-4">
+    <Card className="border-0 shadow-sm h-full flex flex-col">
+      <CardHeader className="pb-4 flex-shrink-0">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <CardTitle className="text-xl font-semibold text-gray-800">
             {title}
@@ -194,7 +194,7 @@ export function DataTable({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="p-0">
+      <CardContent className="p-0 flex-1 min-h-0 overflow-auto">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16">
             <LoadingSpinner />
@@ -210,64 +210,66 @@ export function DataTable({
             <p className="text-gray-500 max-w-sm">{emptyStateDescription}</p>
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow className="border-b border-gray-200">
-                {columns.map((column) => (
-                  <TableHead
-                    key={column.key}
-                    className={`text-left font-medium text-gray-600 ${
-                      column.sortable
-                        ? "cursor-pointer select-none hover:bg-gray-50"
-                        : ""
-                    }`}
-                    onClick={() => column.sortable && handleSort(column.key)}
-                  >
-                    <div className="flex items-center gap-2">
-                      {column.label}
-                      {column.sortable && (
-                        <span className="inline-flex">
-                          {sortConfig?.key === column.key ? (
-                            sortConfig.direction === "asc" ? (
-                              <ArrowUp className="h-4 w-4 text-teal-600" />
-                            ) : (
-                              <ArrowDown className="h-4 w-4 text-teal-600" />
-                            )
-                          ) : (
-                            <ArrowUpDown className="h-4 w-4 text-gray-400" />
-                          )}
-                        </span>
-                      )}
-                    </div>
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {processedData.map((row, rowIndex) => (
-                <TableRow
-                  key={rowIndex}
-                  className={`border-b border-gray-100 hover:bg-teal-50 ${
-                    onRowClick ? "cursor-pointer" : ""
-                  }`}
-                  onClick={() => onRowClick?.(row)}
-                >
+          <div className="h-full overflow-auto">
+            <Table>
+              <TableHeader className="sticky top-0 bg-white z-10">
+                <TableRow className="border-b border-gray-200">
                   {columns.map((column) => (
-                    <TableCell
+                    <TableHead
                       key={column.key}
-                      className={
-                        column.key === columns[0].key
-                          ? "font-medium text-gray-900"
-                          : "text-gray-700"
-                      }
+                      className={`text-left font-medium text-gray-600 ${
+                        column.sortable
+                          ? "cursor-pointer select-none hover:bg-gray-50"
+                          : ""
+                      }`}
+                      onClick={() => column.sortable && handleSort(column.key)}
                     >
-                      {renderCellContent(column, row)}
-                    </TableCell>
+                      <div className="flex items-center gap-2">
+                        {column.label}
+                        {column.sortable && (
+                          <span className="inline-flex">
+                            {sortConfig?.key === column.key ? (
+                              sortConfig.direction === "asc" ? (
+                                <ArrowUp className="h-4 w-4 text-teal-600" />
+                              ) : (
+                                <ArrowDown className="h-4 w-4 text-teal-600" />
+                              )
+                            ) : (
+                              <ArrowUpDown className="h-4 w-4 text-gray-400" />
+                            )}
+                          </span>
+                        )}
+                      </div>
+                    </TableHead>
                   ))}
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {processedData.map((row, rowIndex) => (
+                  <TableRow
+                    key={rowIndex}
+                    className={`border-b border-gray-100 hover:bg-teal-50 ${
+                      onRowClick ? "cursor-pointer" : ""
+                    }`}
+                    onClick={() => onRowClick?.(row)}
+                  >
+                    {columns.map((column) => (
+                      <TableCell
+                        key={column.key}
+                        className={
+                          column.key === columns[0].key
+                            ? "font-medium text-gray-900"
+                            : "text-gray-700"
+                        }
+                      >
+                        {renderCellContent(column, row)}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </CardContent>
     </Card>

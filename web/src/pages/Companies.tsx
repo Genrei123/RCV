@@ -229,19 +229,21 @@ export function Companies(props: CompaniesProps) {
         </div>
 
         {/* Data Table */}
-        <>
-          <DataTable
-            title=""
-            columns={columns}
-            data={pagedCompanies}
-            searchPlaceholder="Search companies..."
-            onSearch={onSearch}
-            loading={loading}
-            emptyStateTitle="No Companies Found"
-            emptyStateDescription="Try adjusting your search or add a new company to get started."
-          />
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 min-h-0">
+            <DataTable
+              title=""
+              columns={columns}
+              data={pagedCompanies}
+              searchPlaceholder="Search companies..."
+              onSearch={onSearch}
+              loading={loading}
+              emptyStateTitle="No Companies Found"
+              emptyStateDescription="Try adjusting your search or add a new company to get started."
+            />
+          </div>
 
-          <div className="mt-4 flex items-center justify-between">
+          <div className="mt-4 flex items-center justify-between flex-shrink-0">
             <div>
               <span className="text-sm">
                 Page {currentPage} of {totalPages}
@@ -259,7 +261,7 @@ export function Companies(props: CompaniesProps) {
               />
             </div>
           </div>
-        </>
+        </div>
       </PageContainer>
 
       {/* Add Company Modal */}

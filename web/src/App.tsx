@@ -142,7 +142,7 @@ function App() {
   }, [isLoggedIn]);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-white flex flex-col">
       {/* Global Loading Indicator for all API requests */}
       <GlobalLoadingIndicator />
 
@@ -162,18 +162,21 @@ function App() {
 
       <div
         className={`flex-1 ${
-          isLoggedIn ? "grid grid-cols-1 md:grid-cols-[250px_1fr]" : ""
+          isLoggedIn
+            ? "grid grid-cols-1 md:grid-cols-[250px_1fr] grid-rows-[1fr_auto]"
+            : ""
         }`}
       >
-        {/* Sidebar - Only show when logged in */}
+        {/* Sidebar - Only show when logged in.
+            Remove extra dark background so it doesn't cover content/footer. */}
         {isLoggedIn && (
-          <aside className="hidden md:block bg-slate-800 text-white shadow-lg">
+          <aside className="hidden md:block">
             <Sidebar />
           </aside>
         )}
 
-        <main className="flex flex-col min-h-screen md:min-h-0 h-[100vh]">
-          <div className="flex-1 bg-white rounded-lg shadow-sm overflow-y-auto m-0">
+        <main className="flex flex-col min-h-0 flex-1 overflow-hidden">
+          <div className="flex-1 bg-white rounded-lg shadow-sm overflow-y-auto m-0 flex flex-col">
             <Routes>
               {/* Public Routes */}
               <Route
@@ -307,10 +310,12 @@ function App() {
             </Routes>
           </div>
         </main>
-      </div>
 
-      {/* Footer */}
-      <Footer />
+        {/* Footer - spans both columns when logged in */}
+        <div className={isLoggedIn ? "col-span-1 md:col-span-2 w-full" : "w-full"}>
+          <Footer />
+        </div>
+      </div>
     </div>
   );
 }
