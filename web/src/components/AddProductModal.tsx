@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { X, Package, Hash, Calendar, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProductService } from "@/services/productService";
 import type { CreateProductRequest } from "@/services/productService";
+import { CompanyService } from "@/services/companyService";
 import { toast } from "react-toastify";
 
 interface AddProductModalProps {
@@ -34,6 +35,98 @@ export function AddProductModal({
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [companyInputValue, setCompanyInputValue] = useState("");
+  const [allCompanies, setAllCompanies] = useState(companies);
+  const [companyOptions, setCompanyOptions] = useState(companies);
+  const [companyDropdownOpen, setCompanyDropdownOpen] = useState(false);
+  const [companyLoading, setCompanyLoading] = useState(false);
+  const companyDropdownRef = useRef<HTMLDivElement | null>(null);
+  const hasFetchedAllCompanies = useRef(false);
+  const COMPANY_FETCH_LIMIT = 2000;
+
+  useEffect(() => {
+    setAllCompanies(companies);
+    setCompanyOptions(companies);
+  }, [companies]);
+
+  useEffect(() => {
+    const query = companyInputValue.trim().toLowerCase();
+    if (!query) {
+      setCompanyOptions(allCompanies);
+      return;
+    }
+    setCompanyOptions(
+      allCompanies.filter((company) =>
+        company.name.toLowerCase().includes(query)
+      )
+    );
+  }, [companyInputValue, allCompanies]);
+
+  useEffect(() => {
+    if (!companyDropdownOpen || hasFetchedAllCompanies.current) return;
+
+    let isActive = true;
+    setCompanyLoading(true);
+
+    CompanyService.getCompaniesPage(1, COMPANY_FETCH_LIMIT)
+      .then((response) => {
+        if (!isActive) return;
+        const fetchedCompanies = response.companies || response.data || [];
+        setAllCompanies(fetchedCompanies);
+        setCompanyOptions(fetchedCompanies);
+        hasFetchedAllCompanies.current = true;
+      })
+      .catch((error) => {
+        if (isActive) {
+          console.error("Error fetching companies:", error);
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setCompanyLoading(false);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [companyDropdownOpen]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        companyDropdownRef.current &&
+        !companyDropdownRef.current.contains(event.target as Node)
+      ) {
+        setCompanyDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const handleCompanyInputChange = (value: string) => {
+    setCompanyInputValue(value);
+    setCompanyDropdownOpen(true);
+    if (formData.companyId) {
+      setFormData((prev) => ({ ...prev, companyId: "" }));
+    }
+    if (errors.companyId) {
+      setErrors((prev) => ({ ...prev, companyId: "" }));
+    }
+  };
+
+  const handleCompanySelect = (company: { _id: string; name: string }) => {
+    setFormData((prev) => ({ ...prev, companyId: company._id }));
+    setCompanyInputValue(company.name);
+    setCompanyDropdownOpen(false);
+    if (errors.companyId) {
+      setErrors((prev) => ({ ...prev, companyId: "" }));
+    }
+  };
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -138,6 +231,8 @@ export function AddProductModal({
         dateOfRegistration: new Date().toISOString().split("T")[0],
         companyId: "",
       });
+      setCompanyInputValue("");
+      setCompanyDropdownOpen(false);
 
       onSuccess();
       onClose();
@@ -167,6 +262,8 @@ export function AddProductModal({
         dateOfRegistration: new Date().toISOString().split("T")[0],
         companyId: "",
       });
+      setCompanyInputValue("");
+      setCompanyDropdownOpen(false);
       setErrors({});
       onClose();
     }
@@ -175,7 +272,7 @@ export function AddProductModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
@@ -444,26 +541,51 @@ export function AddProductModal({
               <label className="block text-sm font-medium app-text-subtle mb-2">
                 Company *
               </label>
-              <div className="relative">
+              <div className="relative" ref={companyDropdownRef}>
                 <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 app-text-subtle h-4 w-4" />
-                <select
-                  name="companyId"
-                  value={formData.companyId}
-                  onChange={handleChange}
-                  className={`w-full pl-10 px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[color:var(--app-primary)] ${
+                <Input
+                  type="text"
+                  name="companySearch"
+                  autoComplete="off"
+                  value={companyInputValue}
+                  onFocus={() => setCompanyDropdownOpen(true)}
+                  onChange={(e) => handleCompanyInputChange(e.target.value)}
+                  placeholder="Search or select a company"
+                  className={`pl-10 ${
                     errors.companyId
                       ? "border-[color:var(--app-error)]"
                       : "app-border-neutral"
                   }`}
                   disabled={loading}
-                >
-                  <option value="">Select a company</option>
-                  {companies.map((company) => (
-                    <option key={company._id} value={company._id}>
-                      {company.name}
-                    </option>
-                  ))}
-                </select>
+                />
+                {companyDropdownOpen && (
+                  <div className="absolute z-10 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                    {companyLoading ? (
+                      <div className="p-3 text-sm text-gray-500">
+                        Searching companies...
+                      </div>
+                    ) : companyOptions.length === 0 ? (
+                      <div className="p-3 text-sm text-gray-500">
+                        No companies found
+                      </div>
+                    ) : (
+                      companyOptions.map((company) => (
+                        <button
+                          key={company._id}
+                          type="button"
+                          onClick={() => handleCompanySelect(company)}
+                          className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 ${
+                            formData.companyId === company._id
+                              ? "bg-gray-100 font-medium"
+                              : ""
+                          }`}
+                        >
+                          {company.name}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
               {errors.companyId && (
                 <p className="app-text-error text-xs mt-1">
