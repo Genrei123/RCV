@@ -460,15 +460,18 @@ export function Profile({
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="animate-pulse">
+      <PageContainer
+        title="Profile"
+        description="Manage your personal account information and activity"
+      >
+        <div className="animate-pulse py-6 md:py-8 space-y-6">
           <div className="h-8 bg-neutral-200 rounded w-48 mb-6"></div>
           <div className="grid lg:grid-cols-2 gap-8">
             <div className="h-96 bg-neutral-200 rounded-lg"></div>
             <div className="h-96 bg-neutral-200 rounded-lg"></div>
           </div>
         </div>
-      </div>
+      </PageContainer>
     );
   }
 
@@ -477,7 +480,7 @@ export function Profile({
       title="Profile"
       description="Manage your personal account information and activity"
       headerAction={
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 cursor-pointer">
           <Button
             onClick={handleEditProfile}
             className="bg-teal-600 hover:bg-primary-700 text-white w-auto"
@@ -487,7 +490,7 @@ export function Profile({
           <Button
             onClick={handleArchiveAccount}
             variant="destructive"
-            className="bg-error-600 hover:bg-error-700 text-white w-auto"
+            className="bg-amber-500 hover:bg-error-700 text-white w-auto"
           >
             <Archive className="h-4 w-4 mr-2" />
             Archive Account
@@ -499,7 +502,7 @@ export function Profile({
         {/* Profile Information */}
         <Card className="w-full">
           <CardContent className="p-4 sm:p-6 w-full">
-            <div className="mb-6">
+            <div className="mb-12">
               <h2 className="text-xl font-semibold text-neutral-900 mb-1">
                 Profile Information
               </h2>
@@ -511,7 +514,7 @@ export function Profile({
             {/* Avatar Section */}
             <div className="text-center mb-8">
               <div className="relative inline-block">
-                <div className="w-24 h-24 bg-neutral-200 rounded-full flex items-center justify-center mx-auto mb-4 overflow-hidden">
+                <div className="w-30 h-30 bg-neutral-200 rounded-full flex items-center justify-center mx-auto mb-4 overflow-hidden">
                   {localAvatar ? (
                     <img
                       src={localAvatar}

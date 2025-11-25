@@ -174,25 +174,25 @@ export function Sidebar({
       {/* Desktop sidebar: sticky with max height; allows global footer to appear below */}
       <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:sticky lg:top-0 lg:max-h-screen bg-white border-r overflow-y-auto flex-shrink-0">
         {/* Logo Section */}
-        <div className="p-6 border-b border-gray-200">
+        <div className="p-6 border-b border-neutral-200">
           <div className="flex items-center gap-2">
             {/* Figma-style logo */}
             <div className="flex items-center justify-center">
               <LogoIcon className="w-8 h-8" />
             </div>
             <span className="text-xl font-semibold text-[#005440]">RCV</span>
-            <span className="text-xs text-gray-400">v.01</span>
+            <span className="text-xs text-neutral-400">v.01</span>
           </div>
         </div>
 
         {/* User Profile Section (click to open profile menu) */}
-        <div className="p-6 border-b border-gray-200 relative">
+        <div className="p-6 border-b border-neutral-200 relative cursor-pointer">
           <button
             type="button"
             onClick={() => setShowProfileMenu((s) => !s)}
             className="w-full flex items-center gap-3 text-left focus:outline-none"
           >
-            <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-300 flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 rounded-full overflow-hidden bg-neutral-300 flex items-center justify-center flex-shrink-0 cursor-pointer">
               {avatarUrl ? (
                 <img
                   src={avatarUrl}
@@ -200,14 +200,14 @@ export function Sidebar({
                   className="w-10 h-10 object-cover"
                 />
               ) : (
-                <User size={20} className="text-gray-600" />
+                <User size={20} className="text-neutral-600" />
               )}
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-gray-800 text-sm truncate">
+            <div className="flex-1 min-w-0 cursor-pointer">
+              <p className="font-medium text-neutral-800 text-sm truncate">
                 {loading ? "Loading..." : getFullName()}
               </p>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-neutral-500 cursor-pointer">
                 {loading ? "Please wait..." : getRoleName()}
               </p>
             </div>
@@ -260,7 +260,7 @@ export function Sidebar({
                   className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
                     isActive
                       ? "app-bg-primary text-white"
-                      : "text-gray-600 hover:bg-gray-100"
+                      : "text-neutral-600 hover:bg-neutral-100"
                   }`}
                 >
                   <div className="flex items-center gap-3">
