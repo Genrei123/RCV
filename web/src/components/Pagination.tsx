@@ -72,8 +72,8 @@ export function Pagination({
             <button
               onClick={onPrev}
               disabled={currentPage === 1}
-              className={`inline-flex items-center rounded-md border bg-white px-3 py-1 text-sm font-medium transition-colors hover:app-bg-neutral ${
-                currentPage === 1 ? "cursor-not-allowed opacity-50" : ""
+              className={`inline-flex items-center rounded-md border bg-white px-3 py-1 text-sm font-medium transition-colors ${
+                currentPage === 1 ? "cursor-not-allowed opacity-50" : "hover:bg-gray-200"
               }`}
               aria-label="Previous page"
             >
@@ -90,7 +90,7 @@ export function Pagination({
                       className={`inline-flex h-8 min-w-[2rem] items-center justify-center rounded-md px-3 text-sm font-medium transition-colors ${
                         p === currentPage
                           ? "app-bg-primary text-white"
-                          : "bg-white app-text-subtle hover:app-bg-neutral"
+                          : "bg-white app-text-subtle hover:bg-green-100"
                       }`}
                     >
                       {p}
@@ -113,7 +113,7 @@ export function Pagination({
               className={`inline-flex items-center rounded-md border bg-white px-3 py-1 text-sm font-medium transition-colors hover:app-bg-neutral ${
                 currentPage === totalPages
                   ? "cursor-not-allowed opacity-50"
-                  : ""
+                  : "hover:bg-gray-200"
               }`}
               aria-label="Next page"
             >
@@ -136,8 +136,8 @@ export function Pagination({
             <button
               onClick={onPrev}
               disabled={currentPage === 1}
-              className={`inline-flex items-center rounded-md border bg-white px-3 py-1 text-sm font-medium transition-colors hover:app-bg-neutral ${
-                currentPage === 1 ? "cursor-not-allowed opacity-50" : ""
+              className={`inline-flex items-center rounded-md border bg-white px-3 py-1 text-sm font-medium transition-colors ${
+                currentPage === 1 ? "cursor-not-allowed opacity-50" : "hover:bg-gray-200"
               }`}
               aria-label="Previous page"
             >
@@ -153,7 +153,7 @@ export function Pagination({
                       className={`inline-flex h-8 min-w-[2rem] items-center justify-center rounded-md px-3 text-sm font-medium transition-colors ${
                         p === currentPage
                           ? "app-bg-primary text-white"
-                          : "bg-white app-text-subtle hover:app-bg-neutral"
+                          : "bg-white app-text-subtle hover:bg-green-100"
                       }`}
                     >
                       {p}
@@ -176,7 +176,7 @@ export function Pagination({
               className={`inline-flex items-center rounded-md border bg-white px-3 py-1 text-sm font-medium transition-colors hover:app-bg-neutral ${
                 currentPage === totalPages
                   ? "cursor-not-allowed opacity-50"
-                  : ""
+                  : "hover:bg-gray-200"
               }`}
               aria-label="Next page"
             >
