@@ -28,6 +28,7 @@
     "mysql2": "^3.14.4",
     "nodemailer": "^7.0.7",
     "openai": "^6.3.0",
+    "punycode": "^2.3.1",
     "qrcode": "^1.5.4",
     "redis": "^5.9.0",
     "reflect-metadata": "^0.2.2",
