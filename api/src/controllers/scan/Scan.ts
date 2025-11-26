@@ -14,6 +14,7 @@ import {
 import { OCRBlock } from "../../types/types";
 import { ProcessText } from "../../services/aiProcess";
 import { FirebaseStorageValidator } from "../../utils/FirebaseStorageValidator";
+import { searchProductWithGrounding } from "../../services/groundedSearchService";
 import { ILike } from "typeorm";
 
 export const scanProduct = async (
@@ -91,7 +92,7 @@ export const searchScannedProduct = async (
   next: NextFunction
 ) => {
   try {
-    const { productName, LTONumber, CFPRNumber } = req.body;
+    const { productName, LTONumber, CFPRNumber, brandName, manufacturer } = req.body;
 
     // Validate input - at least one search criteria is required
     if (!productName && !LTONumber && !CFPRNumber) {
@@ -102,11 +103,17 @@ export const searchScannedProduct = async (
       );
     }
 
-    console.log("Searching for product with criteria:", { productName, LTONumber, CFPRNumber });
+    console.log("🔍 Step 1: Searching for product in OUR database with criteria:", { 
+      productName, 
+      LTONumber, 
+      CFPRNumber,
+      brandName,
+      manufacturer 
+    });
 
     const { page, limit, skip } = parsePageParams(req, 10);
     
-    // Build search criteria
+    // Build search criteria for database
     const searchCriteria: any = {};
     if (productName) {
       searchCriteria.productName = ILike(`%${productName}%`);
@@ -118,6 +125,7 @@ export const searchScannedProduct = async (
       searchCriteria.CFPRNumber = CFPRNumber;
     }
 
+    // STEP 1: Try to find in OUR database first
     const [products, total] = await ProductRepo.findAndCount({
       where: searchCriteria,
       skip,
@@ -126,66 +134,93 @@ export const searchScannedProduct = async (
       relations: ["company", "registeredBy"],
     });
 
-    if (!products || products.length === 0) {
-      console.log("Product not found in database. Creating sample product...");
+    // If product found in OUR database, return it immediately
+    if (products && products.length > 0) {
+      console.log("✅ Product found in OUR database:", products.length, "results");
 
-      // First, get or create a sample company
-      let sampleCompany = await CompanyRepo.findOne({
-        where: { name: "Sample Test Company" },
-      });
-
-      if (!sampleCompany) {
-        console.log("Creating sample company...");
-        sampleCompany = new Company();
-        sampleCompany.name = "Sample Test Company";
-        sampleCompany.address = "123 Sample Street, Test City, Philippines";
-        sampleCompany.licenseNumber =
-          "LIC-" + Math.floor(Math.random() * 1000000);
-        sampleCompany = await CompanyRepo.save(sampleCompany);
-        console.log("Sample company created with ID:", sampleCompany._id);
-      }
-
-      // Create sample product with the extracted data
-      const newProduct = new Product();
-      newProduct.productName = productName || "Unknown Product";
-      newProduct.brandName = req.body.brandName || "Sample Brand";
-      newProduct.LTONumber = LTONumber || "LTO-2024-" + Math.floor(Math.random() * 100000);
-      newProduct.CFPRNumber = CFPRNumber || "CFPR-2024-" + Math.floor(Math.random() * 100000);
-      newProduct.lotNumber = req.body.lotNumber || "LOT-" + Math.floor(Math.random() * 1000000);
-      newProduct.productClassification = req.body.productClassification || "Unclassified";
-      newProduct.productSubClassification = req.body.productSubClassification || "General";
-      newProduct.dateOfRegistration = new Date();
-      newProduct.expirationDate = req.body.expirationDate 
-        ? new Date(req.body.expirationDate)
-        : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
-      newProduct.registeredById = "56c69f46-e5ae-410e-b935-f714fbc6556c";
-      newProduct.registeredAt = new Date();
-      newProduct.companyId = sampleCompany._id;
-
-      // Save the new product
-      const savedProduct = await ProductRepo.save(newProduct);
-      console.log("Sample product created with ID:", savedProduct._id);
+      const meta = buildPaginationMeta(page, limit, total);
+      const links = buildLinks(req, page, limit, meta.total_pages);
 
       return res.status(200).json({
         success: true,
-        message: "Product not found - created sample product for testing",
-        Product: [savedProduct],
+        found: true,
+        message: "Product found in database",
+        source: "internal_database",
+        data: products,
+        pagination: meta,
+        links,
+        Product: products, // Keep this for compatibility with Flutter app
       });
     }
 
-    console.log("Found products:", products.length);
+    // STEP 2: Product NOT found in our database - use GROUNDED SEARCH
+    console.log("⚠️ Product NOT found in our database");
+    console.log("🌐 Step 2: Performing grounded search with PDF registry...");
 
-    const meta = buildPaginationMeta(page, limit, total);
-    const links = buildLinks(req, page, limit, meta.total_pages);
+    try {
+      const groundedResult = await searchProductWithGrounding(
+        productName,
+        LTONumber,
+        CFPRNumber,
+        brandName,
+        manufacturer
+      );
 
-    res.status(200).json({
-      success: true,
-      message: "Product found successfully",
-      data: products,
-      pagination: meta,
-      links,
-      Product: products, // Keep this for compatibility with Flutter app
-    });
+      if (!groundedResult) {
+        console.log("❌ No match found in PDF registry either");
+        return res.status(200).json({
+          success: true,
+          found: false,
+          message: "Product not found in database or official registry",
+          source: "not_found",
+          data: null,
+        });
+      }
+
+      // Format grounded result to match Product structure
+      const groundedProduct = {
+        _id: `grounded-${Date.now()}`,
+        productName: groundedResult.productName,
+        brandName: groundedResult.brandName,
+        CFPRNumber: groundedResult.CFPRNumber,
+        productClassification: groundedResult.productClassification,
+        productSubClassification: groundedResult.subClassification,
+        expirationDate: groundedResult.validUntil, // Map VALID UNTIL to expirationDate
+        company: {
+          name: groundedResult.companyName,
+          address: 'Philippines',
+        },
+        isActive: true,
+        confidence: groundedResult.confidence,
+        sourceUrl: groundedResult.source,
+      };
+
+      console.log("✅ Product found via grounded search from PDF registry");
+
+      return res.status(200).json({
+        success: true,
+        found: true,
+        message: "Product found in official PDF registry (not in our database)",
+        source: "grounded_search_pdf",
+        data: [groundedProduct],
+        confidence: groundedResult.confidence,
+        Product: [groundedProduct], // Keep this for compatibility with Flutter app
+      });
+
+    } catch (groundingError: any) {
+      console.error("❌ Error during grounded search:", groundingError);
+      
+      // Fallback: Return not found if grounding fails
+      return res.status(200).json({
+        success: true,
+        found: false,
+        message: "Product not found (database search failed, grounding search unavailable)",
+        source: "search_failed",
+        data: null,
+        error: groundingError.message,
+      });
+    }
+
   } catch (error) {
     console.error("Error in searchScannedProduct:", error);
     next(error);

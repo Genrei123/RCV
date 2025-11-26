@@ -13,7 +13,7 @@ const initializeApp = async () => {
   initializeCertificateBlockchain();
 
   // Initialize Redis connection
-  await redisService.connect();
+  // await redisService.connect();
 
   app.listen(PORT || 3000, () =>
     console.log('Server is running on port: ', PORT)    

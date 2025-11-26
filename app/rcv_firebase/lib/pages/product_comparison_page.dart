@@ -4,11 +4,17 @@ import 'package:rcv_firebase/themes/app_colors.dart';
 class ProductComparisonPage extends StatelessWidget {
   final Map<String, dynamic> scannedData;
   final Map<String, dynamic>? databaseProduct;
+  final String? frontImageUrl;
+  final String? backImageUrl;
+  final String? ocrBlobText;
 
   const ProductComparisonPage({
     super.key,
     required this.scannedData,
     this.databaseProduct,
+    this.frontImageUrl,
+    this.backImageUrl,
+    this.ocrBlobText,
   });
 
   @override
@@ -93,19 +99,9 @@ class ProductComparisonPage extends StatelessWidget {
                       databaseProduct!['brandName'],
                     ),
                     _buildComparisonCard(
-                      'LTO Number',
-                      scannedData['LTONumber'],
-                      databaseProduct!['LTONumber'],
-                    ),
-                    _buildComparisonCard(
                       'CFPR Number',
                       scannedData['CFPRNumber'],
                       databaseProduct!['CFPRNumber'],
-                    ),
-                    _buildComparisonCard(
-                      'Lot Number',
-                      scannedData['lotNumber'],
-                      databaseProduct!['lotNumber'],
                     ),
                     _buildComparisonCard(
                       'Expiration Date',
@@ -138,20 +134,33 @@ class ProductComparisonPage extends StatelessWidget {
                           const SizedBox(height: 12),
                           _buildInfoRow(
                             'Classification',
-                            databaseProduct!['productClassification'],
+                            databaseProduct!['productClassification'] ?? 'N/A',
                           ),
                           _buildInfoRow(
                             'Sub-Classification',
-                            databaseProduct!['productSubClassification'],
-                          ),
-                          _buildInfoRow(
-                            'Registration Date',
-                            databaseProduct!['dateOfRegistration'],
+                            databaseProduct!['productSubClassification'] ?? 'N/A',
                           ),
                           _buildInfoRow(
                             'Company',
                             databaseProduct!['company']?['name'] ?? 'N/A',
                           ),
+                          if (databaseProduct!['dateOfRegistration'] != null)
+                            _buildInfoRow(
+                              'Registration Date',
+                              databaseProduct!['dateOfRegistration'],
+                            ),
+                          if (databaseProduct!['confidence'] != null)
+                            _buildInfoRow(
+                              'Match Confidence',
+                              '${(databaseProduct!['confidence'] * 100).toStringAsFixed(0)}%',
+                            ),
+                          if (databaseProduct!['source'] != null)
+                            _buildInfoRow(
+                              'Data Source',
+                              databaseProduct!['source'] == 'grounded_search_pdf'
+                                  ? 'Official PDF Registry'
+                                  : 'Internal Database',
+                            ),
                           _buildInfoRow(
                             'Status',
                             databaseProduct!['isActive'] == true
@@ -198,16 +207,8 @@ class ProductComparisonPage extends StatelessWidget {
                             scannedData['brandName'],
                           ),
                           _buildScanDataRow(
-                            'LTO Number',
-                            scannedData['LTONumber'],
-                          ),
-                          _buildScanDataRow(
                             'CFPR Number',
                             scannedData['CFPRNumber'],
-                          ),
-                          _buildScanDataRow(
-                            'Lot Number',
-                            scannedData['lotNumber'],
                           ),
                           _buildScanDataRow(
                             'Expiration Date',
@@ -226,7 +227,12 @@ class ProductComparisonPage extends StatelessWidget {
                       Expanded(
                         child: ElevatedButton.icon(
                           onPressed: () {
-                            Navigator.pop(context, 'COMPLIANT');
+                            Navigator.pop(context, {
+                              'action': 'COMPLIANT',
+                              'frontImageUrl': frontImageUrl,
+                              'backImageUrl': backImageUrl,
+                              'ocrBlobText': ocrBlobText,
+                            });
                           },
                           icon: const Icon(Icons.check_circle),
                           label: const Text('Mark Compliant'),
@@ -244,7 +250,12 @@ class ProductComparisonPage extends StatelessWidget {
                       Expanded(
                         child: ElevatedButton.icon(
                           onPressed: () {
-                            Navigator.pop(context, 'NON_COMPLIANT');
+                            Navigator.pop(context, {
+                              'action': 'NON_COMPLIANT',
+                              'frontImageUrl': frontImageUrl,
+                              'backImageUrl': backImageUrl,
+                              'ocrBlobText': ocrBlobText,
+                            });
                           },
                           icon: const Icon(Icons.report_problem),
                           label: const Text('Report Issue'),

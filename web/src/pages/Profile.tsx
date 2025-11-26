@@ -15,7 +15,7 @@ import { Pagination } from "@/components/Pagination";
 import { PageContainer } from "@/components/PageContainer";
 import { EditProfileModal } from "@/components/EditProfileModal";
 import { ArchiveAccountModal } from "@/components/ArchiveAccountModal";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { UserPageService, type UserProfile } from "@/services/userPageService";
 import { AuditLogService, type AuditLog } from "@/services/auditLogService";
 import { toast } from "react-toastify";
@@ -66,8 +66,8 @@ export function Profile({
   const [localAvatar, setLocalAvatar] = useState<string | null>(null);
   // Removed cropOpen, cropImageSrc, and fileInputRef for view-only mode
 
-  // Audit logs state
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  // Full audit logs fetched once for consistent cross-page sorting
+  const [fullAuditLogs, setFullAuditLogs] = useState<AuditLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
   const [logsPagination, setLogsPagination] = useState({
     current_page: 1,
@@ -75,6 +75,33 @@ export function Profile({
     total_pages: 1,
     total_items: 0,
   });
+  const [sortBy, setSortBy] = useState<"all" | "platform" | "action">("all");
+
+  const sortedFullLogs = useMemo(() => {
+    const arr = [...fullAuditLogs];
+    if (sortBy === "platform") {
+      const order: Record<string, number> = { MOBILE: 0, WEB: 1 };
+      return arr.sort((a, b) => {
+        const pa = order[a.platform] ?? 99;
+        const pb = order[b.platform] ?? 99;
+        if (pa === pb) {
+          return (
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+        }
+        return pa - pb; // MOBILE first, then WEB
+      });
+    }
+    if (sortBy === "action") {
+      return arr.sort((a, b) => a.action.localeCompare(b.action));
+    }
+    return arr;
+  }, [fullAuditLogs, sortBy]);
+
+  const currentPageLogs = useMemo(() => {
+    const start = (logsPagination.current_page - 1) * logsPagination.per_page;
+    return sortedFullLogs.slice(start, start + logsPagination.per_page);
+  }, [sortedFullLogs, logsPagination.current_page, logsPagination.per_page]);
 
   // Fetch profile data on mount
   useEffect(() => {
@@ -83,7 +110,7 @@ export function Profile({
     } else {
       setUser(propUser);
     }
-    fetchAuditLogs(1);
+    fetchAllAuditLogs();
     // Load avatar from localStorage override if present (view-only on Profile page)
     try {
       const saved = localStorage.getItem("profile_avatar_data");
@@ -127,27 +154,30 @@ export function Profile({
     }
   };
 
-  const fetchAuditLogs = async (page: number = 1) => {
+  const fetchAllAuditLogs = async () => {
     setLogsLoading(true);
     try {
-      console.log("Fetching audit logs for page:", page);
-      const response = await AuditLogService.getMyLogs(page, 10);
-      console.log("Audit logs response:", response);
-
-      // Check if response has the expected structure
-      if (!response) {
-        throw new Error("No response from server");
+      console.log("Fetching all audit logs for consistent pagination");
+      const first = await AuditLogService.getMyLogs(1, logsPagination.per_page);
+      if (!first || !first.pagination) throw new Error("Invalid response");
+      let all: AuditLog[] = [...(first.data || [])];
+      const totalPages = first.pagination.total_pages || 1;
+      for (let p = 2; p <= totalPages; p++) {
+        const resp = await AuditLogService.getMyLogs(
+          p,
+          first.pagination.per_page
+        );
+        all = all.concat(resp.data || []);
       }
-
-      setAuditLogs(response.data || []);
-      if (response.pagination) {
-        setLogsPagination(response.pagination);
-      }
+      setFullAuditLogs(all);
+      setLogsPagination({
+        current_page: 1,
+        per_page: first.pagination.per_page,
+        total_pages: first.pagination.total_pages,
+        total_items: first.pagination.total_items,
+      });
     } catch (error: any) {
-      console.error("Error fetching audit logs:", error);
-      console.error("Error details:", error.response?.data || error.message);
-
-      // More specific error messages
+      console.error("Error fetching all audit logs:", error);
       if (
         error.code === "ERR_NETWORK" ||
         error.message?.includes("Network Error")
@@ -225,7 +255,9 @@ export function Profile({
     }
     // Badge ID (optional)
     if (!validateBadgeId(updatedUser.badgeId)) {
-      toast.error("Badge ID may only contain letters, numbers, - _ . and be 2-30 chars.");
+      toast.error(
+        "Badge ID may only contain letters, numbers, - _ . and be 2-30 chars."
+      );
       return;
     }
     // Date of birth (optional)
@@ -273,7 +305,7 @@ export function Profile({
       }
 
       // Refresh audit logs to show the profile update action
-      await fetchAuditLogs(logsPagination.current_page);
+      await fetchAllAuditLogs();
 
       setShowEditModal(false);
     } catch (error) {
@@ -334,7 +366,9 @@ export function Profile({
       render: (value) => {
         if (typeof value !== "string") {
           return (
-            <span className="font-medium text-neutral-900">{String(value)}</span>
+            <span className="font-medium text-neutral-900">
+              {String(value)}
+            </span>
           );
         }
         const MAX_LEN = 40;
@@ -443,517 +477,599 @@ export function Profile({
       title="Profile"
       description="Manage your personal account information and activity"
       headerAction={
-      <div className="flex items-center gap-3">
-        <Button
-        onClick={handleEditProfile}
-        className="bg-teal-600 hover:bg-primary-700 text-white w-auto"
-        >
-        Edit Profile
-        </Button>
-        <Button
-        onClick={handleArchiveAccount}
-        variant="destructive"
-        className="bg-error-600 hover:bg-error-700 text-white w-auto"
-        >
-        <Archive className="h-4 w-4 mr-2" />
-        Archive Account
-        </Button>
-      </div>
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={handleEditProfile}
+            className="bg-teal-600 hover:bg-primary-700 text-white w-auto"
+          >
+            Edit Profile
+          </Button>
+          <Button
+            onClick={handleArchiveAccount}
+            variant="destructive"
+            className="bg-error-600 hover:bg-error-700 text-white w-auto"
+          >
+            <Archive className="h-4 w-4 mr-2" />
+            Archive Account
+          </Button>
+        </div>
       }
     >
       <div className="grid w-full grid-cols-1 xl:grid-cols-2 gap-6 md:gap-8">
-      {/* Profile Information */}
-      <Card className="w-full">
-        <CardContent className="p-4 sm:p-6 w-full">
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold text-neutral-900 mb-1">
-          Profile Information
-          </h2>
-          <p className="text-sm text-neutral-600">
-          Update your personal account
-          </p>
-        </div>
-
-        {/* Avatar Section */}
-        <div className="text-center mb-8">
-          <div className="relative inline-block">
-          <div className="w-24 h-24 bg-neutral-200 rounded-full flex items-center justify-center mx-auto mb-4 overflow-hidden">
-            {localAvatar ? (
-            <img
-              src={localAvatar}
-              alt={getFullName(user)}
-              className="w-full h-full object-cover"
-            />
-            ) : user?.avatar ? (
-            <img
-              src={user.avatar}
-              alt={getFullName(user)}
-              className="w-full h-full object-cover"
-            />
-            ) : (
-            <User className="w-12 h-12 text-neutral-500" />
-            )}
-            {/* View-only avatar: no overlay or edit icon */}
-          </div>
-          <h3 className="text-lg font-semibold text-neutral-900">
-            {getFullName(user)}
-          </h3>
-          <p className="text-sm text-neutral-600">
-            {getRoleName(user?.role)}
-          </p>
-          </div>
-        </div>
-
-        {/* Profile Details */}
-        <div className="space-y-4 w-full">
-          <div className="flex items-start gap-3 p-3 border border-neutral-200 rounded-lg w-full">
-          <Mail className="w-5 h-5 text-neutral-500 mt-0.5" />
-          <div className="flex-1">
-            <p className="text-sm font-medium text-neutral-900">Email</p>
-            <p className="text-sm text-neutral-600 break-all">
-            {user?.email || "Not provided"}
-            </p>
-          </div>
-          </div>
-
-          {user?.location && (
-          <div className="flex items-start gap-3 p-3 border border-neutral-200 rounded-lg w-full">
-            <MapPin className="w-5 h-5 text-neutral-500 mt-0.5" />
-            <div className="flex-1">
-            <p className="text-sm font-medium text-neutral-900">
-              Location
-            </p>
-            <p className="text-sm text-neutral-600 break-words">
-              {user.location}
-            </p>
+        {/* Profile Information */}
+        <Card className="w-full">
+          <CardContent className="p-4 sm:p-6 w-full">
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold text-neutral-900 mb-1">
+                Profile Information
+              </h2>
+              <p className="text-sm text-neutral-600">
+                Update your personal account
+              </p>
             </div>
-          </div>
-          )}
 
-          {user?.dateOfBirth && (
-          <div className="flex items-start gap-3 p-3 border border-neutral-200 rounded-lg w-full">
-            <Calendar className="w-5 h-5 text-neutral-500 mt-0.5" />
-            <div className="flex-1">
-            <p className="text-sm font-medium text-neutral-900">
-              Date of Birth
-            </p>
-            <p className="text-sm text-neutral-600">{user.dateOfBirth}</p>
+            {/* Avatar Section */}
+            <div className="text-center mb-8">
+              <div className="relative inline-block">
+                <div className="w-24 h-24 bg-neutral-200 rounded-full flex items-center justify-center mx-auto mb-4 overflow-hidden">
+                  {localAvatar ? (
+                    <img
+                      src={localAvatar}
+                      alt={getFullName(user)}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : user?.avatar ? (
+                    <img
+                      src={user.avatar}
+                      alt={getFullName(user)}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <User className="w-12 h-12 text-neutral-500" />
+                  )}
+                  {/* View-only avatar: no overlay or edit icon */}
+                </div>
+                <h3 className="text-lg font-semibold text-neutral-900">
+                  {getFullName(user)}
+                </h3>
+                <p className="text-sm text-neutral-600">
+                  {getRoleName(user?.role)}
+                </p>
+              </div>
             </div>
-          </div>
-          )}
 
-          {user?.phoneNumber && (
-          <div className="flex items-start gap-3 p-3 border border-neutral-200 rounded-lg w-full">
-            <Phone className="w-5 h-5 text-neutral-500 mt-0.5" />
-            <div className="flex-1">
-            <p className="text-sm font-medium text-neutral-900">
-              Phone Number
-            </p>
-            <p className="text-sm text-neutral-600 break-all">
-              {user.phoneNumber}
-            </p>
+            {/* Profile Details */}
+            <div className="space-y-4 w-full">
+              <div className="flex items-start gap-3 p-3 border border-neutral-200 rounded-lg w-full">
+                <Mail className="w-5 h-5 text-neutral-500 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-neutral-900">Email</p>
+                  <p className="text-sm text-neutral-600 break-all">
+                    {user?.email || "Not provided"}
+                  </p>
+                </div>
+              </div>
+
+              {user?.location && (
+                <div className="flex items-start gap-3 p-3 border border-neutral-200 rounded-lg w-full">
+                  <MapPin className="w-5 h-5 text-neutral-500 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-neutral-900">
+                      Location
+                    </p>
+                    <p className="text-sm text-neutral-600 break-words">
+                      {user.location}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {user?.dateOfBirth && (
+                <div className="flex items-start gap-3 p-3 border border-neutral-200 rounded-lg w-full">
+                  <Calendar className="w-5 h-5 text-neutral-500 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-neutral-900">
+                      Date of Birth
+                    </p>
+                    <p className="text-sm text-neutral-600">
+                      {user.dateOfBirth}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {user?.phoneNumber && (
+                <div className="flex items-start gap-3 p-3 border border-neutral-200 rounded-lg w-full">
+                  <Phone className="w-5 h-5 text-neutral-500 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-neutral-900">
+                      Phone Number
+                    </p>
+                    <p className="text-sm text-neutral-600 break-all">
+                      {user.phoneNumber}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {user?.badgeId && (
+                <div className="flex items-start gap-3 p-3 border border-neutral-200 rounded-lg w-full">
+                  <BadgeIcon className="w-5 h-5 text-neutral-500 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-neutral-900">
+                      Badge ID
+                    </p>
+                    <p className="text-sm text-neutral-600 break-all">
+                      {user.badgeId}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {user?.stationedAt && (
+                <div className="flex items-start gap-3 p-3 border border-neutral-200 rounded-lg w-full">
+                  <BadgeIcon className="w-5 h-5 text-neutral-500 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-neutral-900">
+                      Stationed At
+                    </p>
+                    <p className="text-sm text-neutral-600 break-words">
+                      {user.stationedAt}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-          )}
+          </CardContent>
+        </Card>
 
-          {user?.badgeId && (
-          <div className="flex items-start gap-3 p-3 border border-neutral-200 rounded-lg w-full">
-            <BadgeIcon className="w-5 h-5 text-neutral-500 mt-0.5" />
-            <div className="flex-1">
-            <p className="text-sm font-medium text-neutral-900">
-              Badge ID
-            </p>
-            <p className="text-sm text-neutral-600 break-all">
-              {user.badgeId}
-            </p>
+        {/* Recent Activities */}
+        <Card className="w-full">
+          <CardContent className="p-4 sm:p-6 w-full">
+            <div className="mb-4 w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <h2 className="text-xl font-semibold text-neutral-900">
+                Your Recent Activities
+              </h2>
+              <div className="flex items-center gap-2">
+                <label
+                  htmlFor="activity-sort"
+                  className="text-sm text-neutral-600 hidden sm:block"
+                >
+                  Sort:
+                </label>
+                <select
+                  id="activity-sort"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="h-9 rounded-md border border-neutral-300 bg-white px-2 text-sm"
+                >
+                  <option value="all">All (default)</option>
+                  <option value="action">Action (A–Z)</option>
+                </select>
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    try {
+                      toast.info("Preparing export…");
+                      // Use already sorted full list for export
+                      const all = [...sortedFullLogs];
+                      // Convert to CSV
+                      const header = [
+                        "Date",
+                        "Action",
+                        "Type",
+                        "Platform",
+                        "IP",
+                        "User Agent",
+                        "Log ID",
+                      ];
+                      const rows = all.map((l) => [
+                        new Date(l.createdAt).toLocaleString(),
+                        (l.action || "").replace(/\n|\r/g, " "),
+                        l.actionType || "",
+                        l.platform || "",
+                        l.ipAddress || "",
+                        (l.userAgent || "").replace(/\n|\r/g, " "),
+                        l._id,
+                      ]);
+                      const csv = [header, ...rows]
+                        .map((r) =>
+                          r
+                            .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+                            .join(",")
+                        )
+                        .join("\n");
+                      const blob = new Blob(["\ufeff" + csv], {
+                        type: "text/csv;charset=utf-8;",
+                      });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = `rcv-activities-${new Date()
+                        .toISOString()
+                        .slice(0, 10)}.csv`;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                      toast.success("Export complete");
+                    } catch (err) {
+                      console.error(err);
+                      toast.error("Failed to export activities");
+                    }
+                  }}
+                >
+                  Export CSV
+                </Button>
+              </div>
             </div>
-          </div>
-          )}
 
-          {user?.stationedAt && (
-          <div className="flex items-start gap-3 p-3 border border-neutral-200 rounded-lg w-full">
-            <BadgeIcon className="w-5 h-5 text-neutral-500 mt-0.5" />
-            <div className="flex-1">
-            <p className="text-sm font-medium text-neutral-900">
-              Stationed At
-            </p>
-            <p className="text-sm text-neutral-600 break-words">
-              {user.stationedAt}
-            </p>
+            {/* Activities Table */}
+            <div className="mb-6 w-full">
+              <DataTable
+                title=""
+                columns={activityColumns}
+                data={currentPageLogs}
+                loading={logsLoading}
+                emptyStateTitle="No Activities Found"
+                emptyStateDescription="Your recent activities will appear here."
+                showSearch={false}
+              />
             </div>
-          </div>
-          )}
-        </div>
-        </CardContent>
-      </Card>
 
-      {/* Recent Activities */}
-      <Card className="w-full">
-        <CardContent className="p-4 sm:p-6 w-full">
-        <div className="mb-6 w-full">
-          <h2 className="text-xl font-semibold text-neutral-900 mb-1 w-full">
-          Your Recent Activities
-          </h2>
-        </div>
-
-        {/* Activities Table */}
-        <div className="mb-6 w-full">
-          <DataTable
-          title=""
-          columns={activityColumns}
-          data={auditLogs}
-          loading={logsLoading}
-          emptyStateTitle="No Activities Found"
-          emptyStateDescription="Your recent activities will appear here."
-          showSearch={false}
-          />
-        </div>
-
-        {/* Pagination */}
-        <div className="mt-2">
-          <Pagination
-          currentPage={logsPagination.current_page}
-          totalPages={logsPagination.total_pages}
-          totalItems={logsPagination.total_items}
-          itemsPerPage={logsPagination.per_page}
-          onPageChange={(page) => fetchAuditLogs(page)}
-          showingText={`Showing ${auditLogs.length} of ${logsPagination.total_items} activities`}
-          showingPosition="right"
-          />
-        </div>
-        </CardContent>
-      </Card>
+            {/* Pagination */}
+            <div className="mt-2">
+              <Pagination
+                currentPage={logsPagination.current_page}
+                totalPages={logsPagination.total_pages}
+                totalItems={logsPagination.total_items}
+                itemsPerPage={logsPagination.per_page}
+                onPageChange={(page) =>
+                  setLogsPagination((prev) => ({ ...prev, current_page: page }))
+                }
+                showingText={`Showing ${currentPageLogs.length} of ${logsPagination.total_items} activities`}
+                showingPosition="right"
+              />
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Modals */}
       <EditProfileModal
-      isOpen={showEditModal}
-      onClose={() => setShowEditModal(false)}
-      user={user}
-      onSave={handleSaveProfile}
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        user={user}
+        onSave={handleSaveProfile}
       />
       <ArchiveAccountModal
-      isOpen={showArchiveModal}
-      onClose={() => setShowArchiveModal(false)}
-      userEmail={user?.email || ""}
-      onConfirm={handleConfirmArchive}
+        isOpen={showArchiveModal}
+        onClose={() => setShowArchiveModal(false)}
+        userEmail={user?.email || ""}
+        onConfirm={handleConfirmArchive}
       />
 
       {/* Audit Log Details Modal */}
       <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-        <DialogTitle>Activity Details</DialogTitle>
-        </DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Activity Details</DialogTitle>
+          </DialogHeader>
 
-        {selectedLog && (
-        <div className="space-y-4">
-          {/* Action */}
-          <div className="border-b pb-3">
-          <p className="text-sm font-medium text-neutral-500 mb-1">Action</p>
-          <p className="text-base font-semibold text-neutral-900">
-            {selectedLog.action}
-          </p>
-          </div>
-
-          {/* Action Type */}
-          <div className="border-b pb-3">
-          <p className="text-sm font-medium text-neutral-500 mb-1">Type</p>
-          <span
-            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-            AuditLogService.getActionTypeBadge(selectedLog.actionType)
-              .className
-            }`}
-          >
-            {
-            AuditLogService.getActionTypeBadge(selectedLog.actionType)
-              .label
-            }
-          </span>
-          </div>
-
-          {/* Platform */}
-          <div className="border-b pb-3">
-          <p className="text-sm font-medium text-neutral-500 mb-1">
-            Platform
-          </p>
-          <p className="text-base text-neutral-900">
-            {selectedLog.platform === "WEB" ? "Web" : "Mobile"}
-          </p>
-          </div>
-
-          {/* Date & Time */}
-          <div className="border-b pb-3">
-          <p className="text-sm font-medium text-neutral-500 mb-1">
-            Date & Time
-          </p>
-          <p className="text-base text-neutral-900">
-            {new Date(selectedLog.createdAt).toLocaleString("en-US", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-            })}
-          </p>
-          </div>
-
-          {/* IP Address */}
-          {selectedLog.ipAddress && (
-          <div className="border-b pb-3">
-            <p className="text-sm font-medium text-neutral-500 mb-1">
-            IP Address
-            </p>
-            <p className="text-base text-neutral-900 font-mono">
-            {selectedLog.ipAddress}
-            </p>
-          </div>
-          )}
-
-          {/* User Agent */}
-          {selectedLog.userAgent && (
-          <div className="border-b pb-3">
-            <p className="text-sm font-medium text-neutral-500 mb-1">
-            User Agent
-            </p>
-            <p className="text-sm text-neutral-700 break-words">
-            {selectedLog.userAgent}
-            </p>
-          </div>
-          )}
-
-          {/* Location */}
-          {selectedLog.location && (
-          <div className="border-b pb-3">
-            <p className="text-sm font-medium text-neutral-500 mb-1">
-            Location
-            </p>
-            <div className="space-y-1">
-            {selectedLog.location.latitude &&
-              selectedLog.location.longitude && (
-              <p className="text-sm text-neutral-700">
-                Coordinates: {selectedLog.location.latitude},{" "}
-                {selectedLog.location.longitude}
-              </p>
-              )}
-            {selectedLog.location.address && (
-              <p className="text-sm text-neutral-700">
-              Address: {selectedLog.location.address}
-              </p>
-            )}
-            </div>
-          </div>
-          )}
-
-          {/* Scan Images */}
-          {selectedLog.metadata?.frontImageUrl ||
-          selectedLog.metadata?.backImageUrl ? (
-          <div className="border-b pb-3">
-            <p className="text-sm font-medium text-neutral-500 mb-3">
-            Scan Images
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {selectedLog.metadata.frontImageUrl && (
-              <div className="space-y-2">
-              <p className="text-xs font-medium text-neutral-600">
-                Front Image
-              </p>
-              <a
-                href={selectedLog.metadata.frontImageUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block border rounded-lg overflow-hidden hover:opacity-80 transition-opacity"
-              >
-                <img
-                src={selectedLog.metadata.frontImageUrl}
-                alt="Front scan"
-                className="w-full h-48 object-cover"
-                />
-              </a>
+          {selectedLog && (
+            <div className="space-y-4">
+              {/* Action */}
+              <div className="border-b pb-3">
+                <p className="text-sm font-medium text-neutral-500 mb-1">
+                  Action
+                </p>
+                <p className="text-base font-semibold text-neutral-900">
+                  {selectedLog.action}
+                </p>
               </div>
-            )}
-            {selectedLog.metadata.backImageUrl && (
-              <div className="space-y-2">
-              <p className="text-xs font-medium text-neutral-600">
-                Back Image
-              </p>
-              <a
-                href={selectedLog.metadata.backImageUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block border rounded-lg overflow-hidden hover:opacity-80 transition-opacity"
-              >
-                <img
-                src={selectedLog.metadata.backImageUrl}
-                alt="Back scan"
-                className="w-full h-48 object-cover"
-                />
-              </a>
-              </div>
-            )}
-            </div>
-          </div>
-          ) : null}
 
-          {/* OCR Extracted Information */}
-          {selectedLog.metadata?.extractedInfo && (
-          <div className="border-b pb-3">
-            <p className="text-sm font-medium text-neutral-500 mb-2">
-            OCR Extracted Information
-            </p>
-            <div className="bg-blue-50 rounded-lg p-3 space-y-2">
-            {Object.entries(selectedLog.metadata.extractedInfo).map(
-              ([key, value]) => (
-              <div
-                key={key}
-                className="flex justify-between items-start gap-3"
-              >
-                <span className="text-sm font-medium text-blue-700 capitalize">
-                {key.replace(/([A-Z])/g, " $1").trim()}:
-                </span>
-                <span className="text-sm text-neutral-900 text-right ml-4 font-medium break-words max-w-[60%]">
-                {value === undefined ||
-                value === null ||
-                value === ""
-                  ? "N/A"
-                  : typeof value === "object"
-                  ? JSON.stringify(value)
-                  : String(value)}
-                </span>
-              </div>
-              )
-            )}
-            </div>
-          </div>
-          )}
-
-          {/* OCR Raw Text */}
-          {selectedLog.metadata?.scannedText && (
-          <div className="border-b pb-3">
-            <p className="text-sm font-medium text-neutral-500 mb-2">
-            OCR Raw Text
-            </p>
-            <div className="bg-neutral-100 rounded-lg p-3 max-h-48 overflow-y-auto">
-            <pre className="text-xs text-neutral-800 whitespace-pre-wrap font-mono">
-              {selectedLog.metadata.scannedText}
-            </pre>
-            </div>
-          </div>
-          )}
-
-          {/* Scan Type & Status */}
-          {(selectedLog.metadata?.scanType ||
-          selectedLog.metadata?.extractionSuccess !== undefined) && (
-          <div className="border-b pb-3">
-            <p className="text-sm font-medium text-neutral-500 mb-2">
-            Scan Details
-            </p>
-            <div className="bg-neutral-50 rounded-lg p-3 space-y-2">
-            {selectedLog.metadata.scanType && (
-              <div className="flex justify-between items-start">
-              <span className="text-sm font-medium text-neutral-600">
-                Scan Type:
-              </span>
-              <span className="text-sm text-neutral-900 font-medium">
-                {selectedLog.metadata.scanType}
-              </span>
-              </div>
-            )}
-            {selectedLog.metadata.extractionSuccess !== undefined && (
-              <div className="flex justify-between items-start">
-              <span className="text-sm font-medium text-neutral-600">
-                Extraction Status:
-              </span>
-              <span
-                className={`text-sm font-medium ${
-                selectedLog.metadata.extractionSuccess
-                  ? "text-green-600"
-                  : "text-red-600"
-                }`}
-              >
-                {selectedLog.metadata.extractionSuccess
-                ? "Success"
-                : "Failed"}
-              </span>
-              </div>
-            )}
-            </div>
-          </div>
-          )}
-
-          {/* Metadata */}
-          {selectedLog.metadata &&
-          Object.keys(selectedLog.metadata).length > 0 && (
-            <div className="border-b pb-3">
-            <p className="text-sm font-medium text-neutral-500 mb-2">
-              Additional Information
-            </p>
-            <div className="bg-neutral-50 rounded-lg p-3 space-y-2">
-              {Object.entries(selectedLog.metadata)
-              .filter(
-                ([key]) =>
-                key !== "frontImageUrl" &&
-                key !== "backImageUrl" &&
-                key !== "extractedInfo" &&
-                key !== "scanType" &&
-                key !== "extractionSuccess" &&
-                key !== "scannedText"
-              )
-              .map(([key, value]) => (
-                <div
-                key={key}
-                className="flex justify-between items-start gap-3"
+              {/* Action Type */}
+              <div className="border-b pb-3">
+                <p className="text-sm font-medium text-neutral-500 mb-1">
+                  Type
+                </p>
+                <span
+                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    AuditLogService.getActionTypeBadge(selectedLog.actionType)
+                      .className
+                  }`}
                 >
-                <span className="text-sm font-medium text-neutral-600 capitalize">
-                  {key.replace(/([A-Z])/g, " $1").trim()}:
+                  {
+                    AuditLogService.getActionTypeBadge(selectedLog.actionType)
+                      .label
+                  }
                 </span>
-                <span className="text-sm text-neutral-900 text-right ml-4 break-words max-w-[60%]">
-                  {typeof value === "object"
-                  ? JSON.stringify(value)
-                  : String(value)}
-                </span>
+              </div>
+
+              {/* Platform */}
+              <div className="border-b pb-3">
+                <p className="text-sm font-medium text-neutral-500 mb-1">
+                  Platform
+                </p>
+                <p className="text-base text-neutral-900">
+                  {selectedLog.platform === "WEB" ? "Web" : "Mobile"}
+                </p>
+              </div>
+
+              {/* Date & Time */}
+              <div className="border-b pb-3">
+                <p className="text-sm font-medium text-neutral-500 mb-1">
+                  Date & Time
+                </p>
+                <p className="text-base text-neutral-900">
+                  {new Date(selectedLog.createdAt).toLocaleString("en-US", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
+                  })}
+                </p>
+              </div>
+
+              {/* IP Address */}
+              {selectedLog.ipAddress && (
+                <div className="border-b pb-3">
+                  <p className="text-sm font-medium text-neutral-500 mb-1">
+                    IP Address
+                  </p>
+                  <p className="text-base text-neutral-900 font-mono">
+                    {selectedLog.ipAddress}
+                  </p>
                 </div>
-              ))}
-            </div>
+              )}
+
+              {/* User Agent */}
+              {selectedLog.userAgent && (
+                <div className="border-b pb-3">
+                  <p className="text-sm font-medium text-neutral-500 mb-1">
+                    User Agent
+                  </p>
+                  <p className="text-sm text-neutral-700 break-words">
+                    {selectedLog.userAgent}
+                  </p>
+                </div>
+              )}
+
+              {/* Location */}
+              {selectedLog.location && (
+                <div className="border-b pb-3">
+                  <p className="text-sm font-medium text-neutral-500 mb-1">
+                    Location
+                  </p>
+                  <div className="space-y-1">
+                    {selectedLog.location.latitude &&
+                      selectedLog.location.longitude && (
+                        <p className="text-sm text-neutral-700">
+                          Coordinates: {selectedLog.location.latitude},{" "}
+                          {selectedLog.location.longitude}
+                        </p>
+                      )}
+                    {selectedLog.location.address && (
+                      <p className="text-sm text-neutral-700">
+                        Address: {selectedLog.location.address}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Scan Images */}
+              {selectedLog.metadata?.frontImageUrl ||
+              selectedLog.metadata?.backImageUrl ? (
+                <div className="border-b pb-3">
+                  <p className="text-sm font-medium text-neutral-500 mb-3">
+                    Scan Images
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {selectedLog.metadata.frontImageUrl && (
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-neutral-600">
+                          Front Image
+                        </p>
+                        <a
+                          href={selectedLog.metadata.frontImageUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block border rounded-lg overflow-hidden hover:opacity-80 transition-opacity"
+                        >
+                          <img
+                            src={selectedLog.metadata.frontImageUrl}
+                            alt="Front scan"
+                            className="w-full h-48 object-cover"
+                          />
+                        </a>
+                      </div>
+                    )}
+                    {selectedLog.metadata.backImageUrl && (
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-neutral-600">
+                          Back Image
+                        </p>
+                        <a
+                          href={selectedLog.metadata.backImageUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block border rounded-lg overflow-hidden hover:opacity-80 transition-opacity"
+                        >
+                          <img
+                            src={selectedLog.metadata.backImageUrl}
+                            alt="Back scan"
+                            className="w-full h-48 object-cover"
+                          />
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : null}
+
+              {/* OCR Extracted Information */}
+              {selectedLog.metadata?.extractedInfo && (
+                <div className="border-b pb-3">
+                  <p className="text-sm font-medium text-neutral-500 mb-2">
+                    OCR Extracted Information
+                  </p>
+                  <div className="bg-blue-50 rounded-lg p-3 space-y-2">
+                    {Object.entries(selectedLog.metadata.extractedInfo).map(
+                      ([key, value]) => (
+                        <div
+                          key={key}
+                          className="flex justify-between items-start gap-3"
+                        >
+                          <span className="text-sm font-medium text-blue-700 capitalize">
+                            {key.replace(/([A-Z])/g, " $1").trim()}:
+                          </span>
+                          <span className="text-sm text-neutral-900 text-right ml-4 font-medium break-words max-w-[60%]">
+                            {value === undefined ||
+                            value === null ||
+                            value === ""
+                              ? "N/A"
+                              : typeof value === "object"
+                              ? JSON.stringify(value)
+                              : String(value)}
+                          </span>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* OCR Raw Text */}
+              {selectedLog.metadata?.scannedText && (
+                <div className="border-b pb-3">
+                  <p className="text-sm font-medium text-neutral-500 mb-2">
+                    OCR Raw Text
+                  </p>
+                  <div className="bg-neutral-100 rounded-lg p-3 max-h-48 overflow-y-auto">
+                    <pre className="text-xs text-neutral-800 whitespace-pre-wrap font-mono">
+                      {selectedLog.metadata.scannedText}
+                    </pre>
+                  </div>
+                </div>
+              )}
+
+              {/* Scan Type & Status */}
+              {(selectedLog.metadata?.scanType ||
+                selectedLog.metadata?.extractionSuccess !== undefined) && (
+                <div className="border-b pb-3">
+                  <p className="text-sm font-medium text-neutral-500 mb-2">
+                    Scan Details
+                  </p>
+                  <div className="bg-neutral-50 rounded-lg p-3 space-y-2">
+                    {selectedLog.metadata.scanType && (
+                      <div className="flex justify-between items-start">
+                        <span className="text-sm font-medium text-neutral-600">
+                          Scan Type:
+                        </span>
+                        <span className="text-sm text-neutral-900 font-medium">
+                          {selectedLog.metadata.scanType}
+                        </span>
+                      </div>
+                    )}
+                    {selectedLog.metadata.extractionSuccess !== undefined && (
+                      <div className="flex justify-between items-start">
+                        <span className="text-sm font-medium text-neutral-600">
+                          Extraction Status:
+                        </span>
+                        <span
+                          className={`text-sm font-medium ${
+                            selectedLog.metadata.extractionSuccess
+                              ? "text-green-600"
+                              : "text-red-600"
+                          }`}
+                        >
+                          {selectedLog.metadata.extractionSuccess
+                            ? "Success"
+                            : "Failed"}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Metadata */}
+              {selectedLog.metadata &&
+                Object.keys(selectedLog.metadata).length > 0 && (
+                  <div className="border-b pb-3">
+                    <p className="text-sm font-medium text-neutral-500 mb-2">
+                      Additional Information
+                    </p>
+                    <div className="bg-neutral-50 rounded-lg p-3 space-y-2">
+                      {Object.entries(selectedLog.metadata)
+                        .filter(
+                          ([key]) =>
+                            key !== "frontImageUrl" &&
+                            key !== "backImageUrl" &&
+                            key !== "extractedInfo" &&
+                            key !== "scanType" &&
+                            key !== "extractionSuccess" &&
+                            key !== "scannedText"
+                        )
+                        .map(([key, value]) => (
+                          <div
+                            key={key}
+                            className="flex justify-between items-start gap-3"
+                          >
+                            <span className="text-sm font-medium text-neutral-600 capitalize">
+                              {key.replace(/([A-Z])/g, " $1").trim()}:
+                            </span>
+                            <span className="text-sm text-neutral-900 text-right ml-4 break-words max-w-[60%]">
+                              {typeof value === "object"
+                                ? JSON.stringify(value)
+                                : String(value)}
+                            </span>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+              {/* Target User */}
+              {selectedLog.targetUser && (
+                <div className="border-b pb-3">
+                  <p className="text-sm font-medium text-neutral-500 mb-1">
+                    Target User
+                  </p>
+                  <p className="text-base text-neutral-900">
+                    {selectedLog.targetUser.firstName}{" "}
+                    {selectedLog.targetUser.lastName}
+                    <span className="text-sm text-neutral-500 ml-2">
+                      ({selectedLog.targetUser.email})
+                    </span>
+                  </p>
+                </div>
+              )}
+
+              {/* Log ID */}
+              <div>
+                <p className="text-sm font-medium text-neutral-500 mb-1">
+                  Log ID
+                </p>
+                <p className="text-xs text-neutral-600 font-mono">
+                  {selectedLog._id}
+                </p>
+              </div>
             </div>
           )}
 
-          {/* Target User */}
-          {selectedLog.targetUser && (
-          <div className="border-b pb-3">
-            <p className="text-sm font-medium text-neutral-500 mb-1">
-            Target User
-            </p>
-            <p className="text-base text-neutral-900">
-            {selectedLog.targetUser.firstName}{" "}
-            {selectedLog.targetUser.lastName}
-            <span className="text-sm text-neutral-500 ml-2">
-              ({selectedLog.targetUser.email})
-            </span>
-            </p>
+          <div className="flex justify-end mt-6">
+            <Button
+              variant="outline"
+              onClick={() => setShowDetailsModal(false)}
+            >
+              Close
+            </Button>
           </div>
-          )}
-
-          {/* Log ID */}
-          <div>
-          <p className="text-sm font-medium text-neutral-500 mb-1">Log ID</p>
-          <p className="text-xs text-neutral-600 font-mono">
-            {selectedLog._id}
-          </p>
-          </div>
-        </div>
-        )}
-
-        <div className="flex justify-end mt-6">
-        <Button
-          variant="outline"
-          onClick={() => setShowDetailsModal(false)}
-        >
-          Close
-        </Button>
-        </div>
-      </DialogContent>
+        </DialogContent>
       </Dialog>
 
       {/* Avatar Crop Dialog */}

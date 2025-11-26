@@ -1,8 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import CustomError from '../../utils/CustomError';
+import { ProductRepo } from '../../typeorm/data-source';
+import { ILike } from 'typeorm';
+import { searchProductWithGrounding } from '../../services/groundedSearchService';
 
 /**
- * Search for product in database (MOCK DATA FOR NOW)
+ * Search for product in database first, then use grounded search if not found
  * POST /api/v1/mobile/compliance/search-product
  */
 export const searchProduct = async (
@@ -11,112 +14,121 @@ export const searchProduct = async (
   next: NextFunction
 ) => {
   try {
-    const { productName, LTONumber, CFPRNumber, brandName } = req.body;
+    const { productName, LTONumber, CFPRNumber, brandName, manufacturer } = req.body;
 
-    // Mock database - In real implementation, this would query the actual database
-    const mockProducts = [
-      {
-        _id: '550e8400-e29b-41d4-a716-446655440001',
-        productName: 'Premium Layer Feed',
-        brandName: 'Vitarich',
-        LTONumber: 'LTO-2024-001',
-        CFPRNumber: 'CFPR-2024-001',
-        lotNumber: 'LOT-20240115',
-        productClassification: 'Processed Product',
-        productSubClassification: 'Layer Feeds',
-        expirationDate: '2025-06-30',
-        dateOfRegistration: '2024-01-15',
-        company: {
-          name: 'Vitarich Corporation',
-          address: 'Manila, Philippines',
-        },
-        registeredBy: {
-          firstName: 'Juan',
-          lastName: 'Dela Cruz',
-          email: 'juan.delacruz@vitarich.com',
-        },
-        isActive: true,
-      },
-      {
-        _id: '550e8400-e29b-41d4-a716-446655440002',
-        productName: 'Gamecock Champion Feed',
-        brandName: 'San Miguel',
-        LTONumber: 'LTO-2024-002',
-        CFPRNumber: 'CFPR-2024-002',
-        lotNumber: 'LOT-20240120',
-        productClassification: 'Processed Product',
-        productSubClassification: 'Gamecock Feeds',
-        expirationDate: '2025-07-15',
-        dateOfRegistration: '2024-01-20',
-        company: {
-          name: 'San Miguel Foods Inc.',
-          address: 'Quezon City, Philippines',
-        },
-        registeredBy: {
-          firstName: 'Maria',
-          lastName: 'Santos',
-          email: 'maria.santos@smf.com',
-        },
-        isActive: true,
-      },
-      {
-        _id: '550e8400-e29b-41d4-a716-446655440003',
-        productName: 'Organic Broiler Feed',
-        brandName: 'Nescafe Agriventures',
-        LTONumber: 'LTO-2024-003',
-        CFPRNumber: 'CFPR-2024-003',
-        lotNumber: 'LOT-20240125',
-        productClassification: 'Processed Product',
-        productSubClassification: 'Layer Feeds',
-        expirationDate: '2025-08-01',
-        dateOfRegistration: '2024-01-25',
-        company: {
-          name: 'Nescafe Agriventures Corp.',
-          address: 'Laguna, Philippines',
-        },
-        registeredBy: {
-          firstName: 'Pedro',
-          lastName: 'Reyes',
-          email: 'pedro.reyes@nescafe.com',
-        },
-        isActive: true,
-      },
-    ];
-
-    // Search logic - match by any of the fields
-    const results = mockProducts.filter(product => {
-      if (CFPRNumber && product.CFPRNumber.toLowerCase().includes(CFPRNumber.toLowerCase())) {
-        return true;
-      }
-      if (LTONumber && product.LTONumber.toLowerCase().includes(LTONumber.toLowerCase())) {
-        return true;
-      }
-      if (productName && product.productName.toLowerCase().includes(productName.toLowerCase())) {
-        return true;
-      }
-      if (brandName && product.brandName.toLowerCase().includes(brandName.toLowerCase())) {
-        return true;
-      }
-      return false;
+    console.log('🔍 Step 1: Searching for product in OUR database with criteria:', {
+      productName,
+      LTONumber,
+      CFPRNumber,
+      brandName,
+      manufacturer
     });
 
-    if (results.length === 0) {
+    // Build search criteria for database query
+    const searchCriteria: any = {};
+    if (productName) {
+      searchCriteria.productName = ILike(`%${productName}%`);
+    }
+    if (LTONumber) {
+      searchCriteria.LTONumber = LTONumber;
+    }
+    if (CFPRNumber) {
+      searchCriteria.CFPRNumber = CFPRNumber;
+    }
+
+    // STEP 1: Try to find in OUR database first
+    const products = await ProductRepo.find({
+      where: searchCriteria,
+      relations: ['company', 'registeredBy'],
+      take: 5, // Limit results
+      order: { dateOfRegistration: 'DESC' },
+    });
+
+    // If product found in OUR database, return it immediately
+    if (products && products.length > 0) {
+      console.log('✅ Product found in OUR database:', products.length, 'results');
+
       return res.status(200).json({
         success: true,
-        found: false,
-        message: 'No products found matching the search criteria',
-        data: null,
+        found: true,
+        message: 'Product found in database',
+        source: 'internal_database',
+        product: products[0], // Return first match for compatibility
+        data: products[0],
+        totalMatches: products.length,
       });
     }
 
-    // Return the first match (or you can return all matches)
-    res.status(200).json({
-      success: true,
-      found: true,
-      message: 'Product found in database',
-      data: results[0],
-      totalMatches: results.length,
-    });
+    // STEP 2: Product NOT found in our database - use GROUNDED SEARCH
+    console.log('⚠️ Product NOT found in our database');
+    console.log('🌐 Step 2: Performing grounded search with PDF registry...');
+
+    try {
+      const groundedResult = await searchProductWithGrounding(
+        productName,
+        LTONumber,
+        CFPRNumber,
+        brandName,
+        manufacturer
+      );
+
+      if (!groundedResult) {
+        console.log('❌ No match found in PDF registry either');
+        return res.status(200).json({
+          success: true,
+          found: false,
+          message: 'No products found in database or official registry',
+          source: 'not_found',
+          product: null,
+          data: null,
+        });
+      }
+
+      // Format grounded result to match expected structure
+      const groundedProduct = {
+        _id: `grounded-${Date.now()}`,
+        productName: groundedResult.productName,
+        brandName: groundedResult.brandName,
+        CFPRNumber: groundedResult.CFPRNumber,
+        productClassification: groundedResult.productClassification,
+        productSubClassification: groundedResult.subClassification,
+        expirationDate: groundedResult.validUntil, // Map VALID UNTIL to expirationDate
+        company: {
+          name: groundedResult.companyName,
+          address: 'Philippines',
+        },
+        isActive: true,
+        confidence: groundedResult.confidence,
+        sourceUrl: groundedResult.source,
+      };
+
+      console.log('✅ Product found via grounded search from PDF registry');
+
+      return res.status(200).json({
+        success: true,
+        found: true,
+        message: 'Product found in official PDF registry',
+        source: 'grounded_search_pdf',
+        product: groundedProduct,
+        data: groundedProduct,
+        confidence: groundedResult.confidence,
+      });
+
+    } catch (groundingError: any) {
+      console.error('❌ Error during grounded search:', groundingError);
+
+      // Fallback: Return not found if grounding fails
+      return res.status(200).json({
+        success: true,
+        found: false,
+        message: 'Product not found (grounding search unavailable)',
+        source: 'search_failed',
+        product: null,
+        data: null,
+        error: groundingError.message,
+      });
+    }
+
   } catch (error: any) {
     console.error('Error searching product:', error);
     return next(new CustomError(500, 'Failed to search product'));

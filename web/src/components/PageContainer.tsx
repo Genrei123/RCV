@@ -33,8 +33,8 @@ export function PageContainer({
   return (
     <div
       className={cn(
-        "min-h-[calc(100vh-12rem)]",
-        "w-full",
+        // Avoid forcing viewport-based min-height which caused extra space below footer
+        "min-h-0 w-full",
         "mx-auto",
         "px-4 sm:px-6 lg:px-8",
         "py-6 md:py-8",

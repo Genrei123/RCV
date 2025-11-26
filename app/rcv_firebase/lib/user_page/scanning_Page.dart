@@ -8,17 +8,15 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/ocr_service.dart';
+import '../services/firebase_storage_service.dart';
 // import '../widgets/gradient_header_app_bar.dart';
 import '../widgets/title_logo_header_app_bar.dart';
 import '../widgets/navigation_bar.dart';
 import '../services/api_service.dart';
 import '../services/audit_log_service.dart';
-import '../services/firebase_storage_service.dart';
-import '../models/product.dart';
 import '../services/remote_config_service.dart';
 import '../widgets/feature_disabled_screen.dart';
 import '../utils/tab_history.dart';
-import '../pages/product_comparison_page.dart';
 import '../pages/compliance_report_page.dart';
 
 class QRScannerPage extends StatefulWidget {
@@ -42,8 +40,8 @@ class _QRScannerPageState extends State<QRScannerPage> {
   // For dual image OCR
   String? _frontImagePath;
   String? _backImagePath;
-  String? _frontImageUrl;
-  String? _backImageUrl;
+  String? _frontImageUrl; // Firebase URL
+  String? _backImageUrl;  // Firebase URL
   String? _ocrBlobText; // Store raw OCR text for compliance reports
 
   @override
@@ -835,7 +833,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Please review the extracted information:',
+                          'Please review the extracted information and proceed to report:',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.black54,
@@ -925,11 +923,11 @@ class _QRScannerPageState extends State<QRScannerPage> {
                         // Action Buttons
                         Column(
                           children: [
-                            // Search Product Button (Primary Action)
+                            // Conduct Report Button (Primary Action)
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton(
-                                onPressed: () => _searchProductInDatabase(
+                                onPressed: () => _conductReport(
                                   extractedInfo,
                                   ocrText,
                                 ),
@@ -947,10 +945,10 @@ class _QRScannerPageState extends State<QRScannerPage> {
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: const [
-                                    Icon(Icons.search, size: 20),
+                                    Icon(Icons.assignment, size: 20),
                                     SizedBox(width: 8),
                                     Text(
-                                      'Search Product',
+                                      'Conduct Report',
                                       style: TextStyle(
                                         fontSize: 15,
                                         fontWeight: FontWeight.w600,
@@ -1184,265 +1182,147 @@ class _QRScannerPageState extends State<QRScannerPage> {
     );
   }
 
-  Future<void> _searchProductInDatabase(
+  // New function to go directly to compliance report (skipping product search/comparison)
+  Future<void> _conductReport(
     Map<String, dynamic> extractedInfo,
     String ocrText,
   ) async {
     try {
-      // Close the extracted info modal
-      Navigator.of(context).pop();
-
-      // Show loading indicator
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(child: CircularProgressIndicator()),
-      );
-
-      final apiService = ApiService();
-      final searchResponse = await apiService.searchProductForCompliance(
-        productName: extractedInfo['productName'],
-        LTONumber: extractedInfo['LTONumber'],
-        CFPRNumber: extractedInfo['CFPRNumber'],
-        brandName: extractedInfo['brandName'],
-      );
-
-      // Close loading dialog
-      if (mounted) Navigator.pop(context);
-
-      if (searchResponse['success'] == true) {
-        // Navigate to product comparison page
-        final result = await Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => ProductComparisonPage(
-              scannedData: extractedInfo,
-              databaseProduct: searchResponse['found'] == true 
-                  ? searchResponse['product'] 
-                  : null,
-            ),
-          ),
-        );
-
-        // Handle compliance report action
-        if (result == 'COMPLIANT') {
-          // Navigate to compliance report page with COMPLIANT status
-          await _navigateToComplianceReport(extractedInfo, searchResponse, 'COMPLIANT');
-        } else if (result == 'NON_COMPLIANT') {
-          // Navigate to compliance report page with NON_COMPLIANT status
-          await _navigateToComplianceReport(extractedInfo, searchResponse, 'NON_COMPLIANT');
-        }
-      } else {
-        // Search failed
+      // Validate Firebase URLs are available before proceeding
+      if (_frontImageUrl == null || _backImageUrl == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(searchResponse['message'] ?? 'Failed to search product'),
-              backgroundColor: Colors.orange,
-              duration: Duration(seconds: 3),
+            const SnackBar(
+              content: Text('Error: Images not uploaded. Please scan again.'),
+              backgroundColor: Colors.red,
             ),
           );
         }
+        return;
       }
+      
+      // Close the extracted info modal
+      Navigator.of(context).pop();
+
+      // Navigate directly to compliance report page with Firebase URLs
+      await _navigateToComplianceReport(
+        extractedInfo,
+        {'found': false, 'product': null},
+        'NON_COMPLIANT',
+        frontImageUrl: _frontImageUrl,
+        backImageUrl: _backImageUrl,
+        ocrBlobText: _ocrBlobText,
+      );
     } catch (e) {
-      // Close loading dialog if open
-      if (mounted) Navigator.pop(context);
+      developer.log('Error conducting report: $e');
 
-      print('Error searching product: $e');
-
-      // Show user-friendly error modal with retry option
+      // Show error message
       if (mounted) {
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return Dialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Container(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Error Icon
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        color: Colors.orange.shade50,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.search_off,
-                        size: 40,
-                        color: Colors.orange.shade700,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    
-                    // Title
-                    const Text(
-                      'Search Failed',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    
-                    // Message
-                    const Text(
-                      'We couldn\'t search for the product at this time.\n\n'
-                      'This might be due to a connection issue. '
-                      'Please check your internet and try again.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: Colors.black54,
-                        height: 1.4,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    
-                    // Buttons
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              side: const BorderSide(color: Color(0xFF005440)),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: const Text(
-                              'Cancel',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Color(0xFF005440),
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                              // Retry the search
-                              _searchProductInDatabase(extractedInfo, ocrText);
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF005440),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: const Text(
-                              'Retry',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error opening report: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
+          ),
         );
       }
     }
   }
 
+  // Navigate to compliance report page
   Future<void> _navigateToComplianceReport(
     Map<String, dynamic> extractedInfo,
     Map<String, dynamic> searchResponse,
-    String initialStatus,
-  ) async {
-    // Debug logging to check state variables
-    developer.log('🔍 Navigating to compliance report...');
-    developer.log('Front Image URL: ${_frontImageUrl ?? "NULL"}');
-    developer.log('Back Image URL: ${_backImageUrl ?? "NULL"}');
-    developer.log('OCR Blob Text length: ${_ocrBlobText?.length ?? 0}');
-    
-    final success = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (context) => ComplianceReportPage(
-          scannedData: extractedInfo,
-          productSearchResult: searchResponse['found'] == true 
-              ? searchResponse['product'] 
-              : null,
-          frontImageUrl: _frontImageUrl,
-          backImageUrl: _backImageUrl,
-          initialStatus: initialStatus,
-          ocrBlobText: _ocrBlobText, // Pass OCR blob text
+    String status, {
+    String? frontImageUrl,
+    String? backImageUrl,
+    String? ocrBlobText,
+  }) async {
+    try {
+      final success = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          builder: (context) => ComplianceReportPage(
+            scannedData: extractedInfo,
+            productSearchResult: searchResponse,
+            initialStatus: status,
+            frontImageUrl: frontImageUrl,
+            backImageUrl: backImageUrl,
+            ocrBlobText: ocrBlobText,
+          ),
         ),
-      ),
-    );
+      );
 
-    // If successfully submitted compliance report, show success and reset
-    if (success == true && mounted) {
-      // Reset image URLs and OCR text
-      setState(() {
-        _frontImageUrl = null;
-        _backImageUrl = null;
-        _frontImagePath = null;
-        _backImagePath = null;
-        _ocrBlobText = null;
-      });
+      // If report was submitted successfully, reset scan state
+      if (success == true && mounted) {
+        setState(() {
+          _frontImagePath = null;
+          _backImagePath = null;
+          _frontImageUrl = null;
+          _backImageUrl = null;
+          _ocrBlobText = null;
+        });
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Compliance report submitted successfully'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      developer.log('Error navigating to compliance report: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 
-  void _showOCRModal(String ocrText) {
+  // Show OCR results modal
+  void _showOCRModal(String frontText, [String? backText]) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return Dialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(16),
           ),
           child: Container(
             constraints: BoxConstraints(
               maxHeight: MediaQuery.of(context).size.height * 0.7,
+              maxWidth: 500,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 // Header
                 Container(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: const Color(0xFF005440),
                     borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20),
+                      topLeft: Radius.circular(16),
+                      topRight: Radius.circular(16),
                     ),
                   ),
                   child: Row(
                     children: [
-                      const Icon(
-                        Icons.text_fields,
-                        color: Colors.white,
-                        size: 28,
-                      ),
+                      const Icon(Icons.text_snippet, color: Colors.white),
                       const SizedBox(width: 12),
                       const Expanded(
                         child: Text(
-                          'Text Extracted (OCR)',
+                          'OCR Results',
                           style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
+                            fontSize: 18,
                             fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
                         ),
                       ),
@@ -1454,460 +1334,81 @@ class _QRScannerPageState extends State<QRScannerPage> {
                   ),
                 ),
                 // Content
-                Flexible(
+                Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Extracted Text:',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[100],
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey[300]!),
-                          ),
-                          child: SelectableText(
-                            ocrText.isEmpty
-                                ? 'No text found in image'
-                                : ocrText,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              color: Colors.black87,
-                              height: 1.5,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: ocrText.isEmpty
-                                    ? null
-                                    : () {
-                                        Clipboard.setData(
-                                          ClipboardData(text: ocrText),
-                                        );
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              'Copied to clipboard',
-                                            ),
-                                            duration: Duration(seconds: 2),
-                                          ),
-                                        );
-                                      },
-                                icon: const Icon(Icons.copy, size: 18),
-                                label: const Text('Copy'),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: const Color(0xFF005440),
-                                  side: const BorderSide(
-                                    color: Color(0xFF005440),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 12,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed: () => Navigator.of(context).pop(),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF005440),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 12,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                                child: const Text('Close'),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  void _showProductResultModal(List<Product> products, String ocrText) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        final product = products.first; // Display first product
-
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Container(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.85,
-              maxWidth: 500,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Success Header with gradient
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFF00A47D), Color(0xFF005440)],
-                    ),
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(24),
-                      topRight: Radius.circular(24),
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.verified,
-                              color: Colors.white,
-                              size: 32,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Product Verified',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                SizedBox(height: 4),
-                                Text(
-                                  'Authentic product found',
-                                  style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(
-                              Icons.close,
-                              color: Colors.white,
-                              size: 28,
-                            ),
-                            onPressed: () => Navigator.of(context).pop(),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Content
-                Flexible(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Product Name Card
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [Colors.green[50]!, Colors.green[100]!],
-                            ),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: Colors.green[300]!,
-                              width: 2,
-                            ),
-                          ),
-                          child: Column(
+                    padding: const EdgeInsets.all(16),
+                    child: backText != null
+                        ? Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.inventory_2,
-                                    color: Colors.green[700],
-                                    size: 24,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Product Name',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.green[700],
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                product.productName,
-                                style: const TextStyle(
-                                  fontSize: 18,
+                              const Text(
+                                'Front Image Text:',
+                                style: TextStyle(
+                                  fontSize: 16,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
-                                  height: 1.4,
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // Product Details Section
-                        Text(
-                          'Product Details',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey[800],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Details Grid
-                        _buildDetailCard(
-                          icon: Icons.business,
-                          label: 'Brand Name',
-                          value: product.brandName,
-                          color: Colors.blue,
-                        ),
-                        const SizedBox(height: 12),
-
-                        _buildDetailCard(
-                          icon: Icons.factory,
-                          label: 'Company',
-                          value: product.companyName ?? 'N/A',
-                          color: Colors.purple,
-                        ),
-                        const SizedBox(height: 12),
-
-                        _buildDetailCard(
-                          icon: Icons.badge,
-                          label: 'LTO Number',
-                          value: product.ltoNumber,
-                          color: Colors.orange,
-                        ),
-                        const SizedBox(height: 12),
-
-                        _buildDetailCard(
-                          icon: Icons.assignment,
-                          label: 'CFPR Number',
-                          value: product.cfprNumber,
-                          color: Colors.teal,
-                        ),
-                        const SizedBox(height: 12),
-
-                        _buildDetailCard(
-                          icon: Icons.qr_code,
-                          label: 'Lot Number',
-                          value: product.lotNumber,
-                          color: Colors.indigo,
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // Dates Section
-                        Text(
-                          'Important Dates',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey[800],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildDateCard(
-                                icon: Icons.event_available,
-                                label: 'Registered',
-                                date: product.dateOfRegistration,
-                                color: Colors.green,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _buildDateCard(
-                                icon: Icons.event_busy,
-                                label: 'Expires',
-                                date: product.expirationDate,
-                                color: Colors.red,
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // OCR Text Section (Collapsible)
-                        Theme(
-                          data: Theme.of(
-                            context,
-                          ).copyWith(dividerColor: Colors.transparent),
-                          child: ExpansionTile(
-                            tilePadding: EdgeInsets.zero,
-                            title: Row(
-                              children: [
-                                Icon(
-                                  Icons.text_snippet,
-                                  color: Colors.grey[700],
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Scanned Text (OCR)',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.grey[800],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            children: [
+                              const SizedBox(height: 8),
                               Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.all(16),
+                                padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
                                   color: Colors.grey[100],
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(8),
                                   border: Border.all(color: Colors.grey[300]!),
                                 ),
                                 child: SelectableText(
-                                  ocrText,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey[800],
-                                    height: 1.5,
-                                    fontFamily: 'monospace',
-                                  ),
+                                  frontText.isEmpty ? 'No text detected' : frontText,
+                                  style: const TextStyle(fontSize: 14),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              const Text(
+                                'Back Image Text:',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[100],
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.grey[300]!),
+                                ),
+                                child: SelectableText(
+                                  backText.isEmpty ? 'No text detected' : backText,
+                                  style: const TextStyle(fontSize: 14),
+                                ),
+                              ),
+                            ],
+                          )
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Scanned Text:',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[100],
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.grey[300]!),
+                                ),
+                                child: SelectableText(
+                                  frontText.isEmpty ? 'No text detected' : frontText,
+                                  style: const TextStyle(fontSize: 14),
                                 ),
                               ),
                             ],
                           ),
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // Action Buttons
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () {
-                                  final productInfo =
-                                      '''
-Product: ${product.productName}
-Brand: ${product.brandName}
-LTO: ${product.ltoNumber}
-CFPR: ${product.cfprNumber}
-Lot: ${product.lotNumber}
-Expiration: ${_formatDate(product.expirationDate)}
-Registered: ${_formatDate(product.dateOfRegistration)}
-''';
-                                  Clipboard.setData(
-                                    ClipboardData(text: productInfo),
-                                  );
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Product details copied'),
-                                      duration: Duration(seconds: 2),
-                                      backgroundColor: Colors.green,
-                                    ),
-                                  );
-                                },
-                                icon: const Icon(Icons.copy, size: 18),
-                                label: const Text('Copy Details'),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: const Color(0xFF005440),
-                                  side: const BorderSide(
-                                    color: Color(0xFF005440),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 14,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: () => Navigator.of(context).pop(),
-                                icon: const Icon(Icons.check, size: 18),
-                                label: const Text('Done'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF005440),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 14,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  elevation: 2,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
                   ),
                 ),
               ],
@@ -2030,35 +1531,180 @@ Registered: ${_formatDate(product.dateOfRegistration)}
 
   Future<void> _takePictureForOCR(bool isFront) async {
     final XFile? image = await _picker.pickImage(source: ImageSource.camera);
-    if (image != null) {
-      // Navigate to crop page to allow precise label cropping
-      String? croppedPath;
-      try {
-        croppedPath =
-            await Navigator.pushNamed(
-                  context,
-                  '/crop-label',
-                  arguments: {'imagePath': image.path},
-                )
-                as String?;
-      } catch (_) {}
+    if (image == null) return;
 
-      // If user canceled cropping, do nothing
-      if (croppedPath == null || croppedPath.isEmpty) {
-        return;
+    // Just save the path locally - we'll upload both images together after OCR
+    setState(() {
+      if (isFront) {
+        _frontImagePath = image.path;
+      } else {
+        _backImagePath = image.path;
       }
+    });
 
-      setState(() {
-        if (isFront) {
-          _frontImagePath = croppedPath;
-        } else {
-          _backImagePath = croppedPath;
+    // Navigate to crop page for visual adjustment (optional)
+    try {
+      await Navigator.pushNamed(
+        context,
+        '/crop-label',
+        arguments: {'imagePath': image.path},
+      );
+    } catch (_) {}
+
+    // If both images are captured, upload to Firebase then perform OCR
+    if (_frontImagePath != null && _backImagePath != null) {
+      try {
+        // Show uploading dialog
+        if (mounted) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => Dialog(
+              backgroundColor: Colors.transparent,
+              insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.25),
+                      blurRadius: 12,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header with icon
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF005440).withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const SizedBox(
+                            width: 28,
+                            height: 28,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 3,
+                              valueColor: AlwaysStoppedAnimation(Color(0xFF005440)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            'Uploading images',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF005440),
+                            ),
+                          ),
+                        ),
+                        // Optional minimal cancel icon (keeps barrierDismissible false)
+                        IconButton(
+                          icon: Icon(Icons.close, color: Colors.grey[600]),
+                          tooltip: 'Cancel upload',
+                          onPressed: () {
+                            // Close dialog and reset captured images so caller can handle cancellation
+                            Navigator.of(context).pop();
+                            if (mounted) {
+                              setState(() {
+                                _frontImagePath = null;
+                                _backImagePath = null;
+                                _frontImageUrl = null;
+                                _backImageUrl = null;
+                              });
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Message
+                    const Text(
+                      'Uploading images to Firebase. This may take a few seconds.',
+                      style: TextStyle(fontSize: 13, color: Colors.black87, height: 1.35),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Indeterminate progress bar with subtle styling
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: LinearProgressIndicator(
+                        minHeight: 8,
+                        backgroundColor: Colors.grey.shade200,
+                        valueColor: const AlwaysStoppedAnimation(Color(0xFF00A47D)),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Small helper note
+                    Text(
+                      'Please keep the app open until upload completes.',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
         }
-      });
 
-      // If both images are selected, perform OCR on both
-      if (_frontImagePath != null && _backImagePath != null) {
+        // Upload both images to Firebase
+        final scanId = 'scan_${DateTime.now().millisecondsSinceEpoch}';
+        final uploadResults = await FirebaseStorageService.uploadScanImages(
+          scanId: scanId,
+          frontImage: File(_frontImagePath!),
+          backImage: File(_backImagePath!),
+        );
+
+        // Close upload dialog
+        if (mounted) Navigator.pop(context);
+
+        // Check if upload succeeded
+        if (uploadResults['frontUrl'] == null || uploadResults['backUrl'] == null) {
+          throw Exception('Failed to upload images to Firebase');
+        }
+
+        // Save Firebase URLs
+        setState(() {
+          _frontImageUrl = uploadResults['frontUrl'];
+          _backImageUrl = uploadResults['backUrl'];
+        });
+
+        // Now perform OCR
         await _performDualOCR(_frontImagePath!, _backImagePath!);
+      } catch (e) {
+        // Close dialogs if open
+        if (mounted) {
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        }
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to upload images: $e'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+        
+        // Reset state on failure
+        setState(() {
+          _frontImagePath = null;
+          _backImagePath = null;
+          _frontImageUrl = null;
+          _backImageUrl = null;
+        });
       }
     }
   }
@@ -2170,59 +1816,18 @@ Registered: ${_formatDate(product.dateOfRegistration)}
         return;
       }
 
-      // Upload images to Firebase Storage before sending to API
-      developer.log('📤 Uploading scan images to Firebase Storage...');
-      String? frontImageUrl;
-      String? backImageUrl;
-      
-      try {
-        // Generate unique scan ID
-        final scanId = 'scan_${DateTime.now().millisecondsSinceEpoch}';
-        
-        // Upload both images to Firebase Storage
-        final uploadResults = await FirebaseStorageService.uploadScanImages(
-          scanId: scanId,
-          frontImage: File(frontImagePath),
-          backImage: File(backImagePath),
-        );
-        
-        frontImageUrl = uploadResults['frontUrl'];
-        backImageUrl = uploadResults['backUrl'];
-        
-        developer.log('📥 Upload results: frontUrl=${frontImageUrl != null ? "✓" : "✗"}, backUrl=${backImageUrl != null ? "✓" : "✗"}');
-        
-        if (frontImageUrl != null && backImageUrl != null) {
-          developer.log('✅ Images uploaded successfully');
-          developer.log('Front: $frontImageUrl');
-          developer.log('Back: $backImageUrl');
-          
-          // Store URLs in state for compliance reporting
-          setState(() {
-            _frontImageUrl = frontImageUrl;
-            _backImageUrl = backImageUrl;
-          });
-          
-          developer.log('✅ State updated - _frontImageUrl and _backImageUrl now set');
-        } else {
-          developer.log('⚠️ Image upload incomplete!');
-          developer.log('   frontImageUrl: ${frontImageUrl ?? "NULL"}');
-          developer.log('   backImageUrl: ${backImageUrl ?? "NULL"}');
-          developer.log('   State variables will remain NULL!');
-        }
-      } catch (uploadError) {
-        developer.log('❌ Error uploading images: $uploadError');
-        // Continue without image URLs - images are optional
-      }
+      // Keep images as local files for now - upload only happens on report submission
+      developer.log('📁 Images ready for OCR processing (local files)');
+      developer.log('   Front: $frontImagePath');
+      developer.log('   Back: $backImagePath');
 
-      // Send to backend API for OCR processing with image URLs
+      // Send to backend API for OCR processing (without uploading images)
       final apiService = ApiService();
       Map<String, dynamic> response;
       
       try {
         response = await apiService.scanProduct(
           combinedText,
-          frontImageUrl: frontImageUrl,
-          backImageUrl: backImageUrl,
         );
       } on ApiException catch (apiError) {
         // Close loading dialog
@@ -2287,7 +1892,7 @@ Registered: ${_formatDate(product.dateOfRegistration)}
           _ocrBlobText = combinedText;
         });
 
-        // Log OCR scan to audit trail with image URLs
+        // Log OCR scan to audit trail (images will be uploaded on report submission)
         AuditLogService.logScanProduct(
           scanData: {
             'scannedText': combinedText.substring(
@@ -2297,15 +1902,13 @@ Registered: ${_formatDate(product.dateOfRegistration)}
             'scanType': 'OCR',
             'extractionSuccess': true,
             'extractedInfo': extractedInfo,
-            if (frontImageUrl != null) 'frontImageUrl': frontImageUrl,
-            if (backImageUrl != null) 'backImageUrl': backImageUrl,
           },
         );
 
         // Show extracted information to user with "Search Product" button
         _showExtractedInfoModal(extractedInfo, combinedText);
       } else {
-        // Log failed OCR scan with image URLs
+        // Log failed OCR scan
         AuditLogService.logScanProduct(
           scanData: {
             'scannedText': combinedText.substring(
@@ -2314,8 +1917,6 @@ Registered: ${_formatDate(product.dateOfRegistration)}
             ),
             'scanType': 'OCR',
             'extractionSuccess': false,
-            if (frontImageUrl != null) 'frontImageUrl': frontImageUrl,
-            if (backImageUrl != null) 'backImageUrl': backImageUrl,
           },
         );
 
