@@ -22,6 +22,7 @@ import CompanyRouter from "./routes/v1/company";
 import FirebaseRouter from "./routes/v1/firebase";
 import AuditLogRouter from "./routes/v1/auditLog";
 import CertificateBlockchainRouter from "./routes/v1/certificateBlockchain";
+import AnalyticsRouter from "./routes/v1/analytics";
 import { verifyUser } from "./middleware/verifyUser";
 import { verifyMobileUser } from "./middleware/verifyMobileUser";
 import helmet from "helmet";
@@ -50,6 +51,7 @@ const setUpApp = async () => {
   app.use("/api/v1/firebase", verifyUser, FirebaseRouter);
   app.use("/api/v1/audit", verifyUser, AuditLogRouter);
   app.use("/api/v1/certificate-blockchain", verifyUser, CertificateBlockchainRouter);
+  app.use("/api/v1/analytics", verifyUser, AnalyticsRouter);
 
   // Serve static uploads (avatars, etc.)
   const uploadsPath = path.resolve(process.cwd(), "uploads");
