@@ -28,6 +28,14 @@ export function RemoteConfig() {
   const hasChanges =
     JSON.stringify(publishedParameters) !== JSON.stringify(draftParameters);
 
+  // Add a default Reports parameter so UI always shows it even if backend doesn't return it
+  const defaultReportsParam: RemoteConfigParameter = {
+    key: "disable_reports_page",
+    value: false,
+    type: "boolean",
+    description: "Controls access to the Reports page and analytics",
+  };
+
   useEffect(() => {
     loadParameters();
   }, [location.pathname]);
@@ -36,6 +44,18 @@ export function RemoteConfig() {
     try {
       setLoading(true);
       const params = await RemoteConfigService.getAllParameters();
+
+      // Ensure the Reports parameter exists (append if missing)
+      const hasReports =
+        params.findIndex(
+          (p) =>
+            p.key === "disable_reports_page" ||
+            p.key === "disable_reports"
+        ) !== -1;
+      if (!hasReports) {
+        params.push(defaultReportsParam);
+      }
+
       setPublishedParameters(params);
       setDraftParameters([...params]); // Create a copy for drafts
     } catch (error) {
@@ -145,6 +165,8 @@ export function RemoteConfig() {
                 const isChanged =
                   publishedParameters.find((p) => p.key === param.key)
                     ?.value !== param.value;
+
+                // Add Reports mappings (support both possible keys)
                 const getFeatureName = (key: string) => {
                   switch (key) {
                     case "disable_application":
@@ -159,6 +181,9 @@ export function RemoteConfig() {
                       return "User Profile";
                     case "disable_scanning_page":
                       return "QR Code Scanning";
+                    case "disable_reports_page":
+                    case "disable_reports":
+                      return "Reports";
                     default:
                       return key
                         .replace(/disable_|_/g, " ")
@@ -180,6 +205,9 @@ export function RemoteConfig() {
                       return "Controls access to user profile and account settings";
                     case "disable_scanning_page":
                       return "Enables or disables QR code scanning functionality";
+                    case "disable_reports_page":
+                    case "disable_reports":
+                      return "Controls access to reports and analytics features";
                     default:
                       return `Controls the ${key.replace(
                         /disable_|_/g,
