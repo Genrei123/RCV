@@ -5,7 +5,6 @@ import '../services/user_profile_service.dart';
 import '../services/auth_service.dart';
 import '../services/audit_log_service.dart';
 import '../widgets/navigation_bar.dart';
-import '../widgets/title_logo_header_app_bar.dart';
 import 'edit_profile_page.dart';
 import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -33,15 +32,12 @@ class _UserProfilePageState extends State<UserProfilePage> {
 
   Future<void> _loadUserProfile() async {
     setState(() => _isLoading = true);
-
     final userData = await UserProfileService.getUserProfile();
-
+    if (!mounted) return;
     setState(() {
       _userData = userData;
       _isLoading = false;
     });
-
-    // After user data is loaded, refresh local avatar for this specific user
     await _loadLocalAvatar();
   }
 
@@ -92,13 +88,8 @@ class _UserProfilePageState extends State<UserProfilePage> {
     );
 
     if (confirmed == true && mounted) {
-      // Log the logout action
       await AuditLogService.logLogout();
-
-      // Perform logout
       await _authService.logout();
-
-      // Navigate to login page
       if (mounted) {
         Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
       }
@@ -107,15 +98,12 @@ class _UserProfilePageState extends State<UserProfilePage> {
 
   Future<void> _navigateToEditProfile() async {
     if (_userData == null) return;
-
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => EditProfilePage(userData: _userData!),
       ),
     );
-
-    // Reload profile if edited
     if (result == true) {
       await _loadUserProfile();
       await _loadLocalAvatar();
@@ -124,15 +112,37 @@ class _UserProfilePageState extends State<UserProfilePage> {
 
   String _getRoleDisplayName(String? role) {
     if (role == null) return 'User';
-    switch (role.toUpperCase()) {
+    switch (role.toString().toUpperCase()) {
       case 'ADMIN':
         return 'Administrator';
       case 'AGENT':
         return 'Agent';
-      case 'USER':
       default:
         return 'User';
     }
+  }
+
+  Widget _buildInfoCard(IconData icon, String text) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: AppColors.primary, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(fontSize: 16, color: Colors.black87),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -140,7 +150,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
     if (_isLoading) {
       return WillPopScope(
         onWillPop: () async {
-          // Navigate back to previous tab if available
           final prev = TabHistory.instance.popAndGetPrevious();
           if (prev != null &&
               prev >= 0 &&
@@ -154,13 +163,11 @@ class _UserProfilePageState extends State<UserProfilePage> {
           return true;
         },
         child: Scaffold(
-          appBar: const TitleLogoHeaderAppBar(
-            title: 'User Profile',
-            showBackButton: false,
+          body: const SafeArea(
+            child: Center(child: CircularProgressIndicator()),
           ),
-          body: const Center(child: CircularProgressIndicator()),
           bottomNavigationBar: AppBottomNavBar(
-            selectedIndex: 4, // Profile tab
+            selectedIndex: 4,
             role: NavBarRole.user,
           ),
         ),
@@ -169,39 +176,38 @@ class _UserProfilePageState extends State<UserProfilePage> {
 
     if (_userData == null) {
       return Scaffold(
-        appBar: const TitleLogoHeaderAppBar(
-          title: 'User Profile',
-          showBackButton: false,
-        ),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 64, color: Colors.grey),
-              const SizedBox(height: 16),
-              const Text(
-                'Failed to load profile',
-                style: TextStyle(fontSize: 18, color: Colors.grey),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _loadUserProfile,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
+        body: SafeArea(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 64, color: Colors.grey),
+                const SizedBox(height: 16),
+                const Text(
+                  'Failed to load profile',
+                  style: TextStyle(fontSize: 18, color: Colors.grey),
                 ),
-                child: const Text('Retry'),
-              ),
-            ],
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: _loadUserProfile,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
           ),
         ),
         bottomNavigationBar: AppBottomNavBar(
-          selectedIndex: 4, // Profile tab
+          selectedIndex: 4,
           role: NavBarRole.user,
         ),
       );
     }
 
+    // Loaded state: gradient header + avatar/name/role + edit button + details + logout
     final String firstName = _userData!['firstName'] ?? '';
     final String? middleName = _userData!['middleName'];
     final String lastName = _userData!['lastName'] ?? '';
@@ -211,16 +217,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
     final String role = _getRoleDisplayName(_userData!['role']);
     final String badgeId = _userData!['badgeId'] ?? 'N/A';
 
-    // Build full name
     String fullName = firstName;
-    if (middleName != null && middleName.isNotEmpty) {
-      fullName += ' $middleName';
-    }
+    if (middleName != null && middleName.isNotEmpty) fullName += ' $middleName';
     fullName += ' $lastName';
-    if (extName != null && extName.isNotEmpty) {
-      fullName += ' $extName';
-    }
-
+    if (extName != null && extName.isNotEmpty) fullName += ' $extName';
     return WillPopScope(
       onWillPop: () async {
         final prev = TabHistory.instance.popAndGetPrevious();
@@ -231,282 +231,227 @@ class _UserProfilePageState extends State<UserProfilePage> {
         return true;
       },
       child: Scaffold(
-        appBar: const TitleLogoHeaderAppBar(
-          title: 'User Profile',
-          showBackButton: false,
-        ),
-        body: RefreshIndicator(
-          onRefresh: _loadUserProfile,
+        body: SafeArea(
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(16.0),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Avatar with border
-                Center(
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Builder(
-                        builder: (context) {
-                          final String? avatarUrl = _userData?['avatarUrl'];
-                          final bool hasRemote =
-                              avatarUrl != null && avatarUrl.isNotEmpty;
-                          if (hasRemote) {
-                            // If backend serves under /api/v1/uploads too, we can prefix with base URL
-                            final String base =
-                                ApiConstants.baseUrl; // ends with /api/v1
-                            final String absolute = avatarUrl.startsWith('http')
-                                ? avatarUrl
-                                : (base +
-                                      (avatarUrl.startsWith('/')
-                                          ? avatarUrl
-                                          : '/$avatarUrl'));
-                            return ClipOval(
-                              child: Image.network(
-                                absolute,
-                                width: 128,
-                                height: 128,
-                                fit: BoxFit.cover,
-                              ),
-                            );
-                          } else if (_localAvatarPath != null) {
-                            return ClipOval(
-                              child: Image.file(
-                                File(_localAvatarPath!),
-                                width: 128,
-                                height: 128,
-                                fit: BoxFit.cover,
-                              ),
-                            );
-                          } else {
-                            return ClipOval(
-                              child: SvgPicture.asset(
-                                "assets/landinglogo.svg",
-                                width: 128,
-                                height: 128,
-                                fit: BoxFit.cover,
-                              ),
-                            );
-                          }
-                        },
-                      ),
-                      Container(
-                        width: 128,
-                        height: 128,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: AppColors.primary,
-                            width: 4,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Name
-                Center(
-                  child: Text(
-                    fullName,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                const SizedBox(height: 4),
-
-                // Role
-                Center(
-                  child: Text(
-                    role,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.normal,
-                      color: Colors.black54,
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // Edit Profile Button
-                Center(
-                  child: SizedBox(
-                    width: 200,
-                    height: 44,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      onPressed: _navigateToEditProfile,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          SvgPicture.string(
-                            '''
-                          <svg xmlns="http://www.w3.org/2000/svg"
-                            width="20" height="20" viewBox="0 0 24 24"
-                            fill="none" stroke="currentColor" stroke-width="2"
-                            stroke-linecap="round" stroke-linejoin="round"
-                            class="lucide lucide-pencil">
-                            <path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/>
-                            <path d="m15 5 4 4"/>
-                          </svg>
-                          ''',
-                            colorFilter: const ColorFilter.mode(
-                              Colors.white,
-                              BlendMode.srcIn,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          const Text(
-                            "Edit Profile",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                // Profile Details Container
+                // Header gradient with watermark and title
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.only(top: 44, bottom: 20),
                   decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(8),
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.primary,
+                        AppColors.primary.withOpacity(0.9),
+                      ],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Stack(
+                    alignment: Alignment.topCenter,
                     children: [
-                      const Text(
-                        "Email",
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                      Opacity(
+                        opacity: 0.08,
+                        child: SvgPicture.asset(
+                          'assets/landinglogo.svg',
+                          width: MediaQuery.of(context).size.width * 1.8,
+                          fit: BoxFit.contain,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        email,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.normal,
-                          color: Colors.black,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        "Location",
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        location,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.normal,
-                          color: Colors.black,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        "Badge ID",
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        badgeId,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.normal,
-                          color: Colors.black,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                // Logout Button
-                Center(
-                  child: SizedBox(
-                    width: 200,
-                    height: 44,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.error,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      onPressed: _handleLogout,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          SvgPicture.string(
-                            '''
-                          <svg xmlns="http://www.w3.org/2000/svg"
-                            width="20" height="20" viewBox="0 0 24 24"
-                            fill="none" stroke="currentColor" stroke-width="2"
-                            stroke-linecap="round" stroke-linejoin="round"
-                            class="lucide lucide-log-out">
-                            <path d="m16 17 5-5-5-5"/>
-                            <path d="M21 12H9"/>
-                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                          </svg>
-                          ''',
-                            colorFilter: const ColorFilter.mode(
-                              Colors.white,
-                              BlendMode.srcIn,
+                          const Text(
+                            'User Profile',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          const Text(
-                            "Logout",
-                            style: TextStyle(
-                              fontSize: 16,
+                          const SizedBox(height: 18),
+                          // Avatar
+                          Builder(
+                            builder: (context) {
+                              final String? avatarUrl = _userData?['avatarUrl'];
+                              final bool hasRemote =
+                                  avatarUrl != null && avatarUrl.isNotEmpty;
+                              Widget avatarChild;
+                              if (hasRemote) {
+                                final String base = ApiConstants.baseUrl;
+                                final String absolute =
+                                    avatarUrl.startsWith('http')
+                                    ? avatarUrl
+                                    : (base +
+                                          (avatarUrl.startsWith('/')
+                                              ? avatarUrl
+                                              : '/$avatarUrl'));
+                                avatarChild = Image.network(
+                                  absolute,
+                                  width: 140,
+                                  height: 140,
+                                  fit: BoxFit.cover,
+                                );
+                              } else if (_localAvatarPath != null) {
+                                avatarChild = Image.file(
+                                  File(_localAvatarPath!),
+                                  width: 124,
+                                  height: 124,
+                                  fit: BoxFit.cover,
+                                );
+                              } else {
+                                avatarChild = SvgPicture.asset(
+                                  'assets/landinglogo.svg',
+                                  width: 124,
+                                  height: 124,
+                                  fit: BoxFit.cover,
+                                );
+                              }
+                              return Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  Container(
+                                    width: 136,
+                                    height: 136,
+                                    decoration: const BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  ClipOval(child: avatarChild),
+                                ],
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            fullName,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
                               fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            role,
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          // Edit profile button
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 48),
+                            child: SizedBox(
+                              width: double.infinity,
+                              height: 44,
+                              child: ElevatedButton(
+                                onPressed: _navigateToEditProfile,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: AppColors.primary,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                                child: const Text(
+                                  'Edit profile',
+                                  style: TextStyle(fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          // Divider with label
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 48),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Container(
+                                    height: 2,
+                                    color: Colors.white.withOpacity(0.6),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  'Your Details',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Container(
+                                    height: 2,
+                                    color: Colors.white.withOpacity(0.6),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Details directly under the divider
+                          const SizedBox(height: 14),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Column(
+                              children: [
+                                _buildInfoCard(Icons.email_outlined, email),
+                                const SizedBox(height: 10),
+                                _buildInfoCard(
+                                  Icons.location_on_outlined,
+                                  location,
+                                ),
+                                const SizedBox(height: 10),
+                                _buildInfoCard(Icons.badge_outlined, badgeId),
+                              ],
+                            ),
+                          ),
+
+                          // Logout button
+                          const SizedBox(height: 14),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: SizedBox(
+                              width: double.infinity,
+                              height: 44,
+                              child: ElevatedButton.icon(
+                                onPressed: _handleLogout,
+                                icon: const Icon(Icons.logout),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.error,
+                                  foregroundColor: AppColors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                                label: const Text(
+                                  'Log out your account',
+                                  style: TextStyle(fontWeight: FontWeight.w600),
+                                ),
+                              ),
                             ),
                           ),
                         ],
                       ),
-                    ),
+                    ],
                   ),
                 ),
+                const SizedBox(height: 24),
               ],
             ),
           ),
         ),
         bottomNavigationBar: AppBottomNavBar(
-          selectedIndex: 4, // Profile tab
+          selectedIndex: 4,
           role: NavBarRole.user,
         ),
       ),

@@ -1,4 +1,4 @@
-import { SecurityCode } from "./enums";
+import { SecurityCode, ComplianceStatus } from "./enums";
 import { User } from "../typeorm/entities/user.entity";
 
 // Extend Express Request to include user
@@ -165,4 +165,67 @@ export interface SignupForm {
   location: string;
   dateOfBirth: string;
   badgeId: string;
+}
+
+// Analytics
+export interface AnalyticsComplianceReport {
+  _id: string;
+  agentId: string;
+  status: ComplianceStatus;
+  scannedData: Record<string, any>;
+  nonComplianceReason?: string | null;
+  additionalNotes?: string | null;
+  frontImageUrl: string;
+  backImageUrl: string;
+  createdAt: Date;
+  ocrBlobText?: string | null;
+  productSearchResult?: Record<string, any> | null;
+  location?: {
+    latitude?: number;
+    longitude?: number;
+    address?: string;
+  } | null;
+}
+
+export interface ClusterPoint {
+  index: number;
+  coordinates: [number, number];
+  lng: number;
+  lat: number;
+  report: AnalyticsComplianceReport;
+  clusterId: number;
+}
+
+export interface ClusterInfo {
+  cluster_id: number;
+  size: number;
+  center: { latitude: number; longitude: number };
+  radius_km: number;
+  points: ClusterPoint[];
+  compliance_stats: {
+    compliant: number;
+    non_compliant: number;
+    fraudulent: number;
+  };
+}
+
+export interface AnalyticsResults {
+  clustering_params: {
+    eps_km: number;
+    min_samples: number;
+  };
+  summary: {
+    total_points: number;
+    n_clusters: number;
+    n_noise_points: number;
+    noise_percentage: number;
+    compliance_overview: {
+      total_compliant: number;
+      total_non_compliant: number;
+      total_fraudulent: number;
+    };
+  };
+  clusters: ClusterInfo[];
+  noise_points: ClusterPoint[];
+  timestamp: string;
 }

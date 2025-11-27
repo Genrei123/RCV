@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:rcv_firebase/themes/app_colors.dart';
 import '../services/user_profile_service.dart';
 import 'package:image_picker/image_picker.dart';
@@ -77,6 +78,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         : (email?.isNotEmpty == true ? email : 'default');
     _avatarLocalKey = 'profile_avatar_path_${userKey}';
     _loadLocalAvatar();
+    _phoneNumberController.addListener(_handlePhoneNumberFormat);
   }
 
   @override
@@ -314,6 +316,28 @@ class _EditProfilePageState extends State<EditProfilePage> {
     }
   }
 
+  void _handlePhoneNumberFormat() {
+    final text = _phoneNumberController.text;
+    // Filter to only plus and digits
+    final filtered = text.replaceAll(RegExp(r'[^0-9+]'), '');
+    String newText = filtered;
+    if (newText.startsWith('09')) {
+      if (newText.length > 11) {
+        newText = newText.substring(0, 11);
+      }
+    } else if (newText.startsWith('+63')) {
+      if (newText.length > 13) {
+        newText = newText.substring(0, 13);
+      }
+    }
+    if (newText != text) {
+      _phoneNumberController.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection.collapsed(offset: newText.length),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -393,56 +417,105 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     ),
                     const SizedBox(height: 16),
 
-                    TextFormField(
-                      controller: _firstNameController,
-                      decoration: const InputDecoration(
-                        labelText: 'First Name',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.person),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'First name is required';
-                        }
-                        return null;
-                      },
+                    // Names Row 1: First & Middle
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _firstNameController,
+                            decoration: const InputDecoration(
+                              labelText: 'First Name',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.person),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'First name is required';
+                              }
+                              final v = value.trim();
+                              if (!RegExp(
+                                r"^[A-Za-zÀ-ÖØ-öø-ÿ\s'-]+",
+                              ).hasMatch(v)) {
+                                return 'Letters only';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _middleNameController,
+                            decoration: const InputDecoration(
+                              labelText: 'Middle Name (Optional)',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.person_outline),
+                            ),
+                            validator: (value) {
+                              if (value != null && value.trim().isNotEmpty) {
+                                final v = value.trim();
+                                if (!RegExp(
+                                  r"^[A-Za-zÀ-ÖØ-öø-ÿ\s'-]+",
+                                ).hasMatch(v)) {
+                                  return 'Invalid';
+                                }
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 16),
-
-                    TextFormField(
-                      controller: _middleNameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Middle Name (Optional)',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.person_outline),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    TextFormField(
-                      controller: _lastNameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Last Name',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.person),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Last name is required';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-
-                    TextFormField(
-                      controller: _extNameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Name Extension (Optional)',
-                        hintText: 'Jr., Sr., III, etc.',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.text_fields),
-                      ),
+                    // Names Row 2: Last & Extension
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _lastNameController,
+                            decoration: const InputDecoration(
+                              labelText: 'Last Name',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.person),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Last name is required';
+                              }
+                              final v = value.trim();
+                              if (!RegExp(
+                                r"^[A-Za-zÀ-ÖØ-öø-ÿ\s'-]+",
+                              ).hasMatch(v)) {
+                                return 'Letters only';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _extNameController,
+                            decoration: const InputDecoration(
+                              labelText: 'Name Extension (Optional)',
+                              hintText: 'Jr., Sr., III, etc.',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.text_fields),
+                            ),
+                            validator: (value) {
+                              if (value != null && value.trim().isNotEmpty) {
+                                final v = value.trim();
+                                if (!RegExp(
+                                  r"^[A-Za-zÀ-ÖØ-öø-ÿ\s'-]+\.?$",
+                                ).hasMatch(v)) {
+                                  return 'Invalid';
+                                }
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 16),
 
@@ -476,6 +549,30 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         prefixIcon: Icon(Icons.phone),
                       ),
                       keyboardType: TextInputType.phone,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'[0-9+]')),
+                      ],
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Phone number is required';
+                        }
+                        final v = value.trim();
+                        if (!RegExp(r'^[0-9+]+$').hasMatch(v)) {
+                          return 'Only + and numbers allowed';
+                        }
+                        if (v.startsWith('09')) {
+                          if (v.length != 11) {
+                            return 'Must be 11 digits starting with 09';
+                          }
+                        } else if (v.startsWith('+63')) {
+                          if (v.length != 13) {
+                            return 'Must be +63 followed by 10 digits';
+                          }
+                        } else {
+                          return 'Start with 09 or +63';
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 16),
 

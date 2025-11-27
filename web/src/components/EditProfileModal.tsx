@@ -23,32 +23,6 @@ interface EditProfileModalProps {
   onSave: (updatedUser: Partial<ProfileUser>) => Promise<void>;
 }
 
-// Validators
-const validators = {
-  name: (fieldName: string) => (val: string) => {
-    if (!val?.trim()) return `${fieldName} is required`;
-    if (val.trim().length < 2) return `${fieldName} must be at least 2 characters`;
-    if (val.trim().length > 50) return `${fieldName} must be less than 50 characters`;
-    return null;
-  },
-
-  email: (val: string) => {
-    if (!val?.trim()) return "Email is required";
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
-      return "Invalid email format";
-    }
-    return null;
-  },
-
-  phone: (val: string) => {
-    if (!val) return null; // Optional field
-    if (!/^\+?[\d\s-()]+$/.test(val)) {
-      return "Invalid phone number format";
-    }
-    return null;
-  },
-};
-
 export function EditProfileModal({
   isOpen,
   onClose,
@@ -58,19 +32,11 @@ export function EditProfileModal({
   const [formData, setFormData] = useState<Partial<ProfileUser>>({});
   const [loading, setLoading] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [cropOpen, setCropOpen] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  // Track form validity
-  const [formValid, setFormValid] = useState(false);
-  const [fieldValidity, setFieldValidity] = useState<Record<string, boolean>>({
-    firstName: false,
-    lastName: false,
-    email: false,
-    phoneNumber: true, // optional, so valid by default
-  });
 
   useEffect(() => {
     if (user) {
@@ -92,32 +58,31 @@ export function EditProfileModal({
       } catch {
         setAvatarPreview(user.avatar || null);
       }
-
-      // Set initial validity based on existing data
-      setFieldValidity({
-        firstName: !!(user.firstName?.trim()),
-        lastName: !!(user.lastName?.trim()),
-        email: !!(user.email?.trim()),
-        phoneNumber: true,
-      });
-      setFormValid(
-        !!(user.firstName?.trim()) &&
-        !!(user.lastName?.trim()) &&
-        !!(user.email?.trim())
-      );
     }
   }, [user]);
 
   if (!isOpen || !user) return null;
 
-  // Track field validity
-  const handleValidationChange = (field: string, isValid: boolean) => {
-    setFieldValidity((prev) => {
-      const updated = { ...prev, [field]: isValid };
-      // Update overall form validity
-      setFormValid(Object.values(updated).every(Boolean));
-      return updated;
-    });
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.firstName?.trim()) {
+      newErrors.firstName = "First name is required";
+    }
+    if (!formData.lastName?.trim()) {
+      newErrors.lastName = "Last name is required";
+    }
+    if (!formData.email?.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = "Invalid email format";
+    }
+    if (formData.phoneNumber && !/^\+?[\d\s-()]+$/.test(formData.phoneNumber)) {
+      newErrors.phoneNumber = "Invalid phone number format";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   // Avatar handlers
@@ -186,9 +151,8 @@ export function EditProfileModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Check form validity
-    if (!formValid) {
-      return; // Input components will show their own errors
+    if (!validateForm()) {
+      return;
     }
 
     setLoading(true);
@@ -204,6 +168,10 @@ export function EditProfileModal({
 
   const handleChange = (field: keyof ProfileUser, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    // Clear error for this field when user starts typing
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: "" }));
+    }
   };
 
   return (
@@ -311,12 +279,11 @@ export function EditProfileModal({
                     value={formData.firstName || ""}
                     onChange={(e) => handleChange("firstName", e.target.value)}
                     placeholder="Enter first name"
-                    required
-                    validator={validators.name("First name")}
-                    onValidationChange={(isValid) => 
-                      handleValidationChange("firstName", isValid)
-                    }
+                    className={errors.firstName ? "border-red-500" : ""}
                   />
+                  {errors.firstName && (
+                    <p className="text-xs text-red-500">{errors.firstName}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -338,12 +305,11 @@ export function EditProfileModal({
                     value={formData.lastName || ""}
                     onChange={(e) => handleChange("lastName", e.target.value)}
                     placeholder="Enter last name"
-                    required
-                    validator={validators.name("Last name")}
-                    onValidationChange={(isValid) => 
-                      handleValidationChange("lastName", isValid)
-                    }
+                    className={errors.lastName ? "border-red-500" : ""}
                   />
+                  {errors.lastName && (
+                    <p className="text-xs text-red-500">{errors.lastName}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -351,7 +317,7 @@ export function EditProfileModal({
                     Date of Birth
                   </label>
                   <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none z-10" />
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                       type="date"
                       value={formData.dateOfBirth || ""}
@@ -376,20 +342,20 @@ export function EditProfileModal({
                     Email Address <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none z-10" />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                       type="email"
                       value={formData.email || ""}
                       onChange={(e) => handleChange("email", e.target.value)}
                       placeholder="Enter email address"
-                      className="pl-10"
-                      required
-                      validator={validators.email}
-                      onValidationChange={(isValid) => 
-                        handleValidationChange("email", isValid)
-                      }
+                      className={`pl-10 ${
+                        errors.email ? "border-red-500" : ""
+                      }`}
                     />
                   </div>
+                  {errors.email && (
+                    <p className="text-xs text-red-500">{errors.email}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -397,7 +363,7 @@ export function EditProfileModal({
                     Phone Number
                   </label>
                   <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none z-10" />
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                       type="tel"
                       value={formData.phoneNumber || ""}
@@ -405,13 +371,14 @@ export function EditProfileModal({
                         handleChange("phoneNumber", e.target.value)
                       }
                       placeholder="Enter phone number"
-                      className="pl-10"
-                      validator={validators.phone}
-                      onValidationChange={(isValid) => 
-                        handleValidationChange("phoneNumber", isValid)
-                      }
+                      className={`pl-10 ${
+                        errors.phoneNumber ? "border-red-500" : ""
+                      }`}
                     />
                   </div>
+                  {errors.phoneNumber && (
+                    <p className="text-xs text-red-500">{errors.phoneNumber}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
@@ -419,7 +386,7 @@ export function EditProfileModal({
                     Location
                   </label>
                   <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none z-10" />
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                       value={formData.location || ""}
                       onChange={(e) => handleChange("location", e.target.value)}
@@ -442,7 +409,7 @@ export function EditProfileModal({
                     Badge ID
                   </label>
                   <div className="relative">
-                    <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none z-10" />
+                    <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                       value={formData.badgeId || ""}
                       onChange={(e) => handleChange("badgeId", e.target.value)}
@@ -482,7 +449,7 @@ export function EditProfileModal({
             <Button
               type="submit"
               className="bg-teal-600 hover:bg-teal-700 text-white"
-              disabled={loading || uploadingAvatar || !formValid}
+              disabled={loading || uploadingAvatar}
             >
               {loading ? "Saving..." : uploadingAvatar ? "Uploading..." : "Save Changes"}
             </Button>

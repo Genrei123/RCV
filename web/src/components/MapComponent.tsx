@@ -14,11 +14,23 @@ export interface Inspector {
   location: { lat: number; lng: number; address: string; city: string };
 }
 
+type Suggestion = {
+  id: string;
+  name: string;
+  role?: string;
+  status?: "active" | "inactive";
+  lastSeen?: string;
+  badgeId?: string;
+  location?: { lat: number; lng: number; address: string; city: string };
+};
+
 interface MapComponentProps {
   inspectors?: Inspector[];
   onInspectorClick?: (inspector: Inspector) => void;
   onSearch?: (query: string) => void;
   loading?: boolean;
+  allInspectors?: Inspector[]; // for local suggestions when API results absent
+  searchUsers?: Suggestion[]; // may include users without locations
 }
 
 declare global {
@@ -32,6 +44,8 @@ export function MapComponent({
   onInspectorClick,
   onSearch,
   loading = false,
+  allInspectors = [],
+  searchUsers = [],
 }: MapComponentProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -41,9 +55,10 @@ export function MapComponent({
   const markersRef = useRef<any[]>([]);
   const infoWindowRef = useRef<any>(null);
   const markersByIdRef = useRef<Map<string, any>>(new Map());
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [pendingFocusId, setPendingFocusId] = useState<string | null>(null);
 
-  // Use inspectors directly from props (already filtered by parent component)
-
+  // Load Google Maps script
   useEffect(() => {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
     if (!apiKey) {
@@ -62,6 +77,7 @@ export function MapComponent({
     document.head.appendChild(script);
   }, []);
 
+  // Initialize map
   useEffect(() => {
     if (!mapLoaded || !mapRef.current || googleMapRef.current) return;
     const center =
@@ -75,7 +91,6 @@ export function MapComponent({
               inspectors.length,
           }
         : { lat: 14.5995, lng: 120.9842 };
-    // quieter, desaturated map style so markers stand out
     const mapStyles = [
       {
         elementType: "geometry",
@@ -110,12 +125,13 @@ export function MapComponent({
     infoWindowRef.current = new window.google.maps.InfoWindow();
   }, [mapLoaded, inspectors]);
 
+  // Render markers for filtered inspectors
   useEffect(() => {
     if (!googleMapRef.current || !mapLoaded) return;
     markersRef.current.forEach((m) => m.setMap(null));
     markersRef.current = [];
     markersByIdRef.current.clear();
-    // helper to build an SVG marker with white stroke and drop shadow
+
     const svgMarkerDataUrl = (color: string, size = 48) => {
       const svg = encodeURIComponent(`
         <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24">
@@ -159,7 +175,6 @@ export function MapComponent({
         const badgeText = inspector.badgeId
           ? `<p class="my-1 text-emerald-600 text-xs font-medium">Badge: ${inspector.badgeId}</p>`
           : "";
-
         infoWindowRef.current.setContent(
           `<div class="p-4 font-sans min-w-[200px] rounded-lg">
             <div class="flex items-center gap-2 mb-2">
@@ -177,11 +192,14 @@ export function MapComponent({
       });
       markersRef.current.push(marker);
     });
+
     if (inspectors.length > 0) {
       if (inspectors.length === 1) {
         const inspector = inspectors[0];
-        const position = { lat: inspector.location.lat, lng: inspector.location.lng };
-        
+        const position = {
+          lat: inspector.location.lat,
+          lng: inspector.location.lng,
+        };
         googleMapRef.current.panTo(position);
         googleMapRef.current.setZoom(16);
       } else {
@@ -193,6 +211,63 @@ export function MapComponent({
       }
     }
   }, [inspectors, mapLoaded, onInspectorClick]);
+
+  // Build suggestions from API results first, then local lists
+  useEffect(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) {
+      setSuggestions([]);
+      return;
+    }
+    const base: Suggestion[] = (
+      searchUsers?.length
+        ? searchUsers
+        : allInspectors?.length
+        ? allInspectors
+        : inspectors
+    ) as Suggestion[];
+    const next = base
+      .filter((i) => i?.name?.toLowerCase().includes(q))
+      .slice(0, 10);
+    setSuggestions(next);
+  }, [searchQuery, searchUsers, allInspectors, inspectors]);
+
+  // Focus a marker once it's rendered after filtering
+  useEffect(() => {
+    if (!pendingFocusId) return;
+    const marker = markersByIdRef.current.get(pendingFocusId);
+    const match = (inspectors || []).find((i) => i.id === pendingFocusId);
+    if (marker && match && googleMapRef.current) {
+      googleMapRef.current.panTo({
+        lat: match.location.lat,
+        lng: match.location.lng,
+      });
+      const statusColor = match.status === "active" ? "#10b981" : "#6b7280";
+      const lastSeenText = match.lastSeen
+        ? `<p class="my-1 text-gray-500 text-xs">Last Seen: ${new Date(
+            match.lastSeen
+          ).toLocaleString()}</p>`
+        : "";
+      const badgeText = match.badgeId
+        ? `<p class="my-1 text-emerald-600 text-xs font-medium">Badge: ${match.badgeId}</p>`
+        : "";
+      infoWindowRef.current.setContent(
+        `<div class="p-4 font-sans min-w-[200px] rounded-lg">
+            <div class="flex items-center gap-2 mb-2">
+              <div class="w-2 h-2 rounded-full" style="background-color: ${statusColor};"></div>
+              <h3 class="m-0 text-base font-semibold text-gray-800">${match.name}</h3>
+            </div>
+            <p class="my-1 text-emerald-600 font-medium text-sm">${match.role}</p>
+            ${badgeText}
+            <p class="my-1 text-gray-600 text-xs">Location: ${match.location.address}</p>
+            ${lastSeenText}
+          </div>`
+      );
+      infoWindowRef.current.open(googleMapRef.current, marker);
+      setPendingFocusId(null);
+      setSearchQuery("");
+    }
+  }, [inspectors, pendingFocusId]);
 
   if (loading)
     return (
@@ -214,7 +289,8 @@ export function MapComponent({
   return (
     <div className="relative w-full h-full">
       <div ref={mapRef} className="w-full h-full" />
-      <div className="absolute top-15 left-3 z-10 w-96">
+      {/* Search panel: responsive width and offset below header on mobile */}
+      <div className="absolute top-16 sm:top-20 left-3 sm:left-4 z-10 w-[calc(100vw-2rem)] sm:w-80 md:w-96 max-w-[28rem]">
         <Card className="bg-white rounded-lg border-0 shadow-none">
           <div className="relative p-2">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -240,62 +316,78 @@ export function MapComponent({
               </button>
             )}
           </div>
-          {searchQuery && inspectors.length > 0 && (
+          {searchQuery && (
             <div className="mt-1 max-h-60 overflow-y-auto bg-white rounded-b-lg shadow-sm">
-              {inspectors.map((i) => (
-                <button
-                  key={i.id}
-                  onClick={() => {
-                    // Center map and open info window for the selected inspector
-                    const marker = markersByIdRef.current.get(i.id);
-                    if (marker && googleMapRef.current) {
-                      googleMapRef.current.panTo({
-                        lat: i.location.lat,
-                        lng: i.location.lng,
-                      });
-                      const statusColor =
-                        i.status === "active" ? "#10b981" : "#6b7280";
-                      const lastSeenText = i.lastSeen
-                        ? `<p class="my-1 text-gray-500 text-xs">Last Seen: ${new Date(
-                            i.lastSeen
-                          ).toLocaleString()}</p>`
-                        : "";
-                      const badgeText = i.badgeId
-                        ? `<p class="my-1 text-emerald-600 text-xs font-medium">Badge: ${i.badgeId}</p>`
-                        : "";
-                      infoWindowRef.current.setContent(
-                        `<div class="p-4 font-sans min-w-[200px] rounded-lg">
-            <div class="flex items-center gap-2 mb-2">
-              <div class="w-2 h-2 rounded-full" style="background-color: ${statusColor};"></div>
-              <h3 class="m-0 text-base font-semibold text-gray-800">${i.name}</h3>
-            </div>
-            <p class="my-1 text-emerald-600 font-medium text-sm">${i.role}</p>
-            ${badgeText}
-            <p class="my-1 text-gray-600 text-xs">Location: ${i.location.address}</p>
-            ${lastSeenText}
-          </div>`
-                      );
-                      infoWindowRef.current.open(googleMapRef.current, marker);
-                    }
-                    setSearchQuery("");
-                    onInspectorClick?.(i);
-                  }}
-                  className="w-full text-left px-4 py-3 hover:bg-gray-50 flex flex-col gap-1 focus:outline-none"
-                >
-                  <span className="font-medium text-sm text-gray-800">
-                    {i.name}
-                  </span>
-                  <p className="text-xs text-gray-500">{i.location.city}</p>
-                </button>
-              ))}
+              {suggestions.length > 0 ? (
+                suggestions.map((i) => (
+                  <button
+                    key={i.id}
+                    onClick={() => {
+                      if (i.location) {
+                        const marker = markersByIdRef.current.get(i.id);
+                        if (marker && googleMapRef.current) {
+                          googleMapRef.current.panTo({
+                            lat: i.location.lat,
+                            lng: i.location.lng,
+                          });
+                          const statusColor =
+                            i.status === "active" ? "#10b981" : "#6b7280";
+                          const lastSeenText = i.lastSeen
+                            ? `<p class=\"my-1 text-gray-500 text-xs\">Last Seen: ${new Date(
+                                i.lastSeen
+                              ).toLocaleString()}</p>`
+                            : "";
+                          const badgeText = i.badgeId
+                            ? `<p class=\"my-1 text-emerald-600 text-xs font-medium\">Badge: ${i.badgeId}</p>`
+                            : "";
+                          infoWindowRef.current.setContent(
+                            `<div class=\"p-4 font-sans min-w-[200px] rounded-lg\">\n            <div class=\"flex items-center gap-2 mb-2\">\n              <div class=\"w-2 h-2 rounded-full\" style=\"background-color: ${statusColor};\"></div>\n              <h3 class=\"m-0 text-base font-semibold text-gray-800\">${
+                              i.name
+                            }</h3>\n            </div>\n            <p class=\"my-1 text-emerald-600 font-medium text-sm\">${
+                              i.role || ""
+                            }</p>\n            ${badgeText}\n            <p class=\"my-1 text-gray-600 text-xs\">Location: ${
+                              i.location.address
+                            }</p>\n            ${lastSeenText}\n          </div>`
+                          );
+                          infoWindowRef.current.open(
+                            googleMapRef.current,
+                            marker
+                          );
+                          setSearchQuery("");
+                        } else {
+                          setPendingFocusId(i.id);
+                          onSearch?.(i.name);
+                        }
+                      } else {
+                        // No live location — still trigger parent filtering so user sees no markers
+                        onSearch?.(i.name);
+                        setSearchQuery("");
+                      }
+                      onInspectorClick?.(i as unknown as Inspector);
+                    }}
+                    className="w-full text-left px-4 py-3 hover:bg-gray-50 flex flex-col gap-1 focus:outline-none"
+                  >
+                    <span className="font-medium text-sm text-gray-800">
+                      {i.name}
+                    </span>
+                    <p className="text-xs text-gray-500">
+                      {i.location?.city || "No live location"}
+                    </p>
+                  </button>
+                ))
+              ) : (
+                <div className="px-4 py-3 text-sm text-gray-500">
+                  No matches
+                </div>
+              )}
             </div>
           )}
         </Card>
       </div>
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
+      <div className="absolute top-4 sm:top-6 left-1/2 -translate-x-1/2 z-10">
         <Card className="bg-white shadow-lg px-4 py-2">
           <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-teal-600" />
+            <MapPin className="h-4 w-4 app-text-primary" />
             <span className="text-sm font-semibold">
               {inspectors.length} Inspectors
             </span>

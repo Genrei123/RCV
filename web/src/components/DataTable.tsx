@@ -238,9 +238,9 @@ export function DataTable({
                           <span className="inline-flex">
                             {sortConfig?.key === column.key ? (
                               sortConfig.direction === "asc" ? (
-                                <ArrowUp className="h-4 w-4 text-teal-600" />
+                                <ArrowUp className="h-4 w-4 app-text-primary" />
                               ) : (
-                                <ArrowDown className="h-4 w-4 text-teal-600" />
+                                <ArrowDown className="h-4 w-4 app-text-primary" />
                               )
                             ) : (
                               <ArrowUpDown className="h-4 w-4 text-gray-400" />
@@ -256,7 +256,7 @@ export function DataTable({
                 {processedData.map((row, rowIndex) => (
                   <TableRow
                     key={rowIndex}
-                    className={`border-b border-gray-100 hover:bg-teal-50 ${
+                    className={`border-b border-gray-100 hover:app-bg-primary-soft ${
                       onRowClick ? "cursor-pointer" : ""
                     }`}
                     onClick={() => onRowClick?.(row)}

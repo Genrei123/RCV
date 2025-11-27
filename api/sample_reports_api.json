@@ -1,0 +1,132 @@
+[
+  {
+    "_id": "11111111-aaaa-4bbb-cccc-000000000001",
+    "agentId": "aaaa1111-bbbb-2222-cccc-333333333333",
+    "status": "COMPLIANT",
+    "scannedData": {
+      "productName": "Hotdog 1kg",
+      "brand": "MeatMaster",
+      "batch": "HD-2025",
+      "expDate": "2026-01-12"
+    },
+    "productSearchResult": {
+      "matchScore": 0.91,
+      "productId": "P-00123"
+    },
+    "nonComplianceReason": null,
+    "additionalNotes": "Packaging intact.",
+    "frontImageUrl": "https://example.com/images/front1.jpg",
+    "backImageUrl": "https://example.com/images/back1.jpg",
+    "ocrBlobText": "HOTDOG 1KG BATCH HD-2025 EXP 2026",
+    "location": {
+      "latitude": 14.5896,
+      "longitude": 121.0606,
+      "address": "Ortigas Center, Pasig City"
+    },
+    "createdAt": "2025-11-18T09:12:33.000Z"
+  },
+  {
+    "_id": "11111111-aaaa-4bbb-cccc-000000000002",
+    "agentId": "aaaa1111-bbbb-2222-cccc-333333333333",
+    "status": "NON_COMPLIANT",
+    "scannedData": {
+      "productName": "Shampoo 200ml",
+      "brand": "FreshClean",
+      "batch": "FC-8492",
+      "expDate": "2024-02-01"
+    },
+    "productSearchResult": {
+      "matchScore": 0.67,
+      "productId": "P-00988"
+    },
+    "nonComplianceReason": "EXPIRED",
+    "additionalNotes": "Expired by 9 months.",
+    "frontImageUrl": "https://example.com/images/front2.jpg",
+    "backImageUrl": "https://example.com/images/back2.jpg",
+    "ocrBlobText": "EXP: 2024-02-01 BATCH: FC-8492",
+    "location": {
+      "latitude": 14.5873,
+      "longitude": 121.0633,
+      "address": "Ortigas Ave, Pasig City"
+    },
+    "createdAt": "2025-11-18T09:18:44.000Z"
+  },
+  {
+    "_id": "11111111-aaaa-4bbb-cccc-000000000003",
+    "agentId": "aaaa1111-bbbb-2222-cccc-333333333333",
+    "status": "COMPLIANT",
+    "scannedData": {
+      "productName": "Canned Tuna 180g",
+      "brand": "BlueOcean",
+      "batch": "BO-9911",
+      "expDate": "2027-05-21"
+    },
+    "productSearchResult": {
+      "matchScore": 0.89,
+      "productId": "P-00512"
+    },
+    "nonComplianceReason": null,
+    "additionalNotes": "OCR slightly blurry.",
+    "frontImageUrl": "https://example.com/images/front3.jpg",
+    "backImageUrl": "https://example.com/images/back3.jpg",
+    "ocrBlobText": "BLUEOCEAN TUNA EXP 2027",
+    "location": {
+      "latitude": 14.5881,
+      "longitude": 121.0599,
+      "address": "SM Megamall, Mandaluyong"
+    },
+    "createdAt": "2025-11-18T10:03:22.000Z"
+  },
+  {
+    "_id": "11111111-aaaa-4bbb-cccc-000000000004",
+    "agentId": "bbbb2222-cccc-3333-dddd-444444444444",
+    "status": "COMPLIANT",
+    "scannedData": {
+      "productName": "Powdered Milk 800g",
+      "brand": "MilkoPlus",
+      "batch": "MP-3211",
+      "expDate": "2026-07-10"
+    },
+    "productSearchResult": {
+      "matchScore": 0.93,
+      "productId": "P-00345"
+    },
+    "nonComplianceReason": null,
+    "additionalNotes": "Store was crowded.",
+    "frontImageUrl": "https://example.com/images/front4.jpg",
+    "backImageUrl": "https://example.com/images/back4.jpg",
+    "ocrBlobText": "MILKOPLUS 800G EXP 2026",
+    "location": {
+      "latitude": 10.3157,
+      "longitude": 123.8854,
+      "address": "Cebu City, Visayas"
+    },
+    "createdAt": "2025-11-18T11:19:58.000Z"
+  },
+  {
+    "_id": "11111111-aaaa-4bbb-cccc-000000000005",
+    "agentId": "cccc3333-dddd-4444-eeee-555555555555",
+    "status": "NON_COMPLIANT",
+    "scannedData": {
+      "productName": "Coffee Mix 3-in-1",
+      "brand": "CaféKopi",
+      "batch": "CK-1181",
+      "expDate": "2023-12-30"
+    },
+    "productSearchResult": {
+      "matchScore": 0.52,
+      "productId": "P-00777"
+    },
+    "nonComplianceReason": "DAMAGED_PACKAGING",
+    "additionalNotes": "Box crushed on 1 side.",
+    "frontImageUrl": "https://example.com/images/front5.jpg",
+    "backImageUrl": "https://example.com/images/back5.jpg",
+    "ocrBlobText": "CAFEKOPI EXP 2023 DAMAGED",
+    "location": {
+      "latitude": 7.1907,
+      "longitude": 125.4553,
+      "address": "Davao City, Mindanao"
+    },
+    "createdAt": "2025-11-18T13:12:10.000Z"
+  }
+]

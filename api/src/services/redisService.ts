@@ -11,6 +11,7 @@ class RedisService {
     });
 
     this.client.on('error', (err) => {
+      console.error('Redis client error:', err.message);
       this.isConnected = false;
     });
 
@@ -28,8 +29,9 @@ class RedisService {
       if (!this.isConnected) {
         await this.client.connect();
       }
-    } catch (error) {
-      // Silent fail
+    } catch (error: any) {
+      console.error('Redis connection failed:', error.message);
+      this.isConnected = false;
     }
   }
 
@@ -45,7 +47,15 @@ class RedisService {
       const dataPromise = this.client.get(key);
       const data = await Promise.race([dataPromise, timeoutPromise]);
       
-      return data ? JSON.parse(data as string) : null;
+      if (data) {
+        try {
+          return JSON.parse(data as string);
+        } catch (parseError: any) {
+          console.error(`Redis JSON parse error for key ${key}:`, parseError.message);
+          return null;
+        }
+      }
+      return null;
     } catch (error: any) {
       throw new CustomError(503, "Redis get operation failed", {
         key,
@@ -63,7 +73,17 @@ class RedisService {
         setTimeout(() => reject(new Error('Redis timeout')), 2000)
       );
       
-      const setPromise = this.client.setEx(key, ttl, JSON.stringify(data));
+      let jsonData: string;
+      try {
+        jsonData = JSON.stringify(data);
+      } catch (stringifyError: any) {
+        throw new CustomError(400, "Data serialization failed", {
+          key,
+          error: stringifyError.message
+        });
+      }
+      
+      const setPromise = this.client.setEx(key, ttl, jsonData);
       await Promise.race([setPromise, timeoutPromise]);
       
       return true;
