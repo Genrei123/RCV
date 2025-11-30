@@ -185,8 +185,8 @@ export function Blockchain() {
                   )}
                 </div>
               </div>
-              <div className="p-3 app-bg-success-soft rounded-lg shrink-0">
-                <Shield className="h-4 w-4 app-text-success" />
+              <div className="p-3 app-bg-primary-soft rounded-lg shrink-0">
+                <Shield className="h-4 w-4 app-text-primary" />
               </div>
             </div>
           </CardContent>

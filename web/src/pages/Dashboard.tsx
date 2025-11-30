@@ -110,7 +110,8 @@ export function Dashboard(props: DashboardProps) {
         } = {
           Pending: {
             label: "Pending",
-            className: "border-gray-500 text-foreground-500 bg-gray-50 hover:bg-gray-100",
+            className:
+              "border-gray-500 text-foreground-500 bg-gray-50 hover:bg-gray-100",
           },
           Active: {
             label: "Active",
@@ -373,8 +374,8 @@ export function Dashboard(props: DashboardProps) {
                     )}
                   </p>
                 </div>
-                <div className="h-9 w-9 sm:h-12 sm:w-12 app-bg-success-soft rounded-lg flex items-center justify-center">
-                  <Package className="h-5 w-5 sm:h-6 sm:w-6 app-text-success" />
+                <div className="h-9 w-9 sm:h-12 sm:w-12 app-bg-primary-soft rounded-lg flex items-center justify-center">
+                  <Package className="h-5 w-5 sm:h-6 sm:w-6 app-text-primary" />
                 </div>
               </div>
             </CardContent>
