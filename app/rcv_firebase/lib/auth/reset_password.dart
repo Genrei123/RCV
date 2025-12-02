@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/app_buttons.dart';
-import '/widgets/animated_form_field.dart';
+import '../widgets/animated_form_field.dart';
 import 'package:rcv_firebase/auth/otp_verification_page.dart';
 import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
 
