@@ -42,7 +42,7 @@ class ProductComparisonPage extends StatelessWidget {
                 gradient: LinearGradient(
                   colors: [
                     AppColors.primary,
-                    AppColors.primary.withOpacity(0.8),
+                    AppColors.primary.withValues(alpha: 0.8),
                   ],
                 ),
               ),
@@ -116,7 +116,7 @@ class ProductComparisonPage extends StatelessWidget {
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
+                        color: AppColors.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: AppColors.primary),
                       ),
@@ -180,7 +180,7 @@ class ProductComparisonPage extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.grey.withOpacity(0.2),
+                            color: Colors.grey.withValues(alpha: 0.2),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -290,8 +290,8 @@ class ProductComparisonPage extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: matches
-            ? Colors.green.withOpacity(0.1)
-            : Colors.orange.withOpacity(0.1),
+            ? Colors.green.withValues(alpha: 0.1)
+            : Colors.orange.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: matches ? Colors.green : Colors.orange,
@@ -306,8 +306,8 @@ class ProductComparisonPage extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: matches
-                  ? Colors.green.withOpacity(0.2)
-                  : Colors.orange.withOpacity(0.2),
+                  ? Colors.green.withValues(alpha: 0.2)
+                  : Colors.orange.withValues(alpha: 0.2),
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(10)),
             ),

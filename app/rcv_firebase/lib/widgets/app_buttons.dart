@@ -109,7 +109,7 @@ class AppButtons extends StatelessWidget {
                       style:
                           subTitleStyle ??
                           TextStyle(
-                            color: textColor.withOpacity(0.8),
+                            color: textColor.withValues(alpha: 0.8),
                             fontSize: 12,
                             fontWeight: FontWeight.w400,
                           ),

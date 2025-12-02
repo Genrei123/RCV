@@ -6,9 +6,9 @@ class RemoteConfigService {
   
   static Future<void> initialize() async {
     try {
-      print('🔧 [RemoteConfig] Starting initialization...');
+      debugPrint('🔧 [RemoteConfig] Starting initialization...');
       _remoteConfig = FirebaseRemoteConfig.instance;
-      print('🔧 [RemoteConfig] Instance obtained');
+      debugPrint('🔧 [RemoteConfig] Instance obtained');
       
       await _remoteConfig!.setConfigSettings(RemoteConfigSettings(
         fetchTimeout: const Duration(seconds: 30), // Reduced timeout
@@ -16,44 +16,14 @@ class RemoteConfigService {
           ? const Duration(seconds: 10)
           : const Duration(hours: 1),
       ));
-      print('🔧 [RemoteConfig] Config settings applied');
       
-      // Set default values first
-      await _remoteConfig!.setDefaults({
-        'latest_app_version': '1.0.1',
-        'minimum_app_version': '1.0.0',
-        'force_update_required': false,
-        'app_update_url': '',
-      });
-      print('🔧 [RemoteConfig] Defaults set');
+      // Fetch and activate the latest values
+      await _remoteConfig!.fetchAndActivate();
       
-      // Try to fetch and activate, but don't fail if network issues
-      try {
-        bool success = await _remoteConfig!.fetchAndActivate();
-        print('🔧 [RemoteConfig] Fetch and activate result: $success');
-        
-        // Test getting a value
-        String testValue = _remoteConfig!.getString('latest_app_version');
-        print('🔧 [RemoteConfig] Test value for latest_app_version: $testValue');
-      } catch (networkError) {
-        print('⚠️ [RemoteConfig] Network fetch failed, using defaults: $networkError');
-      }
-      
-      print('✅ [RemoteConfig] Initialization completed');
+      debugPrint('Remote Config initialized successfully');
       
     } catch (e) {
-      print('💥 [RemoteConfig] Failed to initialize: $e');
-      _remoteConfig = null; // Ensure null state on failure
-    }
-  }
-  
-  /// Ensure Remote Config is initialized (re-initialize if needed)
-  static Future<void> ensureInitialized() async {
-    if (_remoteConfig == null) {
-      print('🔄 [RemoteConfig] Instance is null, re-initializing...');
-      await initialize();
-    } else {
-      print('✅ [RemoteConfig] Instance already exists');
+      debugPrint('Failed to initialize Remote Config: $e');
     }
   }
   
@@ -67,14 +37,14 @@ class RemoteConfigService {
   static String getString(String key, {String defaultValue = ''}) {
     try {
       if (_remoteConfig == null) {
-        print('⚠️ [RemoteConfig] _remoteConfig is null for key: $key, returning default: $defaultValue');
+        debugPrint('⚠️ [RemoteConfig] _remoteConfig is null for key: $key, returning default: $defaultValue');
         return defaultValue;
       }
       String value = _remoteConfig!.getString(key);
-      print('📋 [RemoteConfig] getString($key) = "$value" (default: "$defaultValue")');
+      debugPrint('📋 [RemoteConfig] getString($key) = "$value" (default: "$defaultValue")');
       return value.isEmpty ? defaultValue : value;
     } catch (e) {
-      print('Error getting string value for $key: $e');
+      debugPrint('Error getting string value for $key: $e');
       return defaultValue;
     }
   }
@@ -84,7 +54,7 @@ class RemoteConfigService {
       if (_remoteConfig == null) return defaultValue;
       return _remoteConfig!.getBool(key);
     } catch (e) {
-      print('Error getting bool value for $key: $e');
+      debugPrint('Error getting bool value for $key: $e');
       return defaultValue;
     }
   }
@@ -94,7 +64,7 @@ class RemoteConfigService {
       if (_remoteConfig == null) return defaultValue;
       return _remoteConfig!.getDouble(key);
     } catch (e) {
-      print('Error getting number value for $key: $e');
+      debugPrint('Error getting number value for $key: $e');
       return defaultValue;
     }
   }
@@ -110,7 +80,7 @@ class RemoteConfigService {
 
   static String getLatestAppVersion() {
     String version = getString('latest_app_version', defaultValue: '1.0.1'); // Changed default for testing
-    print('🔍 [RemoteConfig] getLatestAppVersion: $version');
+    debugPrint('🔍 [RemoteConfig] getLatestAppVersion: $version');
     return version;
   }
 
@@ -141,26 +111,16 @@ class RemoteConfigService {
   /// Manually refresh Remote Config values
   static Future<bool> refresh() async {
     try {
-      print('🔄 [RemoteConfig] Starting refresh...');
-      
-      if (_remoteConfig == null) {
-        print('⚠️ [RemoteConfig] Instance is null during refresh');
-        return false;
+      if (_remoteConfig != null) {
+        bool updatedConfig = await _remoteConfig!.fetchAndActivate();
+        debugPrint(updatedConfig 
+          ? 'Remote Config refreshed with new values' 
+          : 'No Remote Config updates available');
+        return updatedConfig;
       }
-      
-      bool updatedConfig = await _remoteConfig!.fetchAndActivate();
-      print('🔄 [RemoteConfig] Refresh result: $updatedConfig');
-      
-      // Test getting values after refresh
-      String version = _remoteConfig!.getString('latest_app_version');
-      print('🔄 [RemoteConfig] After refresh - latest_app_version: $version');
-      
-      print(updatedConfig 
-        ? '✅ [RemoteConfig] Refreshed with new values' 
-        : 'ℹ️ [RemoteConfig] No updates available');
-      return updatedConfig;
+      return false;
     } catch (e) {
-      print('💥 [RemoteConfig] Refresh failed: $e');
+      debugPrint('Failed to refresh Remote Config: $e');
       return false;
     }
   }
@@ -168,12 +128,12 @@ class RemoteConfigService {
   /// Set up real-time listener for immediate updates
   static void addRealtimeListener(Function() onConfigUpdated) {
     if (_remoteConfig == null) {
-      print('Remote Config not initialized, cannot add listener');
+      debugPrint('Remote Config not initialized, cannot add listener');
       return;
     }
     
     _remoteConfig!.onConfigUpdated.listen((event) async {
-      print('Remote Config update received');
+      debugPrint('Remote Config update received');
       
       await _remoteConfig!.activate();
       
@@ -181,6 +141,6 @@ class RemoteConfigService {
       onConfigUpdated();
     });
     
-    print('Real-time Remote Config listener added');
+    debugPrint('Real-time Remote Config listener added');
   }
 }

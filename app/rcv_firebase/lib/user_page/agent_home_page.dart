@@ -35,14 +35,16 @@ class _UserHomePageState extends State<UserHomePage> {
         navBarRole: NavBarRole.user,
       );
     }
-    return WillPopScope(
-      onWillPop: () async {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
         final prev = TabHistory.instance.popAndGetPrevious();
         if (prev != null && prev >= 0 && prev < AppBottomNavBar.routes.length) {
           Navigator.pushReplacementNamed(context, AppBottomNavBar.routes[prev]);
-          return false;
+        } else {
+          Navigator.maybePop(context);
         }
-        return true;
       },
       child: Scaffold(
         appBar: const TitleLogoHeaderAppBar(
@@ -105,11 +107,11 @@ class _HomeContentState extends State<HomeContent> {
   // Get current location
   void _getCurrentLocation() async {
     try {
-      print('📍 [HomePage] Getting current location...');
+      debugPrint('📍 [HomePage] Getting current location...');
       LocationData? location = await _gpsService.getCurrentLocation();
 
       if (location != null) {
-        print(
+        debugPrint(
           '✅ [HomePage] Location received: lat=${location.latitude}, lng=${location.longitude}',
         );
         setState(() {
@@ -132,25 +134,25 @@ class _HomeContentState extends State<HomeContent> {
 
         // Save location to Firestore
         if (location.latitude != null && location.longitude != null) {
-          print('💾 [HomePage] Saving location to Firestore...');
+          debugPrint('💾 [HomePage] Saving location to Firestore...');
           bool saved = await FirestoreService.saveUserLocation(
             location.latitude!,
             location.longitude!,
           );
           if (saved) {
-            print('✅ [HomePage] Location saved to Firestore successfully');
+            debugPrint('✅ [HomePage] Location saved to Firestore successfully');
           } else {
-            print('❌ [HomePage] Failed to save location to Firestore');
+            debugPrint('❌ [HomePage] Failed to save location to Firestore');
           }
         } else {
-          print('⚠️ [HomePage] Location coordinates are null, not saving');
+          debugPrint('⚠️ [HomePage] Location coordinates are null, not saving');
         }
       } else {
-        print('⚠️ [HomePage] Location is null');
+        debugPrint('⚠️ [HomePage] Location is null');
       }
     } catch (e, stackTrace) {
-      print('❌ [HomePage] Error getting location: $e');
-      print('📚 [HomePage] Stack trace: $stackTrace');
+      debugPrint('❌ [HomePage] Error getting location: $e');
+      debugPrint('📚 [HomePage] Stack trace: $stackTrace');
     }
   }
 

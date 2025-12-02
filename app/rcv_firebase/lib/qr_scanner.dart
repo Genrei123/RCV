@@ -121,7 +121,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
         _scannedItem = ScannedItem.fromJson(data);
       });
     } catch (e) {
-      print('Error loading scanned_item.json: $e');
+      debugPrint('Error loading scanned_item.json: $e');
       // Set dummy data if JSON fails to load
       setState(() {
         _scannedItem = ScannedItem(
@@ -369,7 +369,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
                           errorBuilder: (context, error, stackTrace) {
                             return Container(
                               height: 200,
-                              color: AppColors.muted.withOpacity(0.5),
+                              color: AppColors.muted.withValues(alpha: 0.5),
                               child: const Center(
                                 child: Text('Image Not Found',
                                     style: TextStyle(color: AppColors.text)),

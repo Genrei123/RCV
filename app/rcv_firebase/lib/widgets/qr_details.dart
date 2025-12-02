@@ -86,7 +86,7 @@ class ScannedItemDetails extends StatelessWidget {
                       return Container(
                         height: 200,
                         width: MediaQuery.of(context).size.width * 0.7,
-                        color: AppColors.muted.withOpacity(0.5),
+                        color: AppColors.muted.withValues(alpha: 0.5),
                         child: const Center(
                           child: Text('Image Not Found',
                               style: TextStyle(color: AppColors.text)),
