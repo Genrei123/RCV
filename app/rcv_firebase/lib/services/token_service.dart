@@ -2,6 +2,7 @@
 // Service for managing JWT tokens (access token, refresh token)
 // Handles token storage, retrieval, and validation
 
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../config/api_constants.dart';
@@ -147,7 +148,7 @@ class TokenService {
       final decoded = utf8.decode(base64Url.decode(normalizedPayload));
       return jsonDecode(decoded) as Map<String, dynamic>;
     } catch (e) {
-      print('Error decoding JWT token: $e');
+      debugPrint('Error decoding JWT token: $e');
       return null;
     }
   }

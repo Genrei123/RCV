@@ -78,6 +78,7 @@ class _OcrScannerPageState extends State<OcrScannerPage> {
 
       // Redirect to crop page first
       String? croppedPath;
+      if (!mounted) return;
       try {
         croppedPath =
             await Navigator.pushNamed(
@@ -226,9 +227,9 @@ class _OcrScannerPageState extends State<OcrScannerPage> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.white.withOpacity(0.1),
+        color: AppColors.white.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.white.withOpacity(0.3)),
+        border: Border.all(color: AppColors.white.withValues(alpha: 0.3)),
       ),
       child: const Column(
         children: [
@@ -348,7 +349,7 @@ class _OcrScannerPageState extends State<OcrScannerPage> {
     return Container(
       padding: const EdgeInsets.all(30),
       decoration: BoxDecoration(
-        color: AppColors.white.withOpacity(0.1),
+        color: AppColors.white.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: const Column(
@@ -388,7 +389,7 @@ class _OcrScannerPageState extends State<OcrScannerPage> {
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: Colors.red.withOpacity(0.2),
+        color: Colors.red.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.red),
       ),

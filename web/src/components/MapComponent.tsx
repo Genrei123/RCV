@@ -291,7 +291,7 @@ export function MapComponent({
       <div ref={mapRef} className="w-full h-full" />
       {/* Search panel: responsive width and offset below header on mobile */}
       <div className="absolute top-16 sm:top-20 left-3 sm:left-4 z-10 w-[calc(100vw-2rem)] sm:w-80 md:w-96 max-w-[28rem]">
-        <Card className="bg-white rounded-lg border-0 shadow-none">
+        <Card className="bg-white rounded-lg border-0 shadow-xl ">
           <div className="relative p-2">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input

@@ -115,7 +115,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         <path d="m15 5 4 4"/>
                       </svg>
                       ''',
-                      color: Colors.white,
+                      colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
                     ),
                     const SizedBox(width: 8),
                     const Text(
@@ -214,7 +214,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
                       </svg>
                       ''',
-                      color: Colors.white,
+                      colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
                     ),
                     const SizedBox(width: 8),
                     const Text(

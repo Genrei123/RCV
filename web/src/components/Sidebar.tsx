@@ -28,7 +28,7 @@ interface CurrentUser {
 }
 
 // Inline logo component (hexagon + inner circle) — used in desktop header (and can be reused elsewhere)
-const LogoIcon = ({ className = "w-8 h-8" }: { className?: string }) => (
+const LogoIcon = ({ className = "w-8 h-8 app-bg-primary" }: { className?: string }) => (
   <svg
     viewBox="0 0 24 24"
     fill="none"
@@ -175,12 +175,12 @@ export function Sidebar({
       <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:sticky lg:top-0 lg:max-h-screen bg-white border-r overflow-y-auto flex-shrink-0">
         {/* Logo Section */}
         <div className="p-6 border-b border-neutral-200">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 ">
             {/* Figma-style logo */}
             <div className="flex items-center justify-center">
               <LogoIcon className="w-8 h-8" />
             </div>
-            <span className="text-xl font-semibold text-[#005440]">RCV</span>
+            <span className="text-xl font-semibold app-text-primary">RCV</span>
             <span className="text-xs text-neutral-400">v.01</span>
           </div>
         </div>

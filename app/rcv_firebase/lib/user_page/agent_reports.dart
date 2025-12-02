@@ -55,12 +55,12 @@ class UserReportsPage extends StatefulWidget {
   const UserReportsPage({super.key});
 
   @override
-  _UserReportsPageState createState() => _UserReportsPageState();
+  State<UserReportsPage> createState() => _UserReportsPageState();
 }
 
 class _UserReportsPageState extends State<UserReportsPage> {
-  final List<ReportItem> _reports = [];
-  bool _loading = false; // UI-only mode: no fetching
+final List<ReportItem> _reports = [];
+  final bool _loading = false; // UI-only mode: no fetching
   String? _error;
   ReportCategory? _activeFilter; // null = all
   // UI-only mode: removed data fetching and mapping functions
@@ -179,7 +179,7 @@ class _UserReportsPageState extends State<UserReportsPage> {
           final Color chipColor = isAll
               ? Colors.blue.shade600
               : _categoryColor(c);
-          final Color fillColor = chipColor.withOpacity(0.15);
+          final Color fillColor = chipColor.withValues(alpha: 0.15);
           final IconData iconData = isAll ? Icons.all_inbox : _categoryIcon(c);
           final String labelText = isAll ? 'All' : _categoryLabel(c);
           return Expanded(
@@ -284,7 +284,7 @@ class _ReportCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -296,7 +296,7 @@ class _ReportCard extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 24,
-              backgroundColor: catColor.withOpacity(0.15),
+              backgroundColor: catColor.withValues(alpha: 0.15),
               child: Icon(catIcon, color: catColor),
             ),
             const SizedBox(width: 16),
@@ -371,7 +371,7 @@ class _StatusChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: status.color.withOpacity(0.12),
+        color: status.color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(

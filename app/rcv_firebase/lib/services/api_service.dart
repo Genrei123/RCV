@@ -392,8 +392,8 @@ class ApiService {
   /// Returns found product or null if not found
   Future<Map<String, dynamic>> searchProductForCompliance({
     String? productName,
-    String? LTONumber,
-    String? CFPRNumber,
+    String? ltoNumber,
+    String? cfprNumber,
     String? brandName,
   }) async {
     try {
@@ -405,8 +405,8 @@ class ApiService {
             headers: await _getHeaders(),
             body: json.encode({
               if (productName != null) 'productName': productName,
-              if (LTONumber != null) 'LTONumber': LTONumber,
-              if (CFPRNumber != null) 'CFPRNumber': CFPRNumber,
+              if (ltoNumber != null) 'LTONumber': ltoNumber,
+              if (cfprNumber != null) 'CFPRNumber': cfprNumber,
               if (brandName != null) 'brandName': brandName,
             }),
           )

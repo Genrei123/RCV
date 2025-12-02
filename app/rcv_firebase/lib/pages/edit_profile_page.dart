@@ -4,7 +4,6 @@ import 'package:rcv_firebase/themes/app_colors.dart';
 import '../services/user_profile_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:convert' show base64Encode;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -76,7 +75,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final userKey = userId?.isNotEmpty == true
         ? userId
         : (email?.isNotEmpty == true ? email : 'default');
-    _avatarLocalKey = 'profile_avatar_path_${userKey}';
+    _avatarLocalKey = 'profile_avatar_path_$userKey';
     _loadLocalAvatar();
     _phoneNumberController.addListener(_handlePhoneNumberFormat);
   }
@@ -176,6 +175,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       final file = File(imagePath);
       if (!await file.exists()) return;
       final Uint8List bytes = await file.readAsBytes();
+      if (!mounted) return;
 
       final Uint8List? cropped = await showImageCropperDialog(
         context,
@@ -213,7 +213,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         });
 
         // Also upload to API so avatar is tied to the account
-        final base64 = 'data:image/png;base64,' + base64Encode(cropped);
+        final base64 = 'data:image/png;base64,${base64Encode(cropped)}';
         final upload = await UserProfileService.uploadProfileAvatar(base64);
         if (upload['success'] == true) {
           // Optionally, we could refresh profile data here
@@ -222,6 +222,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         } else {
           // Show non-blocking error if upload failed
           // but keep local avatar so user still sees the change offline
+          if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(upload['message'] ?? 'Failed to upload avatar'),
@@ -619,7 +620,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                               _confirmPasswordController.clear();
                             }
                           },
-                          activeColor: AppColors.primary,
+                          activeTrackColor: AppColors.primary,
                         ),
                       ],
                     ),

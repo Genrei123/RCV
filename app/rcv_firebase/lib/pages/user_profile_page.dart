@@ -148,8 +148,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return WillPopScope(
-        onWillPop: () async {
+      return PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) {
+          if (didPop) return;
           final prev = TabHistory.instance.popAndGetPrevious();
           if (prev != null &&
               prev >= 0 &&
@@ -158,9 +160,9 @@ class _UserProfilePageState extends State<UserProfilePage> {
               context,
               AppBottomNavBar.routes[prev],
             );
-            return false;
+          } else {
+            Navigator.maybePop(context);
           }
-          return true;
         },
         child: Scaffold(
           body: const SafeArea(
@@ -221,14 +223,16 @@ class _UserProfilePageState extends State<UserProfilePage> {
     if (middleName != null && middleName.isNotEmpty) fullName += ' $middleName';
     fullName += ' $lastName';
     if (extName != null && extName.isNotEmpty) fullName += ' $extName';
-    return WillPopScope(
-      onWillPop: () async {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
         final prev = TabHistory.instance.popAndGetPrevious();
         if (prev != null && prev >= 0 && prev < AppBottomNavBar.routes.length) {
           Navigator.pushReplacementNamed(context, AppBottomNavBar.routes[prev]);
-          return false;
+        } else {
+          Navigator.maybePop(context);
         }
-        return true;
       },
       child: Scaffold(
         body: SafeArea(
@@ -244,7 +248,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                     gradient: LinearGradient(
                       colors: [
                         AppColors.primary,
-                        AppColors.primary.withOpacity(0.9),
+                        AppColors.primary.withValues(alpha: 0.9),
                       ],
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
@@ -375,7 +379,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                                 Expanded(
                                   child: Container(
                                     height: 2,
-                                    color: Colors.white.withOpacity(0.6),
+                                    color: Colors.white.withValues(alpha: 0.6),
                                   ),
                                 ),
                                 const SizedBox(width: 8),
@@ -391,7 +395,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                                 Expanded(
                                   child: Container(
                                     height: 2,
-                                    color: Colors.white.withOpacity(0.6),
+                                    color: Colors.white.withValues(alpha: 0.6),
                                   ),
                                 ),
                               ],

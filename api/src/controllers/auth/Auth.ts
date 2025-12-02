@@ -8,6 +8,7 @@ import nodemailer_transporter from '../../utils/nodemailer';
 import { AuditLogService } from '../../services/auditLogService';
 import CryptoJS from 'crypto-js';
 import * as dotenv from 'dotenv';
+import { jwt } from 'zod';
 dotenv.config();
 
 export const userSignIn = async (req: Request, res: Response, next: NextFunction) => {
@@ -289,7 +290,6 @@ export const userSignUp = async (
 ) => {
   const newUser = UserValidation.safeParse(req.body);
   if (!newUser || !newUser.success) {
-    console.error("Validation errors:", newUser.error?.issues);
     return next(
       new CustomError(400, "Parsing failed, incomplete information", {
         errors: newUser.error?.issues,
@@ -361,10 +361,33 @@ export const refreshToken = async (
   res: Response,
   next: NextFunction
 ) => {
-  // Refresh token
-  return res
-    .status(500)
-    .json({ success: false, message: "Refresh token not implemented" });
+  if (req.cookies) {
+    const refreshToken = req.cookies.token;
+    const decoded = verifyToken(refreshToken);
+    if (!decoded || !decoded.success) {
+      return next(
+        new CustomError(400, "Token is invalid", {
+          token: refreshToken,
+        })
+      );
+    }
+    const newToken = createToken({
+      sub: decoded.data?.sub,
+      isAdmin: decoded.data?.isAdmin,
+      iat: Date.now(),
+    });
+    return res.status(200).json({
+      success: true,
+      message: "Token refreshed successfully",
+      token: newToken,
+    });
+  } else {
+    return next(
+      new CustomError(400, "No token provided", {
+        token: null,
+      })
+    );
+  }
 };
 
 export const me = async (req: Request, res: Response, next: NextFunction) => {

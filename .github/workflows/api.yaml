@@ -1,0 +1,34 @@
+name: API Build and Test
+
+on:
+  push:
+    branches:
+      - main
+      - development
+      - 'feature/**' 
+      - 'bugfix/**'
+  pull_request:
+    branches:
+      - main
+      - development
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+      - name: Install dependencies
+        run: npm install
+        working-directory: ./api
+      - name: Run tests
+        env:
+          JWT_SECRET: "super_secret_test_key_123"
+          JWT_EXPIRES_IN: "1h"
+          JWT_ALGORITHM: "HS256"
+          NODEMAILER_USER: "testsmtp@gmail.com"
+          NODEMAILER_PASS: "test test test test"
+        run: npm run test:ci
+        working-directory: ./api

@@ -68,7 +68,7 @@ class AuditDataController {
           .map((json) => AuditEntry.fromJson(json as Map<String, dynamic>))
           .toList();
     } catch (e) {
-      print('Error loading audit data: $e');
+      debugPrint('Error loading audit data: $e');
       return [];
     }
   }
@@ -112,7 +112,7 @@ class AuditTrailTable extends StatelessWidget {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 5,
             offset: const Offset(0, 3),
@@ -321,7 +321,7 @@ class AuditTrailPagination extends StatelessWidget {
         borderRadius: const BorderRadius.vertical(bottom: Radius.circular(8)),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 2,
             offset: const Offset(0, 1),
@@ -749,7 +749,7 @@ class _CompleteAuditWidgetState extends State<CompleteAuditWidget> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
+                  color: Colors.grey.withValues(alpha: 0.1),
                   spreadRadius: 1,
                   blurRadius: 2,
                   offset: const Offset(0, 1),

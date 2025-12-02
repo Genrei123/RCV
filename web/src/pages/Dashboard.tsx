@@ -4,7 +4,24 @@ import { useState, useEffect } from "react";
 import type { User } from "@/typeorm/entities/user.entity";
 import { Button } from "@/components/ui/button";
 import { AuthService } from "@/services/authService";
-import { Pagination } from "@/components/Pagination";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from "@/components/ui/pagination";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   DashboardService,
   type DashboardStats,
@@ -110,7 +127,8 @@ export function Dashboard(props: DashboardProps) {
         } = {
           Pending: {
             label: "Pending",
-            className: "border-gray-500 text-foreground-500 bg-gray-50 hover:bg-gray-100",
+            className:
+              "border-gray-500 text-foreground-500 bg-gray-50 hover:bg-gray-100",
           },
           Active: {
             label: "Active",
@@ -373,8 +391,8 @@ export function Dashboard(props: DashboardProps) {
                     )}
                   </p>
                 </div>
-                <div className="h-9 w-9 sm:h-12 sm:w-12 app-bg-success-soft rounded-lg flex items-center justify-center">
-                  <Package className="h-5 w-5 sm:h-6 sm:w-6 app-text-success" />
+                <div className="h-9 w-9 sm:h-12 sm:w-12 app-bg-primary-soft rounded-lg flex items-center justify-center">
+                  <Package className="h-5 w-5 sm:h-6 sm:w-6 app-text-primary" />
                 </div>
               </div>
             </CardContent>
@@ -417,38 +435,124 @@ export function Dashboard(props: DashboardProps) {
             emptyStateDescription="You may try to input different keywords, check for typos, or adjust your filters."
             customControls={
               <div className="flex items-center gap-2 w-full sm:w-auto">
-                <select
+                <Select
                   value={sortKey}
-                  onChange={(e) => setSortKey(e.target.value as any)}
-                  className="h-10 px-2 text-sm border-shadow shadow-md rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 w-full sm:w-auto min-w-[180px]"
+                  onValueChange={(value) =>
+                    setSortKey(value as "lastName" | "email" | "status")
+                  }
                 >
-                  <option value="lastName">Sort: Name (A→Z)</option>
-                  <option value="email">Sort: Email (A→Z)</option>
-                  <option value="status">Sort: Status</option>
-                  <option value="status">Sort: All</option>
-                </select>
+                  <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectValue placeholder="Sort by..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectLabel>Sort Options</SelectLabel>
+                      <SelectItem value="lastName">Name (A→Z)</SelectItem>
+                      <SelectItem value="email">Email (A→Z)</SelectItem>
+                      <SelectItem value="status">Status</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
               </div>
             }
             onRowClick={handleRowClick}
           />
         </div>
-        <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="text-center sm:text-left hidden sm:block">
-            <span className="text-sm">
-              Page {currentPage} of {totalPages}
-            </span>
+        <div className="mt-4 flex items-center justify-between w-full">
+          <div className="text-sm text-muted-foreground">
+            Showing {sortedUsers.length} of {totalItems} users • Page{" "}
+            {currentPage} of {totalPages}
           </div>
 
-          <div className="flex items-center gap-4 justify-center sm:justify-end w-full sm:w-auto">
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              totalItems={totalItems}
-              itemsPerPage={pageSize}
-              onPageChange={(page) => fetchPage(page)}
-              showingPosition="right"
-            />
-          </div>
+          <Pagination className="mx-0 w-auto">
+            <PaginationContent className="gap-1">
+              <PaginationItem>
+                <PaginationPrevious
+                  onClick={() => currentPage > 1 && fetchPage(currentPage - 1)}
+                  className={
+                    currentPage <= 1
+                      ? "pointer-events-none opacity-50"
+                      : "cursor-pointer"
+                  }
+                />
+              </PaginationItem>
+
+              {currentPage > 2 && (
+                <PaginationItem>
+                  <PaginationLink
+                    onClick={() => fetchPage(1)}
+                    className="cursor-pointer"
+                  >
+                    1
+                  </PaginationLink>
+                </PaginationItem>
+              )}
+
+              {currentPage > 3 && (
+                <PaginationItem>
+                  <PaginationEllipsis />
+                </PaginationItem>
+              )}
+
+              {currentPage > 1 && (
+                <PaginationItem>
+                  <PaginationLink
+                    onClick={() => fetchPage(currentPage - 1)}
+                    className="cursor-pointer"
+                  >
+                    {currentPage - 1}
+                  </PaginationLink>
+                </PaginationItem>
+              )}
+
+              <PaginationItem>
+                <PaginationLink isActive className="cursor-pointer">
+                  {currentPage}
+                </PaginationLink>
+              </PaginationItem>
+
+              {currentPage < totalPages && (
+                <PaginationItem>
+                  <PaginationLink
+                    onClick={() => fetchPage(currentPage + 1)}
+                    className="cursor-pointer"
+                  >
+                    {currentPage + 1}
+                  </PaginationLink>
+                </PaginationItem>
+              )}
+
+              {currentPage < totalPages - 2 && (
+                <PaginationItem>
+                  <PaginationEllipsis />
+                </PaginationItem>
+              )}
+
+              {currentPage < totalPages - 1 && (
+                <PaginationItem>
+                  <PaginationLink
+                    onClick={() => fetchPage(totalPages)}
+                    className="cursor-pointer"
+                  >
+                    {totalPages}
+                  </PaginationLink>
+                </PaginationItem>
+              )}
+
+              <PaginationItem>
+                <PaginationNext
+                  onClick={() =>
+                    currentPage < totalPages && fetchPage(currentPage + 1)
+                  }
+                  className={
+                    currentPage >= totalPages
+                      ? "pointer-events-none opacity-50"
+                      : "cursor-pointer"
+                  }
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
       </PageContainer>
 

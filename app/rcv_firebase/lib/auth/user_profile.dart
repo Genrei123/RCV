@@ -127,6 +127,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
       final file = File(imagePath);
       if (!await file.exists()) return;
       final Uint8List bytes = await file.readAsBytes();
+      if (!mounted) return;
 
       final Uint8List? cropped = await showImageCropperDialog(
         context,
@@ -276,7 +277,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                         return CircleAvatar(
                           radius: 48,
                           backgroundColor: app_colors.AppColors.neutral
-                              .withOpacity(0.2),
+                              .withValues(alpha: 0.2),
                           backgroundImage: bgImage,
                           child: bgImage == null
                               ? Icon(
@@ -342,11 +343,11 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: app_colors.AppColors.neutral.withOpacity(0.1),
+                  color: app_colors.AppColors.neutral.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: app_colors.AppColors.neutral.withOpacity(0.25),
+                      color: app_colors.AppColors.neutral.withValues(alpha: 0.25),
                       blurRadius: 8,
                       spreadRadius: 2,
                       offset: const Offset(0, 4),

@@ -5,18 +5,19 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/services.dart';
 import 'firebase_options.dart';
 import 'services/remote_config_service.dart';
+import 'services/update_modal_service.dart';
 
 // Import all your pages
-import 'auth/landingPage.dart';
+import 'auth/landing_page.dart';
 import 'auth/login_page.dart';
 import 'auth/otp_verification_page.dart';
 import 'auth/reset_password.dart';
 import 'auth/reset_new_password_page.dart';
 import 'pages/user_profile_page.dart';
-import 'user_page/agent_homePage.dart';
-import 'user_page/scanning_Page.dart';
+import 'user_page/agent_home_page.dart';
+import 'user_page/scanning_page.dart';
 import 'pages/audit_trail_page.dart';
-import 'user_page/agent_Reports.dart';
+import 'user_page/agent_reports.dart';
 import 'pages/location_page.dart';
 import 'pages/crop_label.dart';
 import 'pages/splash_page.dart';
@@ -34,14 +35,21 @@ Future<void> main() async {
       // Load environment variables from .env file
       await dotenv.load(fileName: ".env");
       
-      // Initialize Firebase with google-services.json configuration
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
+      try {
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+      } catch (e) {
+        if (e.toString().contains('duplicate-app')) {
+        } else {
+          rethrow; // Re-throw if it's a different error
+        }
+      }
 
       // Initialize Remote Config
       await RemoteConfigService.initialize();
     } catch (e) {
+      debugPrint('Initialization error: $e');
       // If Firebase fails, treat as no connection
       runApp(const MyApp(hasConnection: false));
       return;
@@ -64,6 +72,7 @@ class _MyAppState extends State<MyApp> {
   late bool _hasConnection;
   bool _showModal = false; // Control modal visibility manually
   bool _isRetrying = false; // Loading state for retry button
+  UpdateModalState? _updateModalState; // Update modal state
 
   @override
   void initState() {
@@ -74,6 +83,22 @@ class _MyAppState extends State<MyApp> {
     if (!_hasConnection) {
       _showModal = true;
     }
+    
+    // Check for app updates after a short delay
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Wait for the MaterialApp to be built before checking for updates
+      Future.delayed(Duration(seconds: 8), () async {
+        // Check for updates using the service
+        if (mounted) {
+          final updateState = await UpdateModalService.checkForUpdates();
+          if (updateState != null) {
+            setState(() {
+              _updateModalState = updateState;
+            });
+          }
+        }
+      });
+    });
     
     // Monitor connectivity changes but don't auto-hide modal
     Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> results) {
@@ -101,10 +126,9 @@ class _MyAppState extends State<MyApp> {
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF005440)),
         primarySwatch: Colors.green,
       ),
-      // Show login page as home when no connection, otherwise use normal routing
-      home: !_hasConnection ? const LoginPage() : null,
-      initialRoute: _hasConnection ? '/splash' : null,
-      routes: _hasConnection ? {
+      // Simplified routing - always provide full routes but control initial route
+      initialRoute: _hasConnection ? '/splash' : '/login',
+      routes: {
         '/splash': (context) => const SplashPage(),
         '/': (context) => const LandingPage(),
         '/login': (context) => const LoginPage(),
@@ -118,13 +142,13 @@ class _MyAppState extends State<MyApp> {
         '/scanning': (context) => const QRScannerPage(),
         '/location': (context) => const LocationPage(),
         '/crop-label': (context) => const CropLabelPage(),
-      } : {
-        '/login': (context) => const LoginPage(),
       },
       builder: (context, child) {
         return Stack(
           children: [
             child ?? const SizedBox.shrink(),
+            // Update banner at the top
+            // Removed loading text - no longer needed
             if (_showModal)
               Container(
                 color: Colors.black26,
@@ -232,6 +256,17 @@ class _MyAppState extends State<MyApp> {
                   ),
                 ),
               ),
+            // Update Modal
+            if (UpdateModalService.buildUpdateModal(
+              context, 
+              _updateModalState, 
+              () => setState(() => _updateModalState = null)
+            ) != null)
+              UpdateModalService.buildUpdateModal(
+                context, 
+                _updateModalState, 
+                () => setState(() => _updateModalState = null)
+              )!,
           ],
         );
       },

@@ -171,7 +171,7 @@ class ApiClient {
       }
       return false;
     } catch (e) {
-      print('Token refresh failed: $e');
+      debugPrint('Token refresh failed: $e');
       return false;
     }
   }
