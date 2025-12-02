@@ -18,8 +18,8 @@ class ProcessingModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async => dismissible,
+    return PopScope(
+      canPop: dismissible,
       child: Dialog(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -31,7 +31,7 @@ class ProcessingModal extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
+                  color: Colors.black.withValues(alpha: 0.08),
                   blurRadius: 12,
                   offset: const Offset(0, 6),
                 ),

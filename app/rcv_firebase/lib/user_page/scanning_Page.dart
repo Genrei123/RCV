@@ -35,7 +35,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
   final ImagePicker _picker = ImagePicker();
   final TextRecognizer _textRecognizer = TextRecognizer();
   final OcrService _ocrService = OcrService();
-  bool _useTesseract = true; // Switch engine; default to Tesseract
+  final bool _useTesseract = true; // Switch engine; default to Tesseract
 
   // For dual image OCR
   String? _frontImagePath;
@@ -105,10 +105,10 @@ class _QRScannerPageState extends State<QRScannerPage> {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
+                        color: Colors.white.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.3),
+                          color: Colors.white.withValues(alpha: 0.3),
                         ),
                       ),
                       child: const Text(
@@ -140,7 +140,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Colors.black.withValues(alpha: 0.1),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
@@ -261,7 +261,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
               margin: const EdgeInsets.symmetric(horizontal: 20),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.7),
+                color: Colors.black.withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: const Text(
@@ -1136,7 +1136,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
         border: Border.all(color: Colors.grey[300]!),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1419,6 +1419,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildDetailCard({
     required IconData icon,
     required String label,
@@ -1433,7 +1434,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
         border: Border.all(color: Colors.grey[300]!),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1479,6 +1480,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildDateCard({
     required IconData icon,
     required String label,
@@ -1543,6 +1545,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
     });
 
     // Navigate to crop page for visual adjustment (optional)
+    if (!mounted) return;
     try {
       await Navigator.pushNamed(
         context,
@@ -1569,7 +1572,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
                   borderRadius: BorderRadius.circular(14),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.25),
+                      color: Colors.black.withValues(alpha: 0.25),
                       blurRadius: 12,
                       offset: const Offset(0, 6),
                     ),
@@ -1584,7 +1587,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF005440).withOpacity(0.12),
+                            color: const Color(0xFF005440).withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: const SizedBox(
@@ -1984,14 +1987,16 @@ class _QRScannerPageState extends State<QRScannerPage> {
       );
     }
 
-    return WillPopScope(
-      onWillPop: () async {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
         final prev = TabHistory.instance.popAndGetPrevious();
         if (prev != null && prev >= 0 && prev < AppBottomNavBar.routes.length) {
           Navigator.pushReplacementNamed(context, AppBottomNavBar.routes[prev]);
-          return false;
+        } else {
+          Navigator.maybePop(context);
         }
-        return true;
       },
       child: Scaffold(
         appBar: const TitleLogoHeaderAppBar(
@@ -2009,7 +2014,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
                   borderRadius: isOCRMode ? BorderRadius.zero : BorderRadius.circular(20),
                   boxShadow: isOCRMode ? [] : [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -2082,7 +2087,7 @@ class ScannerOverlayPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.black.withOpacity(0.5)
+      ..color = Colors.black.withValues(alpha: 0.5)
       ..style = PaintingStyle.fill;
 
     final scanAreaSize = size.width * 0.7;

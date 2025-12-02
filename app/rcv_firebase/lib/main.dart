@@ -7,16 +7,16 @@ import 'firebase_options.dart';
 import 'services/remote_config_service.dart';
 
 // Import all your pages
-import 'auth/landingPage.dart';
+import 'auth/landing_page.dart';
 import 'auth/login_page.dart';
 import 'auth/otp_verification_page.dart';
 import 'auth/reset_password.dart';
 import 'auth/reset_new_password_page.dart';
 import 'pages/user_profile_page.dart';
-import 'user_page/agent_homePage.dart';
-import 'user_page/scanning_Page.dart';
+import 'user_page/agent_home_page.dart';
+import 'user_page/scanning_page.dart';
 import 'pages/audit_trail_page.dart';
-import 'user_page/agent_Reports.dart';
+import 'user_page/agent_reports.dart';
 import 'pages/location_page.dart';
 import 'pages/crop_label.dart';
 import 'pages/splash_page.dart';

@@ -116,8 +116,8 @@ class _ConnectionTestWidgetState extends State<ConnectionTestWidget> {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: _testResult.contains('✅') 
-                    ? Colors.green.withOpacity(0.1)
-                    : Colors.red.withOpacity(0.1),
+                    ? Colors.green.withValues(alpha: 0.1)
+                    : Colors.red.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: _testResult.contains('✅') 

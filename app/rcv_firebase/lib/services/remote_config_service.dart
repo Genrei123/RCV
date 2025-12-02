@@ -18,10 +18,10 @@ class RemoteConfigService {
       // Fetch and activate the latest values
       await _remoteConfig!.fetchAndActivate();
       
-      print('Remote Config initialized successfully');
+      debugPrint('Remote Config initialized successfully');
       
     } catch (e) {
-      print('Failed to initialize Remote Config: $e');
+      debugPrint('Failed to initialize Remote Config: $e');
     }
   }
   
@@ -37,7 +37,7 @@ class RemoteConfigService {
       if (_remoteConfig == null) return defaultValue;
       return _remoteConfig!.getString(key);
     } catch (e) {
-      print('Error getting string value for $key: $e');
+      debugPrint('Error getting string value for $key: $e');
       return defaultValue;
     }
   }
@@ -47,7 +47,7 @@ class RemoteConfigService {
       if (_remoteConfig == null) return defaultValue;
       return _remoteConfig!.getBool(key);
     } catch (e) {
-      print('Error getting bool value for $key: $e');
+      debugPrint('Error getting bool value for $key: $e');
       return defaultValue;
     }
   }
@@ -57,7 +57,7 @@ class RemoteConfigService {
       if (_remoteConfig == null) return defaultValue;
       return _remoteConfig!.getDouble(key);
     } catch (e) {
-      print('Error getting number value for $key: $e');
+      debugPrint('Error getting number value for $key: $e');
       return defaultValue;
     }
   }
@@ -87,14 +87,14 @@ class RemoteConfigService {
     try {
       if (_remoteConfig != null) {
         bool updatedConfig = await _remoteConfig!.fetchAndActivate();
-        print(updatedConfig 
+        debugPrint(updatedConfig 
           ? 'Remote Config refreshed with new values' 
           : 'No Remote Config updates available');
         return updatedConfig;
       }
       return false;
     } catch (e) {
-      print('Failed to refresh Remote Config: $e');
+      debugPrint('Failed to refresh Remote Config: $e');
       return false;
     }
   }
@@ -102,12 +102,12 @@ class RemoteConfigService {
   /// Set up real-time listener for immediate updates
   static void addRealtimeListener(Function() onConfigUpdated) {
     if (_remoteConfig == null) {
-      print('Remote Config not initialized, cannot add listener');
+      debugPrint('Remote Config not initialized, cannot add listener');
       return;
     }
     
     _remoteConfig!.onConfigUpdated.listen((event) async {
-      print('Remote Config update received');
+      debugPrint('Remote Config update received');
       
       await _remoteConfig!.activate();
       
@@ -115,6 +115,6 @@ class RemoteConfigService {
       onConfigUpdated();
     });
     
-    print('Real-time Remote Config listener added');
+    debugPrint('Real-time Remote Config listener added');
   }
 }

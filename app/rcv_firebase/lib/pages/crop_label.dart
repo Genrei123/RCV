@@ -117,8 +117,8 @@ class _CropLabelPageState extends State<CropLabelPage> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async => !(_isCropping || _isBuildingPreview),
+    return PopScope(
+      canPop: !(_isCropping || _isBuildingPreview),
       child: Scaffold(
         appBar: AppBar(
           backgroundColor: app_colors.AppColors.primary,
@@ -161,6 +161,7 @@ class _CropLabelPageState extends State<CropLabelPage> {
                                   }
                                 } catch (e) {
                                   if (!mounted) return;
+                                  if (!context.mounted) return;
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(content: Text('Crop failed: $e')),
                                   );
@@ -168,7 +169,7 @@ class _CropLabelPageState extends State<CropLabelPage> {
                                 }
                               },
                               baseColor: Colors.black,
-                              maskColor: Colors.black.withOpacity(0.5),
+                              maskColor: Colors.black.withValues(alpha: 0.5),
                               cornerDotBuilder: (size, edgeAlignment) =>
                                   Container(
                                     width: size,
@@ -182,14 +183,14 @@ class _CropLabelPageState extends State<CropLabelPage> {
                           ),
                         if (_isBuildingPreview)
                           Container(
-                            color: Colors.black.withOpacity(0.2),
+                            color: Colors.black.withValues(alpha: 0.2),
                             child: const Center(
                               child: CircularProgressIndicator(),
                             ),
                           ),
                         if (_isCropping)
                           Container(
-                            color: Colors.black.withOpacity(0.3),
+                            color: Colors.black.withValues(alpha: 0.3),
                             child: const Center(
                               child: CircularProgressIndicator(),
                             ),
@@ -204,7 +205,7 @@ class _CropLabelPageState extends State<CropLabelPage> {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.6),
+                                color: Colors.black.withValues(alpha: 0.6),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: const Text(

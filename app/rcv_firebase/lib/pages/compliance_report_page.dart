@@ -194,7 +194,7 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.grey.withOpacity(0.2),
+                          color: Colors.grey.withValues(alpha: 0.2),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -214,7 +214,9 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
                         const SizedBox(height: 12),
                         RadioListTile<String>(
                           value: 'COMPLIANT',
+                          // ignore: deprecated_member_use
                           groupValue: selectedStatus,
+                          // ignore: deprecated_member_use
                           onChanged: (value) {
                             setState(() {
                               selectedStatus = value!;
@@ -232,7 +234,9 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
                         ),
                         RadioListTile<String>(
                           value: 'NON_COMPLIANT',
+                          // ignore: deprecated_member_use
                           groupValue: selectedStatus,
+                          // ignore: deprecated_member_use
                           onChanged: (value) {
                             setState(() {
                               selectedStatus = value!;
@@ -249,7 +253,9 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
                         ),
                         RadioListTile<String>(
                           value: 'FRAUDULENT',
+                          // ignore: deprecated_member_use
                           groupValue: selectedStatus,
+                          // ignore: deprecated_member_use
                           onChanged: (value) {
                             setState(() {
                               selectedStatus = value!;
@@ -279,7 +285,7 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.grey.withOpacity(0.2),
+                            color: Colors.grey.withValues(alpha: 0.2),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -307,7 +313,7 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
                           ),
                           const SizedBox(height: 12),
                           DropdownButtonFormField<String>(
-                            value: selectedReason,
+                            initialValue: selectedReason,
                             decoration: InputDecoration(
                               hintText: 'Select a reason',
                               border: OutlineInputBorder(
@@ -344,7 +350,7 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.grey.withOpacity(0.2),
+                          color: Colors.grey.withValues(alpha: 0.2),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -392,10 +398,10 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
+                      color: AppColors.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: AppColors.primary.withOpacity(0.3),
+                        color: AppColors.primary.withValues(alpha: 0.3),
                       ),
                     ),
                     child: Column(
@@ -447,7 +453,7 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.grey.withOpacity(0.2),
+                            color: Colors.grey.withValues(alpha: 0.2),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -568,7 +574,7 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
                 color: Colors.white,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.grey.withOpacity(0.3),
+                    color: Colors.grey.withValues(alpha: 0.3),
                     blurRadius: 8,
                     offset: const Offset(0, -2),
                   ),

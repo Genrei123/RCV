@@ -172,14 +172,16 @@ class _LocationPageState extends State<LocationPage> {
       );
     }
 
-    return WillPopScope(
-      onWillPop: () async {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
         final prev = TabHistory.instance.popAndGetPrevious();
         if (prev != null && prev >= 0 && prev < AppBottomNavBar.routes.length) {
           Navigator.pushReplacementNamed(context, AppBottomNavBar.routes[prev]);
-          return false;
+        } else {
+          Navigator.maybePop(context);
         }
-        return true;
       },
       child: Scaffold(
         appBar: const TitleLogoHeaderAppBar(

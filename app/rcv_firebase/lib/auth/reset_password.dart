@@ -64,8 +64,8 @@ class ResetPasswordPage extends StatelessWidget {
                           Text(
                             "Enter your valid email address and we'll send you a one-time password (OTP).",
                             style: TextStyle(
-                              color: app_colors.AppColors.white.withOpacity(
-                                0.7,
+                              color: app_colors.AppColors.white.withValues(
+                                alpha: 0.7,
                               ),
                             ),
                             textAlign: TextAlign.center,

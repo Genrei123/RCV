@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
 class ProfileService {
@@ -20,7 +21,7 @@ class ProfileService {
       }
       return _getDefaultProfileData();
     } catch (e) {
-      print('Error loading profile data: $e');
+      debugPrint('Error loading profile data: $e');
       return _getDefaultProfileData();
     }
   }
@@ -47,7 +48,7 @@ class ProfileService {
       await file.writeAsString(jsonString);
       return true;
     } catch (e) {
-      print('Error saving profile data: $e');
+      debugPrint('Error saving profile data: $e');
       return false;
     }
   }
@@ -74,7 +75,7 @@ class ProfileService {
       currentData[field] = value;
       return await saveProfileData(currentData);
     } catch (e) {
-      print('Error updating profile field: $e');
+      debugPrint('Error updating profile field: $e');
       return false;
     }
   }
@@ -84,7 +85,7 @@ class ProfileService {
     try {
       return await saveProfileData(_getDefaultProfileData());
     } catch (e) {
-      print('Error clearing profile data: $e');
+      debugPrint('Error clearing profile data: $e');
       return false;
     }
   }
@@ -96,7 +97,7 @@ class ProfileService {
       final File file = File('${appDir.path}/$_profileDataPath');
       return await file.exists();
     } catch (e) {
-      print('Error checking profile data: $e');
+      debugPrint('Error checking profile data: $e');
       return false;
     }
   }
@@ -107,7 +108,7 @@ class ProfileService {
       final Directory appDir = await getApplicationDocumentsDirectory();
       return '${appDir.path}/$_profileDataPath';
     } catch (e) {
-      print('Error getting profile data path: $e');
+      debugPrint('Error getting profile data path: $e');
       return null;
     }
   }
@@ -123,7 +124,7 @@ class ProfileService {
       }
       return false;
     } catch (e) {
-      print('Error deleting profile data: $e');
+      debugPrint('Error deleting profile data: $e');
       return false;
     }
   }
