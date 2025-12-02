@@ -4,7 +4,15 @@ import { PageContainer } from "@/components/PageContainer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataTable, type Column } from "@/components/DataTable";
-import { Pagination } from "@/components/Pagination";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from "@/components/ui/pagination";
 import type { Product } from "@/typeorm/entities/product.entity";
 import { ProductCard } from "@/components/ProductCard";
 import { AddProductModal } from "@/components/AddProductModal";
@@ -243,23 +251,104 @@ export function Products(props: ProductsProps) {
             }
           />
 
-          <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="hidden sm:block">
-              <span className="text-sm">
-                Page {currentPage} of {totalPages}
-              </span>
+          <div className="mt-4 flex items-center justify-between w-full">
+            <div className="text-sm text-muted-foreground">
+              Showing {pagedProducts.length} of {totalItems} products • Page{" "}
+              {currentPage} of {totalPages}
             </div>
 
-            <div className="flex items-center gap-4 justify-center sm:justify-end w-full sm:w-auto">
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalItems={totalItems}
-                itemsPerPage={pageSize}
-                onPageChange={(p: number) => fetchProductsPage(p)}
-                showingPosition="right"
-              />
-            </div>
+            <Pagination className="mx-0 w-auto">
+              <PaginationContent className="gap-1">
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() =>
+                      currentPage > 1 && fetchProductsPage(currentPage - 1)
+                    }
+                    className={
+                      currentPage <= 1
+                        ? "pointer-events-none opacity-50"
+                        : "cursor-pointer"
+                    }
+                  />
+                </PaginationItem>
+
+                {currentPage > 2 && (
+                  <PaginationItem>
+                    <PaginationLink
+                      onClick={() => fetchProductsPage(1)}
+                      className="cursor-pointer"
+                    >
+                      1
+                    </PaginationLink>
+                  </PaginationItem>
+                )}
+
+                {currentPage > 3 && (
+                  <PaginationItem>
+                    <PaginationEllipsis />
+                  </PaginationItem>
+                )}
+
+                {currentPage > 1 && (
+                  <PaginationItem>
+                    <PaginationLink
+                      onClick={() => fetchProductsPage(currentPage - 1)}
+                      className="cursor-pointer"
+                    >
+                      {currentPage - 1}
+                    </PaginationLink>
+                  </PaginationItem>
+                )}
+
+                <PaginationItem>
+                  <PaginationLink isActive className="cursor-pointer">
+                    {currentPage}
+                  </PaginationLink>
+                </PaginationItem>
+
+                {currentPage < totalPages && (
+                  <PaginationItem>
+                    <PaginationLink
+                      onClick={() => fetchProductsPage(currentPage + 1)}
+                      className="cursor-pointer"
+                    >
+                      {currentPage + 1}
+                    </PaginationLink>
+                  </PaginationItem>
+                )}
+
+                {currentPage < totalPages - 2 && (
+                  <PaginationItem>
+                    <PaginationEllipsis />
+                  </PaginationItem>
+                )}
+
+                {currentPage < totalPages - 1 && (
+                  <PaginationItem>
+                    <PaginationLink
+                      onClick={() => fetchProductsPage(totalPages)}
+                      className="cursor-pointer"
+                    >
+                      {totalPages}
+                    </PaginationLink>
+                  </PaginationItem>
+                )}
+
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() =>
+                      currentPage < totalPages &&
+                      fetchProductsPage(currentPage + 1)
+                    }
+                    className={
+                      currentPage >= totalPages
+                        ? "pointer-events-none opacity-50"
+                        : "cursor-pointer"
+                    }
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
           </div>
         </>
       ) : (
@@ -335,24 +424,6 @@ export function Products(props: ProductsProps) {
                 </div>
               </div>
             ) : null}
-          </div>
-
-          <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="hidden sm:block">
-              <span className="text-sm">
-                Page {currentPage} of {totalPages}
-              </span>
-            </div>
-            <div className="flex items-center gap-4 justify-center sm:justify-end w-full sm:w-auto">
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalItems={totalItems}
-                itemsPerPage={pageSize}
-                onPageChange={(p: number) => fetchProductsPage(p)}
-                showingPosition="right"
-              />
-            </div>
           </div>
         </div>
       )}

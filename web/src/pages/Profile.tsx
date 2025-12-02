@@ -11,7 +11,15 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DataTable, type Column } from "@/components/DataTable";
-import { Pagination } from "@/components/Pagination";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from "@/components/ui/pagination";
 import { PageContainer } from "@/components/PageContainer";
 import { EditProfileModal } from "@/components/EditProfileModal";
 import { ArchiveAccountModal } from "@/components/ArchiveAccountModal";
@@ -721,18 +729,136 @@ export function Profile({
             </div>
 
             {/* Pagination */}
-            <div className="mt-2">
-              <Pagination
-                currentPage={logsPagination.current_page}
-                totalPages={logsPagination.total_pages}
-                totalItems={logsPagination.total_items}
-                itemsPerPage={logsPagination.per_page}
-                onPageChange={(page) =>
-                  setLogsPagination((prev) => ({ ...prev, current_page: page }))
-                }
-                showingText={`Showing ${currentPageLogs.length} of ${logsPagination.total_items} activities`}
-                showingPosition="right"
-              />
+            <div className="mt-4 flex items-center justify-between w-full">
+              <div className="text-sm text-muted-foreground">
+                Showing {currentPageLogs.length} of {logsPagination.total_items}{" "}
+                activities • Page {logsPagination.current_page} of{" "}
+                {logsPagination.total_pages}
+              </div>
+
+              <Pagination className="mx-0 w-auto">
+                <PaginationContent className="gap-1">
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() =>
+                        logsPagination.current_page > 1 &&
+                        setLogsPagination((prev) => ({
+                          ...prev,
+                          current_page: prev.current_page - 1,
+                        }))
+                      }
+                      className={
+                        logsPagination.current_page <= 1
+                          ? "pointer-events-none opacity-50"
+                          : "cursor-pointer"
+                      }
+                    />
+                  </PaginationItem>
+
+                  {logsPagination.current_page > 2 && (
+                    <PaginationItem>
+                      <PaginationLink
+                        onClick={() =>
+                          setLogsPagination((prev) => ({
+                            ...prev,
+                            current_page: 1,
+                          }))
+                        }
+                        className="cursor-pointer"
+                      >
+                        1
+                      </PaginationLink>
+                    </PaginationItem>
+                  )}
+
+                  {logsPagination.current_page > 3 && (
+                    <PaginationItem>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  )}
+
+                  {logsPagination.current_page > 1 && (
+                    <PaginationItem>
+                      <PaginationLink
+                        onClick={() =>
+                          setLogsPagination((prev) => ({
+                            ...prev,
+                            current_page: prev.current_page - 1,
+                          }))
+                        }
+                        className="cursor-pointer"
+                      >
+                        {logsPagination.current_page - 1}
+                      </PaginationLink>
+                    </PaginationItem>
+                  )}
+
+                  <PaginationItem>
+                    <PaginationLink isActive className="cursor-pointer">
+                      {logsPagination.current_page}
+                    </PaginationLink>
+                  </PaginationItem>
+
+                  {logsPagination.current_page < logsPagination.total_pages && (
+                    <PaginationItem>
+                      <PaginationLink
+                        onClick={() =>
+                          setLogsPagination((prev) => ({
+                            ...prev,
+                            current_page: prev.current_page + 1,
+                          }))
+                        }
+                        className="cursor-pointer"
+                      >
+                        {logsPagination.current_page + 1}
+                      </PaginationLink>
+                    </PaginationItem>
+                  )}
+
+                  {logsPagination.current_page <
+                    logsPagination.total_pages - 2 && (
+                    <PaginationItem>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  )}
+
+                  {logsPagination.current_page <
+                    logsPagination.total_pages - 1 && (
+                    <PaginationItem>
+                      <PaginationLink
+                        onClick={() =>
+                          setLogsPagination((prev) => ({
+                            ...prev,
+                            current_page: prev.total_pages,
+                          }))
+                        }
+                        className="cursor-pointer"
+                      >
+                        {logsPagination.total_pages}
+                      </PaginationLink>
+                    </PaginationItem>
+                  )}
+
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() =>
+                        logsPagination.current_page <
+                          logsPagination.total_pages &&
+                        setLogsPagination((prev) => ({
+                          ...prev,
+                          current_page: prev.current_page + 1,
+                        }))
+                      }
+                      className={
+                        logsPagination.current_page >=
+                        logsPagination.total_pages
+                          ? "pointer-events-none opacity-50"
+                          : "cursor-pointer"
+                      }
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
             </div>
           </CardContent>
         </Card>
