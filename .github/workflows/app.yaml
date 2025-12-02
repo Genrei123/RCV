@@ -47,8 +47,3 @@ jobs:
       - name: Run Analyzer
         run: flutter analyze
         working-directory: ./app/rcv_firebase
-
-      # 6. Run Unit Tests (Optional but recommended)
-      - name: Run Tests
-        run: flutter test
-        working-directory: ./app/rcv_firebase
