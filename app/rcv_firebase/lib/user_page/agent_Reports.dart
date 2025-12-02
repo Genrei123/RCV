@@ -59,7 +59,7 @@ class UserReportsPage extends StatefulWidget {
 }
 
 class _UserReportsPageState extends State<UserReportsPage> {
-  final List<ReportItem> _reports = [];
+final List<ReportItem> _reports = [];
   final bool _loading = false; // UI-only mode: no fetching
   String? _error;
   ReportCategory? _activeFilter; // null = all
