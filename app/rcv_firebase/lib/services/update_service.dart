@@ -120,7 +120,7 @@ class UpdateService {
       String updateUrl = RemoteConfigService.getUpdateUrl();
       
       if (updateUrl.isEmpty) {
-        updateUrl = 'https://console.firebase.google.com/u/1/project/rcv-firebase-dev/settings/general/android:rcv.app.android';
+        updateUrl = 'https://example.com/update'; // Fallback URL
       }
       
       await launchUrl(
