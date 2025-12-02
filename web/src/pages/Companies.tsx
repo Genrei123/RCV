@@ -7,7 +7,15 @@ import type { Company } from "@/typeorm/entities/company.entity";
 import { AddCompanyModal } from "@/components/AddCompanyModal";
 import { CompanyDetailsModal } from "@/components/CompanyDetailsModal";
 import { CompanyService } from "@/services/companyService";
-import { Pagination } from "@/components/Pagination";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { PDFGenerationService } from "@/services/pdfGenerationService";
 import { toast } from "react-toastify";
 
@@ -80,7 +88,11 @@ export function Companies(props: CompaniesProps) {
   const fetchCompaniesPage = async (page: number) => {
     setLoading(true);
     try {
-      const resp = await CompanyService.getCompaniesPage(page, pageSize, searchQuery);
+      const resp = await CompanyService.getCompaniesPage(
+        page,
+        pageSize,
+        searchQuery
+      );
       // debug: log server response for pagination diagnosis
       // eslint-disable-next-line no-console
       console.debug("Companies.fetchCompaniesPage response:", resp);
@@ -99,7 +111,7 @@ export function Companies(props: CompaniesProps) {
     } finally {
       setLoading(false);
     }
-};
+  };
 
   const handleAddSuccess = () => {
     // Refresh the companies list after adding a new company
@@ -257,23 +269,104 @@ export function Companies(props: CompaniesProps) {
             }
           />
 
-          <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="hidden sm:block">
-              <span className="text-sm">
-                Page {currentPage} of {totalPages}
-              </span>
+          <div className="mt-4 flex items-center justify-between w-full">
+            <div className="text-sm text-muted-foreground">
+              Showing {pagedCompanies.length} of {totalItems} companies • Page{" "}
+              {currentPage} of {totalPages}
             </div>
 
-            <div className="flex items-center gap-4 justify-center sm:justify-end w-full sm:w-auto">
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalItems={totalItems}
-                itemsPerPage={pageSize}
-                onPageChange={(p: number) => fetchCompaniesPage(p)}
-                showingPosition="right"
-              />
-            </div>
+            <Pagination className="mx-0 w-auto">
+              <PaginationContent className="gap-1">
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() =>
+                      currentPage > 1 && fetchCompaniesPage(currentPage - 1)
+                    }
+                    className={
+                      currentPage <= 1
+                        ? "pointer-events-none opacity-50"
+                        : "cursor-pointer"
+                    }
+                  />
+                </PaginationItem>
+
+                {currentPage > 2 && (
+                  <PaginationItem>
+                    <PaginationLink
+                      onClick={() => fetchCompaniesPage(1)}
+                      className="cursor-pointer"
+                    >
+                      1
+                    </PaginationLink>
+                  </PaginationItem>
+                )}
+
+                {currentPage > 3 && (
+                  <PaginationItem>
+                    <PaginationEllipsis />
+                  </PaginationItem>
+                )}
+
+                {currentPage > 1 && (
+                  <PaginationItem>
+                    <PaginationLink
+                      onClick={() => fetchCompaniesPage(currentPage - 1)}
+                      className="cursor-pointer"
+                    >
+                      {currentPage - 1}
+                    </PaginationLink>
+                  </PaginationItem>
+                )}
+
+                <PaginationItem>
+                  <PaginationLink isActive className="cursor-pointer">
+                    {currentPage}
+                  </PaginationLink>
+                </PaginationItem>
+
+                {currentPage < totalPages && (
+                  <PaginationItem>
+                    <PaginationLink
+                      onClick={() => fetchCompaniesPage(currentPage + 1)}
+                      className="cursor-pointer"
+                    >
+                      {currentPage + 1}
+                    </PaginationLink>
+                  </PaginationItem>
+                )}
+
+                {currentPage < totalPages - 2 && (
+                  <PaginationItem>
+                    <PaginationEllipsis />
+                  </PaginationItem>
+                )}
+
+                {currentPage < totalPages - 1 && (
+                  <PaginationItem>
+                    <PaginationLink
+                      onClick={() => fetchCompaniesPage(totalPages)}
+                      className="cursor-pointer"
+                    >
+                      {totalPages}
+                    </PaginationLink>
+                  </PaginationItem>
+                )}
+
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() =>
+                      currentPage < totalPages &&
+                      fetchCompaniesPage(currentPage + 1)
+                    }
+                    className={
+                      currentPage >= totalPages
+                        ? "pointer-events-none opacity-50"
+                        : "cursor-pointer"
+                    }
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
           </div>
         </>
       </PageContainer>
