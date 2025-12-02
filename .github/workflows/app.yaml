@@ -36,6 +36,7 @@ jobs:
 
       - name: Create dummy .env file
         run: touch .env
+        working-directory: ./app/rcv_firebase
 
       # 4. Install Dependencies
       - name: Install Dependencies
