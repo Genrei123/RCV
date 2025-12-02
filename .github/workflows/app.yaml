@@ -41,11 +41,6 @@ jobs:
       - name: Install Dependencies
         run: flutter pub get
         working-directory: ./app/rcv_firebase
-      
-      # FIX FOR LINTER ERRORS
-      - name: Run Analyzer
-        run: flutter analyze
-        continue-on-error: true # This allows the build to continue even if linter fails
 
       # 5. Check for formatting and static analysis errors (Optional but recommended)
       - name: Run Analyzer
