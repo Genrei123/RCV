@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'update_service.dart';
 import 'remote_config_service.dart';
 
@@ -41,7 +40,7 @@ class UpdateModalService {
       
       return null; // No update needed
     } catch (e) {
-      print('Error checking for updates: $e');
+      debugPrint('Error checking for updates: $e');
       return null;
     }
   }
@@ -51,7 +50,7 @@ class UpdateModalService {
     try {
       UpdateService.redirectToUpdate();
     } catch (e) {
-      print('Error launching app store: $e');
+      debugPrint('Error launching app store: $e');
     }
   }
   

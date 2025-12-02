@@ -6,9 +6,9 @@ class RemoteConfigService {
   
   static Future<void> initialize() async {
     try {
-      print('🔧 [RemoteConfig] Starting initialization...');
+      debugPrint('🔧 [RemoteConfig] Starting initialization...');
       _remoteConfig = FirebaseRemoteConfig.instance;
-      print('🔧 [RemoteConfig] Instance obtained');
+      debugPrint('🔧 [RemoteConfig] Instance obtained');
       
       await _remoteConfig!.setConfigSettings(RemoteConfigSettings(
         fetchTimeout: const Duration(seconds: 30), // Reduced timeout
@@ -37,11 +37,11 @@ class RemoteConfigService {
   static String getString(String key, {String defaultValue = ''}) {
     try {
       if (_remoteConfig == null) {
-        print('⚠️ [RemoteConfig] _remoteConfig is null for key: $key, returning default: $defaultValue');
+        debugPrint('⚠️ [RemoteConfig] _remoteConfig is null for key: $key, returning default: $defaultValue');
         return defaultValue;
       }
       String value = _remoteConfig!.getString(key);
-      print('📋 [RemoteConfig] getString($key) = "$value" (default: "$defaultValue")');
+      debugPrint('📋 [RemoteConfig] getString($key) = "$value" (default: "$defaultValue")');
       return value.isEmpty ? defaultValue : value;
     } catch (e) {
       debugPrint('Error getting string value for $key: $e');
@@ -80,7 +80,7 @@ class RemoteConfigService {
 
   static String getLatestAppVersion() {
     String version = getString('latest_app_version', defaultValue: '1.0.1'); // Changed default for testing
-    print('🔍 [RemoteConfig] getLatestAppVersion: $version');
+    debugPrint('🔍 [RemoteConfig] getLatestAppVersion: $version');
     return version;
   }
 

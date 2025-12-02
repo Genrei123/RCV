@@ -12,14 +12,17 @@ class UpdateService {
       bool forceUpdateFromConfig = RemoteConfigService.isForceUpdateRequired();
       
       if (forceUpdateRequired) {
+        if (!context.mounted) return;
         _showForceUpdateDialog(context, 'Your app version is too old. Please update to continue.');
       } else if (updateAvailable && forceUpdateFromConfig) {
+        if (!context.mounted) return;
         _showForceUpdateDialog(context, 'A critical update is available. Please update to continue.');
       } else if (updateAvailable) {
+        if (!context.mounted) return;
         _showOptionalUpdateDialog(context);
       }
     } catch (e) {
-      print('Error checking for updates: $e');
+      debugPrint('Error checking for updates: $e');
     }
   }
 
@@ -28,8 +31,8 @@ class UpdateService {
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
-        return WillPopScope(
-          onWillPop: () async => false, // Prevent back button
+        return PopScope(
+          canPop: false, // Prevent back button
           child: AlertDialog(
             title: Row(
               children: [
@@ -95,7 +98,7 @@ class UpdateService {
       
       return _isVersionLower(currentVersion, latestVersion);
     } catch (e) {
-      print('Error checking for updates: $e');
+      debugPrint('Error checking for updates: $e');
       return false;
     }
   }
@@ -109,7 +112,7 @@ class UpdateService {
       
       return _isVersionLower(currentVersion, minimumVersion);
     } catch (e) {
-      print('Error checking force update: $e');
+      debugPrint('Error checking force update: $e');
       return false;
     }
   }
@@ -130,7 +133,7 @@ class UpdateService {
       );
       
     } catch (e) {
-      print('Error opening update link: $e');
+      debugPrint('Error opening update link: $e');
     }
   }
   
@@ -140,7 +143,7 @@ class UpdateService {
       final packageInfo = await PackageInfo.fromPlatform();
       return packageInfo.version;
     } catch (e) {
-      print('Error getting current version: $e');
+      debugPrint('Error getting current version: $e');
       return '1.0.0';
     }
   }
@@ -152,8 +155,12 @@ class UpdateService {
       final latestParts = latest.split('.').map(int.parse).toList();
       
       // Ensure both have at least 3 parts (major.minor.patch)
-      while (currentParts.length < 3) currentParts.add(0);
-      while (latestParts.length < 3) latestParts.add(0);
+      while (currentParts.length < 3) {
+        currentParts.add(0);
+      }
+      while (latestParts.length < 3) {
+        latestParts.add(0);
+      }
       
       for (int i = 0; i < 3; i++) {
         if (currentParts[i] < latestParts[i]) return true;
@@ -161,7 +168,7 @@ class UpdateService {
       }
       return false; // Versions are equal
     } catch (e) {
-      print('Error comparing versions: $e');
+      debugPrint('Error comparing versions: $e');
       return false;
     }
   }

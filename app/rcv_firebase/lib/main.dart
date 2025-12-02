@@ -49,7 +49,7 @@ Future<void> main() async {
       // Initialize Remote Config
       await RemoteConfigService.initialize();
     } catch (e) {
-      print('Initialization error: $e');
+      debugPrint('Initialization error: $e');
       // If Firebase fails, treat as no connection
       runApp(const MyApp(hasConnection: false));
       return;
