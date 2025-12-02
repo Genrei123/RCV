@@ -5,6 +5,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/services.dart';
 import 'firebase_options.dart';
 import 'services/remote_config_service.dart';
+import 'services/update_service.dart';
 
 // Import all your pages
 import 'auth/landingPage.dart';
@@ -34,14 +35,21 @@ Future<void> main() async {
       // Load environment variables from .env file
       await dotenv.load(fileName: ".env");
       
-      // Initialize Firebase with google-services.json configuration
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
+      try {
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+      } catch (e) {
+        if (e.toString().contains('duplicate-app')) {
+        } else {
+          rethrow; // Re-throw if it's a different error
+        }
+      }
 
       // Initialize Remote Config
       await RemoteConfigService.initialize();
     } catch (e) {
+      print('Initialization error: $e');
       // If Firebase fails, treat as no connection
       runApp(const MyApp(hasConnection: false));
       return;
@@ -64,6 +72,44 @@ class _MyAppState extends State<MyApp> {
   late bool _hasConnection;
   bool _showModal = false; // Control modal visibility manually
   bool _isRetrying = false; // Loading state for retry button
+  bool _showUpdateModal = false; // Control update modal visibility
+  bool _isForceUpdate = false;
+  String _updateTitle = '';
+  String _updateMessage = '';
+
+  void _handleUpdateNow() {
+    try {
+      UpdateService.redirectToUpdate();
+    } catch (e) {
+      print('Error launching app store: $e');
+    }
+  }
+
+  Future<void> _performUpdateCheck() async {
+    try {
+      await RemoteConfigService.ensureInitialized();
+      bool configRefreshed = await RemoteConfigService.refresh();
+      
+      if (mounted) {
+        bool updateAvailable = await UpdateService.checkForUpdates();
+        
+        if (updateAvailable) {
+          bool isForceUpdate = await UpdateService.isForceUpdateRequired();
+          
+          setState(() {
+            _isForceUpdate = isForceUpdate;
+            _updateTitle = isForceUpdate ? 'Update Required' : 'Update Available';
+            _updateMessage = isForceUpdate
+                ? 'This update is required to continue using the app. Please update now.'
+                : 'A new version of the app is available. Would you like to update now?';
+            _showUpdateModal = true;
+          });
+        }
+      }
+    } catch (e) {
+      print('Error during update check: $e');
+    }
+  }
 
   @override
   void initState() {
@@ -74,6 +120,39 @@ class _MyAppState extends State<MyApp> {
     if (!_hasConnection) {
       _showModal = true;
     }
+    
+    // Check for app updates after a short delay
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Wait for the MaterialApp to be built before checking for updates
+      Future.delayed(Duration(seconds: 8), () async {
+        // Check for updates
+        try {
+          bool forceUpdateRequired = await UpdateService.isForceUpdateRequired();
+          bool updateAvailable = await UpdateService.checkForUpdates();
+          bool forceUpdateFromConfig = RemoteConfigService.isForceUpdateRequired();
+          
+          if (mounted && (forceUpdateRequired || updateAvailable)) {
+            setState(() {
+              _showUpdateModal = true;
+              _isForceUpdate = forceUpdateRequired || forceUpdateFromConfig;
+              
+              if (forceUpdateRequired) {
+                _updateTitle = 'Critical Update Required';
+                _updateMessage = 'Your app version is too old. Please update to continue using the app.';
+              } else if (updateAvailable && forceUpdateFromConfig) {
+                _updateTitle = 'Important Update Available';
+                _updateMessage = 'A critical update is available. Please update for the best experience.';
+              } else if (updateAvailable) {
+                _updateTitle = 'New Version Available';
+                _updateMessage = 'Update now for new features and improvements!';
+              }
+            });
+          }
+        } catch (e) {
+          print('Error checking for updates: $e');
+        }
+      });
+    });
     
     // Monitor connectivity changes but don't auto-hide modal
     Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> results) {
@@ -101,10 +180,9 @@ class _MyAppState extends State<MyApp> {
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF005440)),
         primarySwatch: Colors.green,
       ),
-      // Show login page as home when no connection, otherwise use normal routing
-      home: !_hasConnection ? const LoginPage() : null,
-      initialRoute: _hasConnection ? '/splash' : null,
-      routes: _hasConnection ? {
+      // Simplified routing - always provide full routes but control initial route
+      initialRoute: _hasConnection ? '/splash' : '/login',
+      routes: {
         '/splash': (context) => const SplashPage(),
         '/': (context) => const LandingPage(),
         '/login': (context) => const LoginPage(),
@@ -118,13 +196,13 @@ class _MyAppState extends State<MyApp> {
         '/scanning': (context) => const QRScannerPage(),
         '/location': (context) => const LocationPage(),
         '/crop-label': (context) => const CropLabelPage(),
-      } : {
-        '/login': (context) => const LoginPage(),
       },
       builder: (context, child) {
         return Stack(
           children: [
             child ?? const SizedBox.shrink(),
+            // Update banner at the top
+            // Removed loading text - no longer needed
             if (_showModal)
               Container(
                 color: Colors.black26,
@@ -164,7 +242,9 @@ class _MyAppState extends State<MyApp> {
                         ),
                         const SizedBox(height: 24),
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          mainAxisAlignment: _isForceUpdate 
+                              ? MainAxisAlignment.center 
+                              : MainAxisAlignment.spaceEvenly,
                           children: [
                             TextButton(
                               onPressed: _isRetrying ? null : () async {
@@ -219,6 +299,88 @@ class _MyAppState extends State<MyApp> {
                               ),
                               child: const Text(
                                 'Close App',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            // Update Modal
+            if (_showUpdateModal)
+              Container(
+                color: Colors.black26,
+                child: Center(
+                  child: Container(
+                    margin: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _updateTitle,
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                            decoration: TextDecoration.none,
+                            fontFamily: 'SF Pro Text',
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          _updateMessage,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w400,
+                            color: Colors.black54,
+                            decoration: TextDecoration.none,
+                            fontFamily: 'SF Pro Text',
+                            height: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          mainAxisAlignment: _isForceUpdate 
+                              ? MainAxisAlignment.center 
+                              : MainAxisAlignment.spaceEvenly,
+                          children: [
+                            if (!_isForceUpdate)
+                              TextButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _showUpdateModal = false;
+                                  });
+                                },
+                                style: TextButton.styleFrom(
+                                  foregroundColor: const Color(0xFF005440),
+                                ),
+                                child: const Text(
+                                  'Later',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            TextButton(
+                              onPressed: _handleUpdateNow,
+                              style: TextButton.styleFrom(
+                                foregroundColor: const Color(0xFF005440),
+                              ),
+                              child: const Text(
+                                'Update Now',
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w500,
