@@ -12,9 +12,7 @@ import { AuthService } from "@/services/authService";
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -28,7 +26,6 @@ export function Contact() {
     details: "",
   });
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const primaryButtonClass = "app-bg-primary hover:app-bg-primary text-white";
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {

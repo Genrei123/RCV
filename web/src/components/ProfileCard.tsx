@@ -11,7 +11,6 @@ export function ProfileCard({
   name,
   role,
   imageUrl,
-  backgroundColor = "app-bg-primary",
   variant = "person",
   className = "",
 }: ProfileCardProps) {
