@@ -138,7 +138,7 @@ class AdminAccountsTable extends StatelessWidget {
                       final position = renderBox.localToGlobal(Offset.zero);
                       onActionTap?.call(user, position);
                     } catch (e) {
-                      print('Error getting position: $e');
+                      debugPrint('Error getting position: $e');
                       onActionTap?.call(user, Offset.zero);
                     }
                   },

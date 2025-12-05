@@ -53,11 +53,11 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDdnmKvz8-L6Th-Edx_MhMX2AD2Ek0fptU',
-    appId: '1:94226532407:android:19a3c2a4b9af465b2a57b2',
-    messagingSenderId: '94226532407',
-    projectId: 'rcv-flutter',
-    databaseURL: 'https://rcv-flutter-default-rtdb.asia-southeast1.firebasedatabase.app',
-    storageBucket: 'rcv-flutter.firebasestorage.app',
+    apiKey: 'AIzaSyDI06VuL_verZ85jW4Tnx9C7saNOt6-0FA',
+    appId: '1:956817635834:android:efd1b795b0ce6e1e7c4c43',
+    messagingSenderId: '956817635834',
+    projectId: 'rcv-firebase-dev',
+    databaseURL: 'https://rcv-firebase-dev-default-rtdb.asia-southeast1.firebasedatabase.app',
+    storageBucket: 'rcv-firebase-dev.firebasestorage.app',
   );
 }

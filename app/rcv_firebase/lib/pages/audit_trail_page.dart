@@ -493,15 +493,15 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            app_colors.AppColors.primary.withOpacity(0.05),
-            app_colors.AppColors.primary.withOpacity(0.02),
+            app_colors.AppColors.primary.withValues(alpha: 0.05),
+            app_colors.AppColors.primary.withValues(alpha: 0.02),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: app_colors.AppColors.primary.withOpacity(0.3),
+          color: app_colors.AppColors.primary.withValues(alpha: 0.3),
           width: 1,
         ),
       ),
@@ -654,14 +654,16 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
       );
     }
 
-    return WillPopScope(
-      onWillPop: () async {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
         final prev = TabHistory.instance.popAndGetPrevious();
         if (prev != null && prev >= 0 && prev < AppBottomNavBar.routes.length) {
           Navigator.pushReplacementNamed(context, AppBottomNavBar.routes[prev]);
-          return false;
+        } else {
+          Navigator.maybePop(context);
         }
-        return true;
       },
       child: Scaffold(
         appBar: const TitleLogoHeaderAppBar(
@@ -750,7 +752,7 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
                             width: 50,
                             height: 50,
                             decoration: BoxDecoration(
-                              color: color.withOpacity(0.1),
+                              color: color.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Icon(

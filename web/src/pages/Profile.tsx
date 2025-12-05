@@ -9,6 +9,7 @@ import {
   Eye,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import ExcelJS from "exceljs";
 import { Button } from "@/components/ui/button";
 import { DataTable, type Column } from "@/components/DataTable";
 import {
@@ -661,56 +662,101 @@ export function Profile({
                   variant="outline"
                   onClick={async () => {
                     try {
-                      toast.info("Preparing export…");
-                      // Use already sorted full list for export
+                      toast.info("Preparing Excel export…");
                       const all = [...sortedFullLogs];
-                      // Convert to CSV
-                      const header = [
-                        "Date",
-                        "Action",
-                        "Type",
-                        "Platform",
-                        "IP",
-                        "User Agent",
-                        "Log ID",
+
+                      // Create workbook and worksheet with exceljs
+                      const workbook = new ExcelJS.Workbook();
+                      const worksheet = workbook.addWorksheet("Activities");
+
+                      // Define columns
+                      worksheet.columns = [
+                        { header: "Date", key: "date", width: 22 },
+                        { header: "Action", key: "action", width: 38 },
+                        { header: "Type", key: "type", width: 18 },
+                        { header: "Platform", key: "platform", width: 12 },
+                        { header: "IP", key: "ip", width: 18 },
+                        { header: "User Agent", key: "userAgent", width: 55 },
+                        { header: "Log ID", key: "logId", width: 38 },
                       ];
-                      const rows = all.map((l) => [
-                        new Date(l.createdAt).toLocaleString(),
-                        (l.action || "").replace(/\n|\r/g, " "),
-                        l.actionType || "",
-                        l.platform || "",
-                        l.ipAddress || "",
-                        (l.userAgent || "").replace(/\n|\r/g, " "),
-                        l._id,
-                      ]);
-                      const csv = [header, ...rows]
-                        .map((r) =>
-                          r
-                            .map((v) => `"${String(v).replace(/"/g, '""')}"`)
-                            .join(",")
-                        )
-                        .join("\n");
-                      const blob = new Blob(["\ufeff" + csv], {
-                        type: "text/csv;charset=utf-8;",
+
+                      // Add data rows
+                      all.forEach((l) => {
+                        worksheet.addRow({
+                          date: new Date(l.createdAt).toLocaleString(),
+                          action: (l.action || "").replace(/\n|\r/g, " "),
+                          type: l.actionType || "",
+                          platform: l.platform || "",
+                          ip: l.ipAddress || "",
+                          userAgent: (l.userAgent || "").replace(/\n|\r/g, " "),
+                          logId: l._id,
+                        });
+                      });
+
+                      // Style header row (A1:G1)
+                      const headerRow = worksheet.getRow(1);
+                      headerRow.height = 28;
+                      headerRow.eachCell((cell) => {
+                        cell.fill = {
+                          type: "pattern",
+                          pattern: "solid",
+                          fgColor: { argb: "FF005440" }, // #005440
+                        };
+                        cell.font = {
+                          bold: true,
+                          size: 11,
+                          color: { argb: "FFFFFFFF" }, // white
+                        };
+                        cell.alignment = {
+                          vertical: "middle",
+                          horizontal: "left",
+                          wrapText: true,
+                        };
+                        cell.border = {
+                          top: { style: "thin", color: { argb: "FF005440" } },
+                          bottom: {
+                            style: "thin",
+                            color: { argb: "FF005440" },
+                          },
+                          left: { style: "thin", color: { argb: "FF005440" } },
+                          right: { style: "thin", color: { argb: "FF005440" } },
+                        };
+                      });
+
+                      // Freeze header row
+                      worksheet.views = [
+                        { state: "frozen", ySplit: 1, xSplit: 0 },
+                      ];
+
+                      // Auto filter
+                      worksheet.autoFilter = {
+                        from: "A1",
+                        to: `G${all.length + 1}`,
+                      };
+
+                      // Generate file and download
+                      const buffer = await workbook.xlsx.writeBuffer();
+                      const blob = new Blob([buffer], {
+                        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                       });
                       const url = URL.createObjectURL(blob);
                       const a = document.createElement("a");
                       a.href = url;
                       a.download = `rcv-activities-${new Date()
                         .toISOString()
-                        .slice(0, 10)}.csv`;
+                        .slice(0, 10)}.xlsx`;
                       document.body.appendChild(a);
                       a.click();
                       document.body.removeChild(a);
                       URL.revokeObjectURL(url);
-                      toast.success("Export complete");
+                      toast.success("Excel exported");
                     } catch (err) {
                       console.error(err);
                       toast.error("Failed to export activities");
                     }
                   }}
                 >
-                  Export CSV
+                  Export Excel
                 </Button>
               </div>
             </div>

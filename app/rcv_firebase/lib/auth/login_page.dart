@@ -79,9 +79,9 @@ class _LoginPageState extends State<LoginPage> {
     final result = await _authService.login(email, password);
 
     if (result['success'] == true) {
-      print('✓ Login successful');
-      print('✓ Token: ${result['token']}');
-      print('✓ User: ${result['user']}');
+      debugPrint('✓ Login successful');
+      debugPrint('✓ Token: ${result['token']}');
+      debugPrint('✓ User: ${result['user']}');
 
       // Determine user role from backend response
       final user = result['user'];
@@ -256,38 +256,39 @@ class _LoginPageState extends State<LoginPage> {
 
                             // Allow a frame to render so the processing dialog appears
                             await SchedulerBinding.instance.endOfFrame;
+                            if (!mounted) return;
                             final ok = await validateLogin(
                               emailController.text,
                               passwordController.text,
-                              context,
+                              context, // ignore: use_build_context_synchronously
                             );
 
                             // Hide processing modal
+                            if (!mounted) return;
+                            // ignore: use_build_context_synchronously
                             hideProcessingModal(context);
 
                             // Wait a frame so the dialog has time to dismiss cleanly
                             await SchedulerBinding.instance.endOfFrame;
+                            if (!mounted) return;
 
                             if (ok) {
                               // Direct navigation without status modal
-                              if (mounted) {
-                                Navigator.pushNamedAndRemoveUntil(
-                                  context,
-                                  '/user-home',
-                                  (route) => false,
-                                );
-                              }
+                              Navigator.pushNamedAndRemoveUntil(
+                                context, // ignore: use_build_context_synchronously
+                                '/user-home',
+                                (route) => false,
+                              );
                             } else {
                               // Show a lightweight SnackBar instead of a modal (optional)
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Login failed. Please check your credentials.',
-                                    ),
+                              // ignore: use_build_context_synchronously
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Login failed. Please check your credentials.',
                                   ),
-                                );
-                              }
+                                ),
+                              );
                             }
                           },
                         ),

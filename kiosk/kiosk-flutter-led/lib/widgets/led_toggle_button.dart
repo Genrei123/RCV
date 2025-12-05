@@ -8,12 +8,12 @@ class LedToggleButton extends StatelessWidget {
   final VoidCallback onPressed;
 
   const LedToggleButton({
-    Key? key,
+    super.key,
     required this.index,
     required this.isOn,
     required this.labelColor,
     required this.onPressed,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
