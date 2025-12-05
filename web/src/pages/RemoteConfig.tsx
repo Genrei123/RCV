@@ -302,10 +302,10 @@ export function RemoteConfig() {
                                                                 !(param.value as boolean)
                                                             )
                                                         }
-                                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 ${
+                                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
                                                             (param.value as boolean)
-                                                                ? "bg-red-600"
-                                                                : "bg-neutral-600"
+                                                                ? "bg-[#d64541] focus:ring-[#d64541]"
+                                                                : "bg-[#005440] focus:ring-[#005440]"
                                                         }`}
                                                     >
                                                         <span
