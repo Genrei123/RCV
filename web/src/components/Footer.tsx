@@ -1,9 +1,9 @@
 import { Link } from "react-router-dom";
-import { Facebook, Twitter, Linkedin} from "lucide-react";
+import { Facebook, Twitter, Linkedin } from "lucide-react";
 
 export function Footer() {
   return (
-    <footer className="app-bg-primary text-white border-t border-[color:var(--app-primary)] w-full overflow-x-hidden">
+    <footer className="app-bg-primary text-white w-full overflow-x-hidden relative z-10">
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
         <div className="w-full">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 justify-center justify-items-center text-center">
@@ -94,7 +94,8 @@ export function Footer() {
           {/* Copyright */}
           <div className="border-t border-[color:var(--app-primary)] mt-8 pt-6 text-center w-full">
             <p className="text-sm text-white/80">
-              &copy; {new Date().getFullYear()} Proof of Vision All rights reserved.
+              &copy; {new Date().getFullYear()} Proof of Vision All rights
+              reserved.
             </p>
           </div>
         </div>

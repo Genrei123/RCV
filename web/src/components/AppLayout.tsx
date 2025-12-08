@@ -56,26 +56,30 @@ export const AppLayout = ({
         </span>
       </header>
 
-      {/* Layout body */}
-      <div className="flex flex-1 min-w-0">
-        {/* Sidebar handles its own responsive rendering */}
-        <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      {/* BODY + FOOTER grouped together */}
+      <div className="flex flex-col flex-1 min-h-0">
 
-        {/* Main content area */}
-        <main className="flex-1 flex flex-col min-h-0 min-w-0">
-          <div
-            className={
-              fullBleed
-                ? "flex-1 min-w-0"
-                : "flex-1 min-w-0 bg-white rounded-none lg:rounded-lg lg:m-0"
-            }
-          >
-            {children}
-          </div>
-        </main>
+        {/* Sidebar + main content */}
+        <div className="flex flex-1 min-w-0">
+          <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+          <main className="flex-1 flex flex-col min-h-0 min-w-0">
+            <div
+              className={
+                fullBleed
+                  ? "flex-1 min-w-0"
+                  : "flex-1 min-w-0 bg-white rounded-none lg:rounded-lg lg:m-0"
+              }
+            >
+              {children}
+            </div>
+          </main>
+        </div>
+
+        {/* Footer sits at the bottom because flex-1 is above it */}
+        {!hideFooter && <Footer />}
+
       </div>
-      {/* Site-wide footer spans under sidebar and content */}
-      {!hideFooter && <Footer />}
     </div>
   );
 };
