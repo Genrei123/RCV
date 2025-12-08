@@ -28,7 +28,7 @@ export const AppLayout = ({
   }, [sidebarOpen]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-background overflow-x-hidden">
+    <div className="min-h-screen flex flex-col bg-white overflow-x-hidden">
       {/* Mobile top bar */}
       <header className="lg:hidden sticky top-0 z-40 flex items-center gap-3 px-4 py-3 bg-white border-b">
         <button
