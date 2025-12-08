@@ -20,6 +20,7 @@ import UserRouter from "./routes/v1/user";
 import ProductRouter from "./routes/v1/product";
 import CompanyRouter from "./routes/v1/company";
 import FirebaseRouter from "./routes/v1/firebase";
+import ContactRouter from "./routes/v1/contact";
 import AuditLogRouter from "./routes/v1/auditLog";
 import CertificateBlockchainRouter from "./routes/v1/certificateBlockchain";
 import AnalyticsRouter from "./routes/v1/analytics";
@@ -32,25 +33,35 @@ const setUpApp = async () => {
   const app = express();
 
   // Register middlewares on the app
-  app.use(cors({ origin: process.env.ALLOWED_ORIGINS || 'http://localhost:5173', credentials: true }));
+  app.use(
+    cors({
+      origin: process.env.ALLOWED_ORIGINS || "http://localhost:5173",
+      credentials: true,
+    })
+  );
   app.use(cookieParser(COOKIE_SECRET!));
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
   // Security Middlewares
-  app.use(helmet())
+  app.use(helmet());
   app.use(rateLimit);
 
   // API VERSIONING - Version 1.0
   app.use("/api/v1/auth", AuthRouter);
-  app.use("/api/v1/mobile", MobileRouter);  // Mobile-specific routes (no cookies)
+  app.use("/api/v1/mobile", MobileRouter); // Mobile-specific routes (no cookies)
   app.use("/api/v1/scan", verifyMobileUser, ScanRouter);
   app.use("/api/v1/user", verifyUser, UserRouter);
   app.use("/api/v1/product", verifyUser, ProductRouter);
   app.use("/api/v1/company", verifyUser, CompanyRouter);
   app.use("/api/v1/firebase", verifyUser, FirebaseRouter);
+  app.use("/api/v1/contact", ContactRouter);
   app.use("/api/v1/audit", verifyUser, AuditLogRouter);
-  app.use("/api/v1/certificate-blockchain", verifyUser, CertificateBlockchainRouter);
+  app.use(
+    "/api/v1/certificate-blockchain",
+    verifyUser,
+    CertificateBlockchainRouter
+  );
   app.use("/api/v1/analytics", verifyUser, AnalyticsRouter);
 
   // Serve static uploads (avatars, etc.)

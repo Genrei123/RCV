@@ -25,6 +25,8 @@ import { NotFoundPage } from "./pages/NotFoundPage";
 import { CompanyService } from "./services/companyService";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import About from "./pages/AboutUs";
+import Contact from "./pages/ContactUs";
 
 interface ProtectedRoutesProps {
   children: ReactNode;
@@ -311,6 +313,27 @@ function App() {
             </ProtectedRoutes>
           }
         />
+        <Route
+          path="/about"
+          element={
+            <ProtectedRoutes>
+              <AppLayout>
+                <About/>
+              </AppLayout>
+            </ProtectedRoutes>
+          }
+        />
+        <Route
+          path="/contact"
+          element={
+            <ProtectedRoutes>
+              <AppLayout>
+                <Contact/>
+              </AppLayout>
+            </ProtectedRoutes>
+          }
+        />
+
         {/* 404 Catch-all */}
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
