@@ -347,6 +347,7 @@ export function Dashboard(props: DashboardProps) {
   return (
     <>
       <PageContainer
+        className="overflow-hidden relative"
         title="Dashboard"
         description="Overview of system statistics and user management"
       >
