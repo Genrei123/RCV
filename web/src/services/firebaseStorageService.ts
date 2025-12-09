@@ -1,10 +1,81 @@
 import { storage } from '@/utils/firebase';
-import { ref, uploadBytes, getDownloadURL, deleteObject, getMetadata } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, deleteObject, getMetadata, listAll } from 'firebase/storage';
 
 /**
  * Service for managing file uploads to Firebase Storage
  */
 export class FirebaseStorageService {
+  /**
+   * Get PDF download URL by certificate ID
+   * 
+   * @param certificateId - The certificate ID (e.g., 'CERT-COMP-xxx' or 'CERT-PROD-xxx')
+   * @returns Download URL or null if not found
+   */
+  static async getPDFByCertificateId(certificateId: string): Promise<string | null> {
+    try {
+      // Determine the certificate type from the ID
+      let certType: 'company' | 'product';
+      if (certificateId.startsWith('CERT-COMP-')) {
+        certType = 'company';
+      } else if (certificateId.startsWith('CERT-PROD-')) {
+        certType = 'product';
+      } else {
+        console.error('❌ [Storage] Invalid certificate ID format:', certificateId);
+        return null;
+      }
+
+      const filePath = `certificates/${certType}/${certificateId}.pdf`;
+      console.log('🔍 [Storage] Looking for PDF at:', filePath);
+      
+      const storageRef = ref(storage, filePath);
+      const url = await getDownloadURL(storageRef);
+      
+      console.log('✅ [Storage] PDF found:', url);
+      return url;
+    } catch (error) {
+      console.error('❌ [Storage] PDF not found for certificate:', certificateId, error);
+      return null;
+    }
+  }
+
+  /**
+   * Upload PDF blob to Firebase Storage
+   * 
+   * @param pdf - The PDF blob to upload
+   * @param filePath - The full path in storage (e.g., 'certificates/CERT-COMP-123.pdf')
+   * @returns Download URL or null on failure
+   */
+  static async uploadPDFBlob(pdf: Blob, filePath: string): Promise<string | null> {
+    try {
+      // Check if storage bucket exists
+      if (!storage) {
+        console.error('❌ [Storage] Firebase Storage is not initialized.');
+        return null;
+      }
+
+      console.log('📤 [Storage] Uploading PDF to:', filePath);
+      
+      const storageRef = ref(storage, filePath);
+      
+      // Upload with proper metadata
+      const metadata = {
+        contentType: 'application/pdf',
+        cacheControl: 'public, max-age=31536000',
+        customMetadata: {
+          uploadedAt: new Date().toISOString(),
+        },
+      };
+      
+      const snapshot = await uploadBytes(storageRef, pdf, metadata);
+      const url = await getDownloadURL(snapshot.ref);
+      
+      console.log('✅ [Storage] PDF uploaded successfully:', url);
+      return url;
+    } catch (error) {
+      console.error('❌ [Storage] PDF upload failed:', error);
+      return null;
+    }
+  }
   /**
    * Upload profile avatar to Firebase Storage
    * 

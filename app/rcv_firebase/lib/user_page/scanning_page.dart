@@ -7,6 +7,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/ocr_service.dart';
 import '../services/firebase_storage_service.dart';
 // import '../widgets/gradient_header_app_bar.dart';
@@ -302,7 +303,81 @@ class _QRScannerPageState extends State<QRScannerPage> {
     }
   }
 
+  /// Check if QR data is a certificate and extract the certificate ID
+  String? _extractCertificateId(String qrData) {
+    try {
+      final Map<String, dynamic> data = jsonDecode(qrData);
+      // Check if this is a certificate QR code
+      if (data.containsKey('certificateId') && 
+          data.containsKey('type') &&
+          (data['type'] == 'company-certificate' || data['type'] == 'product-certificate')) {
+        return data['certificateId'] as String?;
+      }
+    } catch (e) {
+      // Not JSON or doesn't have certificate fields
+    }
+    return null;
+  }
+
+  /// Open the original PDF certificate in browser
+  Future<void> _openCertificatePDF(String certificateId) async {
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(
+            color: Color(0xFF005440),
+          ),
+        ),
+      );
+
+      // Fetch PDF URL from API
+      final response = await ApiService.getCertificatePDFUrl(certificateId);
+      
+      if (!mounted) return;
+      Navigator.of(context).pop(); // Close loading
+
+      if (response['success'] == true && response['certificate'] != null) {
+        final pdfUrl = response['certificate']['pdfUrl'] as String?;
+        if (pdfUrl != null && pdfUrl.isNotEmpty) {
+          // Open PDF in browser
+          final uri = Uri.parse(pdfUrl);
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          } else {
+            _showErrorSnackBar('Could not open PDF');
+          }
+        } else {
+          _showErrorSnackBar('PDF URL not available');
+        }
+      } else {
+        _showErrorSnackBar(response['message'] ?? 'Failed to get PDF');
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop(); // Close loading if still showing
+        _showErrorSnackBar('Error: $e');
+      }
+    }
+  }
+
+  void _showErrorSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
   void _showQRCodeModal(String qrData) {
+    final certificateId = _extractCertificateId(qrData);
+    final isCertificate = certificateId != null;
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -312,7 +387,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
           ),
           child: Container(
             constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.7,
+              maxHeight: MediaQuery.of(context).size.height * 0.8,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -321,7 +396,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF005440),
+                    color: isCertificate ? const Color(0xFF005440) : const Color(0xFF005440),
                     borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(20),
                       topRight: Radius.circular(20),
@@ -329,16 +404,16 @@ class _QRScannerPageState extends State<QRScannerPage> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(
-                        Icons.qr_code_2,
+                      Icon(
+                        isCertificate ? Icons.verified : Icons.qr_code_2,
                         color: Colors.white,
                         size: 28,
                       ),
                       const SizedBox(width: 12),
-                      const Expanded(
+                      Expanded(
                         child: Text(
-                          'QR Code Scanned',
-                          style: TextStyle(
+                          isCertificate ? 'Certificate Scanned' : 'QR Code Scanned',
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -359,6 +434,56 @@ class _QRScannerPageState extends State<QRScannerPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Certificate badge if it's a certificate
+                        if (isCertificate) ...[
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF005440).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: const Color(0xFF005440),
+                                width: 2,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.workspace_premium,
+                                  color: Color(0xFF005440),
+                                  size: 40,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'RCV Certificate',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF005440),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        certificateId,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.grey[600],
+                                          fontFamily: 'monospace',
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                        
                         const Text(
                           'Scanned Content:',
                           style: TextStyle(
@@ -370,6 +495,41 @@ class _QRScannerPageState extends State<QRScannerPage> {
                         const SizedBox(height: 12),
                         _buildFormattedContent(qrData),
                         const SizedBox(height: 20),
+                        
+                        // View Original PDF button for certificates
+                        if (isCertificate) ...[
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                                _openCertificatePDF(certificateId);
+                              },
+                              icon: const Icon(Icons.picture_as_pdf, size: 20),
+                              label: const Text('View Original PDF'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF00796B),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Compare the printed certificate with the original electronic version',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                              fontStyle: FontStyle.italic,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                        
                         Row(
                           children: [
                             Expanded(

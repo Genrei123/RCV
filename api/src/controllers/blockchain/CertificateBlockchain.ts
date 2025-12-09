@@ -348,3 +348,68 @@ export const calculatePDFHash = async (
         next(error);
     }
 };
+
+/**
+ * Get certificate PDF URL from Firebase Storage
+ * GET /api/v1/certificate-blockchain/pdf/:certificateId
+ * 
+ * This endpoint returns the Firebase Storage URL for a certificate PDF
+ * so mobile apps can open/view the original electronic certificate
+ */
+export const getCertificatePDFUrl = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+    try {
+        const { certificateId } = req.params;
+        const blockchain = getCertificateBlockchain();
+        
+        // First verify the certificate exists in blockchain
+        const block = blockchain.findCertificateByCertificateId(certificateId);
+
+        if (!block) {
+            throw new CustomError(404, 'Certificate not found', {
+                success: false,
+                message: `Certificate ${certificateId} not found in blockchain`
+            });
+        }
+
+        // Determine certificate type and construct Firebase Storage path
+        let certType: 'company' | 'product';
+        if (certificateId.startsWith('CERT-COMP-')) {
+            certType = 'company';
+        } else if (certificateId.startsWith('CERT-PROD-')) {
+            certType = 'product';
+        } else {
+            throw new CustomError(400, 'Invalid certificate ID format', {
+                success: false,
+                message: 'Certificate ID must start with CERT-COMP- or CERT-PROD-'
+            });
+        }
+
+        // Construct the Firebase Storage URL
+        // Format: https://firebasestorage.googleapis.com/v0/b/{bucket}/o/{path}?alt=media
+        const bucketName = process.env.FIREBASE_STORAGE_BUCKET || 'rcv-firebase-dev.firebasestorage.app';
+        const filePath = `certificates/${certType}/${certificateId}.pdf`;
+        const encodedPath = encodeURIComponent(filePath);
+        const pdfUrl = `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodedPath}?alt=media`;
+
+        res.status(200).json({
+            success: true,
+            message: 'Certificate PDF URL retrieved',
+            certificate: {
+                certificateId: block.data.certificateId,
+                certificateType: block.data.certificateType,
+                entityName: block.data.entityName,
+                issuedDate: block.data.issuedDate,
+                pdfHash: block.data.pdfHash,
+                pdfUrl: pdfUrl,
+                blockIndex: block.index,
+                isBlockValid: block.isValid()
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
