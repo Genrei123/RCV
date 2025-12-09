@@ -662,7 +662,14 @@ export function Profile({
                   variant="outline"
                   onClick={async () => {
                     try {
-                      toast.info("Preparing Excel export…");
+                      const progressDelay = 800; // Show progress alert only if export takes longer than 800ms
+                      let progressToastId: string | number | null = null;
+
+                      // Set a timer to show progress alert if export is taking too long
+                      const progressTimer = setTimeout(() => {
+                        progressToastId = toast.info("Preparing Excel export…");
+                      }, progressDelay);
+
                       const all = [...sortedFullLogs];
 
                       // Create workbook and worksheet with exceljs
@@ -749,6 +756,15 @@ export function Profile({
                       a.click();
                       document.body.removeChild(a);
                       URL.revokeObjectURL(url);
+
+                      // Clear the progress timer since export completed
+                      clearTimeout(progressTimer);
+
+                      // Dismiss progress toast if it was shown
+                      if (progressToastId !== null) {
+                        toast.dismiss(progressToastId);
+                      }
+
                       toast.success("Excel exported");
                     } catch (err) {
                       console.error(err);
