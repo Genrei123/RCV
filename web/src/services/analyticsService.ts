@@ -49,8 +49,7 @@ export interface APIResponse {
   success: boolean;
 }
 
-// Analytics Service Configuration
-const ANALYTICS_API_BASE_URL = import.meta.env.VITE_ANALYTICS_API_BASE_URL;
+import { apiClient } from "./axiosConfig";
 
 class AnalyticsService {
   /**
@@ -58,29 +57,54 @@ class AnalyticsService {
    * @param reportData - The report data to analyze
    * @returns Promise with clustering analysis results
    */
-  async runDBSCANAnalysis(reportData: any): Promise<APIResponse> {
+  async runDBSCANAnalysis(params?: {
+    maxDistance?: number;
+    minPoints?: number;
+    agentId?: string;
+  }): Promise<APIResponse> {
     try {
-      const response = await fetch(`${ANALYTICS_API_BASE_URL}/v1/analyze`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const { data } = await apiClient.get(`/analytics/analyze`, {
+        params: {
+          maxDistance: params?.maxDistance ?? 1000,
+          minPoints: params?.minPoints ?? 3,
+          agentId: params?.agentId,
         },
-        body: JSON.stringify(reportData)
       });
+      // Backend returns: { success, message, data: results, parameters }
+      // Adapt to the frontend's APIResponse shape where results is under `results`
+      const backend = data as any;
+      const results = backend?.data ?? backend?.results ?? null;
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      const adapted: APIResponse = {
+        success: Boolean(backend?.success),
+        message: backend?.message ?? "",
+        metadata: {
+          // Backend doesn't provide processing time; use now
+          processing_time: new Date().toISOString(),
+          total_reports_processed: results?.summary?.total_points ?? 0,
+          total_valid_coordinates: results?.summary?.total_points ?? 0,
+        },
+        results: results ?? {
+          clustering_params: { eps_km: 0, min_samples: 0 },
+          clusters: [],
+          noise_points: [],
+          summary: {
+            n_clusters: 0,
+            n_noise_points: 0,
+            noise_percentage: 0,
+            total_points: 0,
+          },
+          timestamp: new Date().toISOString(),
+        },
+      };
 
-      const data: APIResponse = await response.json();
-      return data;
-      
-    } catch (error) {
-      // Re-throw with more context
-      if (error instanceof Error) {
-        throw new Error(`DBSCAN Analysis failed: ${error.message}`);
-      }
-      throw new Error('DBSCAN Analysis failed: Unknown error occurred');
+      return adapted;
+    } catch (error: any) {
+      const msg =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Unknown error occurred";
+      throw new Error(`DBSCAN Analysis failed: ${msg}`);
     }
   }
 
@@ -88,22 +112,14 @@ class AnalyticsService {
    * Get API health status
    * @returns Promise with API health check result
    */
-  async checkAPIHealth(): Promise<{ status: string; message: string }> {
+  async checkAPIHealth(): Promise<{ status: string; message?: string }> {
     try {
-      const response = await fetch(`${ANALYTICS_API_BASE_URL}/health`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Health check failed with status: ${response.status}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      throw new Error(`API Health check failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const { data } = await apiClient.get(`/analytics/health`);
+      return data;
+    } catch (error: any) {
+      const msg =
+        error?.response?.data?.message || error?.message || "Unknown error";
+      throw new Error(`API Health check failed: ${msg}`);
     }
   }
 }
