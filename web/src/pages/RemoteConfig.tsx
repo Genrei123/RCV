@@ -162,7 +162,7 @@ export function RemoteConfig() {
                                     <button
                                         onClick={handlePublish}
                                         disabled={publishing}
-                                        className="flex items-center gap-2 px-4 py-2 bg-neutral-600 text-white rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="flex items-center gap-2 px-4 py-2 app-bg-primary text-white rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         {publishing ? (
                                             <div className="animate-spin h-4 w-4 border-4 border-white border-t-transparent rounded-full"></div>
@@ -247,7 +247,7 @@ export function RemoteConfig() {
                                         key={param.key}
                                         className={`p-6 ${
                                             isChanged
-                                                ? "bg-orange-50 border-l-4 border-orange-400"
+                                                ? "app-bg-secondary-soft"
                                                 : ""
                                         }`}
                                     >
@@ -258,7 +258,7 @@ export function RemoteConfig() {
                                                         {getFeatureName(param.key)}
                                                     </h3>
                                                     {isChanged && (
-                                                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800">
+                                                        <span className="px-2 py-1 text-xs font-medium rounded-full app-bg-primary" style={{ color: 'var(--app-white)' }}>
                                                             Unsaved
                                                         </span>
                                                     )}
@@ -276,8 +276,8 @@ export function RemoteConfig() {
                                                                 param.type === "boolean" &&
                                                                 typeof param.value === "boolean"
                                                                     ? param.value
-                                                                        ? "text-red-600 font-medium"
-                                                                        : "text-neutral-600 font-medium"
+                                                                        ? "app-text-error font-medium"
+                                                                        : "app-text-success font-medium"
                                                                     : "text-neutral-600 font-medium"
                                                             }
                                                         >
@@ -302,11 +302,16 @@ export function RemoteConfig() {
                                                                 !(param.value as boolean)
                                                             )
                                                         }
-                                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 ${
+                                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
                                                             (param.value as boolean)
-                                                                ? "bg-red-600"
-                                                                : "bg-neutral-600"
+                                                                ? "app-bg-error"
+                                                                : "app-bg-primary"
                                                         }`}
+                                                        style={{
+                                                            "--tw-ring-color": param.value as boolean 
+                                                                ? "var(--app-error)" 
+                                                                : "var(--app-primary)"
+                                                        } as React.CSSProperties}
                                                     >
                                                         <span
                                                             className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
