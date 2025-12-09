@@ -1,5 +1,5 @@
 import { storage } from '@/utils/firebase';
-import { ref, uploadBytes, getDownloadURL, deleteObject, getMetadata, listAll } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, deleteObject, getMetadata } from 'firebase/storage';
 
 /**
  * Service for managing file uploads to Firebase Storage
