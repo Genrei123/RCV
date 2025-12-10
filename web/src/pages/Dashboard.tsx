@@ -54,7 +54,7 @@ export function Dashboard(props: DashboardProps) {
   const [sortKey, setSortKey] = useState<"lastName" | "email" | "status">(
     "lastName"
   );
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [setCurrentUser] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
