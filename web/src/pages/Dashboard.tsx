@@ -2,6 +2,7 @@ import { DataTable, type Column } from "@/components/DataTable";
 import { PageContainer } from "@/components/PageContainer";
 import { useState, useEffect } from "react";
 import type { User } from "@/typeorm/entities/user.entity";
+import { truncateText } from "@/utils/textTruncate";
 import { Button } from "@/components/ui/button";
 import { AuthService } from "@/services/authService";
 import {
@@ -97,21 +98,22 @@ export function Dashboard(props: DashboardProps) {
     {
       key: "firstName",
       label: "First Name",
+      render: (value: string) => (
+        <span title={value}>{truncateText(value)}</span>
+      ),
     },
     {
       key: "lastName",
       label: "Last Name",
+      render: (value: string) => (
+        <span title={value}>{truncateText(value)}</span>
+      ),
     },
     {
       key: "email",
       label: "Email",
       render: (value: string) => (
-        <span
-          className="block max-w-[180px] sm:max-w-none truncate"
-          title={value}
-        >
-          {value}
-        </span>
+        <span title={value}>{truncateText(value)}</span>
       ),
     },
     {

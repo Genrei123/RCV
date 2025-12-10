@@ -4,6 +4,7 @@ import { PageContainer } from "@/components/PageContainer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataTable, type Column } from "@/components/DataTable";
+import { truncateText } from "@/utils/textTruncate";
 import {
   Pagination,
   PaginationContent,
@@ -118,9 +119,27 @@ export function Products(props: ProductsProps) {
 
   // Column definitions for list view table
   const columns: Column[] = [
-    { key: "brandName", label: "Brand Name" },
-    { key: "productName", label: "Product Name" },
-    { key: "lotNumber", label: "Lot Number" },
+    {
+      key: "brandName",
+      label: "Brand Name",
+      render: (value: string) => (
+        <span title={value}>{truncateText(value)}</span>
+      ),
+    },
+    {
+      key: "productName",
+      label: "Product Name",
+      render: (value: string) => (
+        <span title={value}>{truncateText(value)}</span>
+      ),
+    },
+    {
+      key: "lotNumber",
+      label: "Lot Number",
+      render: (value: string) => (
+        <span title={value}>{truncateText(value)}</span>
+      ),
+    },
     {
       key: "expirationDate",
       label: "Expiration Date",
@@ -134,7 +153,10 @@ export function Products(props: ProductsProps) {
     {
       key: "company",
       label: "Company",
-      render: (value: any) => value?.name || "N/A",
+      render: (value: any) => {
+        const companyName = value?.name || "N/A";
+        return <span title={companyName}>{truncateText(companyName)}</span>;
+      },
     },
     {
       key: "actions",

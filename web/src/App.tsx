@@ -21,6 +21,8 @@ import { ProductService } from "./services/productService";
 import { AuthPage } from "./pages/AuthPage";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
 import { PendingApprovalPage } from "./pages/PendingApprovalPage";
+import { PrivacyPolicy } from "./pages/PrivacyPolicy";
+import { TermsOfService } from "./pages/TermsOfService";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { CompanyService } from "./services/companyService";
 import { ToastContainer } from "react-toastify";
@@ -54,6 +56,11 @@ const PublicRoute = ({ children }: ProtectedRoutesProps) => {
     );
   }
 
+  return <>{children}</>;
+};
+
+const AccessibleRoute = ({ children }: ProtectedRoutesProps) => {
+  // Routes that are accessible to both logged-in and non-logged-in users
   return <>{children}</>;
 };
 
@@ -174,6 +181,22 @@ function App() {
             <PublicRoute>
               <ForgotPasswordPage />
             </PublicRoute>
+          }
+        />
+        <Route
+          path="/privacy"
+          element={
+            <AccessibleRoute>
+              <PrivacyPolicy />
+            </AccessibleRoute>
+          }
+        />
+        <Route
+          path="/terms"
+          element={
+            <AccessibleRoute>
+              <TermsOfService />
+            </AccessibleRoute>
           }
         />
         <Route path="/pending-approval" element={<PendingApprovalPage />} />
