@@ -255,7 +255,6 @@ export function Dashboard(props: DashboardProps) {
     (Array.isArray(u.data) || typeof u.pagination !== "undefined");
 
   // Prefer local fetched users first, then parent paginated payload, then legacy parent array
-  // Filter out the current user from the list
   const usersArray: User[] = (() => {
     let allUsers: User[] = [];
 
@@ -267,15 +266,9 @@ export function Dashboard(props: DashboardProps) {
       allUsers = props.users as User[];
     }
 
-    // Filter out the current user
-    if (currentUser && currentUser._id) {
-      return allUsers.filter((user) => user._id !== currentUser._id);
-    }
-
     return allUsers;
   })();
 
-  // Apply ascending sorting by selected key
   const sortedUsers = [...usersArray].sort((a, b) => {
     let av = "";
     let bv = "";
@@ -304,6 +297,8 @@ export function Dashboard(props: DashboardProps) {
   })();
 
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+
+  const paginatedDisplayData = sortedUsers;
 
   // Fetch a page from server
   const fetchPage = async (page: number) => {
@@ -430,7 +425,7 @@ export function Dashboard(props: DashboardProps) {
           <DataTable
             title="User Accounts"
             columns={columns}
-            data={sortedUsers}
+            data={paginatedDisplayData}
             searchPlaceholder="Search users..."
             onSearch={(query) => onSearch(query)}
             loading={loading}
@@ -463,7 +458,7 @@ export function Dashboard(props: DashboardProps) {
         </div>
         <div className="mt-4 flex items-center justify-between w-full">
           <div className="text-sm text-muted-foreground">
-            Showing {sortedUsers.length} of {totalItems} users • Page{" "}
+            Showing {paginatedDisplayData.length} of {totalItems} users • Page{" "}
             {currentPage} of {totalPages}
           </div>
 
