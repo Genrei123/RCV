@@ -290,7 +290,7 @@ export function AuthPage() {
             .trim(),
         email: registerData.email,
         password: registerData.password,
-        phoneNumber: registerData.phoneNumber,
+        phoneNumber: formatPhoneNumberForDatabase(registerData.phoneNumber),
         location: registerData.location,
         dateOfBirth: registerData.dateOfBirth,
         badgeId: registerData.badgeId || "",
