@@ -165,17 +165,31 @@ export const createProduct = async (
     // Save product
     const savedProduct = await ProductRepo.save(validatedProduct.data);
 
-    // Clear products cache when new product is created
-    try {
-      await redisService.invalidateProductsCache();
-    } catch (redisError) {
-      console.warn("Failed to clear products cache:", redisError instanceof Error ? redisError.message : 'Unknown error');
-    }
-
     console.log("Product created successfully:", savedProduct._id);
 
-    // Log product creation
-    await AuditLogService.createLog({
+    // ✅ OPTIMIZATION 1: Send response IMMEDIATELY after save
+    // Don't wait for cache clearing and audit log
+    res.status(201).json({
+      success: true,
+      message: "Product successfully registered",
+      product: savedProduct,
+      registeredBy: {
+        _id: currentUser._id,
+        name: `${currentUser.firstName} ${currentUser.lastName}`,
+        email: currentUser.email,
+      },
+    });
+
+    // ✅ OPTIMIZATION 2: Do cache clearing and audit logging AFTER response
+    // These run in the background and don't block the response
+    
+    // Clear products cache (non-blocking)
+    redisService.invalidateProductsCache().catch((redisError) => {
+      console.warn("Failed to clear products cache:", redisError instanceof Error ? redisError.message : 'Unknown error');
+    });
+
+    // Log product creation (non-blocking)
+    AuditLogService.createLog({
       action: `Created product: ${savedProduct.productName} (${savedProduct.CFPRNumber})`,
       actionType: "CREATE_PRODUCT",
       userId: currentUser._id,
@@ -190,18 +204,10 @@ export const createProduct = async (
         brandName: savedProduct.brandName,
       },
       req,
+    }).catch((auditError) => {
+      console.error("Failed to create audit log:", auditError);
     });
 
-    return res.status(201).json({
-      success: true,
-      message: "Product successfully registered",
-      product: savedProduct,
-      registeredBy: {
-        _id: currentUser._id,
-        name: `${currentUser.firstName} ${currentUser.lastName}`,
-        email: currentUser.email,
-      },
-    });
   } catch (error) {
     console.error("Error creating product:", error);
     return next(new CustomError(500, "Failed to create product"));
