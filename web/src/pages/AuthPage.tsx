@@ -130,8 +130,14 @@ export function AuthPage() {
   };
 
   const validatePhoneNumber = (phone: string): boolean => {
-    const phoneRegex = /^[\d\s\-\+\(\)]+$/;
-    return phoneRegex.test(phone) && phone.replace(/\D/g, "").length >= 10;
+    // Accept only 10 digits (without the +63 prefix)
+    return /^\d{10}$/.test(phone);
+  };
+
+  const formatPhoneNumberForDatabase = (phone: string): string => {
+    // Remove any non-digits and ensure it's 10 digits, then add +63 prefix
+    const digits = phone.replace(/\D/g, "").slice(-10);
+    return `+63${digits}`;
   };
 
   const validateRegisterForm = (): boolean => {
@@ -767,26 +773,42 @@ export function AuthPage() {
                   <label className="block text-sm font-medium text-neutral-700 mb-2">
                     Phone Number *
                   </label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5" />
-                    <Input
-                      type="tel"
-                      placeholder="+1 (555) 123-4567"
-                      className={`pl-10 h-11 ${
-                        errors.phoneNumber ? "border-error-500" : ""
-                      }`}
-                      value={registerData.phoneNumber}
-                      onChange={(e) =>
-                        setRegisterData({
-                          ...registerData,
-                          phoneNumber: e.target.value,
-                        })
-                      }
-                      required
-                    />
+                  <div className="flex gap-0 rounded-lg">
+                    {/* Country Code Prefix with Icon */}
+                    <div className="flex items-center gap-2 bg-neutral-50 px-4 py-2.5 border-r border-neutral-300 pr-3 pointer-events-none">
+                      <Phone className="text-neutral-500 w-5 h-5" />
+                      <span className="text-neutral-700 whitespace-nowrap">
+                        +63
+                      </span>
+                    </div>
+                    {/* Phone Input */}
+                    <div className="flex-1 relative">
+                      <Input
+                        type="tel"
+                        placeholder="99-999-9999"
+                        className={`border-0 h-11 w-full px-3 py-2.5 placeholder-neutral-400 focus:outline-none transition-colors ${
+                          errors.phoneNumber
+                            ? "bg-error-50"
+                            : ""
+                        }`}
+                        value={registerData.phoneNumber}
+                        onChange={(e) => {
+                          // Only allow digits and limit to 10 characters
+                          const value = e.target.value
+                            .replace(/\D/g, "")
+                            .slice(0, 10);
+                          setRegisterData({
+                            ...registerData,
+                            phoneNumber: value,
+                          });
+                        }}
+                        maxLength={10}
+                        required
+                      />
+                    </div>
                   </div>
                   {errors.phoneNumber && (
-                    <p className="text-error-500 text-xs mt-1">
+                    <p className="text-error-500 text-xs mt-2">
                       {errors.phoneNumber}
                     </p>
                   )}
