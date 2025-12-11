@@ -35,7 +35,7 @@ const setUpApp = async () => {
   // Register middlewares on the app
   app.use(
     cors({
-      origin: process.env.ALLOWED_ORIGINS || "http://localhost:5173",
+      origin: [process.env.ALLOWED_ORIGINS || "http://localhost:5173", "https://firebasestorage.googleapis.com/"],
       credentials: true,
     })
   );

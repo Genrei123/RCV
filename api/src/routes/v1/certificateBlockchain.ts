@@ -7,7 +7,8 @@ import {
     getCertificateBlockchainStats,
     validateCertificateBlockchain,
     getCertificatesList,
-    calculatePDFHash
+    calculatePDFHash,
+    getCertificatePDFUrl
 } from '../../controllers/blockchain/CertificateBlockchain';
 
 const router = Router();
@@ -22,6 +23,9 @@ router.post('/verify', verifyCertificatePDF);
 
 // Get certificate by ID
 router.get('/certificate/:certificateId', getCertificateById);
+
+// Get certificate PDF URL from Firebase Storage (for QR code scanning)
+router.get('/pdf/:certificateId', getCertificatePDFUrl);
 
 // Get certificates by entity (company or product)
 router.get('/entity/:entityId', getCertificatesByEntity);

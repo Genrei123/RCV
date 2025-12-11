@@ -5,6 +5,7 @@ import type { Company } from '@/typeorm/entities/company.entity';
 import type { Product } from '@/typeorm/entities/product.entity';
 import CryptoJS from 'crypto-js';
 import { apiClient } from './axiosConfig';
+import { FirebaseStorageService } from './firebaseStorageService';
 
 export class PDFGenerationService {
   /**
@@ -209,7 +210,7 @@ export class PDFGenerationService {
     pdf.text('This certificate is valid and issued under the authority of RCV', pageWidth / 2, footerY + 2, { align: 'center' });
     pdf.text(`© ${new Date().getFullYear()} RCV. All rights reserved. | Document ID: ${company._id}`, pageWidth / 2, footerY + 4, { align: 'center' });
 
-    // Return PDF as blob
+    // Return PDF as blob (Firebase upload is handled in generateAndDownloadCompanyCertificate)
     return pdf.output('blob');
   }
 
@@ -241,6 +242,18 @@ export class PDFGenerationService {
       // Calculate PDF hash
       const pdfHash = await this.calculatePDFHash(pdfBlob);
       
+      // Upload PDF to Firebase Storage with certificate ID as filename
+      const firebaseUrl = await FirebaseStorageService.uploadPDFBlob(
+        pdfBlob,
+        `certificates/company/${certificateId}.pdf`
+      );
+      
+      if (firebaseUrl) {
+        console.log(`📤 PDF uploaded to Firebase: ${firebaseUrl}`);
+      } else {
+        console.warn('⚠️ Failed to upload PDF to Firebase Storage');
+      }
+      
       // Add to blockchain
       const blockchainResult = await this.addToBlockchain(
         certificateId,
@@ -260,7 +273,7 @@ export class PDFGenerationService {
       }
       
       // Download PDF
-      const filename = `Company_Certificate_${company.name.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.pdf`;
+      const filename = `${certificateId}.pdf`;
       this.downloadPDF(pdfBlob, filename);
       return true;
     } catch (error) {
@@ -443,6 +456,18 @@ export class PDFGenerationService {
       // Calculate PDF hash
       const pdfHash = await this.calculatePDFHash(pdfBlob);
       
+      // Upload PDF to Firebase Storage with certificate ID as filename
+      const firebaseUrl = await FirebaseStorageService.uploadPDFBlob(
+        pdfBlob,
+        `certificates/product/${certificateId}.pdf`
+      );
+      
+      if (firebaseUrl) {
+        console.log(`📤 PDF uploaded to Firebase: ${firebaseUrl}`);
+      } else {
+        console.warn('⚠️ Failed to upload PDF to Firebase Storage');
+      }
+      
       // Get company name for blockchain
       const companyName = typeof product.company === 'object' ? product.company.name : 'Unknown Company';
       
@@ -467,7 +492,7 @@ export class PDFGenerationService {
       }
       
       // Download PDF
-      const filename = `Product_Certificate_${product.productName.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.pdf`;
+      const filename = `${certificateId}.pdf`;
       this.downloadPDF(pdfBlob, filename);
       return true;
     } catch (error) {
