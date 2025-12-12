@@ -15,6 +15,11 @@ import { useState, useEffect, useRef } from "react";
 import type { ProfileUser } from "@/pages/Profile";
 import { AvatarCropDialog } from "@/components/AvatarCropDialog";
 import { FirebaseStorageService } from "@/services/firebaseStorageService";
+import {
+  validatePhilippinePhoneNumber,
+  formatPhoneNumberForDatabase,
+  extractPhoneNumberDigits,
+} from "@/utils/phoneValidation";
 
 interface EditProfileModalProps {
   isOpen: boolean;
@@ -83,21 +88,17 @@ export function EditProfileModal({
     ) {
       newErrors.phoneNumber = "Phone number must be 10 digits";
     }
+    if (formData.phoneNumber && formData.phoneNumber.length > 0) {
+      const phoneValidation = validatePhilippinePhoneNumber(
+        formData.phoneNumber
+      );
+      if (!phoneValidation.isValid) {
+        newErrors.phoneNumber = phoneValidation.error || "Invalid phone number";
+      }
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
-
-  const formatPhoneNumberForDatabase = (phone: string): string => {
-    // Remove any non-digits and ensure it's 10 digits, then add +63 prefix
-    const digits = phone.replace(/\D/g, "").slice(-10);
-    return digits.length === 10 ? `+63${digits}` : phone;
-  };
-
-  const extractPhoneNumberDigits = (phone: string): string => {
-    // Extract only 10 digits from a phone number (remove +63 prefix if present)
-    const digits = phone.replace(/\D/g, "").slice(-10);
-    return digits;
   };
 
   // Avatar handlers
@@ -405,7 +406,7 @@ export function EditProfileModal({
                     <div className="flex-1 relative">
                       <Input
                         type="tel"
-                        placeholder="9991112222"
+                        placeholder="99-999-9999"
                         className={`border-0 h-9.5 w-full px-3 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:ring-offset-0 transition-all ${
                           errors.phoneNumber ? "bg-red-50" : ""
                         }`}

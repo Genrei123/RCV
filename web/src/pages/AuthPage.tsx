@@ -28,6 +28,10 @@ import {
 } from "lucide-react";
 import { AuthService } from "@/services/authService";
 import type { User } from "@/typeorm/entities/user.entity";
+import {
+  validatePhilippinePhoneNumber,
+  formatPhoneNumberForDatabase,
+} from "@/utils/phoneValidation";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { CookieManager } from "@/utils/cookies";
@@ -129,16 +133,7 @@ export function AuthPage() {
     return passwordRegex.test(password);
   };
 
-  const validatePhoneNumber = (phone: string): boolean => {
-    // Accept only 9 digits (without the +639 prefix)
-    return /^\d{9}$/.test(phone);
-  };
 
-  const formatPhoneNumberForDatabase = (phone: string): string => {
-    // Remove any non-digits and ensure it's 9 digits, then add +639 prefix
-    const digits = phone.replace(/\D/g, "").slice(-9);
-    return `+639${digits}`;
-  };
 
   const validateRegisterForm = (): boolean => {
     const newErrors: Partial<Record<keyof RegisterFormData, string>> = {};
@@ -166,8 +161,16 @@ export function AuthPage() {
       newErrors.confirmPassword = "Passwords do not match";
     }
 
-    if (!validatePhoneNumber(registerData.phoneNumber)) {
-      newErrors.phoneNumber = "Please enter a valid phone number";
+    if (registerData.phoneNumber) {
+      const phoneValidation = validatePhilippinePhoneNumber(
+        registerData.phoneNumber
+      );
+      if (!phoneValidation.isValid) {
+        newErrors.phoneNumber =
+          phoneValidation.error || "Please enter a valid phone number";
+      }
+    } else {
+      newErrors.phoneNumber = "Phone number is required";
     }
 
     if (!registerData.location.trim()) {
@@ -778,29 +781,29 @@ export function AuthPage() {
                     <div className="flex items-center gap-2 bg-neutral-50 px-4 py-2.5 border-r border-neutral-300 pr-3 pointer-events-none">
                       <Phone className="text-neutral-500 w-5 h-5" />
                       <span className="text-neutral-700 whitespace-nowrap">
-                        +639
+                        +63
                       </span>
                     </div>
                     {/* Phone Input */}
                     <div className="flex-1 relative">
                       <Input
                         type="tel"
-                        placeholder="999-999-999"
+                        placeholder="99-999-9999"
                         className={`border-0 h-11 w-full px-3 py-2.5 placeholder-neutral-400 focus:outline-none transition-colors ${
                           errors.phoneNumber ? "bg-error-50" : ""
                         }`}
                         value={registerData.phoneNumber}
                         onChange={(e) => {
-                          // Only allow digits and limit to 9 characters
+                          // Only allow digits and limit to 10 characters
                           const value = e.target.value
                             .replace(/\D/g, "")
-                            .slice(0, 9);
+                            .slice(0, 10);
                           setRegisterData({
                             ...registerData,
                             phoneNumber: value,
                           });
                         }}
-                        maxLength={9}
+                        maxLength={10}
                         required
                       />
                     </div>
