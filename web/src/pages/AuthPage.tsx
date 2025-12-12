@@ -130,14 +130,14 @@ export function AuthPage() {
   };
 
   const validatePhoneNumber = (phone: string): boolean => {
-    // Accept only 10 digits (without the +63 prefix)
-    return /^\d{10}$/.test(phone);
+    // Accept only 9 digits (without the +639 prefix)
+    return /^\d{9}$/.test(phone);
   };
 
   const formatPhoneNumberForDatabase = (phone: string): string => {
-    // Remove any non-digits and ensure it's 10 digits, then add +63 prefix
-    const digits = phone.replace(/\D/g, "").slice(-10);
-    return `+63${digits}`;
+    // Remove any non-digits and ensure it's 9 digits, then add +639 prefix
+    const digits = phone.replace(/\D/g, "").slice(-9);
+    return `+639${digits}`;
   };
 
   const validateRegisterForm = (): boolean => {
@@ -778,31 +778,29 @@ export function AuthPage() {
                     <div className="flex items-center gap-2 bg-neutral-50 px-4 py-2.5 border-r border-neutral-300 pr-3 pointer-events-none">
                       <Phone className="text-neutral-500 w-5 h-5" />
                       <span className="text-neutral-700 whitespace-nowrap">
-                        +63
+                        +639
                       </span>
                     </div>
                     {/* Phone Input */}
                     <div className="flex-1 relative">
                       <Input
                         type="tel"
-                        placeholder="99-999-9999"
+                        placeholder="999-999-999"
                         className={`border-0 h-11 w-full px-3 py-2.5 placeholder-neutral-400 focus:outline-none transition-colors ${
-                          errors.phoneNumber
-                            ? "bg-error-50"
-                            : ""
+                          errors.phoneNumber ? "bg-error-50" : ""
                         }`}
                         value={registerData.phoneNumber}
                         onChange={(e) => {
-                          // Only allow digits and limit to 10 characters
+                          // Only allow digits and limit to 9 characters
                           const value = e.target.value
                             .replace(/\D/g, "")
-                            .slice(0, 10);
+                            .slice(0, 9);
                           setRegisterData({
                             ...registerData,
                             phoneNumber: value,
                           });
                         }}
-                        maxLength={10}
+                        maxLength={9}
                         required
                       />
                     </div>
