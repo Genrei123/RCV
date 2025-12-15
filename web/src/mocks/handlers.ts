@@ -1,3 +1,7 @@
+// @ts-nocheck
+// Dev-only MSW mock handlers. Type checking is disabled and this folder is
+// excluded from the app tsconfig so CI/production builds won't fail if `msw`
+// isn't installed as a dependency.
 import { rest } from 'msw';
 
 // Sample in-memory store for mocked data

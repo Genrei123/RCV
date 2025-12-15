@@ -10,7 +10,12 @@ import { BrowserRouter } from "react-router-dom";
 if (import.meta.env.DEV && import.meta.env.VITE_USE_MOCK === 'true') {
   (async () => {
     try {
-      const { worker } = await import("./mocks/browser");
+      // Use a runtime-only dynamic import so the bundler doesn't try to
+      // resolve/mock modules during CI/production builds where `msw` is
+      // not installed. The `@vite-ignore` comment tells Vite not to pre-bundle.
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      const { worker } = await import(/* @vite-ignore */ "./mocks/browser");
       await worker.start();
     } catch (err) {
       // ignore if msw isn't installed or fails to start
