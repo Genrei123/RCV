@@ -31,6 +31,7 @@ import type { User } from "@/typeorm/entities/user.entity";
 import {
   validatePhilippinePhoneNumber,
   formatPhoneNumberForDatabase,
+  formatPhoneNumberForDisplay,
 } from "@/utils/phoneValidation";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -132,8 +133,6 @@ export function AuthPage() {
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
     return passwordRegex.test(password);
   };
-
-
 
   const validateRegisterForm = (): boolean => {
     const newErrors: Partial<Record<keyof RegisterFormData, string>> = {};
@@ -788,13 +787,15 @@ export function AuthPage() {
                     <div className="flex-1 relative">
                       <Input
                         type="tel"
-                        placeholder="99-999-9999"
+                        placeholder="999-496-1370"
                         className={`border-0 h-11 w-full px-3 py-2.5 placeholder-neutral-400 focus:outline-none transition-colors ${
                           errors.phoneNumber ? "bg-error-50" : ""
                         }`}
-                        value={registerData.phoneNumber}
+                        value={formatPhoneNumberForDisplay(
+                          registerData.phoneNumber
+                        )}
                         onChange={(e) => {
-                          // Only allow digits and limit to 10 characters
+                          // Remove dashes and only allow digits, limit to 10 characters
                           const value = e.target.value
                             .replace(/\D/g, "")
                             .slice(0, 10);
@@ -803,7 +804,7 @@ export function AuthPage() {
                             phoneNumber: value,
                           });
                         }}
-                        maxLength={10}
+                        maxLength={12}
                         required
                       />
                     </div>
