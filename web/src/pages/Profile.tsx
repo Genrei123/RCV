@@ -492,14 +492,14 @@ export function Profile({
         <div className="flex items-center gap-3 cursor-pointer">
           <Button
             onClick={handleEditProfile}
-            className="bg-teal-600 hover:bg-primary-700 text-white w-auto"
+            className="bg-teal-600 hover:bg-primary-700 text-white w-auto cursor-pointer"
           >
             Edit Profile
           </Button>
           <Button
             onClick={handleArchiveAccount}
             variant="destructive"
-            className="bg-amber-500 hover:bg-error-700 text-white w-auto"
+            className="bg-amber-500 hover:bg-error-700 text-white w-auto cursor-pointer"
           >
             <Archive className="h-4 w-4 mr-2" />
             Archive Account
