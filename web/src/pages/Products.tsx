@@ -244,7 +244,7 @@ export function Products(props: ProductsProps) {
             emptyStateTitle="No Products Found"
             emptyStateDescription="Try adjusting your search or add a new product to get started."
             customControls={
-              <Button onClick={handleAddProduct} className="whitespace-nowrap">
+              <Button onClick={handleAddProduct} className="whitespace-nowrap cursor-pointer">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Product
               </Button>
