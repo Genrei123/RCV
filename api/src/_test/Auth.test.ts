@@ -14,10 +14,12 @@ import { createToken, verifyToken } from "../utils/JWT";
 import { UserValidation } from "../typeorm/entities/user.entity";
 import z from "zod";
 import CustomError from "../utils/CustomError";
+import { FirebaseAuthService } from "../services/firebaseAuthService";
 
 // Mock all dependencies
 jest.mock("../typeorm/data-source");
 jest.mock("../services/auditLogService");
+jest.mock("../services/firebaseAuthService");
 jest.mock("bcryptjs");
 jest.mock("crypto-js");
 jest.mock("../utils/JWT");
@@ -66,6 +68,9 @@ describe("Sign In", () => {
     // Set default environment
     process.env.COOKIE_SECRET = "test-secret";
     process.env.NODE_ENV = "development";
+
+    // Mock Firebase service to return a token
+    (FirebaseAuthService.createCustomToken as jest.Mock).mockResolvedValue("firebase-custom-token-123");
   });
 
   describe("Error Cases", () => {
@@ -95,6 +100,7 @@ describe("Sign In", () => {
         approved: true,
         firstName: "John",
         lastName: "Doe",
+        firebaseUid: "cxkBIq5Safft4hyafE3krH9dh5E3",
       };
 
       (UserRepo.findOne as jest.Mock).mockResolvedValue(mockUser);
@@ -122,6 +128,7 @@ describe("Sign In", () => {
         approved: false,
         firstName: "John",
         lastName: "Doe",
+        firebaseUid: "cxkBIq5Safft4hyafE3krH9dh5E3",
       };
 
       (UserRepo.findOne as jest.Mock).mockResolvedValue(mockUser);
@@ -171,6 +178,7 @@ describe("Sign In", () => {
         approved: true,
         firstName: "John",
         lastName: "Doe",
+        firebaseUid: "cxkBIq5Safft4hyafE3krH9dh5E3",
       };
 
       const mockToken = "jwt-token-123";
@@ -198,6 +206,7 @@ describe("Sign In", () => {
           "approved",
           "firstName",
           "lastName",
+          "firebaseUid",
         ],
       });
 
@@ -231,6 +240,7 @@ describe("Sign In", () => {
         success: true,
         message: "User signed in successfully",
         token: mockToken,
+        firebaseToken: expect.any(String),
         rememberMe: false,
         user: {
           _id: "user123",
@@ -411,6 +421,17 @@ describe("Sign Up", () => {
         _id: "newUserId123",
       }));
       (bcryptjs.hashSync as jest.Mock).mockReturnValue("hashedPassword");
+      (FirebaseAuthService.createFirebaseUser as jest.Mock).mockResolvedValue({
+        firebaseUser: { uid: "cxkBIq5Safft4hyafE3krH9dh5E3" },
+        dbUser: {
+          _id: "newUserId123",
+          email: req.body.email,
+          firstName: req.body.firstName,
+          lastName: req.body.lastName,
+          approved: false,
+          firebaseUid: "cxkBIq5Safft4hyafE3krH9dh5E3",
+        },
+      });
       await userSignUp(req as Request, res as Response, next);
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({
@@ -422,6 +443,7 @@ describe("Sign Up", () => {
           firstName: req.body.firstName,
           lastName: req.body.lastName,
           approved: false,
+          firebaseUid: "cxkBIq5Safft4hyafE3krH9dh5E3",
         },
         pendingApproval: true,
       });

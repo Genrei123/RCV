@@ -9,6 +9,8 @@ import {
   buildPaginationMeta,
 } from "../../utils/pagination";
 import { AuditLogService } from "../../services/auditLogService";
+import { FirebaseAuthService } from "../../services/firebaseAuthService";
+import * as admin from 'firebase-admin';
 
 const IdSchema = z.string().uuid();
 
@@ -345,6 +347,15 @@ export const approveUser = async (
       user.status = "Active";
     }
 
+    // Enable Firebase account if user has one
+    if (user.firebaseUid) {
+      try {
+        await FirebaseAuthService.enableFirebaseUser(user.firebaseUid);
+      } catch (error) {
+        console.error('Failed to enable Firebase user:', error);
+      }
+    }
+
     const saved = await UserRepo.save(user);
 
     // Log the approval action
@@ -432,6 +443,19 @@ export const toggleUserApproval = async (
       user.status = "Active";
     } else if (!user.approved && user.status === "Active") {
       user.status = "Pending";
+    }
+
+    // Sync Firebase account status
+    if (user.firebaseUid) {
+      try {
+        if (user.approved) {
+          await FirebaseAuthService.enableFirebaseUser(user.firebaseUid);
+        } else {
+          await FirebaseAuthService.disableFirebaseUser(user.firebaseUid);
+        }
+      } catch (error) {
+        console.error('Failed to sync Firebase user status:', error);
+      }
     }
 
     const saved = await UserRepo.save(user);
@@ -614,6 +638,16 @@ export const archiveUserAccount = async (
       return res
         .status(404)
         .json({ success: false, message: "User not found" });
+    }
+
+    // Disable Firebase account if user has one
+    if (user.firebaseUid) {
+      try {
+        await FirebaseAuthService.disableFirebaseUser(user.firebaseUid);
+      } catch (error) {
+        // Continue with archiving even if Firebase disable fails
+        console.error('Failed to disable Firebase user:', error);
+      }
     }
 
     // Set account to archived status
