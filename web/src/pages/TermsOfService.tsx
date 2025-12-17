@@ -240,6 +240,11 @@ export function TermsOfService() {
                     <a
                       key={section.id}
                       href={`#${section.id}`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        document.getElementById(section.id)?.scrollIntoView({ behavior: 'smooth' });
+                        window.history.replaceState(null, '', `#${section.id}`);
+                      }}
                       className="block text-sm text-gray-700 hover:text-app-primary transition-colors"
                     >
                       {section.title}
@@ -247,12 +252,22 @@ export function TermsOfService() {
                   ))}
                   <a
                     href="#dispute-resolution"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      document.getElementById('dispute-resolution')?.scrollIntoView({ behavior: 'smooth' });
+                      window.history.replaceState(null, '', '#dispute-resolution');
+                    }}
                     className="block text-sm text-gray-700 hover:text-app-primary transition-colors"
                   >
                     Dispute Resolution
                   </a>
                   <a
                     href="#contact"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
+                      window.history.replaceState(null, '', '#contact');
+                    }}
                     className="block text-sm text-gray-700 hover:text-app-primary transition-colors"
                   >
                     Contact Us

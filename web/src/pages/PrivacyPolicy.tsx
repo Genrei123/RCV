@@ -167,6 +167,11 @@ export function PrivacyPolicy() {
                     <a
                       key={section.id}
                       href={`#${section.id}`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        document.getElementById(section.id)?.scrollIntoView({ behavior: 'smooth' });
+                        window.history.replaceState(null, '', `#${section.id}`);
+                      }}
                       className="block text-sm text-gray-700 hover:text-app-primary transition-colors"
                     >
                       {section.title}
@@ -174,6 +179,11 @@ export function PrivacyPolicy() {
                   ))}
                   <a
                     href="#contact"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
+                      window.history.replaceState(null, '', '#contact');
+                    }}
                     className="block text-sm text-gray-700 hover:text-app-primary transition-colors"
                   >
                     Contact Us
