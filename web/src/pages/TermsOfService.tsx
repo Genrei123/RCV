@@ -258,14 +258,14 @@ export function TermsOfService() {
                     onClick={handleSectionScroll('dispute-resolution')}
                     className="block text-sm text-gray-700 hover:text-app-primary transition-colors"
                   >
-                    Dispute Resolution
+                    7. Dispute Resolution and Governing Law
                   </a>
                   <a
                     href="#contact"
                     onClick={handleSectionScroll('contact')}
                     className="block text-sm text-gray-700 hover:text-app-primary transition-colors"
                   >
-                    Contact Us
+                    8. Contact Us
                   </a>
                 </nav>
               </CardContent>
