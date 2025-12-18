@@ -83,20 +83,20 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
           <div className="grid grid-cols-[max-content_1fr] items-center text-sm min-w-0 gap-2">
             <span className="text-gray-500 justify-self-start">LTO Number:</span>
             <span
-              className="font-medium text-gray-900 truncate min-w-0"
+              className="font-medium text-gray-900 truncate min-w-0 text-right"
               title={product.LTONumber}
             >
-              {product.LTONumber}
+              {truncate(product.LTONumber, 15)}
             </span>
           </div>
 
           <div className="grid grid-cols-[max-content_1fr] items-center text-sm min-w-0 gap-2">
             <span className="text-gray-500 justify-self-start">Lot Number:</span>
             <span
-              className="font-medium text-gray-900 truncate min-w-0"
+              className="font-medium text-gray-900 truncate min-w-0 text-right"
               title={product.lotNumber}
             >
-              {product.lotNumber}
+              {truncate(product.lotNumber, 15)}
             </span>
           </div>
         </div>
