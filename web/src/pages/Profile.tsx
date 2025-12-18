@@ -529,6 +529,8 @@ export function Profile({
                       src={localAvatar}
                       alt={getFullName(user)}
                       className="w-full h-full object-cover"
+                      //added a non draggable profile picture also
+                      draggable="false"
                     />
                   ) : user?.avatar ? (
                     <img

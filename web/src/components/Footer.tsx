@@ -13,6 +13,7 @@ export function Footer() {
                 <img
                   src="logo.svg"
                   alt="RCV System logo"
+                  draggable="false"
                   className="w-full h-full object-contain rounded-lg"
                 />
               </div>

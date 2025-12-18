@@ -380,6 +380,7 @@ export function AuthPage() {
                   src="/logo.svg"
                   alt="RCV Logo"
                   className="w-16 h-16 object-contain"
+                  draggable="false"
                 />
               </div>
             </div>
