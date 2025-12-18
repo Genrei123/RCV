@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -5,6 +6,12 @@ import { ArrowLeft } from 'lucide-react';
 
 export function PrivacyPolicy() {
   const navigate = useNavigate();
+
+  const handleSectionScroll = useCallback((sectionId: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
+    window.history.replaceState(null, '', `#${sectionId}`);
+  }, []);
 
   const sections = [
     {
@@ -167,11 +174,7 @@ export function PrivacyPolicy() {
                     <a
                       key={section.id}
                       href={`#${section.id}`}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        document.getElementById(section.id)?.scrollIntoView({ behavior: 'smooth' });
-                        window.history.replaceState(null, '', `#${section.id}`);
-                      }}
+                      onClick={handleSectionScroll(section.id)}
                       className="block text-sm text-gray-700 hover:text-app-primary transition-colors"
                     >
                       {section.title}
@@ -179,11 +182,7 @@ export function PrivacyPolicy() {
                   ))}
                   <a
                     href="#contact"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
-                      window.history.replaceState(null, '', '#contact');
-                    }}
+                    onClick={handleSectionScroll('contact')}
                     className="block text-sm text-gray-700 hover:text-app-primary transition-colors"
                   >
                     Contact Us
