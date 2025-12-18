@@ -148,7 +148,7 @@ export function PrivacyPolicy() {
             ))}
 
             {/* Contact Section */}
-            <div className="mt-12 pt-8 border-t border-gray-200">
+            <div id="contact" className="mt-12 pt-8 border-t border-gray-200 scroll-mt-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">Contact Us</h2>
               <p className="text-gray-700 leading-relaxed mb-4">
                 If you have questions or concerns about this Privacy Policy or our data practices, please contact 
