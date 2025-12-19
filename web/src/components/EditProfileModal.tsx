@@ -215,7 +215,7 @@ export function EditProfileModal({
                   type="button"
                   onClick={openFilePicker}
                   disabled={uploadingAvatar}
-                  className="group relative w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="group relative w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   title="Change avatar"
                 >
                   {avatarPreview ? (
@@ -437,7 +437,7 @@ export function EditProfileModal({
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end gap-3 pt-6 border-t mt-6">
+          <div className="flex justify-end gap-3 pt-6 border-t mt-6 ">
             <Button
               type="button"
               variant="outline"
@@ -448,7 +448,7 @@ export function EditProfileModal({
             </Button>
             <Button
               type="submit"
-              className="bg-teal-600 hover:bg-teal-700 text-white"
+              className="bg-teal-600 hover:bg-teal-700 text-white cursor-pointer"
               disabled={loading || uploadingAvatar}
             >
               {loading ? "Saving..." : uploadingAvatar ? "Uploading..." : "Save Changes"}

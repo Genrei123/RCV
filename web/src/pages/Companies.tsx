@@ -270,7 +270,7 @@ export function Companies(props: CompaniesProps) {
             customControls={
               <Button
                 onClick={() => setShowAddModal(true)}
-                className="whitespace-nowrap"
+                className="whitespace-nowrap cursor-pointer"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Company

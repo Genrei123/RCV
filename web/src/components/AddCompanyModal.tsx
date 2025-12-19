@@ -364,7 +364,7 @@ export function AddCompanyModal({ isOpen, onClose, onSuccess }: AddCompanyModalP
             <Button
               type="submit"
               disabled={loading}
-              className="flex-1"
+              className="flex-1 cursor-pointer"
             >
               {loading ? 'Creating...' : 'Create Company'}
             </Button>

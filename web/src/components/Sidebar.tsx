@@ -190,7 +190,7 @@ export function Sidebar({
           <button
             type="button"
             onClick={() => setShowProfileMenu((s) => !s)}
-            className="w-full flex items-center gap-3 text-left focus:outline-none"
+            className="w-full flex items-center gap-3 text-left focus:outline-none cursor-pointer"
           >
             <div className="w-10 h-10 rounded-full overflow-hidden bg-neutral-300 flex items-center justify-center flex-shrink-0 cursor-pointer">
               {avatarUrl ? (
