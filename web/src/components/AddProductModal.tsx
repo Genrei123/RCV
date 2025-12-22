@@ -137,6 +137,8 @@ export function AddProductModal({
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
+    // Dismiss any validation toast when user edits inputs
+    toast.dismiss("validation-error");
   };
 
   const validateForm = (): boolean => {
@@ -180,6 +182,30 @@ export function AddProductModal({
     }
 
     setErrors(newErrors);
+
+    // Build human-friendly summary and show toast popup for quick UX
+    const fieldLabelMap: Record<string, string> = {
+      LTONumber: "LTO Number",
+      CFPRNumber: "CFPR Number",
+      lotNumber: "Lot Number",
+      brandName: "Brand Name",
+      productName: "Product Name",
+      productClassification: "Product Classification",
+      productSubClassification: "Product Sub-Classification",
+      expirationDate: "Expiration Date",
+      companyId: "Company",
+    };
+
+    const fields = Object.keys(newErrors).map((k) => fieldLabelMap[k] || k);
+    if (fields.length > 0) {
+      // show a single toast listing the fields to fix; use toastId to avoid duplicates
+      toast.error(`Please fix: ${fields.join(", ")}`, {
+        toastId: "validation-error",
+      });
+    } else {
+      toast.dismiss("validation-error");
+    }
+
     return Object.keys(newErrors).length === 0;
   };
 
@@ -320,7 +346,7 @@ export function AddProductModal({
                     onChange={handleChange}
                     placeholder="LTO-12345678"
                     className={`pl-10 ${
-                      errors.LTONumber ? "border-[color:var(--app-error)]" : ""
+                      errors.LTONumber ? "!border-red-500 !ring-1 !ring-red-200" : ""
                     }`}
                     disabled={loading}
                   />
@@ -344,7 +370,7 @@ export function AddProductModal({
                     onChange={handleChange}
                     placeholder="CFPR-1234567"
                     className={`pl-10 ${
-                      errors.CFPRNumber ? "border-[color:var(--app-error)]" : ""
+                      errors.CFPRNumber ? "!border-red-500 !ring-1 !ring-red-200" : ""
                     }`}
                     disabled={loading}
                   />
@@ -370,7 +396,7 @@ export function AddProductModal({
                   onChange={handleChange}
                   placeholder="Enter lot number"
                   className={`pl-10 ${
-                    errors.lotNumber ? "border-[color:var(--app-error)]" : ""
+                    errors.lotNumber ? "!border-red-500 !ring-1 !ring-red-200" : ""
                   }`}
                   disabled={loading}
                 />
@@ -396,8 +422,8 @@ export function AddProductModal({
                     onChange={handleChange}
                     placeholder="Enter brand name"
                     className={`pl-10 ${
-                      errors.brandName ? "border-[color:var(--app-error)]" : ""
-                    }`}
+                        errors.brandName ? "!border-red-500 !ring-1 !ring-red-200" : ""
+                      }`}
                     disabled={loading}
                   />
                 </div>
@@ -421,7 +447,7 @@ export function AddProductModal({
                     placeholder="Enter product name"
                     className={`pl-10 ${
                       errors.productName
-                        ? "border-[color:var(--app-error)]"
+                        ? "!border-red-500 !ring-1 !ring-red-200"
                         : ""
                     }`}
                     disabled={loading}
@@ -450,7 +476,7 @@ export function AddProductModal({
                     placeholder="e.g., Raw Product, Processed Product"
                     className={`pl-10 ${
                       errors.productClassification
-                        ? "border-[color:var(--app-error)]"
+                        ? "!border-red-500 !ring-1 !ring-red-200"
                         : ""
                     }`}
                     disabled={loading}
@@ -476,7 +502,7 @@ export function AddProductModal({
                     placeholder="e.g., Layer Feeds, Gamecock Feeds"
                     className={`pl-10 ${
                       errors.productSubClassification
-                        ? "border-[color:var(--app-error)]"
+                        ? "!border-red-500 !ring-1 !ring-red-200"
                         : ""
                     }`}
                     disabled={loading}
@@ -522,7 +548,7 @@ export function AddProductModal({
                     onChange={handleChange}
                     className={`pl-10 ${
                       errors.expirationDate
-                        ? "border-[color:var(--app-error)]"
+                        ? "!border-red-500 !ring-1 !ring-red-200"
                         : ""
                     }`}
                     disabled={loading}
@@ -553,7 +579,7 @@ export function AddProductModal({
                   placeholder="Search or select a company"
                   className={`pl-10 ${
                     errors.companyId
-                      ? "border-[color:var(--app-error)]"
+                      ? "!border-red-500 !ring-1 !ring-red-200"
                       : "app-border-neutral"
                   }`}
                   disabled={loading}

@@ -56,21 +56,40 @@ export function AddCompanyModal({ isOpen, onClose, onSuccess }: AddCompanyModalP
       newErrors.name = 'Company name is required';
     } else if (formData.name.trim().length < 2) {
       newErrors.name = 'Company name must be at least 2 characters';
+    } else if (formData.name.trim().length > 50) {
+      newErrors.name = 'This information is too long';
     }
 
     if (!formData.address.trim()) {
       newErrors.address = 'Address is required';
     } else if (formData.address.trim().length < 5) {
       newErrors.address = 'Address must be at least 5 characters';
+    } else if (formData.address.trim().length > 100) {
+      newErrors.address = 'This information is too long';
     }
 
     if (!formData.licenseNumber.trim()) {
       newErrors.licenseNumber = 'License number is required';
     } else if (formData.licenseNumber.trim().length < 3) {
       newErrors.licenseNumber = 'License number must be at least 3 characters';
+    } else if (formData.licenseNumber.trim().length > 50) {
+      newErrors.licenseNumber = 'This information is too long';
     }
 
     setErrors(newErrors);
+
+    const fieldLabelMap: Record<string, string> = {
+      name: 'Company Name',
+      address: 'Address',
+      licenseNumber: 'License Number',
+    };
+    const fields = Object.keys(newErrors).map((k) => fieldLabelMap[k] || k);
+    if (fields.length > 0) {
+      toast.error(`Please fix: ${fields.join(', ')}`, { toastId: 'validation-error' });
+    } else {
+      toast.dismiss('validation-error');
+    }
+
     return Object.keys(newErrors).length === 0;
   };
 
@@ -152,6 +171,8 @@ export function AddCompanyModal({ isOpen, onClose, onSuccess }: AddCompanyModalP
         [name]: undefined
       }));
     }
+    // Dismiss validation toast on user input
+    toast.dismiss('validation-error');
     
     // Clear API error when user makes changes
     if (apiError) {
@@ -295,7 +316,7 @@ export function AddCompanyModal({ isOpen, onClose, onSuccess }: AddCompanyModalP
                 value={formData.name}
                 onChange={handleChange}
                 placeholder="e.g., Acme Corporation"
-                className={`pl-10 ${errors.name ? 'border-red-500' : ''}`}
+                className={`pl-10 ${errors.name ? '!border-red-500 !ring-1 !ring-red-200' : ''}`}
                 disabled={loading}
               />
             </div>
@@ -318,7 +339,7 @@ export function AddCompanyModal({ isOpen, onClose, onSuccess }: AddCompanyModalP
                 value={formData.address}
                 onChange={handleChange}
                 placeholder="e.g., 123 Business St, Manila"
-                className={`pl-10 ${errors.address ? 'border-red-500' : ''}`}
+                className={`pl-10 ${errors.address ? '!border-red-500 !ring-1 !ring-red-200' : ''}`}
                 disabled={loading}
               />
             </div>
@@ -341,7 +362,7 @@ export function AddCompanyModal({ isOpen, onClose, onSuccess }: AddCompanyModalP
                 value={formData.licenseNumber}
                 onChange={handleChange}
                 placeholder="e.g., LIC-2024-001"
-                className={`pl-10 ${errors.licenseNumber ? 'border-red-500' : ''}`}
+                className={`pl-10 ${errors.licenseNumber ? '!border-red-500 !ring-1 !ring-red-200' : ''}`}
                 disabled={loading}
               />
             </div>
