@@ -1,8 +1,10 @@
-import { Request, Response, NextFunction } from 'express';
-import jwt, { Jwt } from 'jsonwebtoken';
-import { UserRepo } from '../typeorm/data-source';
-import CustomError from '../utils/CustomError';
-import { verifyToken } from '../utils/JWT';
+import { Request, Response, NextFunction } from "express";
+import jwt, { Jwt } from "jsonwebtoken";
+import { UserRepo } from "../typeorm/data-source";
+import CustomError from "../utils/CustomError";
+import { verifyToken, decryptToken } from "../utils/JWT";
+import * as dotenv from "dotenv";
+dotenv.config();
 
 /**
  * Middleware to verify user authentication using JWT.
@@ -31,15 +33,24 @@ export const verifyUser = async (
   try {
     // Try to get token from Authorization header first, then from cookie
     let token: string | undefined;
-    
+
     const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      token = authHeader.split(' ')[1];
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      token = authHeader.split(" ")[1];
     } else if (req.cookies && req.cookies.token) {
       // Fallback to cookie if no Authorization header
-      token = req.cookies.token;
+      // Token in cookie is encrypted, so we need to decrypt it
+      try {
+        const encryptedToken = req.cookies.token;
+        token = decryptToken(encryptedToken);
+      } catch (decryptError) {
+        console.error("Error decrypting token from cookie:", decryptError);
+        throw new CustomError(401, "Failed to decrypt authentication token", {
+          success: false,
+        });
+      }
     }
-    
+
     if (!token) {
       throw new CustomError(
         401,
