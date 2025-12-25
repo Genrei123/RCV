@@ -16,6 +16,7 @@ const ConnectDatabase = async (): Promise<void> => {
     console.log('Data Source has been initialized!');
 
     // First account seeder
+    // REMOVE IN PRODUCTION
     const userRepository = DB.getRepository(User);
     const dummyUser = userRepository.create({
       firstName: 'Admin',
