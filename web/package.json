@@ -10,10 +10,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@deck.gl/aggregation-layers": "^9.2.2",
+    "@deck.gl/aggregation-layers": "^9.2.3",
     "@deck.gl/core": "^9.2.2",
     "@deck.gl/google-maps": "^9.2.2",
     "@deck.gl/layers": "^9.2.2",
+    "@radix-ui/react-label": "^2.1.8",
     "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-slot": "^1.2.4",
     "@tailwindcss/vite": "^4.1.13",

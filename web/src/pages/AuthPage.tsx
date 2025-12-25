@@ -8,17 +8,35 @@
 // - Integration with AuthService
 // =========================================================================
 
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
-import { Eye, EyeOff, Mail, Lock, User as UserIcon, Phone, MapPin, Calendar, BadgeCheck, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { AuthService } from '@/services/authService';
-import type { User } from '@/typeorm/entities/user.entity';
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import { CookieManager } from '@/utils/cookies';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
+import {
+  Eye,
+  EyeOff,
+  Mail,
+  Lock,
+  User as UserIcon,
+  Phone,
+  MapPin,
+  Calendar,
+  BadgeCheck,
+  AlertCircle,
+  CheckCircle2,
+  ChevronDown,
+} from "lucide-react";
+import { AuthService } from "@/services/authService";
+import type { User } from "@/typeorm/entities/user.entity";
+import {
+  validatePhilippinePhoneNumber,
+  formatPhoneNumberForDatabase,
+  formatPhoneNumberForDisplay,
+} from "@/utils/phoneValidation";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { CookieManager } from "@/utils/cookies";
 
 interface LoginFormData {
   email: string;
@@ -45,49 +63,191 @@ interface PasswordStrength {
   color: string;
 }
 
+interface PhilippineCity {
+  name: string;
+  adminName1: string; // Province/Region
+}
+
 export function AuthPage() {
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
+  const [philippineCities, setPhilippineCities] = useState<PhilippineCity[]>(
+    []
+  );
+  const [citiesLoading, setCitiesLoading] = useState(true);
+  const [showCityDropdown, setShowCityDropdown] = useState(false);
+  const [citySearchTerm, setCitySearchTerm] = useState("");
+
+  // Fetch Philippine cities and municipalities on component mount
+  useEffect(() => {
+    const fetchPhilippineCities = async () => {
+      try {
+        // Fetch both cities and municipalities from PSGC API
+        const [citiesResponse, municipalitiesResponse] = await Promise.all([
+          fetch("https://psgc.gitlab.io/api/cities/"),
+          fetch("https://psgc.gitlab.io/api/municipalities/"),
+        ]);
+
+        const citiesData = await citiesResponse.json();
+        const municipalitiesData = await municipalitiesResponse.json();
+
+        let allLocations: PhilippineCity[] = [];
+
+        // Process cities
+        if (citiesData && Array.isArray(citiesData)) {
+          const cities = citiesData
+            .map((city: any) => ({
+              name: city.name || city.cityName,
+              adminName1: city.province || city.regionName || "Philippines",
+            }))
+            .sort((a: PhilippineCity, b: PhilippineCity) =>
+              a.name.localeCompare(b.name)
+            );
+          allLocations = [...allLocations, ...cities];
+        }
+
+        // Process municipalities
+        if (municipalitiesData && Array.isArray(municipalitiesData)) {
+          const municipalities = municipalitiesData
+            .map((municipality: any) => ({
+              name: municipality.name || municipality.municipalityName,
+              adminName1:
+                municipality.province ||
+                municipality.regionName ||
+                "Philippines",
+            }))
+            .sort((a: PhilippineCity, b: PhilippineCity) =>
+              a.name.localeCompare(b.name)
+            );
+          allLocations = [...allLocations, ...municipalities];
+        }
+
+        // Sort all locations alphabetically
+        allLocations.sort((a: PhilippineCity, b: PhilippineCity) =>
+          a.name.localeCompare(b.name)
+        );
+
+        console.log("Loaded cities and municipalities:", allLocations.length);
+        setPhilippineCities(allLocations);
+      } catch (err) {
+        console.error(
+          "Failed to fetch Philippine cities and municipalities:",
+          err
+        );
+        // Fallback: Try alternative PSGC endpoint
+        try {
+          const [citiesFallback, municipalitiesFallback] = await Promise.all([
+            fetch("https://psgc.rootscratch.com/cities/"),
+            fetch("https://psgc.rootscratch.com/municipalities/"),
+          ]);
+
+          const citiesFallbackData = await citiesFallback.json();
+          const municipalitiesFallbackData =
+            await municipalitiesFallback.json();
+
+          let allLocations: PhilippineCity[] = [];
+
+          if (citiesFallbackData && Array.isArray(citiesFallbackData)) {
+            const cities = citiesFallbackData
+              .map((city: any) => ({
+                name: city.name || city.cityName,
+                adminName1: city.province || city.regionName || "Philippines",
+              }))
+              .sort((a: PhilippineCity, b: PhilippineCity) =>
+                a.name.localeCompare(b.name)
+              );
+            allLocations = [...allLocations, ...cities];
+          }
+
+          if (
+            municipalitiesFallbackData &&
+            Array.isArray(municipalitiesFallbackData)
+          ) {
+            const municipalities = municipalitiesFallbackData
+              .map((municipality: any) => ({
+                name: municipality.name || municipality.municipalityName,
+                adminName1:
+                  municipality.province ||
+                  municipality.regionName ||
+                  "Philippines",
+              }))
+              .sort((a: PhilippineCity, b: PhilippineCity) =>
+                a.name.localeCompare(b.name)
+              );
+            allLocations = [...allLocations, ...municipalities];
+          }
+
+          allLocations.sort((a: PhilippineCity, b: PhilippineCity) =>
+            a.name.localeCompare(b.name)
+          );
+
+          setPhilippineCities(allLocations);
+        } catch (fallbackErr) {
+          console.error("Fallback API also failed:", fallbackErr);
+          setPhilippineCities([]);
+        }
+      } finally {
+        setCitiesLoading(false);
+      }
+    };
+
+    fetchPhilippineCities();
+  }, []);
 
   // Check if user has remember me enabled and pre-fill email
   useEffect(() => {
     const tokenInfo = CookieManager.getTokenExpirationInfo();
-    
+
     if (tokenInfo && !tokenInfo.isExpired && tokenInfo.rememberMe) {
       setRememberMe(true);
     }
   }, []);
 
+  // Hide body scroll when city dropdown is open
+  useEffect(() => {
+    if (showCityDropdown) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [showCityDropdown]);
+
   const [loginData, setLoginData] = useState<LoginFormData>({
-    email: '',
-    password: ''
+    email: "",
+    password: "",
   });
 
   const [registerData, setRegisterData] = useState<RegisterFormData>({
-    firstName: '',
-    lastName: '',
-    middleName: '',
-    extName: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    phoneNumber: '',
-    location: '',
-    dateOfBirth: '',
-    badgeId: ''
+    firstName: "",
+    lastName: "",
+    middleName: "",
+    extName: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    phoneNumber: "",
+    location: "",
+    dateOfBirth: "",
+    badgeId: "",
   });
 
-  const [errors, setErrors] = useState<Partial<Record<keyof RegisterFormData, string>>>({});
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof RegisterFormData, string>>
+  >({});
 
   // =========================================================================
   // VALIDATION FUNCTIONS
   // =========================================================================
-  
+
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
@@ -95,7 +255,7 @@ export function AuthPage() {
 
   const getPasswordStrength = (password: string): PasswordStrength => {
     let score = 0;
-    
+
     if (password.length >= 8) score++;
     if (password.length >= 12) score++;
     if (/[a-z]/.test(password)) score++;
@@ -103,10 +263,10 @@ export function AuthPage() {
     if (/[0-9]/.test(password)) score++;
     if (/[^A-Za-z0-9]/.test(password)) score++;
 
-    if (score <= 2) return { score, label: 'Weak', color: 'bg-error-500' };
-    if (score <= 4) return { score, label: 'Fair', color: 'bg-yellow-500' };
-    if (score <= 5) return { score, label: 'Good', color: 'bg-blue-500' };
-    return { score, label: 'Strong', color: 'bg-green-500' };
+    if (score <= 2) return { score, label: "Weak", color: "bg-error-500" };
+    if (score <= 4) return { score, label: "Fair", color: "bg-yellow-500" };
+    if (score <= 5) return { score, label: "Good", color: "bg-blue-500" };
+    return { score, label: "Strong", color: "bg-green-500" };
   };
 
   const validatePassword = (password: string): boolean => {
@@ -115,50 +275,54 @@ export function AuthPage() {
     return passwordRegex.test(password);
   };
 
-  const validatePhoneNumber = (phone: string): boolean => {
-    const phoneRegex = /^[\d\s\-\+\(\)]+$/;
-    return phoneRegex.test(phone) && phone.replace(/\D/g, '').length >= 10;
-  };
-
   const validateRegisterForm = (): boolean => {
     const newErrors: Partial<Record<keyof RegisterFormData, string>> = {};
 
     if (!registerData.firstName.trim()) {
-      newErrors.firstName = 'First name is required';
+      newErrors.firstName = "First name is required";
     }
 
     // middleName and extName are optional, no validation needed
 
     if (!registerData.lastName.trim()) {
-      newErrors.lastName = 'Last name is required';
+      newErrors.lastName = "Last name is required";
     }
 
     if (!validateEmail(registerData.email)) {
-      newErrors.email = 'Please enter a valid email address';
+      newErrors.email = "Please enter a valid email address";
     }
 
     if (!validatePassword(registerData.password)) {
-      newErrors.password = 'Password must be at least 8 characters with uppercase, lowercase, and number';
+      newErrors.password =
+        "Password must be at least 8 characters with uppercase, lowercase, and number";
     }
 
     if (registerData.password !== registerData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
+      newErrors.confirmPassword = "Passwords do not match";
     }
 
-    if (!validatePhoneNumber(registerData.phoneNumber)) {
-      newErrors.phoneNumber = 'Please enter a valid phone number';
+    if (registerData.phoneNumber) {
+      const phoneValidation = validatePhilippinePhoneNumber(
+        registerData.phoneNumber
+      );
+      if (!phoneValidation.isValid) {
+        newErrors.phoneNumber =
+          phoneValidation.error || "Please enter a valid phone number";
+      }
+    } else {
+      newErrors.phoneNumber = "Phone number is required";
     }
 
     if (!registerData.location.trim()) {
-      newErrors.location = 'Location is required';
+      newErrors.location = "Location is required";
     }
 
     if (!registerData.dateOfBirth) {
-      newErrors.dateOfBirth = 'Date of birth is required';
+      newErrors.dateOfBirth = "Date of birth is required";
     }
 
     if (!registerData.badgeId.trim()) {
-      newErrors.badgeId = 'Badge ID is required';
+      newErrors.badgeId = "Badge ID is required";
     }
 
     setErrors(newErrors);
@@ -171,15 +335,15 @@ export function AuthPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     if (!validateEmail(loginData.email)) {
-      toast.error('Please enter a valid email address');
+      toast.error("Please enter a valid email address");
       return;
     }
 
     if (!loginData.password) {
-      toast.error('Password is required');
+      toast.error("Password is required");
       return;
     }
 
@@ -189,52 +353,58 @@ export function AuthPage() {
       const response = await AuthService.login({
         email: loginData.email,
         password: loginData.password,
-        rememberMe: rememberMe
+        rememberMe: rememberMe,
       });
 
       if (response?.data.token) {
         // Backend has set httpOnly cookie
-        toast.success('Login successful! Redirecting...');
-        
+        toast.success("Login successful! Redirecting...");
+
         // Use setTimeout to ensure state updates before navigation
         setTimeout(() => {
-          navigate('/dashboard', { replace: true });
+          navigate("/dashboard", { replace: true });
           window.location.reload(); // Force reload to update auth state
         }, 500);
       } else {
-        toast.error('Login failed. Please check your credentials.');
+        toast.error("Login failed. Please check your credentials.");
       }
     } catch (err: any) {
-      console.log('Login error caught:', err);
-      console.log('Error response:', err.response);
-      console.log('Error status:', err.response?.status || err.status);
-      console.log('Error data:', err.response?.data);
-      
+      console.log("Login error caught:", err);
+      console.log("Error response:", err.response);
+      console.log("Error status:", err.response?.status || err.status);
+      console.log("Error data:", err.response?.data);
+
       // Check if the error is due to unapproved account
       // Check both err.response.status and err.status (axios error structure can vary)
       const status = err.response?.status || err.status;
-      const isUnapproved = status === 403 || err.response?.data?.approved === false;
-      
+      const isUnapproved =
+        status === 403 || err.response?.data?.approved === false;
+
       if (isUnapproved) {
         const email = err.response?.data?.email || loginData.email;
-        
-        console.log('Unapproved account detected, redirecting to pending approval page');
-        
+
+        console.log(
+          "Unapproved account detected, redirecting to pending approval page"
+        );
+
         // Store email for the pending approval page
-        CookieManager.setCookie('pendingApprovalEmail', email, { days: 7 });
-        
+        CookieManager.setCookie("pendingApprovalEmail", email, { days: 7 });
+
         // Navigate to pending approval page
-        navigate('/pending-approval', { 
+        navigate("/pending-approval", {
           state: { email },
-          replace: true 
+          replace: true,
         });
         return; // Don't show error toast
       }
-      
+
       // For all other errors
-      const errorMessage = err.response?.data?.message || err.message || 'Login failed. Please check your credentials.';
+      const errorMessage =
+        err.response?.data?.message ||
+        err.message ||
+        "Login failed. Please check your credentials.";
       toast.error(errorMessage);
-      console.error('Login error:', err);
+      console.error("Login error:", err);
     } finally {
       setLoading(false);
     }
@@ -242,10 +412,10 @@ export function AuthPage() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     if (!validateRegisterForm()) {
-      toast.error('Please fill in all required fields correctly');
+      toast.error("Please fill in all required fields correctly");
       return;
     }
 
@@ -257,14 +427,17 @@ export function AuthPage() {
         lastName: registerData.lastName,
         middleName: registerData.middleName || undefined,
         extName: registerData.extName || undefined,
-        fullName: `${registerData.firstName} ${registerData.middleName} ${registerData.lastName} ${registerData.extName}`.replace(/\s+/g, ' ').trim(),
+        fullName:
+          `${registerData.firstName} ${registerData.middleName} ${registerData.lastName} ${registerData.extName}`
+            .replace(/\s+/g, " ")
+            .trim(),
         email: registerData.email,
         password: registerData.password,
-        phoneNumber: registerData.phoneNumber,
+        phoneNumber: formatPhoneNumberForDatabase(registerData.phoneNumber),
         location: registerData.location,
         dateOfBirth: registerData.dateOfBirth,
-        badgeId: registerData.badgeId || '',
-        role: 'AGENT', // Default role: Agent
+        badgeId: registerData.badgeId || "",
+        role: "AGENT", // Default role: Agent
       };
 
       const response = await AuthService.register(userData as User);
@@ -273,56 +446,57 @@ export function AuthPage() {
         // Check if account is pending approval
         if (response.data.pendingApproval || response.data.approved === false) {
           const email = response.data.user?.email || registerData.email;
-          
+
           // Store email for the pending approval page
-          CookieManager.setCookie('pendingApprovalEmail', email, { days: 7 });
-          
+          CookieManager.setCookie("pendingApprovalEmail", email, { days: 7 });
+
           toast.success(
-            'Registration successful! Redirecting to approval status...',
+            "Registration successful! Redirecting to approval status...",
             { autoClose: 2000 }
           );
-          
+
           // Navigate to pending approval page
           setTimeout(() => {
-            navigate('/pending-approval', { 
+            navigate("/pending-approval", {
               state: { email },
-              replace: true 
+              replace: true,
             });
           }, 1500);
         } else {
           // If somehow already approved, try auto-login
-          toast.success('Registration successful! Logging you in...');
-          
+          toast.success("Registration successful! Logging you in...");
+
           const loginResponse = await AuthService.login({
             email: registerData.email,
             password: registerData.password,
-            rememberMe: false
+            rememberMe: false,
           });
 
           if (loginResponse?.data.token) {
             // Backend has set httpOnly cookie
-            
+
             setTimeout(() => {
-              navigate('/dashboard', { replace: true });
+              navigate("/dashboard", { replace: true });
               window.location.reload();
             }, 500);
           } else {
             setIsLogin(true);
-            toast.info('Account created successfully! Please log in.');
+            toast.info("Account created successfully! Please log in.");
           }
         }
       }
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || 'Registration failed. Please try again.';
+      const errorMessage =
+        err.response?.data?.message || "Registration failed. Please try again.";
       toast.error(errorMessage);
-      console.error('Registration error:', err);
+      console.error("Registration error:", err);
     } finally {
       setLoading(false);
     }
   };
 
   const handleForgotPassword = () => {
-    navigate('/forgot-password');
+    navigate("/forgot-password");
   };
 
   const passwordStrength = getPasswordStrength(registerData.password);
@@ -333,7 +507,7 @@ export function AuthPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50 flex items-center justify-center p-4">
-      <ToastContainer 
+      <ToastContainer
         position="top-right"
         autoClose={3000}
         hideProgressBar={false}
@@ -346,20 +520,23 @@ export function AuthPage() {
         theme="light"
       />
       <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-8 items-center">
-        
         {/* Left Side - Branding */}
         <div className="hidden lg:block">
           <div className="text-center space-y-6">
             <div className="inline-block p-6 bg-white rounded-2xl shadow-lg">
               <div className="w-24 h-24 bg-gradient-to-br from-primary to-[#00B087] rounded-xl flex items-center justify-center">
-                <img src="/logo.svg" alt="RCV Logo" className="w-16 h-16 object-contain" />
+                <img
+                  src="/logo.svg"
+                  alt="RCV Logo"
+                  className="w-16 h-16 object-contain"
+                  draggable="false"
+                />
               </div>
             </div>
             <h1 className="text-4xl font-bold text-primary">RCV System</h1>
             <p className="text-xl text-neutral-600">
               Secure Product Verification & Management
             </p>
-            
           </div>
         </div>
 
@@ -367,16 +544,22 @@ export function AuthPage() {
         <Card className="p-8 shadow-2xl bg-white">
           <div className="mb-8 text-center lg:hidden">
             <div className="inline-block p-4 bg-gradient-to-br from-primary to-[#00B087] rounded-xl mb-4">
-              <img src="/logo.svg" alt="RCV Logo" className="w-12 h-12 object-contain" />
+              <img
+                src="/logo.svg"
+                alt="RCV Logo"
+                className="w-12 h-12 object-contain"
+              />
             </div>
           </div>
 
           <div className="mb-8 text-center">
             <h2 className="text-3xl font-bold text-primary mb-2">
-              {isLogin ? 'Welcome Back' : 'Create Account'}
+              {isLogin ? "Welcome Back" : "Create Account"}
             </h2>
             <p className="text-neutral-600">
-              {isLogin ? 'Sign in to continue to RCV System' : 'Sign up to get started with RCV System'}
+              {isLogin
+                ? "Sign in to continue to RCV System"
+                : "Sign up to get started with RCV System"}
             </p>
           </div>
 
@@ -401,7 +584,9 @@ export function AuthPage() {
                     placeholder="Enter your email"
                     className="pl-10 h-11"
                     value={loginData.email}
-                    onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
+                    onChange={(e) =>
+                      setLoginData({ ...loginData, email: e.target.value })
+                    }
                     required
                   />
                 </div>
@@ -414,11 +599,13 @@ export function AuthPage() {
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5" />
                   <Input
-                    type={showPassword ? 'text' : 'password'}
+                    type={showPassword ? "text" : "password"}
                     placeholder="Enter your password"
                     className="pl-10 pr-10 h-11"
                     value={loginData.password}
-                    onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                    onChange={(e) =>
+                      setLoginData({ ...loginData, password: e.target.value })
+                    }
                     required
                   />
                   <button
@@ -426,7 +613,11 @@ export function AuthPage() {
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
                   >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    {showPassword ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
                   </button>
                 </div>
               </div>
@@ -461,7 +652,7 @@ export function AuthPage() {
                     Signing in...
                   </div>
                 ) : (
-                  'Sign In'
+                  "Sign In"
                 )}
               </Button>
             </form>
@@ -478,13 +669,24 @@ export function AuthPage() {
                     <Input
                       type="text"
                       placeholder="John"
-                      className={`pl-10 h-11 ${errors.firstName ? 'border-error-500' : ''}`}
+                      className={`pl-10 h-11 ${
+                        errors.firstName ? "border-error-500" : ""
+                      }`}
                       value={registerData.firstName}
-                      onChange={(e) => setRegisterData({ ...registerData, firstName: e.target.value })}
+                      onChange={(e) =>
+                        setRegisterData({
+                          ...registerData,
+                          firstName: e.target.value,
+                        })
+                      }
                       required
                     />
                   </div>
-                  {errors.firstName && <p className="text-error-500 text-xs mt-1">{errors.firstName}</p>}
+                  {errors.firstName && (
+                    <p className="text-error-500 text-xs mt-1">
+                      {errors.firstName}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -496,12 +698,23 @@ export function AuthPage() {
                     <Input
                       type="text"
                       placeholder="M."
-                      className={`pl-10 h-11 ${errors.middleName ? 'border-error-500' : ''}`}
+                      className={`pl-10 h-11 ${
+                        errors.middleName ? "border-error-500" : ""
+                      }`}
                       value={registerData.middleName}
-                      onChange={(e) => setRegisterData({ ...registerData, middleName: e.target.value })}
+                      onChange={(e) =>
+                        setRegisterData({
+                          ...registerData,
+                          middleName: e.target.value,
+                        })
+                      }
                     />
                   </div>
-                  {errors.middleName && <p className="text-error-500 text-xs mt-1">{errors.middleName}</p>}
+                  {errors.middleName && (
+                    <p className="text-error-500 text-xs mt-1">
+                      {errors.middleName}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -513,13 +726,24 @@ export function AuthPage() {
                     <Input
                       type="text"
                       placeholder="Doe"
-                      className={`pl-10 h-11 ${errors.lastName ? 'border-error-500' : ''}`}
+                      className={`pl-10 h-11 ${
+                        errors.lastName ? "border-error-500" : ""
+                      }`}
                       value={registerData.lastName}
-                      onChange={(e) => setRegisterData({ ...registerData, lastName: e.target.value })}
+                      onChange={(e) =>
+                        setRegisterData({
+                          ...registerData,
+                          lastName: e.target.value,
+                        })
+                      }
                       required
                     />
                   </div>
-                  {errors.lastName && <p className="text-error-500 text-xs mt-1">{errors.lastName}</p>}
+                  {errors.lastName && (
+                    <p className="text-error-500 text-xs mt-1">
+                      {errors.lastName}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -531,12 +755,23 @@ export function AuthPage() {
                     <Input
                       type="text"
                       placeholder="Jr., Sr., III, etc."
-                      className={`pl-10 h-11 ${errors.extName ? 'border-error-500' : ''}`}
+                      className={`pl-10 h-11 ${
+                        errors.extName ? "border-error-500" : ""
+                      }`}
                       value={registerData.extName}
-                      onChange={(e) => setRegisterData({ ...registerData, extName: e.target.value })}
+                      onChange={(e) =>
+                        setRegisterData({
+                          ...registerData,
+                          extName: e.target.value,
+                        })
+                      }
                     />
                   </div>
-                  {errors.extName && <p className="text-error-500 text-xs mt-1">{errors.extName}</p>}
+                  {errors.extName && (
+                    <p className="text-error-500 text-xs mt-1">
+                      {errors.extName}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -549,13 +784,22 @@ export function AuthPage() {
                   <Input
                     type="email"
                     placeholder="john.doe@example.com"
-                    className={`pl-10 h-11 ${errors.email ? 'border-error-500' : ''}`}
+                    className={`pl-10 h-11 ${
+                      errors.email ? "border-error-500" : ""
+                    }`}
                     value={registerData.email}
-                    onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
+                    onChange={(e) =>
+                      setRegisterData({
+                        ...registerData,
+                        email: e.target.value,
+                      })
+                    }
                     required
                   />
                 </div>
-                {errors.email && <p className="text-error-500 text-xs mt-1">{errors.email}</p>}
+                {errors.email && (
+                  <p className="text-error-500 text-xs mt-1">{errors.email}</p>
+                )}
               </div>
 
               <div className="grid md:grid-cols-2 gap-4">
@@ -566,11 +810,18 @@ export function AuthPage() {
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5" />
                     <Input
-                      type={showPassword ? 'text' : 'password'}
+                      type={showPassword ? "text" : "password"}
                       placeholder="Min 8 characters"
-                      className={`pl-10 pr-10 h-11 ${errors.password ? 'border-error-500' : ''}`}
+                      className={`pl-10 pr-10 h-11 ${
+                        errors.password ? "border-error-500" : ""
+                      }`}
                       value={registerData.password}
-                      onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
+                      onChange={(e) =>
+                        setRegisterData({
+                          ...registerData,
+                          password: e.target.value,
+                        })
+                      }
                       required
                     />
                     <button
@@ -578,23 +829,35 @@ export function AuthPage() {
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
                     >
-                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      {showPassword ? (
+                        <EyeOff className="w-5 h-5" />
+                      ) : (
+                        <Eye className="w-5 h-5" />
+                      )}
                     </button>
                   </div>
                   {registerData.password && (
                     <div className="mt-2">
                       <div className="flex items-center gap-2 mb-1">
                         <div className="flex-1 h-1.5 bg-neutral-200 rounded-full overflow-hidden">
-                          <div 
+                          <div
                             className={`h-full transition-all ${passwordStrength.color}`}
-                            style={{ width: `${(passwordStrength.score / 6) * 100}%` }}
+                            style={{
+                              width: `${(passwordStrength.score / 6) * 100}%`,
+                            }}
                           />
                         </div>
-                        <span className="text-xs font-medium text-neutral-600">{passwordStrength.label}</span>
+                        <span className="text-xs font-medium text-neutral-600">
+                          {passwordStrength.label}
+                        </span>
                       </div>
                     </div>
                   )}
-                  {errors.password && <p className="text-error-500 text-xs mt-1">{errors.password}</p>}
+                  {errors.password && (
+                    <p className="text-error-500 text-xs mt-1">
+                      {errors.password}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -604,28 +867,48 @@ export function AuthPage() {
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5" />
                     <Input
-                      type={showConfirmPassword ? 'text' : 'password'}
+                      type={showConfirmPassword ? "text" : "password"}
                       placeholder="Confirm password"
-                      className={`pl-10 pr-10 h-11 ${errors.confirmPassword ? 'border-error-500' : ''}`}
+                      className={`pl-10 pr-10 h-11 ${
+                        errors.confirmPassword ? "border-error-500" : ""
+                      }`}
                       value={registerData.confirmPassword}
-                      onChange={(e) => setRegisterData({ ...registerData, confirmPassword: e.target.value })}
+                      onChange={(e) =>
+                        setRegisterData({
+                          ...registerData,
+                          confirmPassword: e.target.value,
+                        })
+                      }
                       required
                     />
                     <button
                       type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      onClick={() =>
+                        setShowConfirmPassword(!showConfirmPassword)
+                      }
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
                     >
-                      {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      {showConfirmPassword ? (
+                        <EyeOff className="w-5 h-5" />
+                      ) : (
+                        <Eye className="w-5 h-5" />
+                      )}
                     </button>
                   </div>
-                  {registerData.confirmPassword && registerData.password === registerData.confirmPassword && (
-                    <div className="flex items-center gap-1 mt-1">
-                      <CheckCircle2 className="w-4 h-4 text-green-600" />
-                      <span className="text-xs text-green-600">Passwords match</span>
-                    </div>
+                  {registerData.confirmPassword &&
+                    registerData.password === registerData.confirmPassword && (
+                      <div className="flex items-center gap-1 mt-1">
+                        <CheckCircle2 className="w-4 h-4 text-green-600" />
+                        <span className="text-xs text-green-600">
+                          Passwords match
+                        </span>
+                      </div>
+                    )}
+                  {errors.confirmPassword && (
+                    <p className="text-error-500 text-xs mt-1">
+                      {errors.confirmPassword}
+                    </p>
                   )}
-                  {errors.confirmPassword && <p className="text-error-500 text-xs mt-1">{errors.confirmPassword}</p>}
                 </div>
               </div>
 
@@ -634,36 +917,128 @@ export function AuthPage() {
                   <label className="block text-sm font-medium text-neutral-700 mb-2">
                     Phone Number *
                   </label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5" />
-                    <Input
-                      type="tel"
-                      placeholder="+1 (555) 123-4567"
-                      className={`pl-10 h-11 ${errors.phoneNumber ? 'border-error-500' : ''}`}
-                      value={registerData.phoneNumber}
-                      onChange={(e) => setRegisterData({ ...registerData, phoneNumber: e.target.value })}
-                      required
-                    />
+                  <div className="flex gap-0 rounded-lg">
+                    {/* Country Code Prefix with Icon */}
+                    <div className="flex items-center gap-2 bg-neutral-50 px-4 py-2.5 border-r border-neutral-300 pr-3 pointer-events-none">
+                      <Phone className="text-neutral-500 w-5 h-5" />
+                      <span className="text-neutral-700 whitespace-nowrap">
+                        +63
+                      </span>
+                    </div>
+                    {/* Phone Input */}
+                    <div className="flex-1 relative">
+                      <Input
+                        type="tel"
+                        placeholder="999-496-1370"
+                        className={`border-0 h-11 w-full px-3 py-2.5 placeholder-neutral-400 focus:outline-none transition-colors ${
+                          errors.phoneNumber ? "bg-error-50" : ""
+                        }`}
+                        value={formatPhoneNumberForDisplay(
+                          registerData.phoneNumber
+                        )}
+                        onChange={(e) => {
+                          // Remove dashes and only allow digits, limit to 10 characters
+                          const value = e.target.value
+                            .replace(/\D/g, "")
+                            .slice(0, 10);
+                          setRegisterData({
+                            ...registerData,
+                            phoneNumber: value,
+                          });
+                        }}
+                        maxLength={12}
+                        required
+                      />
+                    </div>
                   </div>
-                  {errors.phoneNumber && <p className="text-error-500 text-xs mt-1">{errors.phoneNumber}</p>}
+                  {errors.phoneNumber && (
+                    <p className="text-error-500 text-xs mt-2">
+                      {errors.phoneNumber}
+                    </p>
+                  )}
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-neutral-700 mb-2">
-                    Location *
+                    Location (Philippines) *
                   </label>
                   <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5" />
-                    <Input
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5 pointer-events-none z-10" />
+                    <input
                       type="text"
-                      placeholder="City, Country"
-                      className={`pl-10 h-11 ${errors.location ? 'border-error-500' : ''}`}
-                      value={registerData.location}
-                      onChange={(e) => setRegisterData({ ...registerData, location: e.target.value })}
-                      required
+                      placeholder={
+                        citiesLoading ? "Loading cities..." : "Search city..."
+                      }
+                      className={`pl-10 pr-10 h-11 w-full border rounded-md bg-background text-neutral-900 focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer ${
+                        errors.location
+                          ? "border-error-500"
+                          : "border-neutral-300"
+                      }`}
+                      value={
+                        showCityDropdown
+                          ? citySearchTerm
+                          : registerData.location
+                      }
+                      onChange={(e) => {
+                        setCitySearchTerm(e.target.value);
+                        setShowCityDropdown(true);
+                      }}
+                      onFocus={() => {
+                        setShowCityDropdown(true);
+                      }}
+                      onBlur={() => {
+                        setShowCityDropdown(false);
+                      }}
+                      disabled={citiesLoading}
+                      required={!registerData.location}
                     />
+                    <ChevronDown
+                      className={`absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400 pointer-events-none transition-transform ${
+                        showCityDropdown ? "rotate-180" : ""
+                      }`}
+                    />
+                    {showCityDropdown && !citiesLoading && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-neutral-300 rounded-md shadow-lg z-50 max-h-65 overflow-y-auto">
+                        {philippineCities
+                          .filter((city) =>
+                            `${city.name}, ${city.adminName1}`
+                              .toLowerCase()
+                              .includes(citySearchTerm.toLowerCase())
+                          )
+                          .map((city, index) => (
+                            <button
+                              key={index}
+                              type="button"
+                              onMouseDown={() => {
+                                setRegisterData({
+                                  ...registerData,
+                                  location: `${city.name}, ${city.adminName1}`,
+                                });
+                                setShowCityDropdown(false);
+                                setCitySearchTerm("");
+                              }}
+                              className="w-full text-left px-3 py-2 hover:bg-primary/10 hover:text-primary transition-colors text-sm"
+                            >
+                              {city.name}, {city.adminName1}
+                            </button>
+                          ))}
+                        {philippineCities.filter((city) =>
+                          `${city.name}, ${city.adminName1}`
+                            .toLowerCase()
+                            .includes(citySearchTerm.toLowerCase())
+                        ).length === 0 && (
+                          <div className="px-3 py-2 text-neutral-500 text-sm">
+                            No cities found
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  {errors.location && <p className="text-error-500 text-xs mt-1">{errors.location}</p>}
+                  {errors.location && (
+                    <p className="text-error-500 text-xs mt-1">
+                      {errors.location}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -676,13 +1051,24 @@ export function AuthPage() {
                     <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5" />
                     <Input
                       type="date"
-                      className={`pl-10 h-11 ${errors.dateOfBirth ? 'border-error-500' : ''}`}
+                      className={`pl-10 h-11 ${
+                        errors.dateOfBirth ? "border-error-500" : ""
+                      }`}
                       value={registerData.dateOfBirth}
-                      onChange={(e) => setRegisterData({ ...registerData, dateOfBirth: e.target.value })}
+                      onChange={(e) =>
+                        setRegisterData({
+                          ...registerData,
+                          dateOfBirth: e.target.value,
+                        })
+                      }
                       required
                     />
                   </div>
-                  {errors.dateOfBirth && <p className="text-error-500 text-xs mt-1">{errors.dateOfBirth}</p>}
+                  {errors.dateOfBirth && (
+                    <p className="text-error-500 text-xs mt-1">
+                      {errors.dateOfBirth}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -694,13 +1080,24 @@ export function AuthPage() {
                     <Input
                       type="text"
                       placeholder="BADGE-12345"
-                      className={`pl-10 h-11 ${errors.badgeId ? 'border-error-500' : ''}`}
+                      className={`pl-10 h-11 ${
+                        errors.badgeId ? "border-error-500" : ""
+                      }`}
                       value={registerData.badgeId}
-                      onChange={(e) => setRegisterData({ ...registerData, badgeId: e.target.value })}
+                      onChange={(e) =>
+                        setRegisterData({
+                          ...registerData,
+                          badgeId: e.target.value,
+                        })
+                      }
                       required
                     />
                   </div>
-                  {errors.badgeId && <p className="text-error-500 text-xs mt-1">{errors.badgeId}</p>}
+                  {errors.badgeId && (
+                    <p className="text-error-500 text-xs mt-1">
+                      {errors.badgeId}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -711,12 +1108,18 @@ export function AuthPage() {
                   required
                 />
                 <span className="text-sm text-neutral-600">
-                  I agree to the{' '}
-                  <a href="#" className="text-primary hover:text-[#00B087] font-medium">
+                  I agree to the{" "}
+                  <a
+                    href="#"
+                    className="text-primary hover:text-[#00B087] font-medium"
+                  >
                     Terms of Service
-                  </a>{' '}
-                  and{' '}
-                  <a href="#" className="text-primary hover:text-[#00B087] font-medium">
+                  </a>{" "}
+                  and{" "}
+                  <a
+                    href="#"
+                    className="text-primary hover:text-[#00B087] font-medium"
+                  >
                     Privacy Policy
                   </a>
                 </span>
@@ -733,26 +1136,26 @@ export function AuthPage() {
                     Creating Account...
                   </div>
                 ) : (
-                  'Create Account'
+                  "Create Account"
                 )}
               </Button>
             </form>
           )}
 
-          {/* Toggle Login/Register */}
+          {/* Toggle Login/Register + Contact Us */}
           <div className="mt-6 text-center">
             <p className="text-sm text-neutral-600">
-              {isLogin ? "Don't have an account?" : 'Already have an account?'}{' '}
+              {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
               <button
                 type="button"
                 onClick={() => {
                   setIsLogin(!isLogin);
-                  setError('');
+                  setError("");
                   setErrors({});
                 }}
                 className="text-primary hover:text-[#00B087] font-semibold"
               >
-                {isLogin ? 'Sign Up' : 'Sign In'}
+                {isLogin ? "Sign Up" : "Sign In"}
               </button>
             </p>
           </div>

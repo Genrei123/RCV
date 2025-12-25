@@ -447,7 +447,7 @@ export function Profile({
             variant="outline"
             size="sm"
             onClick={() => handleViewDetails(row as AuditLog)}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 cursor-pointer"
           >
             <Eye className="w-4 h-4" />
             View Details
@@ -492,14 +492,14 @@ export function Profile({
         <div className="flex items-center gap-3 cursor-pointer">
           <Button
             onClick={handleEditProfile}
-            className="bg-teal-600 hover:bg-primary-700 text-white w-auto"
+            className="bg-teal-600 hover:bg-primary-700 text-white w-auto cursor-pointer"
           >
             Edit Profile
           </Button>
           <Button
             onClick={handleArchiveAccount}
             variant="destructive"
-            className="bg-amber-500 hover:bg-error-700 text-white w-auto"
+            className="bg-amber-500 hover:bg-error-700 text-white w-auto cursor-pointer"
           >
             <Archive className="h-4 w-4 mr-2" />
             Archive Account
@@ -529,6 +529,8 @@ export function Profile({
                       src={localAvatar}
                       alt={getFullName(user)}
                       className="w-full h-full object-cover"
+                      //added a non draggable profile picture also
+                      draggable="false"
                     />
                   ) : user?.avatar ? (
                     <img
@@ -645,7 +647,7 @@ export function Profile({
               <div className="flex items-center gap-2">
                 <label
                   htmlFor="activity-sort"
-                  className="text-sm text-neutral-600 hidden sm:block"
+                  className="text-sm text-neutral-600 hidden sm:blockcursor-pointer"
                 >
                   Sort:
                 </label>
@@ -653,7 +655,7 @@ export function Profile({
                   id="activity-sort"
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as any)}
-                  className="h-9 rounded-md border border-neutral-300 bg-white px-2 text-sm"
+                  className="h-9 rounded-md border border-neutral-300 bg-white px-2 text-sm cursor-pointer "
                 >
                   <option value="all">All (default)</option>
                   <option value="action">Action (A–Z)</option>
@@ -662,7 +664,14 @@ export function Profile({
                   variant="outline"
                   onClick={async () => {
                     try {
-                      toast.info("Preparing Excel export…");
+                      const progressDelay = 800; // Show progress alert only if export takes longer than 800ms
+                      let progressToastId: string | number | null = null;
+
+                      // Set a timer to show progress alert if export is taking too long
+                      const progressTimer = setTimeout(() => {
+                        progressToastId = toast.info("Preparing Excel export…");
+                      }, progressDelay);
+
                       const all = [...sortedFullLogs];
 
                       // Create workbook and worksheet with exceljs
@@ -749,6 +758,15 @@ export function Profile({
                       a.click();
                       document.body.removeChild(a);
                       URL.revokeObjectURL(url);
+
+                      // Clear the progress timer since export completed
+                      clearTimeout(progressTimer);
+
+                      // Dismiss progress toast if it was shown
+                      if (progressToastId !== null) {
+                        toast.dismiss(progressToastId);
+                      }
+
                       toast.success("Excel exported");
                     } catch (err) {
                       console.error(err);
@@ -762,7 +780,7 @@ export function Profile({
             </div>
 
             {/* Activities Table */}
-            <div className="mb-6 w-full">
+            <div className="mb-6 w-full ">
               <DataTable
                 title=""
                 columns={activityColumns}
@@ -1236,7 +1254,7 @@ export function Profile({
             </div>
           )}
 
-          <div className="flex justify-end mt-6">
+          <div className="flex justify-end mt-6 ">
             <Button
               variant="outline"
               onClick={() => setShowDetailsModal(false)}

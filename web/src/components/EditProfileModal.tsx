@@ -8,6 +8,7 @@ import {
   Hash,
   AlertTriangle,
   Camera,
+  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,17 @@ import { useState, useEffect, useRef } from "react";
 import type { ProfileUser } from "@/pages/Profile";
 import { AvatarCropDialog } from "@/components/AvatarCropDialog";
 import { FirebaseStorageService } from "@/services/firebaseStorageService";
+
+interface PhilippineCity {
+  name: string;
+  adminName1: string;
+}
+import {
+  validatePhilippinePhoneNumber,
+  formatPhoneNumberForDatabase,
+  extractPhoneNumberDigits,
+  formatPhoneNumberForDisplay,
+} from "@/utils/phoneValidation";
 
 interface EditProfileModalProps {
   isOpen: boolean;
@@ -37,6 +49,12 @@ export function EditProfileModal({
   const [cropOpen, setCropOpen] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [philippineCities, setPhilippineCities] = useState<PhilippineCity[]>(
+    []
+  );
+  const [citiesLoading, setCitiesLoading] = useState(true);
+  const [showCityDropdown, setShowCityDropdown] = useState(false);
+  const [citySearchTerm, setCitySearchTerm] = useState("");
 
   useEffect(() => {
     if (user) {
@@ -61,6 +79,70 @@ export function EditProfileModal({
     }
   }, [user]);
 
+  // Fetch Philippine cities on mount
+  useEffect(() => {
+    const fetchPhilippineCities = async () => {
+      try {
+        const response = await fetch("https://psgc.gitlab.io/api/cities/");
+        const data = await response.json();
+
+        if (data && Array.isArray(data)) {
+          const cities = data
+            .map((city: any) => ({
+              name: city.name || city.cityName,
+              adminName1: city.province || city.regionName || "Philippines",
+            }))
+            .sort((a: PhilippineCity, b: PhilippineCity) =>
+              a.name.localeCompare(b.name)
+            );
+
+          setPhilippineCities(cities);
+        }
+      } catch (err) {
+        console.error("Failed to fetch Philippine cities:", err);
+        try {
+          const fallbackResponse = await fetch(
+            "https://psgc.rootscratch.com/cities/"
+          );
+          const fallbackData = await fallbackResponse.json();
+
+          if (fallbackData && Array.isArray(fallbackData)) {
+            const cities = fallbackData
+              .map((city: any) => ({
+                name: city.name || city.cityName,
+                adminName1: city.province || city.regionName || "Philippines",
+              }))
+              .sort((a: PhilippineCity, b: PhilippineCity) =>
+                a.name.localeCompare(b.name)
+              );
+
+            setPhilippineCities(cities);
+          }
+        } catch (fallbackErr) {
+          console.error("Fallback API also failed:", fallbackErr);
+          setPhilippineCities([]);
+        }
+      } finally {
+        setCitiesLoading(false);
+      }
+    };
+
+    fetchPhilippineCities();
+  }, []);
+
+  // Hide body scroll when modal or city dropdown is open
+  useEffect(() => {
+    if (isOpen || showCityDropdown) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isOpen, showCityDropdown]);
+
   if (!isOpen || !user) return null;
 
   const validateForm = () => {
@@ -77,8 +159,13 @@ export function EditProfileModal({
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = "Invalid email format";
     }
-    if (formData.phoneNumber && !/^\+?[\d\s-()]+$/.test(formData.phoneNumber)) {
-      newErrors.phoneNumber = "Invalid phone number format";
+    if (formData.phoneNumber && formData.phoneNumber.length > 0) {
+      const phoneValidation = validatePhilippinePhoneNumber(
+        formData.phoneNumber
+      );
+      if (!phoneValidation.isValid) {
+        newErrors.phoneNumber = phoneValidation.error || "Invalid phone number";
+      }
     }
 
     setErrors(newErrors);
@@ -111,34 +198,43 @@ export function EditProfileModal({
       // Save to localStorage for immediate preview
       localStorage.setItem("profile_avatar_data", dataUrl);
       setAvatarPreview(dataUrl);
-      
+
       // Upload to Firebase Storage
       if (user?._id) {
-        console.log('📤 Uploading avatar to Firebase Storage for user:', user._id);
-        
+        console.log(
+          "📤 Uploading avatar to Firebase Storage for user:",
+          user._id
+        );
+
         // Convert base64 to File
-        const file = FirebaseStorageService.dataUrlToFile(dataUrl, `avatar_${user._id}.jpg`);
-        
+        const file = FirebaseStorageService.dataUrlToFile(
+          dataUrl,
+          `avatar_${user._id}.jpg`
+        );
+
         // Upload to Firebase Storage
-        const firebaseUrl = await FirebaseStorageService.uploadAvatar(user._id, file);
-        
+        const firebaseUrl = await FirebaseStorageService.uploadAvatar(
+          user._id,
+          file
+        );
+
         if (firebaseUrl) {
-          console.log('✅ Avatar uploaded to Firebase:', firebaseUrl);
+          console.log("✅ Avatar uploaded to Firebase:", firebaseUrl);
           // Use Firebase URL instead of base64
           setFormData((prev) => ({ ...prev, avatar: firebaseUrl }));
         } else {
-          console.warn('⚠️ Firebase upload failed, using base64 fallback');
+          console.warn("⚠️ Firebase upload failed, using base64 fallback");
           setFormData((prev) => ({ ...prev, avatar: dataUrl }));
         }
       } else {
-        console.warn('⚠️ No user ID, using base64 only');
+        console.warn("⚠️ No user ID, using base64 only");
         setFormData((prev) => ({ ...prev, avatar: dataUrl }));
       }
-      
+
       // Notify other components
-      window.dispatchEvent(new CustomEvent('profile-avatar-updated'));
+      window.dispatchEvent(new CustomEvent("profile-avatar-updated"));
     } catch (error) {
-      console.error('❌ Error processing avatar:', error);
+      console.error("❌ Error processing avatar:", error);
       // Fallback to base64 if Firebase upload fails
       setFormData((prev) => ({ ...prev, avatar: dataUrl }));
     } finally {
@@ -157,7 +253,14 @@ export function EditProfileModal({
 
     setLoading(true);
     try {
-      await onSave(formData);
+      // Format phone number before saving
+      const dataToSave = {
+        ...formData,
+        phoneNumber: formData.phoneNumber
+          ? formatPhoneNumberForDatabase(formData.phoneNumber)
+          : "",
+      };
+      await onSave(dataToSave);
       onClose();
     } catch (error) {
       console.error("Error saving profile:", error);
@@ -215,7 +318,7 @@ export function EditProfileModal({
                   type="button"
                   onClick={openFilePicker}
                   disabled={uploadingAvatar}
-                  className="group relative w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="group relative w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   title="Change avatar"
                 >
                   {avatarPreview ? (
@@ -362,19 +465,42 @@ export function EditProfileModal({
                   <label className="text-sm font-medium text-gray-700">
                     Phone Number
                   </label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      type="tel"
-                      value={formData.phoneNumber || ""}
-                      onChange={(e) =>
-                        handleChange("phoneNumber", e.target.value)
-                      }
-                      placeholder="Enter phone number"
-                      className={`pl-10 ${
-                        errors.phoneNumber ? "border-red-500" : ""
-                      }`}
-                    />
+                  <div className="flex gap-0 rounded-lg border border-neutral-300 overflow-hidden bg-white">
+                    {/* Country Code Prefix with Icon */}
+                    <div className="flex items-center gap-2 bg-neutral-50 px-4 border-r border-neutral-300 pr-3 pointer-events-none">
+                      <Phone className="text-neutral-500 w-5 h-5" />
+                      <span className="text-neutral-700 whitespace-nowrap">
+                        +63
+                      </span>
+                    </div>
+                    {/* Phone Input */}
+                    <div className="flex-1 relative">
+                      {(() => {
+                        const plainDigits = formData.phoneNumber
+                          ? extractPhoneNumberDigits(formData.phoneNumber)
+                          : "";
+                        const displayValue =
+                          formatPhoneNumberForDisplay(plainDigits);
+                        return (
+                          <Input
+                            type="tel"
+                            placeholder="999-999-9999"
+                            className={`border-0 h-9.5 w-full px-3 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:ring-offset-0 transition-all ${
+                              errors.phoneNumber ? "bg-red-50" : ""
+                            }`}
+                            value={displayValue}
+                            onChange={(e) => {
+                              // Remove dashes and only allow digits, limit to 10 characters
+                              const value = e.target.value
+                                .replace(/\D/g, "")
+                                .slice(0, 10);
+                              handleChange("phoneNumber", value);
+                            }}
+                            maxLength={12}
+                          />
+                        );
+                      })()}
+                    </div>
                   </div>
                   {errors.phoneNumber && (
                     <p className="text-xs text-red-500">{errors.phoneNumber}</p>
@@ -383,16 +509,74 @@ export function EditProfileModal({
 
                 <div className="space-y-2 md:col-span-2">
                   <label className="text-sm font-medium text-gray-700">
-                    Location
+                    Location (Philippine Cities)
                   </label>
                   <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      value={formData.location || ""}
-                      onChange={(e) => handleChange("location", e.target.value)}
-                      placeholder="Enter location"
-                      className="pl-10"
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none z-10" />
+                    <input
+                      type="text"
+                      placeholder={
+                        citiesLoading ? "Loading cities..." : "Search city..."
+                      }
+                      className="pl-10 pr-10 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+                      value={
+                        showCityDropdown
+                          ? citySearchTerm
+                          : formData.location || ""
+                      }
+                      onChange={(e) => {
+                        setCitySearchTerm(e.target.value);
+                        setShowCityDropdown(true);
+                      }}
+                      onFocus={() => {
+                        setShowCityDropdown(true);
+                      }}
+                      onBlur={() => {
+                        setShowCityDropdown(false);
+                      }}
+                      disabled={citiesLoading}
                     />
+                    <ChevronDown
+                      className={`absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none transition-transform ${
+                        showCityDropdown ? "rotate-180" : ""
+                      }`}
+                    />
+                    {showCityDropdown && !citiesLoading && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-50 max-h-40 overflow-y-auto">
+                        {philippineCities
+                          .filter((city) =>
+                            `${city.name}, ${city.adminName1}`
+                              .toLowerCase()
+                              .includes(citySearchTerm.toLowerCase())
+                          )
+                          .map((city, index) => (
+                            <button
+                              key={index}
+                              type="button"
+                              onMouseDown={() => {
+                                handleChange(
+                                  "location",
+                                  `${city.name}, ${city.adminName1}`
+                                );
+                                setShowCityDropdown(false);
+                                setCitySearchTerm("");
+                              }}
+                              className="w-full text-left px-3 py-2 hover:bg-teal-500/10 hover:text-teal-600 transition-colors text-sm"
+                            >
+                              {city.name}, {city.adminName1}
+                            </button>
+                          ))}
+                        {philippineCities.filter((city) =>
+                          `${city.name}, ${city.adminName1}`
+                            .toLowerCase()
+                            .includes(citySearchTerm.toLowerCase())
+                        ).length === 0 && (
+                          <div className="px-3 py-2 text-gray-500 text-sm">
+                            No cities found
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -437,7 +621,7 @@ export function EditProfileModal({
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end gap-3 pt-6 border-t mt-6">
+          <div className="flex justify-end gap-3 pt-6 border-t mt-6 ">
             <Button
               type="button"
               variant="outline"
@@ -448,10 +632,14 @@ export function EditProfileModal({
             </Button>
             <Button
               type="submit"
-              className="bg-teal-600 hover:bg-teal-700 text-white"
+              className="bg-teal-600 hover:bg-teal-700 text-white cursor-pointer"
               disabled={loading || uploadingAvatar}
             >
-              {loading ? "Saving..." : uploadingAvatar ? "Uploading..." : "Save Changes"}
+              {loading
+                ? "Saving..."
+                : uploadingAvatar
+                ? "Uploading..."
+                : "Save Changes"}
             </Button>
           </div>
         </form>

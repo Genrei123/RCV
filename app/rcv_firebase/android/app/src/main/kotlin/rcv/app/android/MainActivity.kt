@@ -1,4 +1,4 @@
-package rcv.app.android
+package com.rcv.io
 
 import io.flutter.embedding.android.FlutterActivity
 

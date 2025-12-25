@@ -1,3 +1,4 @@
+// ...existing code...
 import { Package, Calendar, Building2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -44,7 +45,7 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
 
   return (
     <Card className="hover:shadow-md transition-shadow cursor-pointer overflow-hidden">
-      <CardContent className="p-4" onClick={() => onClick?.(product)}>
+      <CardContent className="p-4 min-w-0" onClick={() => onClick?.(product)}>
         <div className="flex items-start justify-between mb-3 min-w-0">
           <div className="flex items-center gap-3 min-w-0">
             <div
@@ -79,22 +80,23 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
         </div>
 
         <div className="space-y-2 mb-3">
-          <div className="flex items-center justify-between text-sm min-w-0 gap-2">
-            <span className="text-gray-500">LTO Number:</span>
+          <div className="grid grid-cols-[max-content_1fr] items-center text-sm min-w-0 gap-2">
+            <span className="text-gray-500 justify-self-start">LTO Number:</span>
             <span
-              className="font-medium text-gray-900 truncate min-w-0"
+              className="font-medium text-gray-900 truncate min-w-0 text-right"
               title={product.LTONumber}
             >
-              {product.LTONumber}
+              {truncate(product.LTONumber || "", 15)}
             </span>
           </div>
-          <div className="flex items-center justify-between text-sm min-w-0 gap-2">
-            <span className="text-gray-500">Lot Number:</span>
+
+          <div className="grid grid-cols-[max-content_1fr] items-center text-sm min-w-0 gap-2">
+            <span className="text-gray-500 justify-self-start">Lot Number:</span>
             <span
-              className="font-medium text-gray-900 truncate min-w-0"
+              className="font-medium text-gray-900 truncate min-w-0 text-right"
               title={product.lotNumber}
             >
-              {product.lotNumber}
+              {truncate(product.lotNumber, 15)}
             </span>
           </div>
         </div>
@@ -135,3 +137,4 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
     </Card>
   );
 }
+// ...existing code...

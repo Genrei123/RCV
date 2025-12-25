@@ -2,6 +2,7 @@ import { DataTable, type Column } from "@/components/DataTable";
 import { PageContainer } from "@/components/PageContainer";
 import { useState, useEffect } from "react";
 import type { User } from "@/typeorm/entities/user.entity";
+import { truncateText } from "@/utils/textTruncate";
 import { Button } from "@/components/ui/button";
 import { AuthService } from "@/services/authService";
 import {
@@ -53,7 +54,7 @@ export function Dashboard(props: DashboardProps) {
   const [sortKey, setSortKey] = useState<"lastName" | "email" | "status">(
     "lastName"
   );
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [setCurrentUser] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
@@ -97,21 +98,22 @@ export function Dashboard(props: DashboardProps) {
     {
       key: "firstName",
       label: "First Name",
+      render: (value: string) => (
+        <span title={value}>{truncateText(value)}</span>
+      ),
     },
     {
       key: "lastName",
       label: "Last Name",
+      render: (value: string) => (
+        <span title={value}>{truncateText(value)}</span>
+      ),
     },
     {
       key: "email",
       label: "Email",
       render: (value: string) => (
-        <span
-          className="block max-w-[180px] sm:max-w-none truncate"
-          title={value}
-        >
-          {value}
-        </span>
+        <span title={value}>{truncateText(value)}</span>
       ),
     },
     {
@@ -253,7 +255,6 @@ export function Dashboard(props: DashboardProps) {
     (Array.isArray(u.data) || typeof u.pagination !== "undefined");
 
   // Prefer local fetched users first, then parent paginated payload, then legacy parent array
-  // Filter out the current user from the list
   const usersArray: User[] = (() => {
     let allUsers: User[] = [];
 
@@ -265,15 +266,9 @@ export function Dashboard(props: DashboardProps) {
       allUsers = props.users as User[];
     }
 
-    // Filter out the current user
-    if (currentUser && currentUser._id) {
-      return allUsers.filter((user) => user._id !== currentUser._id);
-    }
-
     return allUsers;
   })();
 
-  // Apply ascending sorting by selected key
   const sortedUsers = [...usersArray].sort((a, b) => {
     let av = "";
     let bv = "";
@@ -302,6 +297,8 @@ export function Dashboard(props: DashboardProps) {
   })();
 
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+
+  const paginatedDisplayData = sortedUsers;
 
   // Fetch a page from server
   const fetchPage = async (page: number) => {
@@ -347,6 +344,7 @@ export function Dashboard(props: DashboardProps) {
   return (
     <>
       <PageContainer
+        className="overflow-hidden relative"
         title="Dashboard"
         description="Overview of system statistics and user management"
       >
@@ -427,7 +425,7 @@ export function Dashboard(props: DashboardProps) {
           <DataTable
             title="User Accounts"
             columns={columns}
-            data={sortedUsers}
+            data={paginatedDisplayData}
             searchPlaceholder="Search users..."
             onSearch={(query) => onSearch(query)}
             loading={loading}
@@ -455,12 +453,11 @@ export function Dashboard(props: DashboardProps) {
                 </Select>
               </div>
             }
-            onRowClick={handleRowClick}
           />
         </div>
         <div className="mt-4 flex items-center justify-between w-full">
           <div className="text-sm text-muted-foreground">
-            Showing {sortedUsers.length} of {totalItems} users • Page{" "}
+            Showing {paginatedDisplayData.length} of {totalItems} users • Page{" "}
             {currentPage} of {totalPages}
           </div>
 

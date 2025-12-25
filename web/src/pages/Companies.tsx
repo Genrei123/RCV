@@ -4,6 +4,7 @@ import { PageContainer } from "@/components/PageContainer";
 import { Button } from "@/components/ui/button";
 import { DataTable, type Column } from "@/components/DataTable";
 import type { Company } from "@/typeorm/entities/company.entity";
+import { truncateText } from "@/utils/textTruncate";
 import { AddCompanyModal } from "@/components/AddCompanyModal";
 import { CompanyDetailsModal } from "@/components/CompanyDetailsModal";
 import { CompanyService } from "@/services/companyService";
@@ -157,20 +158,28 @@ export function Companies(props: CompaniesProps) {
           <div className="p-2 bg-teal-100 rounded-lg">
             <Building2 className="h-4 w-4 text-teal-600" />
           </div>
-          <span className="font-medium">{value}</span>
+          <span className="font-medium" title={value}>
+            {truncateText(value)}
+          </span>
         </div>
       ),
     },
     {
       key: "address",
       label: "Address",
+      render: (value: string) => (
+        <span title={value}>{truncateText(value)}</span>
+      ),
     },
     {
       key: "licenseNumber",
       label: "License Number",
       render: (value: string) => (
-        <span className="px-2 py-1 bg-neutral-100 text-neutral-700 rounded text-sm font-mono">
-          {value}
+        <span
+          className="px-2 py-1 bg-neutral-100 text-neutral-700 rounded text-sm font-mono"
+          title={value}
+        >
+          {truncateText(value)}
         </span>
       ),
     },
@@ -261,9 +270,9 @@ export function Companies(props: CompaniesProps) {
             customControls={
               <Button
                 onClick={() => setShowAddModal(true)}
-                className="whitespace-nowrap"
+                className="whitespace-nowrap cursor-pointer"
               >
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="h-4 w-4 mr-2 " />
                 Add Company
               </Button>
             }

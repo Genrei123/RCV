@@ -490,6 +490,44 @@ class ApiService {
       return {'success': false, 'message': 'Network error: ${e.toString()}'};
     }
   }
+
+  /// Get certificate PDF URL from blockchain
+  ///
+  /// Retrieves the Firebase Storage URL for a certificate PDF
+  /// so users can view/download the original electronic certificate
+  static Future<Map<String, dynamic>> getCertificatePDFUrl(String certificateId) async {
+    try {
+      developer.log('Fetching PDF URL for certificate: $certificateId');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/certificate-blockchain/pdf/$certificateId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 15));
+
+      developer.log('Certificate PDF URL Response Status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        return {
+          'success': true,
+          'certificate': responseData['certificate'],
+          'message': responseData['message'],
+        };
+      } else {
+        final errorData = json.decode(response.body);
+        return {
+          'success': false,
+          'message': errorData['message'] ?? 'Certificate not found',
+        };
+      }
+    } catch (e) {
+      developer.log('Error fetching certificate PDF URL: $e');
+      return {'success': false, 'message': 'Network error: ${e.toString()}'};
+    }
+  }
 }
 
 /// Custom API Exception

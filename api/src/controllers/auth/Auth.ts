@@ -2,13 +2,19 @@ import bcryptjs from 'bcryptjs';
 import CustomError from '../../utils/CustomError';
 import { ForgotPasswordRepo, UserRepo } from '../../typeorm/data-source';
 import type { NextFunction, Request, Response } from 'express';
-import { createForgotPasswordToken, createToken, createMobileToken, verifyToken } from '../../utils/JWT';
-import { UserValidation } from '../../typeorm/entities/user.entity';
+import {
+  createForgotPasswordToken,
+  createToken,
+  createMobileToken,
+  verifyToken,
+  decryptToken,
+} from "../../utils/JWT";
+import { UserValidation, type User } from '../../typeorm/entities/user.entity';
 import nodemailer_transporter from '../../utils/nodemailer';
 import { AuditLogService } from '../../services/auditLogService';
+import { FirebaseAuthService } from '../../services/firebaseAuthService';
 import CryptoJS from 'crypto-js';
 import * as dotenv from 'dotenv';
-import { jwt } from 'zod';
 dotenv.config();
 
 export const userSignIn = async (req: Request, res: Response, next: NextFunction) => {
@@ -26,6 +32,7 @@ export const userSignIn = async (req: Request, res: Response, next: NextFunction
         "approved",
         "firstName",
         "lastName",
+        "firebaseUid",
       ],
     });
 
@@ -49,7 +56,6 @@ export const userSignIn = async (req: Request, res: Response, next: NextFunction
       return next(error);
     }
 
-    // Check if user is approved
     if (!user.approved) {
       return res.status(403).json({
         success: false,
@@ -65,6 +71,21 @@ export const userSignIn = async (req: Request, res: Response, next: NextFunction
       isAdmin: user.role === "ADMIN" ? true : false,
       iat: Date.now(),
     });
+
+    // Generate Firebase custom token if user has Firebase account
+    let firebaseToken = null;
+    if (user.firebaseUid) {
+      try {
+        console.log('Attempting to create Firebase token for UID:', user.firebaseUid);
+        firebaseToken = await FirebaseAuthService.createCustomToken(user.firebaseUid);
+        console.log('Firebase token created successfully:', firebaseToken ? 'YES' : 'NO');
+      } catch (error) {
+        console.error('Failed to create Firebase custom token:', error);
+        console.error('Error details:', JSON.stringify(error, null, 2));
+      }
+    } else {
+      console.log('No firebaseUid found for user:', user.email);
+    }
 
     // Log the login action
     await AuditLogService.logLogin(user._id, req, "WEB");
@@ -85,6 +106,7 @@ export const userSignIn = async (req: Request, res: Response, next: NextFunction
       success: true,
       message: "User signed in successfully",
       token,
+      firebaseToken,
       rememberMe: rememberMe || false,
       user: {
         _id: user._id,
@@ -128,6 +150,7 @@ export const mobileSignIn = async (req: Request, res: Response, next: NextFuncti
         "phoneNumber",
         "dateOfBirth",
         "avatarUrl",
+        "firebaseUid",
       ],
     });
 
@@ -164,7 +187,7 @@ export const mobileSignIn = async (req: Request, res: Response, next: NextFuncti
 
     // Create mobile token with full user data
     const fullName = `${user.firstName} ${user.middleName ? user.middleName + ' ' : ''}${user.lastName}${user.extName ? ' ' + user.extName : ''}`.trim();
-    
+
     const mobileToken = createMobileToken({
       sub: user._id,
       email: user.email,
@@ -183,6 +206,16 @@ export const mobileSignIn = async (req: Request, res: Response, next: NextFuncti
       isAdmin: user.role === "ADMIN",
       iat: Date.now(),
     });
+
+    // Generate Firebase custom token if user has Firebase UID
+    let firebaseToken = null;
+    if (user.firebaseUid) {
+      try {
+        firebaseToken = await FirebaseAuthService.createCustomToken(user.firebaseUid);
+      } catch (error) {
+        console.error('Failed to create Firebase custom token:', error);
+      }
+    }
 
     // Log the login action
     await AuditLogService.logLogin(user._id, req, "MOBILE");
@@ -203,6 +236,7 @@ export const mobileSignIn = async (req: Request, res: Response, next: NextFuncti
       success: true,
       message: "Mobile sign in successful",
       token: mobileToken,
+      firebaseToken,
       rememberMe: rememberMe || false,
       user: {
         _id: user._id,
@@ -288,46 +322,87 @@ export const userSignUp = async (
   res: Response,
   next: NextFunction
 ) => {
-  const newUser = UserValidation.safeParse(req.body);
-  if (!newUser || !newUser.success) {
-    return next(
-      new CustomError(400, "Parsing failed, incomplete information", {
-        errors: newUser.error?.issues,
-      })
-    );
+  try {
+    const newUser = UserValidation.safeParse(req.body);
+    if (!newUser || !newUser.success) {
+      return next(
+        new CustomError(400, "Parsing failed, incomplete information", {
+          errors: newUser.error?.issues,
+        })
+      );
+    }
+
+    if ((await UserRepo.findOneBy({ email: newUser.data?.email })) != null) {
+      return next(
+        new CustomError(400, "Email already exists", {
+          email: newUser.data.email,
+        })
+      );
+    }
+
+    try {
+      const { firebaseUser, dbUser } = await FirebaseAuthService.createFirebaseUser(
+        newUser.data.email,
+        newUser.data.password,
+        {
+          firstName: newUser.data.firstName,
+          lastName: newUser.data.lastName,
+          middleName: newUser.data.middleName || '',
+          extName: newUser.data.extName || '',
+          phoneNumber: newUser.data.phoneNumber || '',
+          location: newUser.data.location || '',
+          dateOfBirth: newUser.data.dateOfBirth || '',
+          badgeId: newUser.data.badgeId || '',
+          fullName: newUser.data.fullName,
+          role: 'USER' as User['role'],
+          approved: false,
+          status: 'Active' as User['status'],
+        }
+      );
+
+      return res.status(200).json({
+        success: true,
+        message:
+          "Registration successful! Your account is pending approval. You will be notified once an administrator approves your account.",
+        user: {
+          email: dbUser.email,
+          firstName: dbUser.firstName,
+          lastName: dbUser.lastName,
+          approved: false,
+          firebaseUid: firebaseUser.uid,
+        },
+        pendingApproval: true,
+      });
+    } catch (firebaseError: any) {
+      console.error('Firebase user creation failed:', firebaseError);
+      
+      // Fallback: Create in MySQL only if Firebase fails
+      const hashPassword = bcryptjs.hashSync(
+        newUser.data.password,
+        bcryptjs.genSaltSync(10)
+      );
+      newUser.data.password = hashPassword;
+      newUser.data.approved = false;
+
+      const savedUser = await UserRepo.save(newUser.data);
+
+      return res.status(200).json({
+        success: true,
+        message:
+          "Registration successful! Your account is pending approval. You will be notified once an administrator approves your account.",
+        user: {
+          email: savedUser.email,
+          firstName: savedUser.firstName,
+          lastName: savedUser.lastName,
+          approved: false,
+        },
+        pendingApproval: true,
+      });
+    }
+  } catch (error: any) {
+    console.error('Registration error:', error);
+    return next(new CustomError(500, error.message));
   }
-
-  if ((await UserRepo.findOneBy({ email: newUser.data?.email })) != null) {
-    return next(
-      new CustomError(400, "Email already exists", {
-        email: newUser.data.email,
-      })
-    );
-  }
-
-  const hashPassword = bcryptjs.hashSync(
-    newUser.data.password,
-    bcryptjs.genSaltSync(10)
-  );
-  newUser.data.password = hashPassword;
-
-  // Set approved to false by default
-  newUser.data.approved = false;
-
-  await UserRepo.save(newUser.data);
-
-  return res.status(200).json({
-    success: true,
-    message:
-      "Registration successful! Your account is pending approval. You will be notified once an administrator approves your account.",
-    user: {
-      email: newUser.data.email,
-      firstName: newUser.data.firstName,
-      lastName: newUser.data.lastName,
-      approved: false,
-    },
-    pendingApproval: true,
-  });
 };
 
 export const logout = async (
@@ -362,7 +437,22 @@ export const refreshToken = async (
   next: NextFunction
 ) => {
   if (req.cookies) {
-    const refreshToken = req.cookies.token;
+    let refreshToken = req.cookies.token;
+
+    // Decrypt the token if it came from cookie
+    if (refreshToken) {
+      try {
+        refreshToken = decryptToken(refreshToken);
+      } catch (decryptError) {
+        console.error("Error decrypting refresh token:", decryptError);
+        return next(
+          new CustomError(400, "Failed to decrypt token", {
+            token: refreshToken,
+          })
+        );
+      }
+    }
+
     const decoded = verifyToken(refreshToken);
     if (!decoded || !decoded.success) {
       return next(
@@ -394,13 +484,24 @@ export const me = async (req: Request, res: Response, next: NextFunction) => {
   try {
     // Try to get token from Authorization header first, then from cookie
     let token: string | undefined;
-    
+
     if (req.headers.authorization) {
       token = req.headers.authorization;
     } else if (req.cookies && req.cookies.token) {
-      token = req.cookies.token;
+      // Decrypt the token if it came from cookie
+      try {
+        const encryptedToken = req.cookies.token;
+        token = decryptToken(encryptedToken);
+      } catch (decryptError) {
+        console.error("Error decrypting token in me endpoint:", decryptError);
+        return next(
+          new CustomError(400, "Failed to decrypt token", {
+            token: null,
+          })
+        );
+      }
     }
-    
+
     if (!token) {
       return next(
         new CustomError(400, "No token provided", {
@@ -408,7 +509,7 @@ export const me = async (req: Request, res: Response, next: NextFunction) => {
         })
       );
     }
-    
+
     const decoded = verifyToken(token);
     if (!decoded || !decoded.success) {
       return next(
@@ -417,7 +518,7 @@ export const me = async (req: Request, res: Response, next: NextFunction) => {
         })
       );
     }
-    
+
     const User = await UserRepo.findOne({
       where: { _id: decoded.data?.sub },
       select: [
@@ -433,7 +534,7 @@ export const me = async (req: Request, res: Response, next: NextFunction) => {
         "avatarUrl",
       ],
     });
-    
+
     return res.send(User);
   } catch (error) {
     return next(error);
@@ -471,11 +572,11 @@ export const meMobile = async (req: Request, res: Response, next: NextFunction) 
         "extName",
       ],
     });
-    
+
     if (!user) {
       return next(new CustomError(404, "User not found"));
     }
-    
+
     return res.status(200).json(user);
   } catch (error) {
     return next(error);
@@ -739,10 +840,10 @@ export const generateForgotPassword = async (
   return res
     .status(200)
     .json({
-      message: "Forgot password key sent",
-      email: email,
-      hashKey: hashKey,
-    });
+    message: "Forgot password key sent",
+    email: email,
+    hashKey: hashKey,
+  });
 };
 
 export const forgotPassword = async (
