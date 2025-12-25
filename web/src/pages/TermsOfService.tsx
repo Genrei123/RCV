@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -5,6 +6,12 @@ import { ArrowLeft } from 'lucide-react';
 
 export function TermsOfService() {
   const navigate = useNavigate();
+
+  const handleSectionScroll = useCallback((sectionId: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
+    window.history.replaceState(null, '', `#${sectionId}`);
+  }, []);
 
   const sections = [
     {
@@ -240,6 +247,7 @@ export function TermsOfService() {
                     <a
                       key={section.id}
                       href={`#${section.id}`}
+                      onClick={handleSectionScroll(section.id)}
                       className="block text-sm text-gray-700 hover:text-app-primary transition-colors"
                     >
                       {section.title}
@@ -247,15 +255,17 @@ export function TermsOfService() {
                   ))}
                   <a
                     href="#dispute-resolution"
+                    onClick={handleSectionScroll('dispute-resolution')}
                     className="block text-sm text-gray-700 hover:text-app-primary transition-colors"
                   >
-                    Dispute Resolution
+                    7. Dispute Resolution and Governing Law
                   </a>
                   <a
                     href="#contact"
+                    onClick={handleSectionScroll('contact')}
                     className="block text-sm text-gray-700 hover:text-app-primary transition-colors"
                   >
-                    Contact Us
+                    8. Contact Us
                   </a>
                 </nav>
               </CardContent>
