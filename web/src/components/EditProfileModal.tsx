@@ -19,6 +19,7 @@ import {
   validatePhilippinePhoneNumber,
   formatPhoneNumberForDatabase,
   extractPhoneNumberDigits,
+  formatPhoneNumberForDisplay,
 } from "@/utils/phoneValidation";
 
 interface EditProfileModalProps {
@@ -81,12 +82,6 @@ export function EditProfileModal({
       newErrors.email = "Email is required";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = "Invalid email format";
-    }
-    if (
-      formData.phoneNumber &&
-      !/^\d{10}$/.test(formData.phoneNumber.replace(/\D/g, ""))
-    ) {
-      newErrors.phoneNumber = "Phone number must be 10 digits";
     }
     if (formData.phoneNumber && formData.phoneNumber.length > 0) {
       const phoneValidation = validatePhilippinePhoneNumber(
@@ -247,7 +242,7 @@ export function EditProfileModal({
                   type="button"
                   onClick={openFilePicker}
                   disabled={uploadingAvatar}
-                  className="group relative w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="group relative w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   title="Change avatar"
                 >
                   {avatarPreview ? (
@@ -404,26 +399,31 @@ export function EditProfileModal({
                     </div>
                     {/* Phone Input */}
                     <div className="flex-1 relative">
-                      <Input
-                        type="tel"
-                        placeholder="99-999-9999"
-                        className={`border-0 h-9.5 w-full px-3 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:ring-offset-0 transition-all ${
-                          errors.phoneNumber ? "bg-red-50" : ""
-                        }`}
-                        value={
-                          formData.phoneNumber
-                            ? extractPhoneNumberDigits(formData.phoneNumber)
-                            : ""
-                        }
-                        onChange={(e) => {
-                          // Only allow digits and limit to 10 characters
-                          const value = e.target.value
-                            .replace(/\D/g, "")
-                            .slice(0, 10);
-                          handleChange("phoneNumber", value);
-                        }}
-                        maxLength={10}
-                      />
+                      {(() => {
+                        const plainDigits = formData.phoneNumber
+                          ? extractPhoneNumberDigits(formData.phoneNumber)
+                          : "";
+                        const displayValue =
+                          formatPhoneNumberForDisplay(plainDigits);
+                        return (
+                          <Input
+                            type="tel"
+                            placeholder="999-999-9999"
+                            className={`border-0 h-9.5 w-full px-3 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:ring-offset-0 transition-all ${
+                              errors.phoneNumber ? "bg-red-50" : ""
+                            }`}
+                            value={displayValue}
+                            onChange={(e) => {
+                              // Remove dashes and only allow digits, limit to 10 characters
+                              const value = e.target.value
+                                .replace(/\D/g, "")
+                                .slice(0, 10);
+                              handleChange("phoneNumber", value);
+                            }}
+                            maxLength={12}
+                          />
+                        );
+                      })()}
                     </div>
                   </div>
                   {errors.phoneNumber && (
@@ -487,7 +487,7 @@ export function EditProfileModal({
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end gap-3 pt-6 border-t mt-6">
+          <div className="flex justify-end gap-3 pt-6 border-t mt-6 ">
             <Button
               type="button"
               variant="outline"
@@ -498,7 +498,7 @@ export function EditProfileModal({
             </Button>
             <Button
               type="submit"
-              className="bg-teal-600 hover:bg-teal-700 text-white"
+              className="bg-teal-600 hover:bg-teal-700 text-white cursor-pointer"
               disabled={loading || uploadingAvatar}
             >
               {loading

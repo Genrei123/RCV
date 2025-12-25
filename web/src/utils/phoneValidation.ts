@@ -138,19 +138,30 @@ export const isValidPhilippineMobilePrefix = (phoneNumber: string): boolean => {
 
 /**
  * Validates a Philippine phone number
- * @param phoneNumber - The phone number (10 digits with leading 0, without +63 prefix)
+ * @param phoneNumber - The phone number (10 digits with leading 0, with or without +63 prefix)
  * @returns Object with isValid boolean and error message if invalid
  */
 export const validatePhilippinePhoneNumber = (
   phoneNumber: string
 ): { isValid: boolean; error?: string } => {
-  // Check if it's exactly 10 digits
-  if (!/^\d{10}$/.test(phoneNumber)) {
+  // Extract only digits
+  const digitsOnly = phoneNumber.replace(/\D/g, "");
+
+  // Check if it's exactly 10 or 12 digits (10 digits + 63 prefix)
+  let tenDigitNumber = digitsOnly;
+
+  if (digitsOnly.length === 12 && digitsOnly.startsWith("63")) {
+    // Remove +63 prefix (first 2 digits)
+    tenDigitNumber = digitsOnly.substring(2);
+  } else if (digitsOnly.length === 11 && digitsOnly.startsWith("63")) {
+    // Handle case where user typed 63 instead of +63
+    tenDigitNumber = digitsOnly.substring(2);
+  } else if (digitsOnly.length !== 10) {
     return { isValid: false, error: "Phone number must be 10 digits" };
   }
 
   // Check if prefix is valid
-  if (!isValidPhilippineMobilePrefix(phoneNumber)) {
+  if (!isValidPhilippineMobilePrefix(`0${tenDigitNumber.substring(0, 9)}`)) {
     return {
       isValid: false,
       error: "Invalid Philippine mobile network prefix",
@@ -162,29 +173,80 @@ export const validatePhilippinePhoneNumber = (
 
 /**
  * Formats phone number with +63 prefix
- * @param phoneNumber - The phone number (10 digits with leading 0)
- * @returns Formatted phone number with +63 prefix (removes leading 0)
+ * @param phoneNumber - The phone number (10 digits, can start with 9 or 0)
+ * @returns Formatted phone number with +63 prefix (removes leading 0 if present)
  */
 export const formatPhoneNumberForDatabase = (phoneNumber: string): string => {
-  // Remove any non-digits and ensure it's 10 digits
-  const digits = phoneNumber.replace(/\D/g, "").slice(-10);
-  // Remove leading 0 and add +63 prefix
+  // Remove any non-digits
+  const digits = phoneNumber.replace(/\D/g, "");
+
+  // Handle different cases
   if (digits.length === 10) {
-    return `+63${digits.substring(1)}`;
+    // If it starts with 0, remove it: 0999... -> +63999...
+    // If it starts with 9, keep it: 9999... -> +63999...
+    if (digits.startsWith("0")) {
+      return `+63${digits.substring(1)}`;
+    } else {
+      // No leading 0, just add +63
+      return `+63${digits}`;
+    }
   }
+
+  // Fallback for other cases
   return phoneNumber;
 };
 
 /**
- * Extracts 10 digits from a phone number (with leading 0, removes +63 prefix if present)
- * @param phoneNumber - The phone number (with or without +63 prefix)
- * @returns Only the 10 digits with leading 0
+ * Extracts and displays phone number digits (removes +63 prefix if present)
+ * For display in input field: shows just the 10 digits after +63
+ * @param phoneNumber - The phone number (with or without +63 prefix, partial or complete)
+ * @returns The digits to display in the input field (without +63 prefix, no leading 0)
  */
 export const extractPhoneNumberDigits = (phoneNumber: string): string => {
-  const digits = phoneNumber.replace(/\D/g, "").slice(-10);
-  // Ensure it starts with 0
-  if (digits.length === 9) {
-    return `0${digits}`;
+  if (!phoneNumber) {
+    return "";
   }
-  return digits;
+
+  const digitsOnly = phoneNumber.replace(/\D/g, "");
+
+  // If it's 12 digits and starts with 63 (the +63 prefix in digit form)
+  // e.g., "+639994961369" -> "639994961369" (12 digits) -> return "9994961369"
+  if (digitsOnly.length === 12 && digitsOnly.startsWith("63")) {
+    return digitsOnly.substring(2);
+  }
+
+  // If it's 11 digits and starts with 63 (user typed 63 without +)
+  // e.g., "6399949613" (11 digits) - shouldn't happen but handle it
+  if (digitsOnly.length === 11 && digitsOnly.startsWith("63")) {
+    return digitsOnly.substring(2);
+  }
+
+  // For any other case (partial input during typing), just return the digits
+  return digitsOnly;
+};
+
+/**
+ * Formats phone number with dashes for display: 9994961370 -> 999-496-1370
+ * @param phoneNumber - Plain 10 digits (without +63 prefix and dashes)
+ * @returns Formatted phone number with dashes in format XXX-XXX-XXXX
+ */
+export const formatPhoneNumberForDisplay = (phoneNumber: string): string => {
+  // Remove any non-digits first
+  const digitsOnly = phoneNumber.replace(/\D/g, "");
+
+  // Only format if it has 10 digits
+  if (digitsOnly.length === 0) {
+    return "";
+  }
+  if (digitsOnly.length <= 3) {
+    return digitsOnly;
+  }
+  if (digitsOnly.length <= 6) {
+    return `${digitsOnly.slice(0, 3)}-${digitsOnly.slice(3)}`;
+  }
+  // Format as XXX-XXX-XXXX
+  return `${digitsOnly.slice(0, 3)}-${digitsOnly.slice(
+    3,
+    6
+  )}-${digitsOnly.slice(6, 10)}`;
 };

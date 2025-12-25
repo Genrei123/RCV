@@ -14,9 +14,7 @@ interface AuditRecord {
 
 // Mock API functions - replace these with your actual API calls
 const fetchStats = async (): Promise<StatItem[]> => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
+  // In production this should call the real stats API. No artificial delay here.
   return [
     {
       icon: <Users className="h-6 w-6 text-green-500" />,
@@ -40,9 +38,7 @@ const fetchStats = async (): Promise<StatItem[]> => {
 };
 
 const fetchAuditData = async (page: number = 1, search: string = "") => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
+  // In production this should call the real audit API. No artificial delay here.
   const allData = [
     {
       location: "Manila Office",

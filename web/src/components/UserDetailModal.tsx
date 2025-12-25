@@ -355,7 +355,7 @@ export function UserDetailModal({
           <div className="flex justify-end pt-6 border-t mt-6">
             <Button
               onClick={onClose}
-              className="app-bg-primary hover:opacity-90 text-white"
+              className="app-bg-primary hover:opacity-90 text-white cursor-pointer"
             >
               Close
             </Button>

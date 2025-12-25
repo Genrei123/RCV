@@ -79,6 +79,12 @@ export class User {
   @Column({ unique: true })
   email!: string;
 
+  @Column({ nullable: true, unique: true })
+  firebaseUid?: string;
+
+  @Column({ type: 'boolean', default: false })
+  emailVerified!: boolean;
+
   @Column()
   location!: string;
 

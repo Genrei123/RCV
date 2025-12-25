@@ -238,7 +238,7 @@ export function Products(props: ProductsProps) {
             variant={viewMode === "grid" ? "default" : "ghost"}
             size="sm"
             onClick={() => setViewMode("grid")}
-            className="rounded-r-none"
+            className="rounded-r-none cursor-pointer"
           >
             <Grid className="h-4 w-4" />
           </Button>
@@ -246,7 +246,7 @@ export function Products(props: ProductsProps) {
             variant={viewMode === "list" ? "default" : "ghost"}
             size="sm"
             onClick={() => setViewMode("list")}
-            className="rounded-l-none"
+            className="rounded-l-none cursor-pointer"
           >
             <List className="h-4 w-4" />
           </Button>
@@ -266,7 +266,7 @@ export function Products(props: ProductsProps) {
             emptyStateTitle="No Products Found"
             emptyStateDescription="Try adjusting your search or add a new product to get started."
             customControls={
-              <Button onClick={handleAddProduct} className="whitespace-nowrap">
+              <Button onClick={handleAddProduct} className="whitespace-nowrap cursor-pointer">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Product
               </Button>
@@ -390,7 +390,7 @@ export function Products(props: ProductsProps) {
             <div className="flex items-center shrink-0">
               <Button
                 onClick={handleAddProduct}
-                className="whitespace-nowrap sm:ml-2"
+                className="whitespace-nowrap sm:ml-2 cursor-pointer"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Product

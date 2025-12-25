@@ -606,7 +606,7 @@ export function AddProductModal({
               </Button>
               <Button
                 type="submit"
-                className="app-bg-primary text-white hover:opacity-90"
+                className="app-bg-primary text-white hover:opacity-90 cursor-pointer"
                 disabled={loading}
               >
                 {loading ? (
