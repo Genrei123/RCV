@@ -25,6 +25,7 @@ import {
   BadgeCheck,
   AlertCircle,
   CheckCircle2,
+  ChevronDown,
 } from "lucide-react";
 import { AuthService } from "@/services/authService";
 import type { User } from "@/typeorm/entities/user.entity";
@@ -62,6 +63,11 @@ interface PasswordStrength {
   color: string;
 }
 
+interface PhilippineCity {
+  name: string;
+  adminName1: string; // Province/Region
+}
+
 export function AuthPage() {
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
@@ -70,6 +76,128 @@ export function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
+  const [philippineCities, setPhilippineCities] = useState<PhilippineCity[]>(
+    []
+  );
+  const [citiesLoading, setCitiesLoading] = useState(true);
+  const [showCityDropdown, setShowCityDropdown] = useState(false);
+  const [citySearchTerm, setCitySearchTerm] = useState("");
+
+  // Fetch Philippine cities and municipalities on component mount
+  useEffect(() => {
+    const fetchPhilippineCities = async () => {
+      try {
+        // Fetch both cities and municipalities from PSGC API
+        const [citiesResponse, municipalitiesResponse] = await Promise.all([
+          fetch("https://psgc.gitlab.io/api/cities/"),
+          fetch("https://psgc.gitlab.io/api/municipalities/"),
+        ]);
+
+        const citiesData = await citiesResponse.json();
+        const municipalitiesData = await municipalitiesResponse.json();
+
+        let allLocations: PhilippineCity[] = [];
+
+        // Process cities
+        if (citiesData && Array.isArray(citiesData)) {
+          const cities = citiesData
+            .map((city: any) => ({
+              name: city.name || city.cityName,
+              adminName1: city.province || city.regionName || "Philippines",
+            }))
+            .sort((a: PhilippineCity, b: PhilippineCity) =>
+              a.name.localeCompare(b.name)
+            );
+          allLocations = [...allLocations, ...cities];
+        }
+
+        // Process municipalities
+        if (municipalitiesData && Array.isArray(municipalitiesData)) {
+          const municipalities = municipalitiesData
+            .map((municipality: any) => ({
+              name: municipality.name || municipality.municipalityName,
+              adminName1:
+                municipality.province ||
+                municipality.regionName ||
+                "Philippines",
+            }))
+            .sort((a: PhilippineCity, b: PhilippineCity) =>
+              a.name.localeCompare(b.name)
+            );
+          allLocations = [...allLocations, ...municipalities];
+        }
+
+        // Sort all locations alphabetically
+        allLocations.sort((a: PhilippineCity, b: PhilippineCity) =>
+          a.name.localeCompare(b.name)
+        );
+
+        console.log("Loaded cities and municipalities:", allLocations.length);
+        setPhilippineCities(allLocations);
+      } catch (err) {
+        console.error(
+          "Failed to fetch Philippine cities and municipalities:",
+          err
+        );
+        // Fallback: Try alternative PSGC endpoint
+        try {
+          const [citiesFallback, municipalitiesFallback] = await Promise.all([
+            fetch("https://psgc.rootscratch.com/cities/"),
+            fetch("https://psgc.rootscratch.com/municipalities/"),
+          ]);
+
+          const citiesFallbackData = await citiesFallback.json();
+          const municipalitiesFallbackData =
+            await municipalitiesFallback.json();
+
+          let allLocations: PhilippineCity[] = [];
+
+          if (citiesFallbackData && Array.isArray(citiesFallbackData)) {
+            const cities = citiesFallbackData
+              .map((city: any) => ({
+                name: city.name || city.cityName,
+                adminName1: city.province || city.regionName || "Philippines",
+              }))
+              .sort((a: PhilippineCity, b: PhilippineCity) =>
+                a.name.localeCompare(b.name)
+              );
+            allLocations = [...allLocations, ...cities];
+          }
+
+          if (
+            municipalitiesFallbackData &&
+            Array.isArray(municipalitiesFallbackData)
+          ) {
+            const municipalities = municipalitiesFallbackData
+              .map((municipality: any) => ({
+                name: municipality.name || municipality.municipalityName,
+                adminName1:
+                  municipality.province ||
+                  municipality.regionName ||
+                  "Philippines",
+              }))
+              .sort((a: PhilippineCity, b: PhilippineCity) =>
+                a.name.localeCompare(b.name)
+              );
+            allLocations = [...allLocations, ...municipalities];
+          }
+
+          allLocations.sort((a: PhilippineCity, b: PhilippineCity) =>
+            a.name.localeCompare(b.name)
+          );
+
+          setPhilippineCities(allLocations);
+        } catch (fallbackErr) {
+          console.error("Fallback API also failed:", fallbackErr);
+          setPhilippineCities([]);
+        }
+      } finally {
+        setCitiesLoading(false);
+      }
+    };
+
+    fetchPhilippineCities();
+  }, []);
 
   // Check if user has remember me enabled and pre-fill email
   useEffect(() => {
@@ -79,6 +207,19 @@ export function AuthPage() {
       setRememberMe(true);
     }
   }, []);
+
+  // Hide body scroll when city dropdown is open
+  useEffect(() => {
+    if (showCityDropdown) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [showCityDropdown]);
 
   const [loginData, setLoginData] = useState<LoginFormData>({
     email: "",
@@ -819,25 +960,79 @@ export function AuthPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-neutral-700 mb-2">
-                    Location *
+                    Location (Philippines) *
                   </label>
                   <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5" />
-                    <Input
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5 pointer-events-none z-10" />
+                    <input
                       type="text"
-                      placeholder="City, Country"
-                      className={`pl-10 h-11 ${
-                        errors.location ? "border-error-500" : ""
-                      }`}
-                      value={registerData.location}
-                      onChange={(e) =>
-                        setRegisterData({
-                          ...registerData,
-                          location: e.target.value,
-                        })
+                      placeholder={
+                        citiesLoading ? "Loading cities..." : "Search city..."
                       }
-                      required
+                      className={`pl-10 pr-10 h-11 w-full border rounded-md bg-background text-neutral-900 focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer ${
+                        errors.location
+                          ? "border-error-500"
+                          : "border-neutral-300"
+                      }`}
+                      value={
+                        showCityDropdown
+                          ? citySearchTerm
+                          : registerData.location
+                      }
+                      onChange={(e) => {
+                        setCitySearchTerm(e.target.value);
+                        setShowCityDropdown(true);
+                      }}
+                      onFocus={() => {
+                        setShowCityDropdown(true);
+                      }}
+                      onBlur={() => {
+                        setShowCityDropdown(false);
+                      }}
+                      disabled={citiesLoading}
+                      required={!registerData.location}
                     />
+                    <ChevronDown
+                      className={`absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400 pointer-events-none transition-transform ${
+                        showCityDropdown ? "rotate-180" : ""
+                      }`}
+                    />
+                    {showCityDropdown && !citiesLoading && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-neutral-300 rounded-md shadow-lg z-50 max-h-65 overflow-y-auto">
+                        {philippineCities
+                          .filter((city) =>
+                            `${city.name}, ${city.adminName1}`
+                              .toLowerCase()
+                              .includes(citySearchTerm.toLowerCase())
+                          )
+                          .map((city, index) => (
+                            <button
+                              key={index}
+                              type="button"
+                              onMouseDown={() => {
+                                setRegisterData({
+                                  ...registerData,
+                                  location: `${city.name}, ${city.adminName1}`,
+                                });
+                                setShowCityDropdown(false);
+                                setCitySearchTerm("");
+                              }}
+                              className="w-full text-left px-3 py-2 hover:bg-primary/10 hover:text-primary transition-colors text-sm"
+                            >
+                              {city.name}, {city.adminName1}
+                            </button>
+                          ))}
+                        {philippineCities.filter((city) =>
+                          `${city.name}, ${city.adminName1}`
+                            .toLowerCase()
+                            .includes(citySearchTerm.toLowerCase())
+                        ).length === 0 && (
+                          <div className="px-3 py-2 text-neutral-500 text-sm">
+                            No cities found
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                   {errors.location && (
                     <p className="text-error-500 text-xs mt-1">
