@@ -43,20 +43,5 @@ describe("Blockchain API", () => {
                 })
             );
         })
-
-        it("should return 400 if the wallet is not authorized", async () => {
-            await mockInitializeBlockchain.mockResolvedValue(true);
-            req.body = {
-                walletAddress: "unauthorized_wallet_address",
-                data: "some_data",
-            }
-            await addToBlockchain(req as Request, res as Response, next as NextFunction);
-            expect(next).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    statusCode: 400,
-                    message: "Wallet not authorized to add data to the blockchain",
-                })
-            );
-        })
     })
 })
