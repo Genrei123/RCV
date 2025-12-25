@@ -21,6 +21,12 @@ interface PhilippineCity {
   name: string;
   adminName1: string;
 }
+import {
+  validatePhilippinePhoneNumber,
+  formatPhoneNumberForDatabase,
+  extractPhoneNumberDigits,
+  formatPhoneNumberForDisplay,
+} from "@/utils/phoneValidation";
 
 interface EditProfileModalProps {
   isOpen: boolean;
@@ -153,8 +159,13 @@ export function EditProfileModal({
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = "Invalid email format";
     }
-    if (formData.phoneNumber && !/^\+?[\d\s-()]+$/.test(formData.phoneNumber)) {
-      newErrors.phoneNumber = "Invalid phone number format";
+    if (formData.phoneNumber && formData.phoneNumber.length > 0) {
+      const phoneValidation = validatePhilippinePhoneNumber(
+        formData.phoneNumber
+      );
+      if (!phoneValidation.isValid) {
+        newErrors.phoneNumber = phoneValidation.error || "Invalid phone number";
+      }
     }
 
     setErrors(newErrors);
@@ -190,31 +201,40 @@ export function EditProfileModal({
 
       // Upload to Firebase Storage
       if (user?._id) {
-        console.log('📤 Uploading avatar to Firebase Storage for user:', user._id);
+        console.log(
+          "📤 Uploading avatar to Firebase Storage for user:",
+          user._id
+        );
 
         // Convert base64 to File
-        const file = FirebaseStorageService.dataUrlToFile(dataUrl, `avatar_${user._id}.jpg`);
+        const file = FirebaseStorageService.dataUrlToFile(
+          dataUrl,
+          `avatar_${user._id}.jpg`
+        );
 
         // Upload to Firebase Storage
-        const firebaseUrl = await FirebaseStorageService.uploadAvatar(user._id, file);
+        const firebaseUrl = await FirebaseStorageService.uploadAvatar(
+          user._id,
+          file
+        );
 
         if (firebaseUrl) {
-          console.log('✅ Avatar uploaded to Firebase:', firebaseUrl);
+          console.log("✅ Avatar uploaded to Firebase:", firebaseUrl);
           // Use Firebase URL instead of base64
           setFormData((prev) => ({ ...prev, avatar: firebaseUrl }));
         } else {
-          console.warn('⚠️ Firebase upload failed, using base64 fallback');
+          console.warn("⚠️ Firebase upload failed, using base64 fallback");
           setFormData((prev) => ({ ...prev, avatar: dataUrl }));
         }
       } else {
-        console.warn('⚠️ No user ID, using base64 only');
+        console.warn("⚠️ No user ID, using base64 only");
         setFormData((prev) => ({ ...prev, avatar: dataUrl }));
       }
 
       // Notify other components
-      window.dispatchEvent(new CustomEvent('profile-avatar-updated'));
+      window.dispatchEvent(new CustomEvent("profile-avatar-updated"));
     } catch (error) {
-      console.error('❌ Error processing avatar:', error);
+      console.error("❌ Error processing avatar:", error);
       // Fallback to base64 if Firebase upload fails
       setFormData((prev) => ({ ...prev, avatar: dataUrl }));
     } finally {
@@ -233,7 +253,14 @@ export function EditProfileModal({
 
     setLoading(true);
     try {
-      await onSave(formData);
+      // Format phone number before saving
+      const dataToSave = {
+        ...formData,
+        phoneNumber: formData.phoneNumber
+          ? formatPhoneNumberForDatabase(formData.phoneNumber)
+          : "",
+      };
+      await onSave(dataToSave);
       onClose();
     } catch (error) {
       console.error("Error saving profile:", error);
@@ -291,7 +318,7 @@ export function EditProfileModal({
                   type="button"
                   onClick={openFilePicker}
                   disabled={uploadingAvatar}
-                  className="group relative w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="group relative w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   title="Change avatar"
                 >
                   {avatarPreview ? (
@@ -438,19 +465,42 @@ export function EditProfileModal({
                   <label className="text-sm font-medium text-gray-700">
                     Phone Number
                   </label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      type="tel"
-                      value={formData.phoneNumber || ""}
-                      onChange={(e) =>
-                        handleChange("phoneNumber", e.target.value)
-                      }
-                      placeholder="Enter phone number"
-                      className={`pl-10 ${
-                        errors.phoneNumber ? "border-red-500" : ""
-                      }`}
-                    />
+                  <div className="flex gap-0 rounded-lg border border-neutral-300 overflow-hidden bg-white">
+                    {/* Country Code Prefix with Icon */}
+                    <div className="flex items-center gap-2 bg-neutral-50 px-4 border-r border-neutral-300 pr-3 pointer-events-none">
+                      <Phone className="text-neutral-500 w-5 h-5" />
+                      <span className="text-neutral-700 whitespace-nowrap">
+                        +63
+                      </span>
+                    </div>
+                    {/* Phone Input */}
+                    <div className="flex-1 relative">
+                      {(() => {
+                        const plainDigits = formData.phoneNumber
+                          ? extractPhoneNumberDigits(formData.phoneNumber)
+                          : "";
+                        const displayValue =
+                          formatPhoneNumberForDisplay(plainDigits);
+                        return (
+                          <Input
+                            type="tel"
+                            placeholder="999-999-9999"
+                            className={`border-0 h-9.5 w-full px-3 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:ring-offset-0 transition-all ${
+                              errors.phoneNumber ? "bg-red-50" : ""
+                            }`}
+                            value={displayValue}
+                            onChange={(e) => {
+                              // Remove dashes and only allow digits, limit to 10 characters
+                              const value = e.target.value
+                                .replace(/\D/g, "")
+                                .slice(0, 10);
+                              handleChange("phoneNumber", value);
+                            }}
+                            maxLength={12}
+                          />
+                        );
+                      })()}
+                    </div>
                   </div>
                   {errors.phoneNumber && (
                     <p className="text-xs text-red-500">{errors.phoneNumber}</p>
@@ -571,7 +621,7 @@ export function EditProfileModal({
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end gap-3 pt-6 border-t mt-6">
+          <div className="flex justify-end gap-3 pt-6 border-t mt-6 ">
             <Button
               type="button"
               variant="outline"
@@ -582,10 +632,14 @@ export function EditProfileModal({
             </Button>
             <Button
               type="submit"
-              className="bg-teal-600 hover:bg-teal-700 text-white"
+              className="bg-teal-600 hover:bg-teal-700 text-white cursor-pointer"
               disabled={loading || uploadingAvatar}
             >
-              {loading ? "Saving..." : uploadingAvatar ? "Uploading..." : "Save Changes"}
+              {loading
+                ? "Saving..."
+                : uploadingAvatar
+                ? "Uploading..."
+                : "Save Changes"}
             </Button>
           </div>
         </form>
