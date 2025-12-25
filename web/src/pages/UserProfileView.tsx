@@ -305,6 +305,8 @@ export function UserProfileView() {
                       src={user.avatar}
                       alt={getFullName(user)}
                       className="w-full h-full object-cover"
+                      //added a non draggable profile picture also                      
+                      draggable="false"
                     />
                   ) : (
                     <User className="w-12 h-12 text-neutral-500" />
