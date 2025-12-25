@@ -8,6 +8,7 @@ import {
   Hash,
   AlertTriangle,
   Camera,
+  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,11 @@ import { useState, useEffect, useRef } from "react";
 import type { ProfileUser } from "@/pages/Profile";
 import { AvatarCropDialog } from "@/components/AvatarCropDialog";
 import { FirebaseStorageService } from "@/services/firebaseStorageService";
+
+interface PhilippineCity {
+  name: string;
+  adminName1: string;
+}
 import {
   validatePhilippinePhoneNumber,
   formatPhoneNumberForDatabase,
@@ -43,6 +49,12 @@ export function EditProfileModal({
   const [cropOpen, setCropOpen] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [philippineCities, setPhilippineCities] = useState<PhilippineCity[]>(
+    []
+  );
+  const [citiesLoading, setCitiesLoading] = useState(true);
+  const [showCityDropdown, setShowCityDropdown] = useState(false);
+  const [citySearchTerm, setCitySearchTerm] = useState("");
 
   useEffect(() => {
     if (user) {
@@ -66,6 +78,70 @@ export function EditProfileModal({
       }
     }
   }, [user]);
+
+  // Fetch Philippine cities on mount
+  useEffect(() => {
+    const fetchPhilippineCities = async () => {
+      try {
+        const response = await fetch("https://psgc.gitlab.io/api/cities/");
+        const data = await response.json();
+
+        if (data && Array.isArray(data)) {
+          const cities = data
+            .map((city: any) => ({
+              name: city.name || city.cityName,
+              adminName1: city.province || city.regionName || "Philippines",
+            }))
+            .sort((a: PhilippineCity, b: PhilippineCity) =>
+              a.name.localeCompare(b.name)
+            );
+
+          setPhilippineCities(cities);
+        }
+      } catch (err) {
+        console.error("Failed to fetch Philippine cities:", err);
+        try {
+          const fallbackResponse = await fetch(
+            "https://psgc.rootscratch.com/cities/"
+          );
+          const fallbackData = await fallbackResponse.json();
+
+          if (fallbackData && Array.isArray(fallbackData)) {
+            const cities = fallbackData
+              .map((city: any) => ({
+                name: city.name || city.cityName,
+                adminName1: city.province || city.regionName || "Philippines",
+              }))
+              .sort((a: PhilippineCity, b: PhilippineCity) =>
+                a.name.localeCompare(b.name)
+              );
+
+            setPhilippineCities(cities);
+          }
+        } catch (fallbackErr) {
+          console.error("Fallback API also failed:", fallbackErr);
+          setPhilippineCities([]);
+        }
+      } finally {
+        setCitiesLoading(false);
+      }
+    };
+
+    fetchPhilippineCities();
+  }, []);
+
+  // Hide body scroll when modal or city dropdown is open
+  useEffect(() => {
+    if (isOpen || showCityDropdown) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isOpen, showCityDropdown]);
 
   if (!isOpen || !user) return null;
 
@@ -433,16 +509,74 @@ export function EditProfileModal({
 
                 <div className="space-y-2 md:col-span-2">
                   <label className="text-sm font-medium text-gray-700">
-                    Location
+                    Location (Philippine Cities)
                   </label>
                   <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      value={formData.location || ""}
-                      onChange={(e) => handleChange("location", e.target.value)}
-                      placeholder="Enter location"
-                      className="pl-10"
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none z-10" />
+                    <input
+                      type="text"
+                      placeholder={
+                        citiesLoading ? "Loading cities..." : "Search city..."
+                      }
+                      className="pl-10 pr-10 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+                      value={
+                        showCityDropdown
+                          ? citySearchTerm
+                          : formData.location || ""
+                      }
+                      onChange={(e) => {
+                        setCitySearchTerm(e.target.value);
+                        setShowCityDropdown(true);
+                      }}
+                      onFocus={() => {
+                        setShowCityDropdown(true);
+                      }}
+                      onBlur={() => {
+                        setShowCityDropdown(false);
+                      }}
+                      disabled={citiesLoading}
                     />
+                    <ChevronDown
+                      className={`absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none transition-transform ${
+                        showCityDropdown ? "rotate-180" : ""
+                      }`}
+                    />
+                    {showCityDropdown && !citiesLoading && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-50 max-h-40 overflow-y-auto">
+                        {philippineCities
+                          .filter((city) =>
+                            `${city.name}, ${city.adminName1}`
+                              .toLowerCase()
+                              .includes(citySearchTerm.toLowerCase())
+                          )
+                          .map((city, index) => (
+                            <button
+                              key={index}
+                              type="button"
+                              onMouseDown={() => {
+                                handleChange(
+                                  "location",
+                                  `${city.name}, ${city.adminName1}`
+                                );
+                                setShowCityDropdown(false);
+                                setCitySearchTerm("");
+                              }}
+                              className="w-full text-left px-3 py-2 hover:bg-teal-500/10 hover:text-teal-600 transition-colors text-sm"
+                            >
+                              {city.name}, {city.adminName1}
+                            </button>
+                          ))}
+                        {philippineCities.filter((city) =>
+                          `${city.name}, ${city.adminName1}`
+                            .toLowerCase()
+                            .includes(citySearchTerm.toLowerCase())
+                        ).length === 0 && (
+                          <div className="px-3 py-2 text-gray-500 text-sm">
+                            No cities found
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
