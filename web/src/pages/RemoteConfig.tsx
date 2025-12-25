@@ -162,7 +162,7 @@ export function RemoteConfig() {
                                     <button
                                         onClick={handlePublish}
                                         disabled={publishing}
-                                        className="flex items-center gap-2 px-4 py-2 app-bg-primary text-white rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="flex items-center gap-2 px-4 py-2 app-bg-primary text-white rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                     >
                                         {publishing ? (
                                             <div className="animate-spin h-4 w-4 border-4 border-white border-t-transparent rounded-full"></div>
@@ -302,7 +302,7 @@ export function RemoteConfig() {
                                                                 !(param.value as boolean)
                                                             )
                                                         }
-                                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 cursor-pointer ${
                                                             (param.value as boolean)
                                                                 ? "app-bg-error"
                                                                 : "app-bg-primary"

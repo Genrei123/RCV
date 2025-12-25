@@ -453,7 +453,6 @@ export function Dashboard(props: DashboardProps) {
                 </Select>
               </div>
             }
-            onRowClick={handleRowClick}
           />
         </div>
         <div className="mt-4 flex items-center justify-between w-full">

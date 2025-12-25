@@ -190,7 +190,7 @@ export function Sidebar({
           <button
             type="button"
             onClick={() => setShowProfileMenu((s) => !s)}
-            className="w-full flex items-center gap-3 text-left focus:outline-none"
+            className="w-full flex items-center gap-3 text-left focus:outline-none cursor-pointer"
           >
             <div className="w-10 h-10 rounded-full overflow-hidden bg-neutral-300 flex items-center justify-center flex-shrink-0 cursor-pointer">
               {avatarUrl ? (
@@ -214,15 +214,15 @@ export function Sidebar({
             <ChevronDown
               size={16}
               className={`transition-transform ${
-                showProfileMenu ? "rotate-180" : ""
+                showProfileMenu ? "rotate-180 cursor-pointer" : ""
               }`}
             />
           </button>
 
           {/* Profile dropdown (desktop) */}
           {showProfileMenu && (
-            <div className="absolute left-4 bottom-0 translate-y-full mt-2 w-48 bg-white border rounded-lg shadow-lg overflow-hidden z-50">
-              <div className="py-1">
+            <div className="absolute left-4 bottom-0 translate-y-full mt-2 w-48 bg-white border rounded-lg shadow-lg overflow-hidden z-50  ">
+              <div className="py-1 ">
                 <Link
                   to="/profile"
                   onClick={() => setShowProfileMenu(false)}
@@ -236,7 +236,7 @@ export function Sidebar({
                     setShowProfileMenu(false);
                     setShowLogoutModal(true);
                   }}
-                  className="w-full flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50"
+                  className="w-full flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50 "
                 >
                   <LogOut size={16} />
                   <span className="text-sm">Sign Out</span>
@@ -311,7 +311,7 @@ export function Sidebar({
               className="p-1 text-slate-600"
               aria-label="Close menu"
             >
-              <ChevronDown size={18} className="rotate-90" />
+              <ChevronDown size={18} className="rotate-90 " />
             </button>
           </div>
 

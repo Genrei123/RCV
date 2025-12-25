@@ -86,7 +86,7 @@ export function ProductCard({ product, onClick }: ProductCardProps) {
               className="font-medium text-gray-900 truncate min-w-0 text-right"
               title={product.LTONumber}
             >
-              {truncate(product.LTONumber, 15)}
+              {truncate(product.LTONumber || "", 15)}
             </span>
           </div>
 

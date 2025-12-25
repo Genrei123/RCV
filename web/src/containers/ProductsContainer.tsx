@@ -11,9 +11,8 @@ export function ProductsContainer() {
 
   // Simulate API call
   const fetchProducts = async (): Promise<Product[]> => {
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
+    // In production this should call the real products API.
+    // For now return empty list (no artificial delay)
     return []
   }
 

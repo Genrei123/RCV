@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -5,6 +6,12 @@ import { ArrowLeft } from 'lucide-react';
 
 export function PrivacyPolicy() {
   const navigate = useNavigate();
+
+  const handleSectionScroll = useCallback((sectionId: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
+    window.history.replaceState(null, '', `#${sectionId}`);
+  }, []);
 
   const sections = [
     {
@@ -148,8 +155,8 @@ export function PrivacyPolicy() {
             ))}
 
             {/* Contact Section */}
-            <div className="mt-12 pt-8 border-t border-gray-200">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Contact Us</h2>
+            <div id="contact" className="mt-12 pt-8 border-t border-gray-200 scroll-mt-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">6. Contact Us</h2>
               <p className="text-gray-700 leading-relaxed mb-4">
                 If you have questions or concerns about this Privacy Policy or our data practices, please contact 
                 your system administrator or the Bureau of Animal Industry.
@@ -167,6 +174,7 @@ export function PrivacyPolicy() {
                     <a
                       key={section.id}
                       href={`#${section.id}`}
+                      onClick={handleSectionScroll(section.id)}
                       className="block text-sm text-gray-700 hover:text-app-primary transition-colors"
                     >
                       {section.title}
@@ -174,9 +182,10 @@ export function PrivacyPolicy() {
                   ))}
                   <a
                     href="#contact"
+                    onClick={handleSectionScroll('contact')}
                     className="block text-sm text-gray-700 hover:text-app-primary transition-colors"
                   >
-                    Contact Us
+                    6. Contact Us
                   </a>
                 </nav>
               </CardContent>
