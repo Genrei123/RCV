@@ -9,13 +9,12 @@ import {
   verifyToken,
   decryptToken,
 } from "../../utils/JWT";
-import { UserValidation } from '../../typeorm/entities/user.entity';
+import { UserValidation, type User } from '../../typeorm/entities/user.entity';
 import nodemailer_transporter from '../../utils/nodemailer';
 import { AuditLogService } from '../../services/auditLogService';
 import { FirebaseAuthService } from '../../services/firebaseAuthService';
 import CryptoJS from 'crypto-js';
 import * as dotenv from 'dotenv';
-import { jwt } from 'zod';
 dotenv.config();
 
 export const userSignIn = async (req: Request, res: Response, next: NextFunction) => {
