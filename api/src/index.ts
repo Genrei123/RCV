@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 import setUpApp from './setUpApp';
 import { initializeCertificateBlockchain } from './services/certificateblockchain';
 import { redisService } from './services/redisService';
+import { connectToProvider } from './services/blockchainService';
 
 dotenv.config();
 const { PORT } = process.env;
@@ -11,6 +12,7 @@ const initializeApp = async () => {
 
   // Initialize Certificate Blockchain
   initializeCertificateBlockchain();
+  connectToProvider();
 
   // Initialize Redis connection
   // await redisService.connect();

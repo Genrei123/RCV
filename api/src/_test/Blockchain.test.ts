@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-import { initializeBlockchain } from "../services/blockchainService";
+import * as blockchainService from "../services/blockchainService";
 import { addToBlockchain, getBlockchainStatus } from "../controllers/blockchain/Blockchain";
 
 jest.mock("../services/blockchainService");
@@ -9,7 +9,7 @@ describe("Blockchain API", () => {
     let res: Partial<Response>;
     let next: NextFunction;
 
-    const mockInitializeBlockchain = initializeBlockchain as jest.Mock;
+    const mockIsInitialized = blockchainService.isInitialized as jest.Mock;
 
     beforeEach(() => {
         req = {};
@@ -23,7 +23,7 @@ describe("Blockchain API", () => {
 
     describe("Error Cases", () => {
         it("should return 500 if blockchain service is not initialized in addToBlockchain", async () => {
-            await mockInitializeBlockchain.mockResolvedValue(false);
+            mockIsInitialized.mockReturnValue(false);
             await addToBlockchain(req as Request, res as Response, next as NextFunction);
             expect(next).toHaveBeenCalledWith(
                 expect.objectContaining({
@@ -34,7 +34,7 @@ describe("Blockchain API", () => {
         });
         
         it("should return 500 if blockchain service is not initialized in getBlockchainStatus", async () => {
-            await mockInitializeBlockchain.mockResolvedValue(false);
+            mockIsInitialized.mockReturnValue(false);
             await getBlockchainStatus(req as Request, res as Response, next as NextFunction);
             expect(next).toHaveBeenCalledWith(
                 expect.objectContaining({

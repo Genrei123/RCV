@@ -4,6 +4,8 @@ import { UserRepo } from "../typeorm/data-source";
 import CustomError from "../utils/CustomError";
 import { verifyToken, decryptToken } from "../utils/JWT";
 import * as dotenv from "dotenv";
+import { getProvider, validateWallet } from "../services/blockchainService";
+import { BaseWallet, SigningKey } from "ethers";
 dotenv.config();
 
 /**
@@ -123,6 +125,28 @@ const extractRole = (role: number) => {
       return 'Admin';
     case 1:
       return 'Agent';
+  }
+}
+
+export const verifyWallet = (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const walletAddress = req.headers['x-wallet-address'] as string;
+    if (!walletAddress) {
+      return res.status(401).json({ success: false, message: 'No wallet address provided' });
+    }
+
+    // Convert walletAddress to Wallet type
+    const signingKey = new SigningKey(walletAddress);
+    const wallet:BaseWallet = new BaseWallet(signingKey, getProvider());
+
+    const isValidWallet = validateWallet(wallet);
+    if (!isValidWallet) {
+      return res.status(401).json({ success: false, message: 'Invalid wallet address' });
+    }
+
+    next();
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Internal server error' });
   }
 }
 

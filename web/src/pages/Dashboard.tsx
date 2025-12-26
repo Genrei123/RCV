@@ -32,6 +32,7 @@ import { UserPageService } from "@/services/userPageService";
 import { toast } from "react-toastify";
 import { Card, CardContent } from "@/components/ui/card";
 import { Users, Package, Building2 } from "lucide-react";
+import { CompanyOwnersManagement } from "@/components/CompanyOwnersManagement";
 
 export interface DashboardProps {
   success?: boolean;
@@ -60,12 +61,18 @@ export function Dashboard(props: DashboardProps) {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [statsLoading, setStatsLoading] = useState<boolean>(true);
+  const [isSuperAdmin, setIsSuperAdmin] = useState<boolean>(false);
   const pageSize = 10;
 
   useEffect(() => {
     fetchCurrentUser();
     fetchDashboardStats();
+    checkSuperAdmin();
   }, []);
+
+  const checkSuperAdmin = () => {
+    setIsSuperAdmin(AuthService.isSuperAdmin());
+  };
 
   const fetchCurrentUser = async () => {
     try {
@@ -419,6 +426,13 @@ export function Dashboard(props: DashboardProps) {
             </CardContent>
           </Card>
         </div>
+
+        {/* Company Owners Management - SuperAdmin Only */}
+        {isSuperAdmin && (
+          <div className="mb-8">
+            <CompanyOwnersManagement />
+          </div>
+        )}
 
         {/* Users Table */}
         <div className="w-full">

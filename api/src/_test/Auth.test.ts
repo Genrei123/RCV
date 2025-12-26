@@ -38,6 +38,9 @@ const mockUser: UserInput = {
   location: "Manila",
   fullName: "Juan Dela Cruz Jr.",
   approved: false,
+  hasWebAccess: false,
+  hasAppAccess: false,
+  hasKioskAccess: false,
 };
 
 describe("Sign In", () => {
@@ -179,6 +182,12 @@ describe("Sign In", () => {
         firstName: "John",
         lastName: "Doe",
         firebaseUid: "cxkBIq5Safft4hyafE3krH9dh5E3",
+        isSuperAdmin: false,
+        companyOwnerId: "companyOwner123",
+        hasWebAccess: true,
+        hasAppAccess: true,
+        hasKioskAccess: false,
+        walletAddress: "0xABCDEF1234567890"
       };
 
       const mockToken = "jwt-token-123";
@@ -207,6 +216,12 @@ describe("Sign In", () => {
           "firstName",
           "lastName",
           "firebaseUid",
+          "isSuperAdmin",
+          "companyOwnerId",
+          "hasWebAccess",
+          "hasAppAccess",
+          "hasKioskAccess",
+          "walletAddress",
         ],
       });
 
@@ -240,15 +255,21 @@ describe("Sign In", () => {
         success: true,
         message: "User signed in successfully",
         token: mockToken,
-        firebaseToken: expect.any(String),
+        firebaseToken: "firebase-custom-token-123",
         rememberMe: false,
         user: {
           _id: "user123",
           email: "test@example.com",
+          companyOwnerId: "companyOwner123",
           firstName: "John",
+          hasAppAccess: true,
+          hasKioskAccess: false,
+          hasWebAccess: true,
+          isSuperAdmin: false,
           lastName: "Doe",
           role: "USER",
           approved: true,
+          walletAddress: "0xABCDEF1234567890",
         },
       });
     });

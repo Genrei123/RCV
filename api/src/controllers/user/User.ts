@@ -35,7 +35,21 @@ export const getAllUsers = async (
 ) => {
   try {
     const { page, limit, skip } = parsePageParams(req, 10);
+    
+    // Build query conditions - filter by companyOwnerId if user is not SuperAdmin
+    const whereConditions: any = {};
+    
+    // Check if the requesting user is a SuperAdmin
+    // req.user is set by verifyUser middleware
+    const requestingUser = (req as any).user;
+    if (requestingUser && !requestingUser.isSuperAdmin && requestingUser.companyOwnerId) {
+      // Regular employee: only show users from their company
+      whereConditions.companyOwnerId = requestingUser.companyOwnerId;
+    }
+    // SuperAdmin: no filter, show all users
+    
     const [users, total] = await UserRepo.findAndCount({
+      where: whereConditions,
       select: [
         "_id",
         "firstName",
@@ -53,6 +67,7 @@ export const getAllUsers = async (
         "role",
         "createdAt",
         "updatedAt",
+        "companyOwnerId",
       ],
       skip,
       take: limit,

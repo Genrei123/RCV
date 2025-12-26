@@ -141,7 +141,7 @@ export function Sidebar({
   };
 
   const menuItems = [
-    { path: "/", label: "Dashboard", icon: LayoutDashboard },
+    { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { path: "/products", label: "Products", icon: Package },
     { path: "/companies", label: "Companies", icon: Building2 },
     { path: "/maps", label: "Maps", icon: MapPin },

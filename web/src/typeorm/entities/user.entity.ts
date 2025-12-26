@@ -19,6 +19,8 @@ export interface User {
   phoneNumber: string;
   password?: string;
   badgeId: string;
+  companyOwnerId?: string;
+  isSuperAdmin?: boolean;
   createdAt?: Date | string;
   updatedAt?: Date | string;
 }

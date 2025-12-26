@@ -33,6 +33,12 @@ export const userSignIn = async (req: Request, res: Response, next: NextFunction
         "firstName",
         "lastName",
         "firebaseUid",
+        "isSuperAdmin",
+        "companyOwnerId",
+        "hasWebAccess",
+        "hasAppAccess",
+        "hasKioskAccess",
+        "walletAddress",
       ],
     });
 
@@ -115,6 +121,12 @@ export const userSignIn = async (req: Request, res: Response, next: NextFunction
         lastName: user.lastName,
         role: user.role,
         approved: user.approved,
+        isSuperAdmin: user.isSuperAdmin,
+        companyOwnerId: user.companyOwnerId,
+        hasWebAccess: user.hasWebAccess,
+        hasAppAccess: user.hasAppAccess,
+        hasKioskAccess: user.hasKioskAccess,
+        walletAddress: user.walletAddress,
       },
     });
   } catch (error: any) {
@@ -340,6 +352,59 @@ export const userSignUp = async (
       );
     }
 
+    // Check for invite token and company ID
+    const { inviteToken, companyId } = req.body;
+    let companyOwnerId = null;
+    let hasWebAccess = false;
+    let hasAppAccess = false;
+    let hasKioskAccess = false;
+
+    if (inviteToken && companyId) {
+      // Verify that the company exists and is approved
+      const { CompanyOwnerRepo } = await import('../../typeorm/data-source');
+      const company = await CompanyOwnerRepo.findOne({ where: { _id: companyId } });
+      
+      if (company && company.approved) {
+        companyOwnerId = companyId;
+        
+        // Validate the invite token
+        const { InviteTokenRepo } = await import('../../typeorm/data-source');
+        const inviteTokenRecord = await InviteTokenRepo.findOne({
+          where: { 
+            token: inviteToken,
+            companyOwnerId: companyId,
+          },
+        });
+
+        if (!inviteTokenRecord) {
+          return next(
+            new CustomError(400, "Invalid or expired invite token", {})
+          );
+        }
+
+        if (inviteTokenRecord.used) {
+          return next(
+            new CustomError(400, "This invite link has already been used", {})
+          );
+        }
+
+        if (inviteTokenRecord.expiresAt && new Date() > inviteTokenRecord.expiresAt) {
+          return next(
+            new CustomError(400, "This invite link has expired", {})
+          );
+        }
+
+        // Set default access: Web + App access for invited employees
+        hasWebAccess = true;
+        hasAppAccess = true;
+        hasKioskAccess = false;
+      } else {
+        return next(
+          new CustomError(400, "Invalid company or company not approved", {})
+        );
+      }
+    }
+
     try {
       const { firebaseUser, dbUser } = await FirebaseAuthService.createFirebaseUser(
         newUser.data.email,
@@ -357,6 +422,12 @@ export const userSignUp = async (
           role: 'USER' as User['role'],
           approved: false,
           status: 'Active' as User['status'],
+          companyOwnerId: companyOwnerId,
+          inviteToken: inviteToken,
+          hasWebAccess: hasWebAccess,
+          hasAppAccess: hasAppAccess,
+          hasKioskAccess: hasKioskAccess,
+          walletAddress: req.body.walletAddress || null,
         }
       );
 
@@ -370,6 +441,7 @@ export const userSignUp = async (
           lastName: dbUser.lastName,
           approved: false,
           firebaseUid: firebaseUser.uid,
+          companyOwnerId: dbUser.companyOwnerId,
         },
         pendingApproval: true,
       });
@@ -384,7 +456,17 @@ export const userSignUp = async (
       newUser.data.password = hashPassword;
       newUser.data.approved = false;
 
-      const savedUser = await UserRepo.save(newUser.data);
+      const userToSave: any = {
+        ...newUser.data,
+        companyOwnerId,
+        inviteToken,
+        hasWebAccess,
+        hasAppAccess,
+        hasKioskAccess,
+        walletAddress: req.body.walletAddress || null,
+      };
+
+      const savedUser = await UserRepo.save(userToSave);
 
       return res.status(200).json({
         success: true,
@@ -395,6 +477,7 @@ export const userSignUp = async (
           firstName: savedUser.firstName,
           lastName: savedUser.lastName,
           approved: false,
+          companyOwnerId: savedUser.companyOwnerId,
         },
         pendingApproval: true,
       });

@@ -21,14 +21,22 @@ export const getAllProducts = async (
     const search =
       typeof req.query.search === "string" ? req.query.search.trim() : "";
 
-    // Try to get from cache first
-    try {
-      const cachedData = await redisService.getCachedProducts(page, limit, search);
-      if (cachedData) {
-        return res.status(200).json(cachedData);
+    // Check if the requesting user is a SuperAdmin
+    const requestingUser = (req as any).user;
+    const shouldFilterByCompany = requestingUser && 
+                                   !requestingUser.isSuperAdmin && 
+                                   requestingUser.companyOwnerId;
+
+    // Try to get from cache first (skip cache if filtering by company)
+    if (!shouldFilterByCompany) {
+      try {
+        const cachedData = await redisService.getCachedProducts(page, limit, search);
+        if (cachedData) {
+          return res.status(200).json(cachedData);
+        }
+      } catch (redisError) {
+        console.warn("Redis cache failed, using database:", redisError instanceof Error ? redisError.message : 'Unknown error');
       }
-    } catch (redisError) {
-      console.warn("Redis cache failed, using database:", redisError instanceof Error ? redisError.message : 'Unknown error');
     }
 
     let products: any[] = [];
@@ -49,29 +57,50 @@ export const getAllProducts = async (
         })
         .orWhere("LOWER(company.name) LIKE LOWER(:q)", {
           q: `%${search}%`,
-        })
-        .orderBy("product.dateOfRegistration", "DESC")
+        });
+      
+      // Filter by company if not SuperAdmin
+      if (shouldFilterByCompany) {
+        qb.andWhere("registeredBy.companyOwnerId = :companyOwnerId", {
+          companyOwnerId: requestingUser.companyOwnerId,
+        });
+      }
+      
+      qb.orderBy("product.dateOfRegistration", "DESC")
         .skip(skip)
         .take(limit);
       [products, total] = await qb.getManyAndCount();
     } else {
-      [products, total] = await ProductRepo.findAndCount({
+      const findOptions: any = {
         skip,
         take: limit,
         order: { dateOfRegistration: "DESC" },
         relations: ["company", "registeredBy"],
-      });
+      };
+      
+      // Filter by company if not SuperAdmin
+      if (shouldFilterByCompany) {
+        findOptions.where = {
+          registeredBy: {
+            companyOwnerId: requestingUser.companyOwnerId,
+          },
+        };
+      }
+      
+      [products, total] = await ProductRepo.findAndCount(findOptions);
     }
 
     const meta = buildPaginationMeta(page, limit, total);
     const links = buildLinks(req, page, limit, meta.total_pages);
     const responseData = { success: true, data: products, pagination: meta, links };
 
-    // Cache the result for 5 minutes
-    try {
-      await redisService.setCachedProducts(page, limit, responseData, search, 300);
-    } catch (redisError) {
-      console.warn("Failed to cache products:", redisError instanceof Error ? redisError.message : 'Unknown error');
+    // Cache the result for 5 minutes (only if not filtering by company)
+    if (!shouldFilterByCompany) {
+      try {
+        await redisService.setCachedProducts(page, limit, responseData, search, 300);
+      } catch (redisError) {
+        console.warn("Failed to cache products:", redisError instanceof Error ? redisError.message : 'Unknown error');
+      }
     }
 
     res.status(200).json(responseData);

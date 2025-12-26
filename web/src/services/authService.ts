@@ -13,9 +13,18 @@ export interface LoginResponse {
     status: string;
     token: string;
     user?: {
+        _id?: string;
         approved?: boolean;
         email?: string;
         firstName?: string;
+        lastName?: string;
+        role?: string;
+        isSuperAdmin?: boolean;
+        companyOwnerId?: string;
+        hasWebAccess?: boolean;
+        hasAppAccess?: boolean;
+        hasKioskAccess?: boolean;
+        walletAddress?: string;
     };
 }
 
@@ -87,6 +96,19 @@ export class AuthService {
         try {
             const response = await apiClient.post<LoginResponse>('/auth/login', credentials);
             
+            // Store user info in localStorage for quick access
+            if (response.data.user) {
+                localStorage.setItem('userRole', response.data.user.role || 'USER');
+                localStorage.setItem('isSuperAdmin', String(response.data.user.isSuperAdmin || false));
+                if (response.data.user.companyOwnerId) {
+                    localStorage.setItem('companyOwnerId', response.data.user.companyOwnerId);
+                }
+                // Store access flags for quick access checks
+                localStorage.setItem('hasWebAccess', String(response.data.user.hasWebAccess || false));
+                localStorage.setItem('hasAppAccess', String(response.data.user.hasAppAccess || false));
+                localStorage.setItem('hasKioskAccess', String(response.data.user.hasKioskAccess || false));
+            }
+            
             // Backend sets httpOnly cookie automatically
             // We don't need to set any client-side cookies since we can't read httpOnly cookies anyway
             // The browser will automatically send the httpOnly cookie with future requests
@@ -97,6 +119,14 @@ export class AuthService {
             // Re-throw the error so it can be caught by the component
             throw error;
         }
+    }
+
+    static isSuperAdmin(): boolean {
+        return localStorage.getItem('isSuperAdmin') === 'true';
+    }
+
+    static getCompanyOwnerId(): string | null {
+        return localStorage.getItem('companyOwnerId');
     }
 
     static async register(Credentials: User) {

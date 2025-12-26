@@ -34,6 +34,9 @@ export const UserValidation = z.object({
   phoneNumber: z.string().min(10).max(15),
   password: z.string().min(6).max(100),
   badgeId: z.string().min(2).max(50),
+  hasWebAccess: z.boolean().optional().default(false),
+  hasAppAccess: z.boolean().optional().default(false),
+  hasKioskAccess: z.boolean().optional().default(false),
   createdAt: z.preprocess(
     v => (v === undefined ? new Date() : coerceDate(v)),
     z.date()
@@ -51,6 +54,9 @@ export class User {
 
   @Column({ type: 'enum', enum: ['AGENT', 'ADMIN', 'USER'], default: 'AGENT' })
   role!: 'AGENT' | 'ADMIN' | 'USER';
+
+  @Column({ type: 'boolean', default: false })
+  isSuperAdmin!: boolean;
 
   @Column({ type: 'enum', enum: ['Archived', 'Active', 'Pending'], default: 'Pending' })
   status!: 'Archived' | 'Active' | 'Pending';
@@ -84,6 +90,26 @@ export class User {
 
   @Column({ type: 'boolean', default: false })
   emailVerified!: boolean;
+
+  @Column({ nullable: true })
+  companyOwnerId?: string;
+
+  @Column({ nullable: true })
+  inviteToken?: string;
+
+  // Access Control Fields
+  @Column({ type: 'boolean', default: false })
+  hasWebAccess!: boolean;
+
+  @Column({ type: 'boolean', default: false })
+  hasAppAccess!: boolean;
+
+  @Column({ type: 'boolean', default: false })
+  hasKioskAccess!: boolean;
+
+  // Wallet Address for Employee Verification
+  @Column({ nullable: true })
+  walletAddress?: string;
 
   @Column()
   location!: string;

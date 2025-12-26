@@ -8,8 +8,18 @@
 // - Integration with AuthService
 // =========================================================================
 
+// Extend Window interface for ethereum
+declare global {
+  interface Window {
+    ethereum?: {
+      request: (args: { method: string; params?: any[] }) => Promise<any>;
+      isMetaMask?: boolean;
+    };
+  }
+}
+
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -26,8 +36,10 @@ import {
   AlertCircle,
   CheckCircle2,
   ChevronDown,
+  ArrowLeft,
 } from "lucide-react";
 import { AuthService } from "@/services/authService";
+import { CompanyOwnerService } from "@/services/companyOwnerService";
 import type { User } from "@/typeorm/entities/user.entity";
 import {
   validatePhilippinePhoneNumber,
@@ -55,6 +67,7 @@ interface RegisterFormData {
   location: string;
   dateOfBirth: string;
   badgeId: string;
+  walletAddress: string;
 }
 
 interface PasswordStrength {
@@ -70,6 +83,7 @@ interface PhilippineCity {
 
 export function AuthPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -82,6 +96,33 @@ export function AuthPage() {
   const [citiesLoading, setCitiesLoading] = useState(true);
   const [showCityDropdown, setShowCityDropdown] = useState(false);
   const [citySearchTerm, setCitySearchTerm] = useState("");
+  const [inviteToken, setInviteToken] = useState<string | null>(null);
+  const [inviteCompanyName, setInviteCompanyName] = useState<string>("");
+  const [inviteCompanyId, setInviteCompanyId] = useState<string>("");
+
+  // Check for invite token in URL
+  useEffect(() => {
+    const token = searchParams.get('invite');
+    if (token) {
+      setInviteToken(token);
+      setIsLogin(false); // Switch to registration mode
+      validateInviteToken(token);
+    }
+  }, [searchParams]);
+
+  const validateInviteToken = async (token: string) => {
+    try {
+      const response = await CompanyOwnerService.validateInviteToken(token);
+      if (response.success) {
+        setInviteCompanyName(response.companyOwner.companyName);
+        setInviteCompanyId(response.companyOwner._id);
+        toast.success(`You're invited to join ${response.companyOwner.companyName}!`);
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Invalid invite link');
+      setInviteToken(null);
+    }
+  };
 
   // Fetch Philippine cities and municipalities on component mount
   useEffect(() => {
@@ -238,6 +279,7 @@ export function AuthPage() {
     location: "",
     dateOfBirth: "",
     badgeId: "",
+    walletAddress: "",
   });
 
   const [errors, setErrors] = useState<
@@ -325,6 +367,16 @@ export function AuthPage() {
       newErrors.badgeId = "Badge ID is required";
     }
 
+    // Validate wallet address if registering via invite (employee registration)
+    if (inviteToken && !registerData.walletAddress.trim()) {
+      newErrors.walletAddress = "Wallet address is required for employee registration";
+    }
+
+    // Validate Ethereum wallet address format
+    if (registerData.walletAddress && !registerData.walletAddress.match(/^0x[a-fA-F0-9]{40}$/)) {
+      newErrors.walletAddress = "Please enter a valid Ethereum wallet address";
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -357,12 +409,135 @@ export function AuthPage() {
       });
 
       if (response?.data.token) {
+        const user = response.data.user;
+
+        // Check if user has a wallet address registered
+        // If so, require wallet verification before allowing access
+        if (user?.walletAddress) {
+          // Add a small delay to ensure UI is rendered
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          toast.info("🔐 Wallet verification required. Please connect your MetaMask wallet...", {
+            autoClose: false,
+            closeButton: false,
+          });
+          
+          try {
+            if (typeof window.ethereum === 'undefined') {
+              setLoading(false);
+              toast.dismiss();
+              toast.error("MetaMask is not installed. Please install MetaMask extension to continue.", {
+                autoClose: 8000,
+              });
+              // Logout the user
+              await AuthService.logout();
+              return;
+            }
+
+            // Request wallet connection with better error handling
+            let accounts;
+            try {
+              accounts = await window.ethereum.request({ 
+                method: 'eth_requestAccounts' 
+              });
+            } catch (connectError: any) {
+              setLoading(false);
+              toast.dismiss();
+              
+              if (connectError.code === 4001) {
+                toast.error("Wallet connection rejected. You must connect your wallet to login.", {
+                  autoClose: 5000,
+                });
+              } else {
+                toast.error("Failed to connect wallet: " + connectError.message, {
+                  autoClose: 5000,
+                });
+              }
+              
+              // Logout the user
+              await AuthService.logout();
+              return;
+            }
+
+            if (!accounts || accounts.length === 0) {
+              setLoading(false);
+              toast.dismiss();
+              toast.error("No wallet connected. Please connect your MetaMask wallet to continue.", {
+                autoClose: 5000,
+              });
+              // Logout the user
+              await AuthService.logout();
+              return;
+            }
+
+            const connectedWallet = accounts[0].toLowerCase();
+            const registeredWallet = user.walletAddress.toLowerCase();
+
+            // Verify wallet addresses match
+            if (connectedWallet !== registeredWallet) {
+              setLoading(false);
+              toast.dismiss();
+              
+              // Logout the user since wallet doesn't match
+              await AuthService.logout();
+              
+              toast.error(
+                <div>
+                  <div className="font-bold mb-1">❌ Wallet Mismatch!</div>
+                  <div className="text-sm">Expected: {user.walletAddress.substring(0, 10)}...{user.walletAddress.substring(38)}</div>
+                  <div className="text-sm">Connected: {accounts[0].substring(0, 10)}...{accounts[0].substring(38)}</div>
+                  <div className="text-xs mt-2">Please connect the wallet address you registered with.</div>
+                </div>,
+                {
+                  autoClose: 10000,
+                }
+              );
+              return;
+            }
+
+            toast.dismiss();
+            toast.success("✅ Wallet verified successfully!", {
+              autoClose: 2000,
+            });
+            
+            // Small delay to show success message
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+          } catch (walletError: any) {
+            setLoading(false);
+            toast.dismiss();
+            
+            // Logout the user if wallet verification fails
+            await AuthService.logout();
+            
+            console.error("Wallet verification error:", walletError);
+            toast.error("Wallet verification failed: " + (walletError.message || "Unknown error"), {
+              autoClose: 5000,
+            });
+            return;
+          }
+        }
+
         // Backend has set httpOnly cookie
         toast.success("Login successful! Redirecting...");
 
+        // Smart routing based on user type and access levels
+        let targetRoute = "/dashboard"; // Default fallback
+        
+        if (user) {
+          // SuperAdmins and Admins go to system-wide dashboard
+          if (user.isSuperAdmin || user.role === 'ADMIN') {
+            targetRoute = "/dashboard";
+          } 
+          // Employees with company and web access go to company dashboard
+          else if (user.companyOwnerId && user.hasWebAccess) {
+            targetRoute = "/company/dashboard";
+          }
+        }
+
         // Use setTimeout to ensure state updates before navigation
         setTimeout(() => {
-          navigate("/dashboard", { replace: true });
+          navigate(targetRoute, { replace: true });
           window.location.reload(); // Force reload to update auth state
         }, 500);
       } else {
@@ -422,7 +597,12 @@ export function AuthPage() {
     setLoading(true);
 
     try {
-      const userData: Partial<User> = {
+      const userData: Partial<User> & { 
+        companyOwnerId?: string;
+        companyId?: string;
+        inviteToken?: string;
+        walletAddress?: string;
+      } = {
         firstName: registerData.firstName,
         lastName: registerData.lastName,
         middleName: registerData.middleName || undefined,
@@ -438,9 +618,22 @@ export function AuthPage() {
         dateOfBirth: registerData.dateOfBirth,
         badgeId: registerData.badgeId || "",
         role: "AGENT", // Default role: Agent
+        walletAddress: registerData.walletAddress || undefined, // Add wallet address for employee verification
+        companyOwnerId: inviteToken ? inviteCompanyId : undefined, // Link to company if invited
+        companyId: inviteToken ? inviteCompanyId : undefined, // Backend expects this field name
+        inviteToken: inviteToken || undefined, // Include invite token for backend validation
       };
 
       const response = await AuthService.register(userData as User);
+
+      // Mark invite token as used if registration was via invite link
+      if (inviteToken && response?.data) {
+        try {
+          await CompanyOwnerService.markInviteTokenAsUsed(inviteToken);
+        } catch (tokenError) {
+          console.error('Failed to mark invite token as used:', tokenError);
+        }
+      }
 
       if (response?.data) {
         // Check if account is pending approval
@@ -450,10 +643,11 @@ export function AuthPage() {
           // Store email for the pending approval page
           CookieManager.setCookie("pendingApprovalEmail", email, { days: 7 });
 
-          toast.success(
-            "Registration successful! Redirecting to approval status...",
-            { autoClose: 2000 }
-          );
+          const message = inviteToken 
+            ? `Registration successful! Your request to join ${inviteCompanyName} is pending approval.`
+            : "Registration successful! Redirecting to approval status...";
+          
+          toast.success(message, { autoClose: 2000 });
 
           // Navigate to pending approval page
           setTimeout(() => {
@@ -474,9 +668,25 @@ export function AuthPage() {
 
           if (loginResponse?.data.token) {
             // Backend has set httpOnly cookie
+            
+            // Smart routing based on user type and access levels
+            const user = loginResponse.data.user;
+            
+            let targetRoute = "/dashboard"; // Default fallback
+            
+            if (user) {
+              // SuperAdmins and Admins go to system-wide dashboard
+              if (user.isSuperAdmin || user.role === 'ADMIN') {
+                targetRoute = "/dashboard";
+              } 
+              // Employees with company and web access go to company dashboard
+              else if (user.companyOwnerId && user.hasWebAccess) {
+                targetRoute = "/company/dashboard";
+              }
+            }
 
             setTimeout(() => {
-              navigate("/dashboard", { replace: true });
+              navigate(targetRoute, { replace: true });
               window.location.reload();
             }, 500);
           } else {
@@ -519,6 +729,17 @@ export function AuthPage() {
         pauseOnHover
         theme="light"
       />
+      
+      {/* Back Button */}
+      <Button
+        variant="ghost"
+        onClick={() => navigate("/")}
+        className="absolute top-4 left-4 flex items-center gap-2"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to Home
+      </Button>
+
       <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-8 items-center">
         {/* Left Side - Branding */}
         <div className="hidden lg:block">
@@ -562,6 +783,18 @@ export function AuthPage() {
                 : "Sign up to get started with RCV System"}
             </p>
           </div>
+
+          {inviteToken && !isLogin && (
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-3">
+              <CheckCircle2 className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-blue-900 text-sm font-semibold">You're invited!</p>
+                <p className="text-blue-700 text-sm">
+                  You're registering as an employee of <strong>{inviteCompanyName}</strong>
+                </p>
+              </div>
+            </div>
+          )}
 
           {error && (
             <div className="mb-6 p-4 bg-error-50 border border-error-200 rounded-lg flex items-start gap-3">
@@ -1099,6 +1332,73 @@ export function AuthPage() {
                     </p>
                   )}
                 </div>
+
+                {/* Wallet Address Field - Show for employee registration (invite token) */}
+                {inviteToken && (
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-2">
+                      Wallet Address (MetaMask) *
+                    </label>
+                    <div className="relative">
+                      <svg
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                      >
+                        <path d="M21.59 4.99l-7.89 5.7 1.47-3.39 6.42-2.31zm-18.18 0l6.36 2.28 1.42 3.42-7.78-5.7zm15.45 11.82l-2.12 3.16-4.56 1.26 2.27-2.71 4.41-1.71zm-12.86 0l4.41 1.71 2.27 2.71-4.56-1.26-2.12-3.16zm6.43-3.29l-1.99 1.5-1.99-1.5 1.99-4.99 1.99 4.99z" />
+                      </svg>
+                      <Input
+                        type="text"
+                        placeholder="0x..."
+                        className={`pl-10 h-11 ${
+                          errors.walletAddress ? "border-error-500" : ""
+                        }`}
+                        value={registerData.walletAddress}
+                        onChange={(e) =>
+                          setRegisterData({
+                            ...registerData,
+                            walletAddress: e.target.value,
+                          })
+                        }
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (typeof window.ethereum !== 'undefined') {
+                            try {
+                              const accounts = await window.ethereum.request({ 
+                                method: 'eth_requestAccounts' 
+                              });
+                              if (accounts && accounts.length > 0) {
+                                setRegisterData({
+                                  ...registerData,
+                                  walletAddress: accounts[0],
+                                });
+                                toast.success("Wallet connected!");
+                              }
+                            } catch (error: any) {
+                              toast.error("Failed to connect wallet: " + error.message);
+                            }
+                          } else {
+                            toast.error("Please install MetaMask to connect your wallet");
+                          }
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 text-xs font-medium text-white bg-orange-500 hover:bg-orange-600 rounded transition-colors"
+                      >
+                        Connect
+                      </button>
+                    </div>
+                    {errors.walletAddress && (
+                      <p className="text-error-500 text-xs mt-1">
+                        {errors.walletAddress}
+                      </p>
+                    )}
+                    <p className="text-xs text-neutral-500 mt-1">
+                      You'll need to verify with this wallet when logging in
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-start">

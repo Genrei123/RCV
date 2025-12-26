@@ -29,10 +29,62 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import About from "./pages/AboutUs";
 import Contact from "./pages/ContactUs";
+import { LandingPage } from "./pages/LandingPage";
+import { GetStartedPage } from "./pages/GetStartedPage";
+import { KioskLandingPage } from "./pages/KioskLandingPage";
+import { CompanyRegistrationPage } from "./pages/CompanyRegistrationPage";
+import { CompanyLoginPage } from "./pages/CompanyLoginPage";
+import { CompanyPendingApprovalPage } from "./pages/CompanyPendingApprovalPage";
+import { CompanyDashboard } from "./pages/CompanyDashboard";
+import { CompanyEmailVerificationPage } from "./pages/CompanyEmailVerificationPage";
+import { CompanyOwnerService } from "./services/companyOwnerService";
+import { CompanyProducts } from "./pages/CompanyOwner/CompanyProducts";
+import { CompanyMaps } from "./pages/CompanyOwner/CompanyMaps";
+import { CompanyEmployees } from "./pages/CompanyOwner/CompanyEmployees";
 
 interface ProtectedRoutesProps {
   children: ReactNode;
 }
+
+const CompanyProtectedRoute = ({ children }: ProtectedRoutesProps) => {
+  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      // Check if user is a company owner (wallet-based auth)
+      const isCompanyOwner = CompanyOwnerService.isCompanyOwnerLoggedIn();
+      
+      // Check if user is an employee with JWT auth
+      const isEmployee = await AuthService.initializeAuthenticaiton();
+      
+      // Check if employee has web access (from localStorage set during login)
+      const hasWebAccess = localStorage.getItem('hasWebAccess') === 'true';
+      const companyOwnerId = localStorage.getItem('companyOwnerId');
+
+      // Allow access if:
+      // 1. User is a company owner (wallet auth), OR
+      // 2. User is an employee with JWT AND has web access AND belongs to a company
+      if (!isCompanyOwner && !(isEmployee && hasWebAccess && companyOwnerId)) {
+        navigate("/login", { replace: true });
+        return;
+      }
+      setIsLoading(false);
+    };
+
+    checkAuth();
+  }, [navigate]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+};
 
 const PublicRoute = ({ children }: ProtectedRoutesProps) => {
   const navigate = useNavigate();
@@ -93,6 +145,73 @@ const ProtectedRoutes = ({ children }: ProtectedRoutesProps) => {
         <div className="text-center">
           <p className="text-gray-600">
             Access Denied. Redirecting to Login...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+};
+
+const SuperAdminProtectedRoute = ({ children }: ProtectedRoutesProps) => {
+  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasAccess, setHasAccess] = useState(false);
+
+  useEffect(() => {
+    const checkSuperAdminAccess = async () => {
+      try {
+        // First check if user is logged in
+        const isLoggedIn = await AuthService.initializeAuthenticaiton();
+        
+        if (!isLoggedIn) {
+          navigate("/login", { replace: true });
+          return;
+        }
+
+        // Check if user is super admin or admin
+        const isSuperAdmin = AuthService.isSuperAdmin();
+        const userRole = localStorage.getItem('userRole');
+        
+        if (isSuperAdmin || userRole === 'ADMIN') {
+          setHasAccess(true);
+        } else {
+          // Not a super admin/admin, redirect to appropriate dashboard
+          const hasWebAccess = localStorage.getItem('hasWebAccess') === 'true';
+          const companyOwnerId = localStorage.getItem('companyOwnerId');
+          
+          if (hasWebAccess && companyOwnerId) {
+            navigate("/company/dashboard", { replace: true });
+          } else {
+            navigate("/login", { replace: true });
+          }
+        }
+      } catch (error) {
+        console.error("Error checking super admin access:", error);
+        navigate("/login", { replace: true });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkSuperAdminAccess();
+  }, [navigate]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+
+  if (!hasAccess) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-gray-600">
+            Access Denied. You need super admin privileges to access this page.
           </p>
         </div>
       </div>
@@ -166,6 +285,53 @@ function App() {
         theme="light"
       />
       <Routes>
+        {/* Landing Page */}
+        <Route path="/" element={<LandingPage />} />
+        
+        {/* Get Started Page */}
+        <Route path="/get-started" element={<GetStartedPage />} />
+
+        {/* Kiosk Landing Page */}
+        <Route path="/kiosk" element={<KioskLandingPage />} />
+
+        {/* Company Owner Routes */}
+        <Route path="/company/register" element={<CompanyRegistrationPage />} />
+        <Route path="/company/login" element={<CompanyLoginPage />} />
+        <Route path="/company/pending-approval" element={<CompanyPendingApprovalPage />} />
+        <Route path="/company/verify-email" element={<CompanyEmailVerificationPage />} />
+        <Route
+          path="/company/dashboard"
+          element={
+            <CompanyProtectedRoute>
+              <CompanyDashboard />
+            </CompanyProtectedRoute>
+          }
+        />
+        <Route
+          path="/company/products"
+          element={
+            <CompanyProtectedRoute>
+              <CompanyProducts />
+            </CompanyProtectedRoute>
+          }
+        />
+        <Route
+          path="/company/maps"
+          element={
+            <CompanyProtectedRoute>
+              <CompanyMaps />
+            </CompanyProtectedRoute>
+          }
+        />
+        <Route
+          path="/company/employees"
+          element={
+            <CompanyProtectedRoute>
+              <CompanyEmployees />
+            </CompanyProtectedRoute>
+          }
+        />
+
         {/* Public Routes */}
         <Route
           path="/login"
@@ -201,31 +367,23 @@ function App() {
         />
         <Route path="/pending-approval" element={<PendingApprovalPage />} />
 
-        {/* Protected Routes wrapped with AppLayout */}
-        <Route
-          path="/"
-          element={
-            <ProtectedRoutes>
-              <AppLayout>
-                <Dashboard {...dashboardData} />
-              </AppLayout>
-            </ProtectedRoutes>
-          }
-        />
+        {/* Dashboard redirect - now goes to landing if not logged in */}
         <Route
           path="/dashboard"
           element={
-            <ProtectedRoutes>
+            <SuperAdminProtectedRoute>
               <AppLayout>
                 <Dashboard {...dashboardData} />
               </AppLayout>
-            </ProtectedRoutes>
+            </SuperAdminProtectedRoute>
           }
         />
+
+        {/* Protected Routes wrapped with AppLayout */}
         <Route
           path="/products"
           element={
-            <ProtectedRoutes>
+            <SuperAdminProtectedRoute>
               <AppLayout>
                 <Products
                   {...productsData}
@@ -233,107 +391,101 @@ function App() {
                   onRefresh={fetchProductsData}
                 />
               </AppLayout>
-            </ProtectedRoutes>
+            </SuperAdminProtectedRoute>
           }
         />
         <Route
           path="/companies"
           element={
-            <ProtectedRoutes>
+            <SuperAdminProtectedRoute>
               <AppLayout>
                 <Companies {...companiesData} onRefresh={fetchCompaniesData} />
               </AppLayout>
-            </ProtectedRoutes>
+            </SuperAdminProtectedRoute>
           }
         />
         <Route
           path="/maps"
           element={
-            <ProtectedRoutes>
+            <SuperAdminProtectedRoute>
               <AppLayout fullBleed hideFooter>
                 <Maps />
               </AppLayout>
-            </ProtectedRoutes>
+            </SuperAdminProtectedRoute>
           }
         />
         <Route
           path="/analytics"
           element={
-            <ProtectedRoutes>
+            <SuperAdminProtectedRoute>
               <AppLayout hideFooter fullBleed>
                 <Analytics />
               </AppLayout>
-            </ProtectedRoutes>
+            </SuperAdminProtectedRoute>
           }
         />
         <Route
           path="/profile"
           element={
-            <ProtectedRoutes>
+            <CompanyProtectedRoute>
               <AppLayout>
                 <Profile />
               </AppLayout>
-            </ProtectedRoutes>
+            </CompanyProtectedRoute>
           }
         />
         <Route
           path="/users/:id"
           element={
-            <ProtectedRoutes>
+            <SuperAdminProtectedRoute>
               <AppLayout>
                 <UserProfileView />
               </AppLayout>
-            </ProtectedRoutes>
+            </SuperAdminProtectedRoute>
           }
         />
         <Route
           path="/blockchain"
           element={
-            <ProtectedRoutes>
+            <SuperAdminProtectedRoute>
               <AppLayout>
                 <Blockchain />
               </AppLayout>
-            </ProtectedRoutes>
+            </SuperAdminProtectedRoute>
           }
         />
         <Route
           path="/verify-certificate"
-          element={
-            <ProtectedRoutes>
-              <AppLayout>
-                <CertificateVerifier />
-              </AppLayout>
-            </ProtectedRoutes>
-          }
+          element={<CertificateVerifier />}
         />
         <Route
           path="/scan-history"
           element={
-            <ProtectedRoutes>
+            <SuperAdminProtectedRoute>
               <AppLayout>
                 <ScanHistory />
               </AppLayout>
-            </ProtectedRoutes>
+            </SuperAdminProtectedRoute>
           }
         />
         <Route
           path="/remote-config"
           element={
-            <ProtectedRoutes>
+            <SuperAdminProtectedRoute>
               <AppLayout>
                 <RemoteConfig />
               </AppLayout>
-            </ProtectedRoutes>
+            </SuperAdminProtectedRoute>
           }
         />
         <Route
           path="/kiosk-monitor"
           element={
-            <ProtectedRoutes>
+            <SuperAdminProtectedRoute>
               <AppLayout>
                 <KioskMonitor />
               </AppLayout>
-            </ProtectedRoutes>
+            </SuperAdminProtectedRoute>
           }
         />
         <Route

@@ -1,5 +1,14 @@
 import { useState, useEffect } from "react";
 import { Plus, Grid, List, Search, Download } from "lucide-react";
+
+declare global {
+  interface Window {
+    ethereum?: {
+      request: (args: { method: string; params?: any[] }) => Promise<any>;
+      isMetaMask?: boolean;
+    };
+  }
+}
 import { PageContainer } from "@/components/PageContainer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,10 +73,46 @@ export function Products(props: ProductsProps) {
     }
   };
 
-  const handleAddProduct = () => {
-    setShowAddModal(true);
-    if (props.onAddProduct) {
-      props.onAddProduct();
+  const handleAddProduct = async () => {
+    // Check if MetaMask is installed and user is connected
+    try {
+      if (!window.ethereum) {
+        toast.error("MetaMask is required to add products. Please install MetaMask browser extension.");
+        window.open("https://metamask.io/download/", "_blank");
+        return;
+      }
+
+      // Check if wallet is already connected
+      const accounts = await window.ethereum.request({
+        method: "eth_accounts",
+      });
+
+      if (accounts.length === 0) {
+        // Request wallet connection
+        toast.info("Please connect your MetaMask wallet to continue.");
+        const newAccounts = await window.ethereum.request({
+          method: "eth_requestAccounts",
+        });
+        
+        if (newAccounts.length === 0) {
+          toast.error("Wallet connection is required to add products.");
+          return;
+        }
+        
+        toast.success(`Wallet connected: ${newAccounts[0].substring(0, 6)}...${newAccounts[0].substring(newAccounts[0].length - 4)}`);
+      }
+
+      setShowAddModal(true);
+      if (props.onAddProduct) {
+        props.onAddProduct();
+      }
+    } catch (error: any) {
+      console.error("MetaMask connection error:", error);
+      if (error.code === 4001) {
+        toast.warning("You rejected the wallet connection request.");
+      } else {
+        toast.error("Failed to connect wallet. Please try again.");
+      }
     }
   };
 

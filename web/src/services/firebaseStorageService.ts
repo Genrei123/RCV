@@ -76,6 +76,32 @@ export class FirebaseStorageService {
       return null;
     }
   }
+
+  static async uploadBusinessPermit(companyName: string, file: File): Promise<string | null> {
+    try {
+      const timestamp = Date.now();
+      const sanitizedName = companyName.replace(/[^a-zA-Z0-9]/g, '_');
+      const fileName = `${sanitizedName}_${timestamp}.pdf`;
+      const storageRef = ref(storage, `business_permits/${fileName}`);
+
+      const metadata = {
+        contentType: 'application/pdf',
+        customMetadata: {
+          companyName: companyName,
+          uploadedAt: new Date().toISOString(),
+        },
+      };
+
+      const snapshot = await uploadBytes(storageRef, file, metadata);
+      const url = await getDownloadURL(snapshot.ref);
+
+      return url;
+    } catch (error) {
+      console.error('Error uploading business permit:', error);
+      return null;
+    }
+  }
+  
   /**
    * Upload profile avatar to Firebase Storage
    * 

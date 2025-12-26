@@ -1,5 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import { X, Package, Hash, Calendar, Building2 } from "lucide-react";
+import { X, Package, Hash, Calendar, Building2, Wallet, Plus } from "lucide-react";
+import { AddCompanyModal } from "@/components/AddCompanyModal";
+
+declare global {
+  interface Window {
+    ethereum?: {
+      request: (args: { method: string; params?: any[] }) => Promise<any>;
+      isMetaMask?: boolean;
+    };
+  }
+}
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProductService } from "@/services/productService";
@@ -21,6 +31,8 @@ export function AddProductModal({
   companies,
 }: AddProductModalProps) {
   const [loading, setLoading] = useState(false);
+  const [walletAddress, setWalletAddress] = useState<string>("");
+  const [showAddCompanyModal, setShowAddCompanyModal] = useState(false);
   const [formData, setFormData] = useState({
     LTONumber: "",
     CFPRNumber: "",
@@ -48,6 +60,31 @@ export function AddProductModal({
     setAllCompanies(companies);
     setCompanyOptions(companies);
   }, [companies]);
+
+  // Fetch wallet address when modal opens
+  useEffect(() => {
+    const fetchWalletAddress = async () => {
+      if (!isOpen) {
+        setWalletAddress("");
+        return;
+      }
+
+      try {
+        if (window.ethereum) {
+          const accounts = await window.ethereum.request({
+            method: "eth_accounts",
+          });
+          if (accounts.length > 0) {
+            setWalletAddress(accounts[0]);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching wallet address:", error);
+      }
+    };
+
+    fetchWalletAddress();
+  }, [isOpen]);
 
   useEffect(() => {
     const query = companyInputValue.trim().toLowerCase();
@@ -125,6 +162,20 @@ export function AddProductModal({
     setCompanyDropdownOpen(false);
     if (errors.companyId) {
       setErrors((prev) => ({ ...prev, companyId: "" }));
+    }
+  };
+
+  const handleAddCompanySuccess = async () => {
+    // Refresh the companies list
+    try {
+      const response = await CompanyService.getCompaniesPage(1, COMPANY_FETCH_LIMIT);
+      const fetchedCompanies = response.companies || response.data || [];
+      setAllCompanies(fetchedCompanies);
+      setCompanyOptions(fetchedCompanies);
+      hasFetchedAllCompanies.current = true;
+      toast.success("Company added! You can now select it.");
+    } catch (error) {
+      console.error("Error refreshing companies:", error);
     }
   };
 
@@ -306,6 +357,24 @@ export function AddProductModal({
         {/* Form */}
         <div className="p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Wallet Address Display */}
+            {walletAddress && (
+              <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <label className="block text-sm font-medium text-blue-900 mb-2">
+                  <Wallet className="inline h-4 w-4 mr-2" />
+                  Connected Wallet Address
+                </label>
+                <Input
+                  value={walletAddress}
+                  disabled
+                  className="font-mono text-sm bg-white border-blue-200 text-blue-900 cursor-not-allowed"
+                />
+                <p className="text-xs text-blue-700 mt-2">
+                  This product will be registered to your wallet address on the blockchain.
+                </p>
+              </div>
+            )}
+
             {/* LTO and CFPR Numbers */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -538,9 +607,22 @@ export function AddProductModal({
 
             {/* Company */}
             <div>
-              <label className="block text-sm font-medium app-text-subtle mb-2">
-                Company *
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium app-text-subtle">
+                  Company *
+                </label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAddCompanyModal(true)}
+                  className="text-xs h-7 cursor-pointer"
+                  disabled={loading}
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Add New Company
+                </Button>
+              </div>
               <div className="relative" ref={companyDropdownRef}>
                 <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 app-text-subtle h-4 w-4" />
                 <Input
@@ -625,6 +707,13 @@ export function AddProductModal({
           </form>
         </div>
       </div>
+
+      {/* Nested Add Company Modal */}
+      <AddCompanyModal
+        isOpen={showAddCompanyModal}
+        onClose={() => setShowAddCompanyModal(false)}
+        onSuccess={handleAddCompanySuccess}
+      />
     </div>
   );
 }

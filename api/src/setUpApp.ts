@@ -19,6 +19,7 @@ import ScanRouter from "./routes/v1/scan";
 import UserRouter from "./routes/v1/user";
 import ProductRouter from "./routes/v1/product";
 import CompanyRouter from "./routes/v1/company";
+import CompanyOwnerRouter from "./routes/v1/companyOwner";
 import FirebaseRouter from "./routes/v1/firebase";
 import ContactRouter from "./routes/v1/contact";
 import AuditLogRouter from "./routes/v1/auditLog";
@@ -54,6 +55,7 @@ const setUpApp = async () => {
   app.use("/api/v1/user", verifyUser, UserRouter);
   app.use("/api/v1/product", verifyUser, ProductRouter);
   app.use("/api/v1/company", verifyUser, CompanyRouter);
+  app.use("/api/v1/company-owner", CompanyOwnerRouter);
   app.use("/api/v1/firebase", verifyUser, FirebaseRouter);
   app.use("/api/v1/contact", ContactRouter);
   app.use("/api/v1/audit", verifyUser, AuditLogRouter);
