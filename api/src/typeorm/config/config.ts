@@ -12,7 +12,7 @@ import { ComplianceReport } from "../entities/complianceReport.entity";
 
 const { DEV_DATABASE_URI, MAIN_DATABASE_URI, DB_PORT, NODE_ENV } = process.env;
 const config: DataSourceOptions = {
-  type: "mysql",
+  type: "postgres",
   url: NODE_ENV === "development" ? DEV_DATABASE_URI : MAIN_DATABASE_URI,
   port: parseInt(DB_PORT!, 10),
   entities: [User, Product, Company, ScanHistory, ForgotPassword, AuditLog, ComplianceReport], // Add yung models na ginagawa
