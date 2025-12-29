@@ -29,6 +29,8 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import About from "./pages/AboutUs";
 import Contact from "./pages/ContactUs";
+import { PendingAgents } from "./pages/PendingAgents";
+import { AgentRegistration } from "./pages/AgentRegistration";
 
 interface ProtectedRoutesProps {
   children: ReactNode;
@@ -107,10 +109,17 @@ function App() {
   const [productsData, setProductsData] = useState<ProductsProps>();
   const [companiesData, setCompanies] = useState<CompaniesProps>();
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
     AuthService.initializeAuthenticaiton().then((loggedIn) => {
       setIsLoggedIn(loggedIn);
+      if (loggedIn) {
+        // Fetch current user data
+        AuthService.getCurrentUser().then((user) => {
+          setCurrentUser(user);
+        });
+      }
     });
   }, []);
 
@@ -200,6 +209,16 @@ function App() {
           }
         />
         <Route path="/pending-approval" element={<PendingApprovalPage />} />
+        
+        {/* Agent Registration - Accessible to invited users */}
+        <Route
+          path="/agent-registration"
+          element={
+            <AccessibleRoute>
+              <AgentRegistration />
+            </AccessibleRoute>
+          }
+        />
 
         {/* Protected Routes wrapped with AppLayout */}
         <Route
@@ -352,6 +371,16 @@ function App() {
             <ProtectedRoutes>
               <AppLayout>
                 <Contact/>
+              </AppLayout>
+            </ProtectedRoutes>
+          }
+        />
+        <Route
+          path="/pending-agents"
+          element={
+            <ProtectedRoutes>
+              <AppLayout>
+                <PendingAgents user={currentUser} />
               </AppLayout>
             </ProtectedRoutes>
           }

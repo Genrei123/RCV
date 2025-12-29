@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import {
   X,
   User as UserIcon,
@@ -9,9 +10,18 @@ import {
   Shield,
   CheckCircle,
   XCircle,
+  FileText,
+  Image,
+  Monitor,
+  Smartphone,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { toast } from "react-toastify";
+import { UserPageService } from "@/services/userPageService";
 import type { User } from "@/typeorm/entities/user.entity";
 
 interface UserDetailModalProps {
@@ -20,6 +30,7 @@ interface UserDetailModalProps {
   user: User | null;
   onApprove?: (user: User) => void;
   onReject?: (user: User) => void;
+  onAccessUpdate?: (user: User) => void;
 }
 
 export function UserDetailModal({
@@ -28,8 +39,53 @@ export function UserDetailModal({
   user,
   onApprove,
   onReject,
+  onAccessUpdate,
 }: UserDetailModalProps) {
+  const [accessLoading, setAccessLoading] = useState(false);
+  const [localWebAccess, setLocalWebAccess] = useState(false);
+  const [localAppAccess, setLocalAppAccess] = useState(true);
+
+  // Update local state when user changes
+  useEffect(() => {
+    if (user) {
+      setLocalWebAccess(user.webAccess ?? false);
+      setLocalAppAccess(user.appAccess ?? true);
+    }
+  }, [user?._id, user?.webAccess, user?.appAccess]);
+
   if (!isOpen || !user) return null;
+
+  const handleAccessChange = async (type: 'web' | 'app', value: boolean) => {
+    if (!user?._id) return;
+
+    const newWebAccess = type === 'web' ? value : localWebAccess;
+    const newAppAccess = type === 'app' ? value : localAppAccess;
+
+    // Ensure at least one access type is enabled
+    if (!newWebAccess && !newAppAccess) {
+      toast.error("User must have at least one access type enabled");
+      return;
+    }
+
+    // Update local state immediately for responsiveness
+    if (type === 'web') setLocalWebAccess(value);
+    if (type === 'app') setLocalAppAccess(value);
+
+    setAccessLoading(true);
+    try {
+      await UserPageService.updateUserAccess(user._id, newWebAccess, newAppAccess);
+      toast.success("Access permissions updated");
+      // Notify parent to refresh
+      onAccessUpdate?.({ ...user, webAccess: newWebAccess, appAccess: newAppAccess });
+    } catch (error) {
+      // Revert on error
+      if (type === 'web') setLocalWebAccess(!value);
+      if (type === 'app') setLocalAppAccess(!value);
+      toast.error("Failed to update access permissions");
+    } finally {
+      setAccessLoading(false);
+    }
+  };
 
   const formatDate = (date: Date | string | undefined): string => {
     if (!date) return "N/A";
@@ -76,6 +132,7 @@ export function UserDetailModal({
   ): "default" | "secondary" | "destructive" | "outline" => {
     if (status === "Active") return "default";
     if (status === "Pending") return "secondary";
+    if (status === "Rejected") return "destructive";
     if (status === "Inactive") return "destructive";
     return "outline";
   };
@@ -114,8 +171,45 @@ export function UserDetailModal({
         {/* Content */}
         <div className="p-6">
           <div className="space-y-6">
+            {/* Profile Section with Avatar */}
+            <div className="flex items-center gap-4">
+              {user.avatarUrl ? (
+                <img
+                  src={user.avatarUrl}
+                  alt={`${user.firstName}'s avatar`}
+                  className="w-20 h-20 rounded-full object-cover border-2 border-gray-200"
+                />
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center border-2 border-gray-200">
+                  <UserIcon className="w-10 h-10 text-gray-400" />
+                </div>
+              )}
+              <div>
+                <h3 className="text-xl font-semibold app-text">{getFullName()}</h3>
+                <p className="text-sm app-text-subtle">{user.email}</p>
+                {user.status === "Rejected" && (
+                  <Badge variant="destructive" className="mt-1">
+                    Rejected
+                  </Badge>
+                )}
+              </div>
+            </div>
+
+            {/* Rejection Reason Alert */}
+            {user.status === "Rejected" && user.rejectionReason && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex items-start gap-2">
+                  <XCircle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h4 className="text-sm font-semibold text-red-800">Account Rejected</h4>
+                    <p className="text-sm text-red-700 mt-1">{user.rejectionReason}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Personal Information */}
-            <div>
+            <div className="border-t pt-6">
               <h3 className="text-lg font-semibold app-text mb-4">
                 Personal Information
               </h3>
@@ -208,6 +302,97 @@ export function UserDetailModal({
               </div>
             </div>
 
+            {/* Verification Documents */}
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-semibold app-text mb-4 flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Verification Documents
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* ID Document */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium app-text-subtle">
+                    ID Document
+                  </label>
+                  {user.idDocumentUrl ? (
+                    <a
+                      href={user.idDocumentUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block"
+                    >
+                      <div className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+                        <img
+                          src={user.idDocumentUrl}
+                          alt="ID Document"
+                          className="w-full h-40 object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = "none";
+                            const fallback =
+                              target.nextElementSibling as HTMLElement;
+                            if (fallback) fallback.classList.remove("hidden");
+                          }}
+                        />
+                        <div className="hidden h-40 bg-gray-100 flex items-center justify-center">
+                          <Image className="w-8 h-8 text-gray-400" />
+                        </div>
+                        <div className="p-2 bg-gray-50 text-center text-sm text-blue-600">
+                          Click to view full size
+                        </div>
+                      </div>
+                    </a>
+                  ) : (
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg h-40 flex flex-col items-center justify-center bg-gray-50">
+                      <Image className="w-10 h-10 text-gray-300 mb-2" />
+                      <p className="text-sm text-gray-400">No ID document uploaded</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Selfie with ID */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium app-text-subtle">
+                    Selfie with ID
+                  </label>
+                  {user.selfieWithIdUrl ? (
+                    <a
+                      href={user.selfieWithIdUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block"
+                    >
+                      <div className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+                        <img
+                          src={user.selfieWithIdUrl}
+                          alt="Selfie with ID"
+                          className="w-full h-40 object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = "none";
+                            const fallback =
+                              target.nextElementSibling as HTMLElement;
+                            if (fallback) fallback.classList.remove("hidden");
+                          }}
+                        />
+                        <div className="hidden h-40 bg-gray-100 flex items-center justify-center">
+                          <Image className="w-8 h-8 text-gray-400" />
+                        </div>
+                        <div className="p-2 bg-gray-50 text-center text-sm text-blue-600">
+                          Click to view full size
+                        </div>
+                      </div>
+                    </a>
+                  ) : (
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg h-40 flex flex-col items-center justify-center bg-gray-50">
+                      <Image className="w-10 h-10 text-gray-300 mb-2" />
+                      <p className="text-sm text-gray-400">No selfie uploaded</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
             {/* Account Status */}
             <div className="border-t pt-6">
               <h3 className="text-lg font-semibold app-text mb-4">
@@ -265,6 +450,62 @@ export function UserDetailModal({
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Access Permissions */}
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-semibold app-text mb-4 flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Access Permissions
+              </h3>
+              <div className="app-bg-neutral rounded-lg p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Smartphone className="h-5 w-5 text-blue-600" />
+                    <div>
+                      <Label htmlFor="app-access" className="text-sm font-medium cursor-pointer">
+                        Mobile App Access
+                      </Label>
+                      <p className="text-xs text-gray-500">
+                        Allow user to access the mobile application
+                      </p>
+                    </div>
+                  </div>
+                  <Checkbox
+                    id="app-access"
+                    checked={localAppAccess}
+                    onCheckedChange={(checked) => handleAccessChange('app', checked as boolean)}
+                    disabled={accessLoading}
+                    className="h-5 w-5"
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Monitor className="h-5 w-5 text-green-600" />
+                    <div>
+                      <Label htmlFor="web-access" className="text-sm font-medium cursor-pointer">
+                        Web Dashboard Access
+                      </Label>
+                      <p className="text-xs text-gray-500">
+                        Allow user to access the web dashboard
+                      </p>
+                    </div>
+                  </div>
+                  <Checkbox
+                    id="web-access"
+                    checked={localWebAccess}
+                    onCheckedChange={(checked) => handleAccessChange('web', checked as boolean)}
+                    disabled={accessLoading}
+                    className="h-5 w-5"
+                  />
+                </div>
+                {accessLoading && (
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Updating permissions...
+                  </div>
+                )}
               </div>
             </div>
 

@@ -23,7 +23,8 @@ interface CurrentUser {
   lastName: string;
   middleName?: string;
   email: string;
-  role?: number;
+  role?: number | string;
+  isSuperAdmin?: boolean;
   avatar?: string;
 }
 
@@ -131,6 +132,16 @@ export function Sidebar({
     if (!currentUser) return "Loading...";
     if (currentUser.role === undefined || currentUser.role === null)
       return "Agent";
+
+    // Handle both string and number role formats
+    if (typeof currentUser.role === 'string') {
+      const stringRoleMap: { [key: string]: string } = {
+        'AGENT': 'Agent',
+        'ADMIN': 'Admin',
+        'USER': 'User',
+      };
+      return stringRoleMap[currentUser.role] || "Agent";
+    }
 
     const roleMap: { [key: number]: string } = {
       1: "Agent",

@@ -16,7 +16,10 @@ const coerceDate = (val: unknown) =>
 export const UserValidation = z.object({
   _id: z.string().optional(),
   role: z.enum(['AGENT', 'ADMIN', 'USER']).optional(),
-  status: z.enum(['Archived', 'Active', 'Pending']).default('Pending'),
+  status: z.enum(['Archived', 'Active', 'Pending', 'Rejected']).default('Pending'),
+  rejectionReason: z.string().optional(),
+  webAccess: z.boolean().optional().default(false),
+  appAccess: z.boolean().optional().default(true),
   approved: z.boolean().optional().default(false),
   avatarUrl: z.string().optional(),
   firstName: z.string().min(2).max(50),
@@ -52,8 +55,17 @@ export class User {
   @Column({ type: 'enum', enum: ['AGENT', 'ADMIN', 'USER'], default: 'AGENT' })
   role!: 'AGENT' | 'ADMIN' | 'USER';
 
-  @Column({ type: 'enum', enum: ['Archived', 'Active', 'Pending'], default: 'Pending' })
-  status!: 'Archived' | 'Active' | 'Pending';
+  @Column({ type: 'enum', enum: ['Archived', 'Active', 'Pending', 'Rejected'], default: 'Pending' })
+  status!: 'Archived' | 'Active' | 'Pending' | 'Rejected';
+
+  @Column({ nullable: true })
+  rejectionReason?: string;
+
+  @Column({ type: 'boolean', default: false })
+  webAccess!: boolean;
+
+  @Column({ type: 'boolean', default: true })
+  appAccess!: boolean;
 
   @Column({ type: 'boolean', default: false })
   approved!: boolean;
@@ -105,6 +117,13 @@ export class User {
 
   @Column()
   badgeId!: string;
+
+  // Verification documents (from registration)
+  @Column({ nullable: true })
+  idDocumentUrl?: string;
+
+  @Column({ nullable: true })
+  selfieWithIdUrl?: string;
 
   @CreateDateColumn()
   createdAt!: Date;

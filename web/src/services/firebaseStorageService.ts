@@ -279,4 +279,42 @@ export class FirebaseStorageService {
     }
     return new File([u8arr], filename, { type: mime });
   }
+
+  /**
+   * Upload agent verification documents (ID and selfie)
+   * 
+   * @param file - The image file to upload
+   * @param path - The path in storage (e.g., 'agent-verification/token/id-document')
+   * @returns Object with downloadUrl
+   */
+  static async uploadAgentVerificationDocument(
+    file: File,
+    path: string
+  ): Promise<{ downloadUrl: string }> {
+    try {
+      console.log('📤 [Storage] Uploading agent verification document to:', path);
+      
+      const fileExtension = file.name.split('.').pop() || 'jpg';
+      const fullPath = `${path}.${fileExtension}`;
+      const storageRef = ref(storage, fullPath);
+      
+      const metadata = {
+        contentType: file.type || 'image/jpeg',
+        customMetadata: {
+          uploadedAt: new Date().toISOString(),
+          originalName: file.name,
+          purpose: 'agent-verification',
+        },
+      };
+      
+      const snapshot = await uploadBytes(storageRef, file, metadata);
+      const downloadUrl = await getDownloadURL(snapshot.ref);
+      
+      console.log('✅ [Storage] Agent verification document uploaded:', downloadUrl);
+      return { downloadUrl };
+    } catch (error) {
+      console.error('❌ [Storage] Agent verification document upload failed:', error);
+      throw new Error('Failed to upload verification document');
+    }
+  }
 }

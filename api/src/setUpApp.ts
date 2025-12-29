@@ -24,6 +24,7 @@ import ContactRouter from "./routes/v1/contact";
 import AuditLogRouter from "./routes/v1/auditLog";
 import CertificateBlockchainRouter from "./routes/v1/certificateBlockchain";
 import AnalyticsRouter from "./routes/v1/analytics";
+import AdminInviteRouter from "./routes/v1/adminInvite";
 import { verifyUser } from "./middleware/verifyUser";
 import { verifyMobileUser } from "./middleware/verifyMobileUser";
 import helmet from "helmet";
@@ -63,6 +64,7 @@ const setUpApp = async () => {
     CertificateBlockchainRouter
   );
   app.use("/api/v1/analytics", verifyUser, AnalyticsRouter);
+  app.use("/api/v1/admin-invite", AdminInviteRouter);
 
   // Serve static uploads (avatars, etc.)
   const uploadsPath = path.resolve(process.cwd(), "uploads");
