@@ -35,6 +35,13 @@ interface ForgotPasswordPayload {
   iat: number;
 }
 
+interface CompanyOwnerPayload {
+  sub: string;
+  companyName: string;
+  email: string;
+  iat: number;
+}
+
 export const JWT_USERPAYLOAD = z.object({
   sub: z.string(),
   isAdmin: z.boolean(),
@@ -83,6 +90,13 @@ export function createForgotPasswordToken(UserEmail: ForgotPasswordPayload): str
   return jwt.sign(UserEmail, JWT_SECRET, {
     algorithm: JWT_ALGORITHM,
         expiresIn: JWT_EXPIRES_IN
+  });
+}
+
+export function createCompanyOwnerToken(companyOwner: CompanyOwnerPayload): string {
+  return jwt.sign(companyOwner, JWT_SECRET, {
+    algorithm: JWT_ALGORITHM,
+    expiresIn: JWT_EXPIRES_IN,
   });
 }
 

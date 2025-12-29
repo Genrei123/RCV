@@ -1444,20 +1444,31 @@ export function AuthPage() {
 
           {/* Toggle Login/Register + Contact Us */}
           <div className="mt-6 text-center">
-            <p className="text-sm text-neutral-600">
-              {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
-              <button
-                type="button"
-                onClick={() => {
-                  setIsLogin(!isLogin);
-                  setError("");
-                  setErrors({});
-                }}
-                className="text-primary hover:text-[#00B087] font-semibold"
-              >
-                {isLogin ? "Sign Up" : "Sign In"}
-              </button>
-            </p>
+            {/* Only show sign up option when user has an invite token */}
+            {isLogin && !inviteToken ? (
+              <p className="text-sm text-neutral-600">
+                Need an account? Contact your company administrator for an invite link.
+              </p>
+            ) : (
+              <p className="text-sm text-neutral-600">
+                {isLogin ? "Have an invite link?" : "Already have an account?"}{" "}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!isLogin) {
+                      setIsLogin(true);
+                    } else if (inviteToken) {
+                      setIsLogin(false);
+                    }
+                    setError("");
+                    setErrors({});
+                  }}
+                  className="text-primary hover:text-[#00B087] font-semibold"
+                >
+                  {isLogin && inviteToken ? "Sign Up" : "Sign In"}
+                </button>
+              </p>
+            )}
           </div>
         </Card>
       </div>

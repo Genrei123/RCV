@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, UserPlus, Mail, Check, X, Globe, Smartphone, Monitor } from "lucide-react";
+import { Users, UserPlus, Mail, Check, X, Globe, Smartphone, Monitor, Clock, RefreshCw, Trash2 } from "lucide-react";
 import { PageContainer } from "@/components/PageContainer";
 import { Button } from "@/components/ui/button";
 import { CompanyOwnerService } from "@/services/companyOwnerService";
@@ -8,6 +8,8 @@ import { UserPageService } from "@/services/userPageService";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "react-toastify";
+import { AddEmployeeModal } from "@/components/AddEmployeeModal";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Employee {
   _id: string;
@@ -32,6 +34,10 @@ export function CompanyEmployees() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [employeesLoading, setEmployeesLoading] = useState(false);
   const [updatingAccess, setUpdatingAccess] = useState<string | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [activeTab, setActiveTab] = useState("employees");
+  const [pendingInvites, setPendingInvites] = useState<any[]>([]);
+  const [invitesLoading, setInvitesLoading] = useState(false);
 
   useEffect(() => {
     checkAuthAndFetchData();
@@ -52,8 +58,23 @@ export function CompanyEmployees() {
     }
 
     setCompanyOwner(ownerData);
-    await fetchEmployees(ownerData._id);
+    await Promise.all([
+      fetchEmployees(ownerData._id),
+      fetchPendingInvites(ownerData._id),
+    ]);
     setLoading(false);
+  };
+
+  const fetchPendingInvites = async (companyOwnerId: string) => {
+    setInvitesLoading(true);
+    try {
+      const response = await CompanyOwnerService.getPendingInvites(companyOwnerId);
+      setPendingInvites(response.invites || []);
+    } catch (error: any) {
+      console.error("Error fetching pending invites:", error);
+    } finally {
+      setInvitesLoading(false);
+    }
   };
 
   const fetchEmployees = async (companyOwnerId: string) => {
@@ -120,9 +141,24 @@ export function CompanyEmployees() {
     }
   };
 
-  const handleInviteEmployee = () => {
-    navigate("/company/dashboard");
-    toast.info("Please use the 'Generate Invite Link' button on your dashboard");
+  const handleCancelInvite = async (inviteId: string) => {
+    try {
+      await CompanyOwnerService.cancelInvite(inviteId, companyOwner._id);
+      toast.success("Invite cancelled");
+      fetchPendingInvites(companyOwner._id);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to cancel invite");
+    }
+  };
+
+  const handleResendInvite = async (inviteId: string) => {
+    try {
+      await CompanyOwnerService.resendInvite(inviteId, companyOwner._id);
+      toast.success("Invite resent successfully");
+      fetchPendingInvites(companyOwner._id);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to resend invite");
+    }
   };
 
   if (loading) {
@@ -140,6 +176,18 @@ export function CompanyEmployees() {
       title="Company Employees"
       description="Manage your team members and permissions"
     >
+      {/* Add Employee Modal */}
+      <AddEmployeeModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        companyOwnerId={companyOwner?._id || ""}
+        companyName={companyOwner?.companyName || ""}
+        onSuccess={() => {
+          fetchEmployees(companyOwner._id);
+          fetchPendingInvites(companyOwner._id);
+        }}
+      />
+
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Users className="h-8 w-8 text-orange-600" />
@@ -148,19 +196,32 @@ export function CompanyEmployees() {
               {companyOwner?.companyName} - Team Members
             </h1>
             <p className="text-sm text-gray-500">
-              Total: {employees.length} employees
+              Total: {employees.length} employees | {pendingInvites.length} pending invites
             </p>
           </div>
         </div>
         <Button
-          onClick={handleInviteEmployee}
-          className="bg-purple-600 hover:bg-purple-700"
+          onClick={() => setShowAddModal(true)}
+          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
         >
           <UserPlus className="h-4 w-4 mr-2" />
-          Invite Employee
+          Add Employee
         </Button>
       </div>
 
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="employees" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Employees ({employees.length})
+          </TabsTrigger>
+          <TabsTrigger value="pending" className="flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            Pending Invites ({pendingInvites.length})
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="employees">
       <Card className="border-2 border-gray-200">
         <CardContent className="p-6">
           {employeesLoading ? (
@@ -174,11 +235,11 @@ export function CompanyEmployees() {
                 No Employees Yet
               </h3>
               <p className="text-gray-600 mb-6">
-                Generate an invite link to add team members to your organization
+                Invite team members to join your organization
               </p>
               <Button
-                onClick={handleInviteEmployee}
-                className="bg-purple-600 hover:bg-purple-700"
+                onClick={() => setShowAddModal(true)}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
               >
                 <UserPlus className="h-4 w-4 mr-2" />
                 Invite Employee
@@ -343,6 +404,139 @@ export function CompanyEmployees() {
           )}
         </CardContent>
       </Card>
+        </TabsContent>
+
+        {/* Pending Invites Tab */}
+        <TabsContent value="pending">
+          <Card className="border-2 border-gray-200">
+            <CardContent className="p-6">
+              {invitesLoading ? (
+                <div className="flex justify-center py-8">
+                  <LoadingSpinner />
+                </div>
+              ) : pendingInvites.length === 0 ? (
+                <div className="text-center py-12">
+                  <Clock className="h-16 w-16 mx-auto mb-4 text-gray-400" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    No Pending Invites
+                  </h3>
+                  <p className="text-gray-600 mb-6">
+                    All sent invitations have been accepted or expired
+                  </p>
+                  <Button
+                    onClick={() => setShowAddModal(true)}
+                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Send New Invite
+                  </Button>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b-2 border-gray-200">
+                        <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">
+                          Email
+                        </th>
+                        <th className="text-center py-4 px-4 text-sm font-semibold text-gray-700">
+                          Permissions
+                        </th>
+                        <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">
+                          Status
+                        </th>
+                        <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">
+                          Sent
+                        </th>
+                        <th className="text-left py-4 px-4 text-sm font-semibold text-gray-700">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pendingInvites.map((invite) => (
+                        <tr
+                          key={invite._id}
+                          className="border-b border-gray-100 hover:bg-gray-50"
+                        >
+                          <td className="py-4 px-4">
+                            <div className="flex items-center gap-2">
+                              <Mail className="h-4 w-4 text-gray-400" />
+                              <span className="text-sm text-gray-900">
+                                {invite.employeeEmail || "Generic Link"}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-4 px-4">
+                            <div className="flex justify-center gap-2">
+                              {invite.hasWebAccess && (
+                                <Globe className="h-5 w-5 text-blue-600" />
+                              )}
+                              {invite.hasAppAccess && (
+                                <Smartphone className="h-5 w-5 text-green-600" />
+                              )}
+                              {invite.hasKioskAccess && (
+                                <Monitor className="h-5 w-5 text-purple-600" />
+                              )}
+                              {!invite.hasWebAccess && !invite.hasAppAccess && !invite.hasKioskAccess && (
+                                <span className="text-xs text-gray-400">No permissions set</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-4 px-4">
+                            {invite.expired ? (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                Expired
+                              </span>
+                            ) : invite.emailSent ? (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                Email Sent
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                Link Only
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-4 px-4">
+                            <span className="text-sm text-gray-500">
+                              {new Date(invite.createdAt).toLocaleDateString()}
+                            </span>
+                          </td>
+                          <td className="py-4 px-4">
+                            <div className="flex gap-2">
+                              {invite.employeeEmail && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleResendInvite(invite._id)}
+                                  className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                                  title="Resend Invite"
+                                >
+                                  <RefreshCw className="h-4 w-4" />
+                                </Button>
+                              )}
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleCancelInvite(invite._id)}
+                                className="text-red-600 border-red-300 hover:bg-red-50"
+                                title="Cancel Invite"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Access Control Legend */}
       <Card className="mt-6 border-2 border-purple-200 bg-purple-50">

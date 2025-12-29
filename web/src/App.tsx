@@ -34,6 +34,7 @@ import { GetStartedPage } from "./pages/GetStartedPage";
 import { KioskLandingPage } from "./pages/KioskLandingPage";
 import { CompanyRegistrationPage } from "./pages/CompanyRegistrationPage";
 import { CompanyLoginPage } from "./pages/CompanyLoginPage";
+import { CompanyForgotPasswordPage } from "./pages/CompanyForgotPasswordPage";
 import { CompanyPendingApprovalPage } from "./pages/CompanyPendingApprovalPage";
 import { CompanyDashboard } from "./pages/CompanyDashboard";
 import { CompanyEmailVerificationPage } from "./pages/CompanyEmailVerificationPage";
@@ -297,6 +298,7 @@ function App() {
         {/* Company Owner Routes */}
         <Route path="/company/register" element={<CompanyRegistrationPage />} />
         <Route path="/company/login" element={<CompanyLoginPage />} />
+        <Route path="/company/forgot-password" element={<CompanyForgotPasswordPage />} />
         <Route path="/company/pending-approval" element={<CompanyPendingApprovalPage />} />
         <Route path="/company/verify-email" element={<CompanyEmailVerificationPage />} />
         <Route

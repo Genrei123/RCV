@@ -4,6 +4,7 @@ export interface CompanyOwnerRegistration {
   companyName: string;
   walletAddress: string;
   email: string;
+  password: string;
   latitude: number;
   longitude: number;
   address?: string;
@@ -11,6 +12,8 @@ export interface CompanyOwnerRegistration {
 }
 
 export interface CompanyOwnerLogin {
+  email: string;
+  password: string;
   walletAddress: string;
 }
 
@@ -110,12 +113,78 @@ export class CompanyOwnerService {
     }
   }
 
-  static async generateInviteLink(companyOwnerId: string) {
+  static async generateInviteLink(
+    companyOwnerId: string,
+    options?: {
+      employeeEmail?: string;
+      personalMessage?: string;
+      hasWebAccess?: boolean;
+      hasAppAccess?: boolean;
+      hasKioskAccess?: boolean;
+      sendEmail?: boolean;
+    }
+  ) {
     try {
-      const response = await apiClient.post('/company-owner/generate-invite-link', { companyOwnerId });
+      const response = await apiClient.post('/company-owner/generate-invite-link', {
+        companyOwnerId,
+        ...options,
+      });
       return response.data;
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Failed to generate invite link');
+    }
+  }
+
+  static async bulkInviteEmployees(
+    companyOwnerId: string,
+    employees: { email: string }[],
+    options?: {
+      personalMessage?: string;
+      hasWebAccess?: boolean;
+      hasAppAccess?: boolean;
+      hasKioskAccess?: boolean;
+    }
+  ) {
+    try {
+      const response = await apiClient.post('/company-owner/bulk-invite', {
+        companyOwnerId,
+        employees,
+        ...options,
+      });
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to send bulk invites');
+    }
+  }
+
+  static async getPendingInvites(companyOwnerId: string) {
+    try {
+      const response = await apiClient.get(`/company-owner/pending-invites/${companyOwnerId}`);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to fetch pending invites');
+    }
+  }
+
+  static async cancelInvite(inviteId: string, companyOwnerId: string) {
+    try {
+      const response = await apiClient.delete(`/company-owner/invite/${inviteId}`, {
+        data: { companyOwnerId },
+      });
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to cancel invite');
+    }
+  }
+
+  static async resendInvite(inviteId: string, companyOwnerId: string) {
+    try {
+      const response = await apiClient.post(`/company-owner/invite/${inviteId}/resend`, {
+        companyOwnerId,
+      });
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to resend invite');
     }
   }
 
@@ -185,6 +254,37 @@ export class CompanyOwnerService {
       return response.data;
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Failed to reject employee');
+    }
+  }
+
+  static async forgotPassword(email: string) {
+    try {
+      const response = await apiClient.post('/company-owner/forgot-password', { email });
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to send reset email');
+    }
+  }
+
+  static async verifyResetCode(email: string, code: string) {
+    try {
+      const response = await apiClient.post('/company-owner/verify-reset-code', { email, code });
+      return response.data.valid;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to verify code');
+    }
+  }
+
+  static async resetPassword(email: string, code: string, newPassword: string) {
+    try {
+      const response = await apiClient.post('/company-owner/reset-password', {
+        email,
+        code,
+        newPassword,
+      });
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to reset password');
     }
   }
 }

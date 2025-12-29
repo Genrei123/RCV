@@ -2,6 +2,9 @@ import { Request, Response } from 'express';
 import { DB, CompanyOwnerRepo, UserRepo } from '../../typeorm/data-source';
 import { CompanyOwner, CompanyOwnerValidation } from '../../typeorm/entities/companyOwner.entity';
 import { ZodError } from 'zod';
+import bcryptjs from 'bcryptjs';
+import nodemailer_transporter from '../../utils/nodemailer';
+import crypto from 'crypto';
 
 export const registerCompanyOwner = async (req: Request, res: Response) => {
   try {
@@ -28,8 +31,11 @@ export const registerCompanyOwner = async (req: Request, res: Response) => {
       });
     }
 
+    const hashedPassword = bcryptjs.hashSync(validatedData.password, 10);
+
     const newCompanyOwner = companyOwnerRepository.create({
       ...validatedData,
+      password: hashedPassword,
       status: 'Pending',
       approved: false,
     });
@@ -62,7 +68,13 @@ export const registerCompanyOwner = async (req: Request, res: Response) => {
 
 export const loginCompanyOwner = async (req: Request, res: Response) => {
   try {
-    const { walletAddress } = req.body;
+    const { email, password, walletAddress } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        message: 'Email and password are required',
+      });
+    }
 
     if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
       return res.status(400).json({
@@ -73,12 +85,26 @@ export const loginCompanyOwner = async (req: Request, res: Response) => {
     const companyOwnerRepository = CompanyOwnerRepo;
 
     const companyOwner = await companyOwnerRepository.findOne({
-      where: { walletAddress },
+      where: { email },
+      select: ['_id', 'companyName', 'email', 'password', 'emailVerified', 'walletAddress', 'latitude', 'longitude', 'address', 'businessPermitUrl', 'status', 'approved'],
     });
 
     if (!companyOwner) {
-      return res.status(404).json({
-        message: 'Company owner not found',
+      return res.status(401).json({
+        message: 'Invalid email or password',
+      });
+    }
+
+    const isPasswordValid = bcryptjs.compareSync(password, companyOwner.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        message: 'Invalid email or password',
+      });
+    }
+
+    if (companyOwner.walletAddress !== walletAddress) {
+      return res.status(403).json({
+        message: 'Wrong MetaMask wallet connected. Please connect the wallet you registered with.',
       });
     }
 
@@ -438,6 +464,190 @@ export const rejectEmployeeByCompanyOwner = async (req: Request, res: Response) 
     return res.status(500).json({
       success: false,
       message: 'Internal server error',
+    });
+  }
+};
+
+export const forgotPasswordCompanyOwner = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        message: 'Email is required',
+      });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        message: 'Invalid email format',
+      });
+    }
+
+    const companyOwner = await CompanyOwnerRepo.findOne({
+      where: { email },
+    });
+
+    if (!companyOwner) {
+      return res.status(200).json({
+        success: true,
+        message: 'If an account exists with this email, a reset code has been sent.',
+      });
+    }
+
+    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashedCode = bcryptjs.hashSync(resetCode, 10);
+
+    companyOwner.passwordResetToken = hashedCode;
+    companyOwner.passwordResetExpires = new Date(Date.now() + 15 * 60 * 1000);
+    await CompanyOwnerRepo.save(companyOwner);
+
+    await nodemailer_transporter.sendMail({
+      from: "RCV Systems <genreycristobal03@gmail.com>",
+      to: email,
+      subject: "Password Reset Code - RCV Company Portal",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #005440;">Password Reset Request</h2>
+          <p>You have requested to reset your password for your company account.</p>
+          <p>Your 6-digit verification code is:</p>
+          <div style="background-color: #f5f5f5; padding: 20px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #005440;">
+            ${resetCode}
+          </div>
+          <p style="color: #666; margin-top: 20px;">
+            This code will expire in 15 minutes.
+          </p>
+          <p style="color: #666;">
+            If you didn't request this password reset, please ignore this email.
+          </p>
+        </div>
+      `,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'If an account exists with this email, a reset code has been sent.',
+    });
+  } catch (error) {
+    console.error('Company owner password reset error:', error);
+    return res.status(500).json({
+      message: 'Failed to process password reset request',
+    });
+  }
+};
+
+export const verifyResetCodeCompanyOwner = async (req: Request, res: Response) => {
+  try {
+    const { email, code } = req.body;
+
+    if (!email || !code) {
+      return res.status(400).json({
+        valid: false,
+        message: 'Email and code are required',
+      });
+    }
+
+    if (code.length !== 6 || !/^\d+$/.test(code)) {
+      return res.status(200).json({ valid: false });
+    }
+
+    const companyOwner = await CompanyOwnerRepo.findOne({
+      where: { email },
+      select: ['_id', 'email', 'passwordResetToken', 'passwordResetExpires'],
+    });
+
+    if (!companyOwner || !companyOwner.passwordResetToken || !companyOwner.passwordResetExpires) {
+      return res.status(200).json({ valid: false });
+    }
+
+    if (new Date() > companyOwner.passwordResetExpires) {
+      return res.status(200).json({ valid: false });
+    }
+
+    const isCodeValid = bcryptjs.compareSync(code, companyOwner.passwordResetToken);
+
+    return res.status(200).json({ valid: isCodeValid });
+  } catch (error) {
+    console.error('Verify reset code error:', error);
+    return res.status(500).json({
+      valid: false,
+      message: 'Failed to verify reset code',
+    });
+  }
+};
+
+export const resetPasswordCompanyOwner = async (req: Request, res: Response) => {
+  try {
+    const { email, code, newPassword } = req.body;
+
+    if (!email || !code || !newPassword) {
+      return res.status(400).json({
+        message: 'Email, code, and new password are required',
+      });
+    }
+
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+    if (!passwordRegex.test(newPassword)) {
+      return res.status(400).json({
+        message: 'Password must be at least 8 characters with uppercase, lowercase, and number',
+      });
+    }
+
+    const companyOwner = await CompanyOwnerRepo.findOne({
+      where: { email },
+      select: ['_id', 'email', 'companyName', 'passwordResetToken', 'passwordResetExpires'],
+    });
+
+    if (!companyOwner || !companyOwner.passwordResetToken || !companyOwner.passwordResetExpires) {
+      return res.status(400).json({
+        message: 'Invalid or expired reset code',
+      });
+    }
+
+    if (new Date() > companyOwner.passwordResetExpires) {
+      return res.status(400).json({
+        message: 'Reset code has expired',
+      });
+    }
+
+    const isCodeValid = bcryptjs.compareSync(code, companyOwner.passwordResetToken);
+    if (!isCodeValid) {
+      return res.status(400).json({
+        message: 'Invalid reset code',
+      });
+    }
+
+    const hashedPassword = bcryptjs.hashSync(newPassword, 10);
+    companyOwner.password = hashedPassword;
+    companyOwner.passwordResetToken = "";
+    companyOwner.passwordResetExpires = undefined;
+    await CompanyOwnerRepo.save(companyOwner);
+
+    await nodemailer_transporter.sendMail({
+      from: "RCV Systems <genreycristobal03@gmail.com>",
+      to: email,
+      subject: "Password Successfully Reset - RCV Company Portal",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #005440;">Password Successfully Reset</h2>
+          <p>Your password has been successfully reset for your company account.</p>
+          <p>You can now log in with your new password.</p>
+          <p style="color: #666; margin-top: 20px;">
+            If you didn't make this change, please contact support immediately.
+          </p>
+        </div>
+      `,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Password has been successfully reset',
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    return res.status(500).json({
+      message: 'Failed to reset password',
     });
   }
 };

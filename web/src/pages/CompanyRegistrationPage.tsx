@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Building2, Mail, MapPin, Upload, Wallet, Loader2 } from "lucide-react";
+import { ArrowLeft, Building2, Mail, MapPin, Upload, Wallet, Loader2, Lock, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { toast } from "react-toastify";
+import { Card } from "@/components/ui/card";
+import { toast, ToastContainer } from "react-toastify";
 import { CompanyOwnerService } from "@/services/companyOwnerService";
 import { FirebaseStorageService } from "@/services/firebaseStorageService";
 import { GoogleMap, LoadScript, Marker } from '@react-google-maps/api';
+import "react-toastify/dist/ReactToastify.css";
 
 declare global {
   interface Window {
@@ -32,9 +33,13 @@ export function CompanyRegistrationPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [walletAddress, setWalletAddress] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
     companyName: "",
     email: "",
+    password: "",
+    confirmPassword: "",
     latitude: defaultCenter.lat,
     longitude: defaultCenter.lng,
     address: "",
@@ -127,8 +132,18 @@ export function CompanyRegistrationPage() {
       return;
     }
 
-    if (!formData.companyName || !formData.email) {
+    if (!formData.companyName || !formData.email || !formData.password) {
       toast.error("Please fill in all required fields");
+      return;
+    }
+
+    if (formData.password.length < 8) {
+      toast.error("Password must be at least 8 characters");
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      toast.error("Passwords do not match");
       return;
     }
 
@@ -152,8 +167,13 @@ export function CompanyRegistrationPage() {
 
       toast.info("Registering company...");
       await CompanyOwnerService.register({
-        ...formData,
+        companyName: formData.companyName,
+        email: formData.email,
+        password: formData.password,
         walletAddress,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
+        address: formData.address,
         businessPermitUrl: permitUrl,
       });
 
@@ -167,30 +187,45 @@ export function CompanyRegistrationPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 py-12 px-4">
-      <div className="max-w-4xl mx-auto">
-        <Button
-          variant="ghost"
-          onClick={() => navigate("/get-started")}
-          className="mb-6 cursor-pointer"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
-        </Button>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-blue-50 py-12 px-4">
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
 
-        <Card>
-          <CardContent className="p-8">
-            <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Building2 className="h-8 w-8 text-blue-600" />
-              </div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                Company Registration
-              </h1>
-              <p className="text-gray-600">
-                Register your company to access the RCV platform
-              </p>
+      <Button
+        variant="ghost"
+        onClick={() => navigate("/get-started")}
+        className="absolute top-4 left-4 flex items-center gap-2"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back
+      </Button>
+
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-8">
+          <div className="inline-block p-6 bg-white rounded-2xl shadow-lg mb-4">
+            <div className="w-24 h-24 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
+              <Building2 className="h-16 w-16 text-white" />
             </div>
+          </div>
+          <h1 className="text-4xl font-bold text-blue-900 mb-2">
+            Company Registration
+          </h1>
+          <p className="text-xl text-gray-600">
+            Register your company to access the RCV platform
+          </p>
+        </div>
+
+        <Card className="p-8 shadow-2xl bg-white">
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
@@ -257,6 +292,59 @@ export function CompanyRegistrationPage() {
                     className="pl-10"
                     required
                   />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">
+                  Password *
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    placeholder="Enter password"
+                    className="pl-10 pr-10"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500">
+                  Minimum 8 characters
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">
+                  Confirm Password *
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    type={showConfirmPassword ? "text" : "password"}
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    placeholder="Confirm password"
+                    className="pl-10 pr-10"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
               </div>
 
@@ -355,7 +443,7 @@ export function CompanyRegistrationPage() {
                 </Button>
                 <Button
                   type="submit"
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 cursor-pointer"
+                  className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 cursor-pointer"
                   disabled={loading}
                 >
                   {loading ? (
@@ -369,7 +457,6 @@ export function CompanyRegistrationPage() {
                 </Button>
               </div>
             </form>
-          </CardContent>
         </Card>
       </div>
     </div>

@@ -23,11 +23,33 @@ export class InviteToken {
   @JoinColumn({ name: 'companyOwnerId' })
   companyOwner!: CompanyOwner;
 
+  // Target employee email - who the invite is for
+  @Column({ nullable: true })
+  employeeEmail?: string;
+
+  // Personalized message from owner
+  @Column({ type: 'text', nullable: true })
+  personalMessage?: string;
+
+  // Pre-set permissions
+  @Column({ type: 'boolean', default: false })
+  hasWebAccess!: boolean;
+
+  @Column({ type: 'boolean', default: false })
+  hasAppAccess!: boolean;
+
+  @Column({ type: 'boolean', default: false })
+  hasKioskAccess!: boolean;
+
   @Column({ type: 'timestamp', nullable: true })
   expiresAt?: Date;
 
   @Column({ type: 'boolean', default: false })
   used!: boolean;
+
+  // Track if email was sent
+  @Column({ type: 'boolean', default: false })
+  emailSent!: boolean;
 
   @CreateDateColumn()
   createdAt!: Date;

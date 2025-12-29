@@ -394,10 +394,15 @@ export const userSignUp = async (
           );
         }
 
-        // Set default access: Web + App access for invited employees
-        hasWebAccess = true;
-        hasAppAccess = true;
-        hasKioskAccess = false;
+        // Apply permissions from the invite token
+        hasWebAccess = inviteTokenRecord.hasWebAccess || false;
+        hasAppAccess = inviteTokenRecord.hasAppAccess || false;
+        hasKioskAccess = inviteTokenRecord.hasKioskAccess || false;
+
+        // If no permissions were set, default to app access
+        if (!hasWebAccess && !hasAppAccess && !hasKioskAccess) {
+          hasAppAccess = true;
+        }
       } else {
         return next(
           new CustomError(400, "Invalid company or company not approved", {})

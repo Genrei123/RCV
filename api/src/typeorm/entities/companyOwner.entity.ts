@@ -17,6 +17,7 @@ export const CompanyOwnerValidation = z.object({
   companyName: z.string().min(2).max(200),
   walletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
   email: z.string().email(),
+  password: z.string().min(8),
   latitude: z.number(),
   longitude: z.number(),
   address: z.string().optional(),
@@ -47,6 +48,9 @@ export class CompanyOwner {
   @Column({ unique: true })
   email!: string;
 
+  @Column({ select: false })
+  password!: string;
+
   @Column({ type: 'boolean', default: false })
   emailVerified!: boolean;
 
@@ -55,6 +59,12 @@ export class CompanyOwner {
 
   @Column({ nullable: true })
   emailVerificationExpires?: Date;
+
+  @Column({ nullable: true })
+  passwordResetToken?: string;
+
+  @Column({ nullable: true })
+  passwordResetExpires?: Date;
 
   @Column({ type: 'decimal', precision: 10, scale: 7 })
   latitude!: number;
