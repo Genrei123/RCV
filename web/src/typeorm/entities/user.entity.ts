@@ -1,7 +1,10 @@
 export interface User {
   _id?: string;
   role?: 'AGENT' | 'ADMIN' | 'USER';
-  status?: 'Archived' | 'Active' | 'Pending';
+  status?: 'Archived' | 'Active' | 'Pending' | 'Rejected';
+  rejectionReason?: string;
+  webAccess?: boolean;
+  appAccess?: boolean;
   approved?: boolean;
   avatarUrl?: string;
   firstName: string;
@@ -19,6 +22,9 @@ export interface User {
   phoneNumber: string;
   password?: string;
   badgeId: string;
+  idDocumentUrl?: string;
+  selfieWithIdUrl?: string;
+  walletAddress?: string;
   createdAt?: Date | string;
   updatedAt?: Date | string;
 }

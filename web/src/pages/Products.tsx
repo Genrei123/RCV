@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Grid, List, Search, Download } from "lucide-react";
+import { Plus, Grid, List, Search, Download, Package, Tag } from "lucide-react";
 import { PageContainer } from "@/components/PageContainer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,9 +18,12 @@ import type { Product } from "@/typeorm/entities/product.entity";
 import { ProductCard } from "@/components/ProductCard";
 import { AddProductModal } from "@/components/AddProductModal";
 import { ProductDetailsModal } from "@/components/ProductDetailsModal";
+import { ProductStatsView } from "@/components/ProductStatsView";
 import type { Company } from "@/typeorm/entities/company.entity";
 import { PDFGenerationService } from "@/services/pdfGenerationService";
 import { toast } from "react-toastify";
+
+type PageTab = "products" | "stats";
 
 export interface ProductsProps {
   products?: Product[];
@@ -32,6 +35,7 @@ export interface ProductsProps {
 }
 
 export function Products(props: ProductsProps) {
+  const [pageTab, setPageTab] = useState<PageTab>("products");
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -43,6 +47,7 @@ export function Products(props: ProductsProps) {
   const pageSize = 10;
   // Unified search term (server-side for both list & grid views)
   const [searchQuery, setSearchQuery] = useState("");
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   // Disable body scroll when a modal is open
   useEffect(() => {
@@ -86,6 +91,9 @@ export function Products(props: ProductsProps) {
     event: React.MouseEvent
   ) => {
     event.stopPropagation(); // Prevent row click
+    if (downloadingId) return; // Prevent multiple downloads
+    
+    setDownloadingId(product._id ?? 'INVALID');
     try {
       toast.info("Generating certificate PDF...", { autoClose: 1000 });
       await PDFGenerationService.generateAndDownloadProductCertificate(product);
@@ -93,6 +101,8 @@ export function Products(props: ProductsProps) {
     } catch (error) {
       console.error("Error generating certificate:", error);
       toast.error("Failed to generate certificate. Please try again.");
+    } finally {
+      setDownloadingId(null);
     }
   };
 
@@ -177,10 +187,11 @@ export function Products(props: ProductsProps) {
             size="sm"
             variant="outline"
             onClick={(e) => handleDownloadCertificate(row, e)}
-            className="app-text-primary hover:app-text-primary hover:app-bg-primary-soft"
+            disabled={downloadingId !== null}
+            className="app-text-primary hover:app-text-primary hover:app-bg-primary-soft disabled:opacity-50"
           >
-            <Download className="h-4 w-4 mr-1" />
-            Certificate
+            <Download className={`h-4 w-4 mr-1 ${downloadingId === row._id ? 'animate-pulse' : ''}`} />
+            {downloadingId === row._id ? 'Downloading...' : 'Certificate'}
           </Button>
         </div>
       ),
@@ -227,31 +238,62 @@ export function Products(props: ProductsProps) {
       title="Products"
       description="Manage and view all registered products in the system."
     >
-      {/* Header Actions: right-aligned toggles (hidden on mobile in grid view) */}
-      <div className="flex flex-col md:flex-row md:items-center justify-end mb-6">
-        <div
-          className={`flex border rounded-lg self-end ${
-            viewMode === "grid" ? "hidden sm:flex" : ""
+      {/* Page Tab Navigation */}
+      <div className="flex border-b mb-6">
+        <button
+          onClick={() => setPageTab("products")}
+          className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${
+            pageTab === "products"
+              ? "border-blue-500 text-blue-600"
+              : "border-transparent text-gray-500 hover:text-gray-700"
           }`}
         >
-          <Button
-            variant={viewMode === "grid" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setViewMode("grid")}
-            className="rounded-r-none cursor-pointer"
-          >
-            <Grid className="h-4 w-4" />
-          </Button>
-          <Button
-            variant={viewMode === "list" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setViewMode("list")}
-            className="rounded-l-none cursor-pointer"
-          >
-            <List className="h-4 w-4" />
-          </Button>
-        </div>
+          <Package className="h-4 w-4 inline-block mr-2" />
+          All Products
+        </button>
+        <button
+          onClick={() => setPageTab("stats")}
+          className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${
+            pageTab === "stats"
+              ? "border-blue-500 text-blue-600"
+              : "border-transparent text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          <Tag className="h-4 w-4 inline-block mr-2" />
+          By Brand / Classification
+        </button>
       </div>
+
+      {/* Tab Content */}
+      {pageTab === "stats" ? (
+        <ProductStatsView />
+      ) : (
+        <>
+          {/* Header Actions: right-aligned toggles (hidden on mobile in grid view) */}
+          <div className="flex flex-col md:flex-row md:items-center justify-end mb-6">
+            <div
+              className={`flex border rounded-lg self-end ${
+                viewMode === "grid" ? "hidden sm:flex" : ""
+              }`}
+            >
+              <Button
+                variant={viewMode === "grid" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("grid")}
+                className="rounded-r-none cursor-pointer"
+              >
+                <Grid className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === "list" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("list")}
+                className="rounded-l-none cursor-pointer"
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
 
       {/* Content */}
       {viewMode === "list" ? (
@@ -448,6 +490,8 @@ export function Products(props: ProductsProps) {
             ) : null}
           </div>
         </div>
+      )}
+        </>
       )}
 
       {/* Add Product Modal */}

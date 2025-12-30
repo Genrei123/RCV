@@ -23,7 +23,11 @@ import FirebaseRouter from "./routes/v1/firebase";
 import ContactRouter from "./routes/v1/contact";
 import AuditLogRouter from "./routes/v1/auditLog";
 import CertificateBlockchainRouter from "./routes/v1/certificateBlockchain";
+import SepoliaBlockchainRouter from "./routes/v1/sepoliaBlockchain";
 import AnalyticsRouter from "./routes/v1/analytics";
+import AdminInviteRouter from "./routes/v1/adminInvite";
+import BrandNameRouter from "./routes/v1/brandName";
+import ProductClassificationRouter from "./routes/v1/productClassification";
 import { verifyUser } from "./middleware/verifyUser";
 import { verifyMobileUser } from "./middleware/verifyMobileUser";
 import helmet from "helmet";
@@ -57,12 +61,16 @@ const setUpApp = async () => {
   app.use("/api/v1/firebase", verifyUser, FirebaseRouter);
   app.use("/api/v1/contact", ContactRouter);
   app.use("/api/v1/audit", verifyUser, AuditLogRouter);
+  // Certificate blockchain - some routes public for verification
   app.use(
     "/api/v1/certificate-blockchain",
-    verifyUser,
     CertificateBlockchainRouter
   );
+  app.use("/api/v1/sepolia", SepoliaBlockchainRouter); // Sepolia blockchain routes (some public for verification)
   app.use("/api/v1/analytics", verifyUser, AnalyticsRouter);
+  app.use("/api/v1/admin-invite", AdminInviteRouter);
+  app.use("/api/v1/brand-name", verifyUser, BrandNameRouter);
+  app.use("/api/v1/classification", verifyUser, ProductClassificationRouter);
 
   // Serve static uploads (avatars, etc.)
   const uploadsPath = path.resolve(process.cwd(), "uploads");

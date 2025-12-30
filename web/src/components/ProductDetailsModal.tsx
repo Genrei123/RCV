@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   X,
   Package,
@@ -7,6 +8,8 @@ import {
   User,
   MapPin,
   Download,
+  Camera,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +28,8 @@ export function ProductDetailsModal({
   onClose,
   product,
 }: ProductDetailsModalProps) {
+  const [isDownloading, setIsDownloading] = useState(false);
+
   if (!isOpen || !product) return null;
 
   const formatDate = (date: Date | string): string => {
@@ -44,7 +49,9 @@ export function ProductDetailsModal({
   };
 
   const handleDownloadCertificate = async () => {
-    if (!product) return;
+    if (!product || isDownloading) return;
+    
+    setIsDownloading(true);
     try {
       toast.info("Generating certificate PDF...", { autoClose: 1000 });
       await PDFGenerationService.generateAndDownloadProductCertificate(product);
@@ -52,6 +59,8 @@ export function ProductDetailsModal({
     } catch (error) {
       console.error("Error generating certificate:", error);
       toast.error("Failed to generate certificate. Please try again.");
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -209,6 +218,62 @@ export function ProductDetailsModal({
               </div>
             </div>
 
+            {/* Product Images Section */}
+            {(product.productImageFront || product.productImageBack) && (
+              <div className="border-t pt-6">
+                <h3 className="text-lg font-semibold app-text mb-4 flex items-center gap-2">
+                  <Camera className="h-5 w-5 app-text-primary" />
+                  Product Images
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {product.productImageFront && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium app-text-subtle">
+                        Front Image
+                      </label>
+                      <div className="relative group">
+                        <img
+                          src={product.productImageFront}
+                          alt="Product Front"
+                          className="w-full h-48 object-cover rounded-lg border cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => window.open(product.productImageFront, '_blank')}
+                        />
+                        <button
+                          onClick={() => window.open(product.productImageFront, '_blank')}
+                          className="absolute top-2 right-2 p-1.5 bg-black/50 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="View full size"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {product.productImageBack && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium app-text-subtle">
+                        Back Image
+                      </label>
+                      <div className="relative group">
+                        <img
+                          src={product.productImageBack}
+                          alt="Product Back"
+                          className="w-full h-48 object-cover rounded-lg border cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => window.open(product.productImageBack, '_blank')}
+                        />
+                        <button
+                          onClick={() => window.open(product.productImageBack, '_blank')}
+                          className="absolute top-2 right-2 p-1.5 bg-black/50 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="View full size"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {product.company && (
               <div className="border-t pt-6">
                 <h3 className="text-lg font-semibold app-text mb-4">
@@ -336,11 +401,12 @@ export function ProductDetailsModal({
                   </div>
                   <Button
                     onClick={handleDownloadCertificate}
-                    className="app-bg-primary hover:opacity-90 shrink-0"
+                    disabled={isDownloading}
+                    className="app-bg-primary hover:opacity-90 shrink-0 disabled:opacity-50"
                     size="sm"
                   >
-                    <Download className="h-4 w-4 mr-2" />
-                    Download
+                    <Download className={`h-4 w-4 mr-2 ${isDownloading ? 'animate-pulse' : ''}`} />
+                    {isDownloading ? 'Downloading...' : 'Download'}
                   </Button>
                 </div>
               </div>

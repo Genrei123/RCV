@@ -7,6 +7,8 @@ import {
 } from 'typeorm';
 import { User } from './user.entity';
 import { Company } from './company.entity';
+import { BrandName } from './brandName.entity';
+import { ProductClassification } from './productClassification.entity';
 import { z } from 'zod';
 
 const coerceDate = (val: unknown) => {
@@ -32,6 +34,21 @@ export const ProductValidation = z.object({
     z.date()
   ).optional(),
   companyId: z.string().uuid(),
+  // Optional entity references for brand and classification
+  brandNameId: z.string().uuid().optional(),
+  classificationId: z.string().uuid().optional(),
+  subClassificationId: z.string().uuid().optional(),
+  // Product images (front and back) - captured by System Admin
+  productImageFront: z.preprocess(
+    v => (v === null || v === '' ? undefined : v),
+    z.string().url().optional()
+  ),
+  productImageBack: z.preprocess(
+    v => (v === null || v === '' ? undefined : v),
+    z.string().url().optional()
+  ),
+  // Sepolia blockchain transaction ID
+  sepoliaTransactionId: z.string().optional(),
   createdAt: z.preprocess(
     v => (v === undefined ? new Date() : coerceDate(v)),
     z.date()
@@ -94,4 +111,37 @@ export class Product {
 
   @Column()
   companyId!: string;
+
+  // Optional entity references for managed brand names and classifications
+  @ManyToOne(() => BrandName, brandName => brandName.products, { nullable: true })
+  @JoinColumn({ name: 'brandNameId' })
+  brandNameEntity?: BrandName;
+
+  @Column({ nullable: true })
+  brandNameId?: string;
+
+  @ManyToOne(() => ProductClassification, classification => classification.products, { nullable: true })
+  @JoinColumn({ name: 'classificationId' })
+  classificationEntity?: ProductClassification;
+
+  @Column({ nullable: true })
+  classificationId?: string;
+
+  @ManyToOne(() => ProductClassification, classification => classification.subClassificationProducts, { nullable: true })
+  @JoinColumn({ name: 'subClassificationId' })
+  subClassificationEntity?: ProductClassification;
+
+  @Column({ nullable: true })
+  subClassificationId?: string;
+
+  // Product images (front and back) - captured by System Admin to show how the product should look
+  @Column({ nullable: true })
+  productImageFront?: string;
+
+  @Column({ nullable: true })
+  productImageBack?: string;
+
+  // Sepolia blockchain transaction ID for verification
+  @Column({ nullable: true })
+  sepoliaTransactionId?: string;
 }

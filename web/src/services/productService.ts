@@ -30,6 +30,15 @@ export interface CreateProductRequest {
   expirationDate: Date;
   dateOfRegistration: Date;
   companyId: string;
+  // Product images (front and back) - captured by System Admin
+  productImageFront?: string;
+  productImageBack?: string;
+  // Optional entity IDs for managed brand names and classifications
+  brandNameId?: string;
+  classificationId?: string;
+  subClassificationId?: string;
+  // Sepolia blockchain transaction ID (if verified on blockchain)
+  sepoliaTransactionId?: string;
 }
 
 export class ProductService {

@@ -279,4 +279,110 @@ export class FirebaseStorageService {
     }
     return new File([u8arr], filename, { type: mime });
   }
+
+  /**
+   * Upload agent verification documents (ID and selfie)
+   * 
+   * @param file - The image file to upload
+   * @param path - The path in storage (e.g., 'agent-verification/token/id-document')
+   * @returns Object with downloadUrl
+   */
+  static async uploadAgentVerificationDocument(
+    file: File,
+    path: string
+  ): Promise<{ downloadUrl: string }> {
+    try {
+      console.log('📤 [Storage] Uploading agent verification document to:', path);
+      
+      const fileExtension = file.name.split('.').pop() || 'jpg';
+      const fullPath = `${path}.${fileExtension}`;
+      const storageRef = ref(storage, fullPath);
+      
+      const metadata = {
+        contentType: file.type || 'image/jpeg',
+        customMetadata: {
+          uploadedAt: new Date().toISOString(),
+          originalName: file.name,
+          purpose: 'agent-verification',
+        },
+      };
+      
+      const snapshot = await uploadBytes(storageRef, file, metadata);
+      const downloadUrl = await getDownloadURL(snapshot.ref);
+      
+      console.log('✅ [Storage] Agent verification document uploaded:', downloadUrl);
+      return { downloadUrl };
+    } catch (error) {
+      console.error('❌ [Storage] Agent verification document upload failed:', error);
+      throw new Error('Failed to upload verification document');
+    }
+  }
+
+  /**
+   * Upload company document (business permit, license, etc.)
+   * 
+   * @param companyId - The company's ID (can be temporary for new companies)
+   * @param file - The document file to upload
+   * @param documentType - Type of document (e.g., 'business-permit', 'license', 'certificate')
+   * @returns Object with downloadUrl and metadata
+   */
+  static async uploadCompanyDocument(
+    companyId: string,
+    file: File,
+    documentType: string
+  ): Promise<{ downloadUrl: string; fileName: string; fileType: string }> {
+    try {
+      console.log('📤 [Storage] Uploading company document:', documentType, 'for company:', companyId);
+      
+      const timestamp = Date.now();
+      const fileExtension = file.name.split('.').pop() || 'pdf';
+      const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const fullPath = `companies/${companyId}/documents/${documentType}_${timestamp}.${fileExtension}`;
+      const storageRef = ref(storage, fullPath);
+      
+      const metadata = {
+        contentType: file.type || 'application/pdf',
+        customMetadata: {
+          uploadedAt: new Date().toISOString(),
+          originalName: sanitizedName,
+          documentType: documentType,
+          companyId: companyId,
+        },
+      };
+      
+      const snapshot = await uploadBytes(storageRef, file, metadata);
+      const downloadUrl = await getDownloadURL(snapshot.ref);
+      
+      console.log('✅ [Storage] Company document uploaded:', downloadUrl);
+      return { 
+        downloadUrl, 
+        fileName: sanitizedName,
+        fileType: file.type || 'application/octet-stream'
+      };
+    } catch (error) {
+      console.error('❌ [Storage] Company document upload failed:', error);
+      throw new Error('Failed to upload company document');
+    }
+  }
+
+  /**
+   * Delete company document from Firebase Storage
+   * 
+   * @param documentUrl - The full URL of the document to delete
+   * @returns true if deleted successfully
+   */
+  static async deleteCompanyDocument(documentUrl: string): Promise<boolean> {
+    try {
+      console.log('🗑️ [Storage] Deleting company document:', documentUrl);
+      
+      const storageRef = ref(storage, documentUrl);
+      await deleteObject(storageRef);
+      
+      console.log('✅ [Storage] Company document deleted successfully');
+      return true;
+    } catch (error) {
+      console.warn('⚠️ [Storage] Company document delete failed:', error);
+      return false;
+    }
+  }
 }

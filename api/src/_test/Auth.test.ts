@@ -38,6 +38,8 @@ const mockUser: UserInput = {
   location: "Manila",
   fullName: "Juan Dela Cruz Jr.",
   approved: false,
+  appAccess: true,
+  webAccess: false,
 };
 
 describe("Sign In", () => {

@@ -15,4 +15,7 @@ export interface Product {
   registeredBy: User;
   registeredAt: Date;
   company: Company;
+  // Product images (front and back) - captured by System Admin to show how the product should look
+  productImageFront?: string;
+  productImageBack?: string;
 }
