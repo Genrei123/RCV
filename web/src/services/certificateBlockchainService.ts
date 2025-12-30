@@ -24,6 +24,7 @@ export interface CertificateDetail {
   cfprNumber?: string;
   pdfHash: string;
   issuedDate: string;
+  sepoliaTransactionId?: string;
   metadata?: Record<string, any>;
   isBlockValid: boolean;
 }

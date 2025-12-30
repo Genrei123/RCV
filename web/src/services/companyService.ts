@@ -26,6 +26,8 @@ export interface CreateCompanyRequest {
   documents?: CompanyDocument[] | null;
   // Description
   description?: string | null;
+  // Blockchain verification
+  sepoliaTransactionId?: string;
 }
 
 export interface CreateCompanyResponse {

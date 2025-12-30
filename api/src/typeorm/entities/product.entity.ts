@@ -47,6 +47,8 @@ export const ProductValidation = z.object({
     v => (v === null || v === '' ? undefined : v),
     z.string().url().optional()
   ),
+  // Sepolia blockchain transaction ID
+  sepoliaTransactionId: z.string().optional(),
   createdAt: z.preprocess(
     v => (v === undefined ? new Date() : coerceDate(v)),
     z.date()
@@ -138,4 +140,8 @@ export class Product {
 
   @Column({ nullable: true })
   productImageBack?: string;
+
+  // Sepolia blockchain transaction ID for verification
+  @Column({ nullable: true })
+  sepoliaTransactionId?: string;
 }

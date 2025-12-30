@@ -15,13 +15,18 @@ import {
   Monitor,
   Smartphone,
   Loader2,
+  Wallet,
+  Copy,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { toast } from "react-toastify";
 import { UserPageService } from "@/services/userPageService";
+import { MetaMaskService } from "@/services/metaMaskService";
 import type { User } from "@/typeorm/entities/user.entity";
 
 interface UserDetailModalProps {
@@ -44,14 +49,21 @@ export function UserDetailModal({
   const [accessLoading, setAccessLoading] = useState(false);
   const [localWebAccess, setLocalWebAccess] = useState(false);
   const [localAppAccess, setLocalAppAccess] = useState(true);
+  
+  // Wallet management state
+  const [walletAddress, setWalletAddress] = useState("");
+  const [walletLoading, setWalletLoading] = useState(false);
+  const [addToAuthorized, setAddToAuthorized] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // Update local state when user changes
   useEffect(() => {
     if (user) {
       setLocalWebAccess(user.webAccess ?? false);
       setLocalAppAccess(user.appAccess ?? true);
+      setWalletAddress(user.walletAddress || "");
     }
-  }, [user?._id, user?.webAccess, user?.appAccess]);
+  }, [user?._id, user?.webAccess, user?.appAccess, user?.walletAddress]);
 
   if (!isOpen || !user) return null;
 
@@ -59,6 +71,53 @@ export function UserDetailModal({
   const isRejected = user.status === "Rejected";
   // Check if user is admin - admins always have full access
   const isAdmin = user.role === "ADMIN";
+
+  // Copy wallet address to clipboard
+  const handleCopyWallet = () => {
+    if (walletAddress) {
+      navigator.clipboard.writeText(walletAddress);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      toast.success("Wallet address copied to clipboard");
+    }
+  };
+
+  // Update user wallet address
+  const handleUpdateWallet = async () => {
+    if (!user?._id) return;
+    
+    // Validate wallet address format
+    if (walletAddress && !/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+      toast.error("Invalid wallet address format. Must be a valid Ethereum address.");
+      return;
+    }
+
+    setWalletLoading(true);
+    try {
+      const result = await MetaMaskService.updateUserWallet(
+        user._id,
+        walletAddress,
+        addToAuthorized
+      );
+      
+      if (result.success) {
+        toast.success(
+          addToAuthorized 
+            ? "Wallet updated and added to authorized list" 
+            : "Wallet address updated successfully"
+        );
+        // Update parent
+        onAccessUpdate?.({ ...user, walletAddress: walletAddress || undefined });
+      } else {
+        toast.error(result.error || "Failed to update wallet");
+      }
+    } catch (error) {
+      console.error("Error updating wallet:", error);
+      toast.error("Failed to update wallet address");
+    } finally {
+      setWalletLoading(false);
+    }
+  };
 
   const handleAccessChange = async (type: 'web' | 'app', value: boolean) => {
     if (!user?._id) return;
@@ -551,6 +610,101 @@ export function UserDetailModal({
                   )}
                 </div>
               )}
+            </div>
+
+            {/* Blockchain Wallet Section */}
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-semibold app-text mb-4 flex items-center gap-2">
+                <Wallet className="h-5 w-5" />
+                Blockchain Wallet (MetaMask)
+              </h3>
+              <div className="app-bg-neutral rounded-lg p-4 space-y-4">
+                <p className="text-sm text-gray-600">
+                  Assign a MetaMask wallet address to this user. Authorized wallets can perform blockchain operations like storing certificates.
+                </p>
+                
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <div className="flex-1 relative">
+                      <Wallet className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        value={walletAddress}
+                        onChange={(e) => setWalletAddress(e.target.value)}
+                        placeholder="0x..."
+                        className="pl-10 font-mono text-sm"
+                        disabled={walletLoading || isRejected}
+                      />
+                    </div>
+                    {walletAddress && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={handleCopyWallet}
+                        title="Copy wallet address"
+                      >
+                        {copied ? (
+                          <Check className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="add-authorized"
+                      checked={addToAuthorized}
+                      onCheckedChange={(checked) => setAddToAuthorized(checked as boolean)}
+                      disabled={walletLoading || isRejected || !walletAddress}
+                    />
+                    <Label htmlFor="add-authorized" className="text-sm cursor-pointer">
+                      Add to authorized wallets list (allows blockchain operations)
+                    </Label>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleUpdateWallet}
+                      disabled={walletLoading || isRejected}
+                      size="sm"
+                      className="bg-purple-600 hover:bg-purple-700"
+                    >
+                      {walletLoading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Updating...
+                        </>
+                      ) : (
+                        <>
+                          <Wallet className="h-4 w-4 mr-2" />
+                          Update Wallet
+                        </>
+                      )}
+                    </Button>
+                    {user.walletAddress && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setWalletAddress("");
+                          setAddToAuthorized(false);
+                        }}
+                        disabled={walletLoading}
+                      >
+                        Clear
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {user.walletAddress && (
+                  <div className="mt-2 text-xs text-gray-500">
+                    Current wallet: <code className="bg-gray-100 px-1 py-0.5 rounded">{user.walletAddress}</code>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Account Timestamps */}

@@ -176,6 +176,7 @@ export const getCertificateById = async (
                 cfprNumber: block.data.cfprNumber,
                 pdfHash: block.data.pdfHash,
                 issuedDate: block.data.issuedDate,
+                sepoliaTransactionId: block.data.sepoliaTransactionId,
                 metadata: block.data.metadata,
                 isBlockValid: block.isValid()
             }

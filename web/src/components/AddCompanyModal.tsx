@@ -13,6 +13,8 @@ import {
   Loader2,
   Search,
   Map,
+  Wallet,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,8 +29,10 @@ import {
 } from "@/components/ui/select";
 import { CompanyService, type CreateCompanyRequest } from "@/services/companyService";
 import { FirebaseStorageService } from "@/services/firebaseStorageService";
+import { MetaMaskService } from "@/services/metaMaskService";
 import type { CompanyDocument } from "@/typeorm/entities/company.entity";
 import { toast } from "react-toastify";
+import { useMetaMask } from "@/contexts/MetaMaskContext";
 
 // Declare google maps types
 declare global {
@@ -84,6 +88,9 @@ export function AddCompanyModal({
   const [uploading, setUploading] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState(false);
+
+  // MetaMask context
+  const { isConnected: isWalletConnected, isAuthorized: isWalletAuthorized, walletAddress, connect: connectWallet } = useMetaMask();
 
   // Form data
   const [formData, setFormData] = useState<CreateCompanyRequest>({
@@ -384,11 +391,64 @@ export function AddCompanyModal({
     setLoading(true);
 
     try {
-      // First, upload any pending documents
+      // ============ PHASE 1: BLOCKCHAIN VERIFICATION (Optional) ============
+      let sepoliaTransactionId: string | undefined;
+      
+      if (isWalletConnected && isWalletAuthorized && walletAddress) {
+        toast.info("Preparing blockchain verification...", { autoClose: 2000 });
+        
+        // Generate a hash from company data
+        const companyDataString = JSON.stringify({
+          name: formData.name,
+          licenseNumber: formData.licenseNumber,
+          address: formData.address,
+          timestamp: new Date().toISOString()
+        });
+        
+        // Create SHA-256 hash
+        const encoder = new TextEncoder();
+        const data = encoder.encode(companyDataString);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const pdfHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        
+        toast.info("Storing certificate on Sepolia blockchain...", { autoClose: 2000 });
+        
+        const blockchainResult = await MetaMaskService.storeHashOnBlockchain(
+          pdfHash,
+          `CERT-COMP-${formData.licenseNumber}-${Date.now()}`,
+          'company',
+          formData.name!,
+          walletAddress
+        );
+        
+        if (blockchainResult.success && blockchainResult.data) {
+          sepoliaTransactionId = blockchainResult.data.txHash;
+          toast.success(
+            `Blockchain verified! Tx: ${sepoliaTransactionId.slice(0, 10)}...`,
+            { autoClose: 3000 }
+          );
+        } else {
+          // Blockchain failed - ask user if they want to continue without it
+          const continueWithoutBlockchain = window.confirm(
+            "Blockchain storage failed. Do you want to create the company without blockchain verification?\n\n" +
+            "Note: The company can be verified on blockchain later."
+          );
+          
+          if (!continueWithoutBlockchain) {
+            toast.info("Company creation cancelled");
+            setLoading(false);
+            return;
+          }
+        }
+      }
+
+      // ============ PHASE 2: UPLOAD DOCUMENTS ============
       let uploadedDocuments: CompanyDocument[] = [];
       
       if (pendingDocuments.length > 0) {
         setUploading(true);
+        toast.info("Uploading documents...", { autoClose: 1500 });
         const tempId = `temp_${Date.now()}`;
         
         for (const doc of pendingDocuments) {
@@ -413,18 +473,23 @@ export function AddCompanyModal({
         setUploading(false);
       }
 
-      // Create company with documents
+      // ============ PHASE 3: CREATE COMPANY ============
       const companyData: CreateCompanyRequest = {
         ...formData,
         name: formData.name!.trim(),
         address: formData.address!.trim(),
         licenseNumber: formData.licenseNumber!.trim(),
         documents: uploadedDocuments.length > 0 ? uploadedDocuments : null,
+        sepoliaTransactionId,
       };
 
       const response = await CompanyService.createCompany(companyData);
       
-      toast.success(response.message || "Company created successfully!");
+      if (sepoliaTransactionId) {
+        toast.success("Company created & verified on blockchain!");
+      } else {
+        toast.success(response.message || "Company created successfully!");
+      }
 
       // Reset form
       resetForm();
@@ -510,6 +575,58 @@ export function AddCompanyModal({
         {/* Form Content */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
           <div className="p-6 space-y-6">
+            {/* MetaMask Connection Warning */}
+            {(!isWalletConnected || !isWalletAuthorized) && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <h4 className="font-medium text-amber-800">
+                      {!isWalletConnected 
+                        ? "MetaMask Not Connected" 
+                        : "Wallet Not Authorized"}
+                    </h4>
+                    <p className="text-sm text-amber-700 mt-1">
+                      {!isWalletConnected 
+                        ? "You need to connect your MetaMask wallet to add companies. The company certificate will be stored on the Sepolia blockchain for verification."
+                        : "Your wallet is connected but not authorized. Please contact an administrator to authorize your wallet address."}
+                    </p>
+                    {!isWalletConnected && (
+                      <Button
+                        type="button"
+                        onClick={() => connectWallet()}
+                        className="mt-3 bg-amber-600 hover:bg-amber-700 text-white"
+                        size="sm"
+                      >
+                        <Wallet className="h-4 w-4 mr-2" />
+                        Connect MetaMask
+                      </Button>
+                    )}
+                    {isWalletConnected && !isWalletAuthorized && walletAddress && (
+                      <p className="text-xs text-amber-600 mt-2 font-mono">
+                        Connected: {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Wallet Connected Badge */}
+            {isWalletConnected && isWalletAuthorized && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <div className="flex items-center gap-2">
+                  <Wallet className="h-4 w-4 text-green-600" />
+                  <span className="text-sm text-green-700 font-medium">
+                    Wallet Connected & Authorized
+                  </span>
+                  <span className="text-xs text-green-600 font-mono ml-auto">
+                    {walletAddress?.slice(0, 6)}...{walletAddress?.slice(-4)}
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Basic Information Section */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
@@ -851,8 +968,9 @@ export function AddCompanyModal({
           <Button
             type="submit"
             onClick={handleSubmit}
-            disabled={loading || uploading}
-            className="bg-blue-600 hover:bg-blue-700"
+            disabled={loading || uploading || !isWalletConnected || !isWalletAuthorized}
+            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            title={!isWalletConnected ? "Connect MetaMask to create companies" : !isWalletAuthorized ? "Wallet not authorized" : ""}
           >
             {uploading ? (
               <>

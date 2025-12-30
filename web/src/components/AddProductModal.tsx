@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { X, Package, Hash, Calendar, Building2, Plus, ImagePlus, Camera, Tag, Layers } from "lucide-react";
+import { X, Package, Hash, Calendar, Building2, Plus, ImagePlus, Camera, Tag, Layers, Wallet, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProductService } from "@/services/productService";
@@ -8,12 +8,14 @@ import { CompanyService } from "@/services/companyService";
 import { BrandNameService } from "@/services/brandNameService";
 import { ProductClassificationService } from "@/services/productClassificationService";
 import { FirebaseStorageService } from "@/services/firebaseStorageService";
+import { MetaMaskService } from "@/services/metaMaskService";
 import { AddCompanyModal } from "@/components/AddCompanyModal";
 import { AddBrandNameModal } from "@/components/AddBrandNameModal";
 import { AddClassificationModal } from "@/components/AddClassificationModal";
 import type { BrandName } from "@/typeorm/entities/brandName.entity";
 import type { ProductClassification } from "@/typeorm/entities/productClassification.entity";
 import { toast } from "react-toastify";
+import { useMetaMask } from "@/contexts/MetaMaskContext";
 
 interface AddProductModalProps {
   isOpen: boolean;
@@ -93,6 +95,9 @@ export function AddProductModal({
   const [backImagePreview, setBackImagePreview] = useState<string>("");
   const frontImageRef = useRef<HTMLInputElement>(null);
   const backImageRef = useRef<HTMLInputElement>(null);
+
+  // MetaMask context
+  const { isConnected: isWalletConnected, isAuthorized: isWalletAuthorized, walletAddress, connect: connectWallet } = useMetaMask();
 
   useEffect(() => {
     setAllCompanies(companies);
@@ -600,7 +605,64 @@ export function AddProductModal({
     setLoading(true);
 
     try {
-      // Upload product images if provided
+      // ============ PHASE 1: PREPARE DATA & BLOCKCHAIN (Optional) ============
+      // If wallet is connected, we do blockchain first to ensure atomicity
+      
+      let sepoliaTransactionId: string | undefined;
+      
+      // Generate hash for blockchain BEFORE creating product
+      if (isWalletConnected && isWalletAuthorized && walletAddress) {
+        toast.info("Preparing blockchain verification...", { autoClose: 2000 });
+        
+        // Generate a hash from product data
+        const productDataString = JSON.stringify({
+          LTONumber: formData.LTONumber,
+          CFPRNumber: formData.CFPRNumber,
+          lotNumber: formData.lotNumber,
+          productName: formData.productName,
+          brandName: formData.brandName,
+          timestamp: new Date().toISOString()
+        });
+        
+        // Create SHA-256 hash
+        const encoder = new TextEncoder();
+        const data = encoder.encode(productDataString);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const pdfHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        
+        toast.info("Storing certificate on Sepolia blockchain...", { autoClose: 2000 });
+        
+        const blockchainResult = await MetaMaskService.storeHashOnBlockchain(
+          pdfHash,
+          `CERT-PROD-${formData.LTONumber}-${Date.now()}`,
+          'product',
+          formData.productName,
+          walletAddress
+        );
+        
+        if (blockchainResult.success && blockchainResult.data) {
+          sepoliaTransactionId = blockchainResult.data.txHash;
+          toast.success(
+            `Blockchain verified! Tx: ${sepoliaTransactionId.slice(0, 10)}...`,
+            { autoClose: 3000 }
+          );
+        } else {
+          // Blockchain failed - ask user if they want to continue without it
+          const continueWithoutBlockchain = window.confirm(
+            "Blockchain storage failed. Do you want to create the product without blockchain verification?\n\n" +
+            "Note: The product can be verified on blockchain later."
+          );
+          
+          if (!continueWithoutBlockchain) {
+            toast.info("Product creation cancelled");
+            setLoading(false);
+            return;
+          }
+        }
+      }
+
+      // ============ PHASE 2: UPLOAD IMAGES ============
       let productImageFrontUrl: string | undefined;
       let productImageBackUrl: string | undefined;
 
@@ -622,8 +684,7 @@ export function AddProductModal({
         productImageBackUrl = response.downloadUrl;
       }
 
-      // The JWT token is automatically included in the request via axios interceptor
-      // The backend will extract the user from the JWT token
+      // ============ PHASE 3: CREATE PRODUCT ============
       const productData: CreateProductRequest = {
         LTONumber: formData.LTONumber,
         CFPRNumber: formData.CFPRNumber,
@@ -641,16 +702,27 @@ export function AddProductModal({
         brandNameId: selectedBrandName?._id,
         classificationId: selectedClassification?._id,
         subClassificationId: selectedSubClassification?._id,
+        // Include Sepolia transaction ID if available
+        sepoliaTransactionId,
       };
 
       const response = await ProductService.addProduct(productData);
 
-      // Show success message with who registered it
-      toast.success(
-        `Product created successfully by ${response.registeredBy.name}!`
-      );
+      // Show success message
+      if (sepoliaTransactionId) {
+        toast.success(
+          `Product created & verified on blockchain by ${response.registeredBy.name}!`
+        );
+      } else {
+        toast.success(
+          `Product created successfully by ${response.registeredBy.name}!`
+        );
+      }
 
       console.log("Product registered by:", response.registeredBy);
+      if (sepoliaTransactionId) {
+        console.log("Blockchain transaction:", sepoliaTransactionId);
+      }
 
       // Reset form
       setFormData({
@@ -771,6 +843,58 @@ export function AddProductModal({
         {/* Form */}
         <div className="p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* MetaMask Connection Warning */}
+            {(!isWalletConnected || !isWalletAuthorized) && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <h4 className="font-medium text-amber-800">
+                      {!isWalletConnected 
+                        ? "MetaMask Not Connected" 
+                        : "Wallet Not Authorized"}
+                    </h4>
+                    <p className="text-sm text-amber-700 mt-1">
+                      {!isWalletConnected 
+                        ? "You need to connect your MetaMask wallet to add products. The product certificate will be stored on the Sepolia blockchain for verification."
+                        : "Your wallet is connected but not authorized. Please contact an administrator to authorize your wallet address."}
+                    </p>
+                    {!isWalletConnected && (
+                      <Button
+                        type="button"
+                        onClick={connectWallet}
+                        className="mt-3 bg-amber-600 hover:bg-amber-700 text-white"
+                        size="sm"
+                      >
+                        <Wallet className="h-4 w-4 mr-2" />
+                        Connect MetaMask
+                      </Button>
+                    )}
+                    {isWalletConnected && !isWalletAuthorized && walletAddress && (
+                      <p className="text-xs text-amber-600 mt-2 font-mono">
+                        Connected: {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Wallet Connected Badge */}
+            {isWalletConnected && isWalletAuthorized && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+                <div className="flex items-center gap-2">
+                  <Wallet className="h-4 w-4 text-green-600" />
+                  <span className="text-sm text-green-700 font-medium">
+                    Wallet Connected & Authorized
+                  </span>
+                  <span className="text-xs text-green-600 font-mono ml-auto">
+                    {walletAddress?.slice(0, 6)}...{walletAddress?.slice(-4)}
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* LTO and CFPR Numbers */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -1381,8 +1505,9 @@ export function AddProductModal({
               </Button>
               <Button
                 type="submit"
-                className="app-bg-primary text-white hover:opacity-90 cursor-pointer"
-                disabled={loading}
+                className="app-bg-primary text-white hover:opacity-90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={loading || !isWalletConnected || !isWalletAuthorized}
+                title={!isWalletConnected ? "Connect MetaMask to create products" : !isWalletAuthorized ? "Wallet not authorized" : ""}
               >
                 {loading ? (
                   <div className="flex items-center gap-2">

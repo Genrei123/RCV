@@ -3,8 +3,9 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Shield, Upload, CheckCircle, XCircle, AlertCircle, Loader2 } from "lucide-react";
+import { Shield, Upload, CheckCircle, XCircle, AlertCircle, Loader2, ExternalLink, Link as LinkIcon } from "lucide-react";
 import { CertificateBlockchainService } from "@/services/certificateBlockchainService";
+import { MetaMaskService } from "@/services/metaMaskService";
 import { toast } from "react-toastify";
 
 export function CertificateVerifier() {
@@ -12,6 +13,11 @@ export function CertificateVerifier() {
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [verifying, setVerifying] = useState(false);
   const [verificationResult, setVerificationResult] = useState<any>(null);
+  
+  // Sepolia transaction verification
+  const [txHash, setTxHash] = useState("");
+  const [sepoliaVerifying, setSepoliaVerifying] = useState(false);
+  const [sepoliaResult, setSepoliaResult] = useState<any>(null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -71,6 +77,48 @@ export function CertificateVerifier() {
     setCertificateId("");
     setPdfFile(null);
     setVerificationResult(null);
+  };
+
+  // Verify Sepolia transaction
+  const handleSepoliaVerify = async () => {
+    if (!txHash.trim()) {
+      toast.error("Please enter a transaction hash");
+      return;
+    }
+
+    // Validate transaction hash format
+    if (!/^0x[a-fA-F0-9]{64}$/.test(txHash.trim())) {
+      toast.error("Invalid transaction hash format");
+      return;
+    }
+
+    setSepoliaVerifying(true);
+    setSepoliaResult(null);
+
+    try {
+      const result = await MetaMaskService.verifyTransaction(txHash.trim());
+      setSepoliaResult(result);
+
+      if (result.success && result.data?.isValid) {
+        toast.success("✅ Transaction verified on Sepolia!");
+      } else {
+        toast.error("Transaction verification failed");
+      }
+    } catch (error: any) {
+      console.error("Sepolia verification error:", error);
+      setSepoliaResult({
+        success: false,
+        error: error.message || "Verification failed"
+      });
+      toast.error("Failed to verify on Sepolia");
+    } finally {
+      setSepoliaVerifying(false);
+    }
+  };
+
+  const handleSepoliaReset = () => {
+    setTxHash("");
+    setSepoliaResult(null);
   };
 
   return (
@@ -312,6 +360,174 @@ export function CertificateVerifier() {
                         <strong>Warning:</strong> This certificate may be fraudulent. Do not accept it as valid.
                         Contact the issuing authority if you believe this is an error.
                       </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Divider */}
+        <div className="relative my-8">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-neutral-200"></div>
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-white px-2 text-neutral-500">Or verify using</span>
+          </div>
+        </div>
+
+        {/* Sepolia Blockchain Verification */}
+        <Card>
+          <CardContent className="p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <LinkIcon className="h-5 w-5 text-purple-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-neutral-900">Sepolia Blockchain Verification</h3>
+                <p className="text-sm text-neutral-500">Verify using Ethereum Sepolia testnet transaction hash</p>
+              </div>
+            </div>
+            
+            <div className="space-y-6">
+              {/* Transaction Hash Input */}
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-2">
+                  Transaction Hash
+                  <span className="text-error-500 ml-1">*</span>
+                </label>
+                <Input
+                  type="text"
+                  placeholder="0x..."
+                  value={txHash}
+                  onChange={(e) => setTxHash(e.target.value)}
+                  className="font-mono text-sm"
+                  disabled={sepoliaVerifying}
+                />
+                <p className="text-xs text-neutral-500 mt-1">
+                  Enter the transaction hash from the certificate or scan the QR code
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-2">
+                <Button
+                  onClick={handleSepoliaVerify}
+                  disabled={!txHash.trim() || sepoliaVerifying}
+                  className="flex-1 bg-purple-600 hover:bg-purple-700"
+                >
+                  {sepoliaVerifying ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Verifying on Sepolia...
+                    </>
+                  ) : (
+                    <>
+                      <Shield className="h-4 w-4 mr-2" />
+                      Verify on Sepolia
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleSepoliaReset}
+                  disabled={sepoliaVerifying}
+                >
+                  Reset
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Sepolia Verification Result */}
+        {sepoliaResult && (
+          <Card className="mt-6">
+            <CardContent className="p-6">
+              {sepoliaResult.success && sepoliaResult.data?.isValid ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                    <CheckCircle className="h-8 w-8 text-purple-600 flex-shrink-0" />
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-purple-900 text-lg">
+                        ✅ Transaction Verified on Sepolia
+                      </h3>
+                      <p className="text-sm text-purple-700 mt-1">
+                        This transaction has been verified on the Ethereum Sepolia testnet.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Transaction Details */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-3 bg-neutral-50 rounded-lg">
+                      <p className="text-xs text-neutral-600 mb-1">Block Number</p>
+                      <p className="font-semibold text-neutral-900">
+                        #{sepoliaResult.data.blockNumber}
+                      </p>
+                    </div>
+                    <div className="p-3 bg-neutral-50 rounded-lg">
+                      <p className="text-xs text-neutral-600 mb-1">Timestamp</p>
+                      <p className="font-semibold text-neutral-900">
+                        {new Date(sepoliaResult.data.timestamp).toLocaleString()}
+                      </p>
+                    </div>
+                    {sepoliaResult.data.data && (
+                      <>
+                        <div className="p-3 bg-neutral-50 rounded-lg">
+                          <p className="text-xs text-neutral-600 mb-1">Certificate Type</p>
+                          <p className="font-semibold text-neutral-900 capitalize">
+                            {sepoliaResult.data.data.entityType || "N/A"}
+                          </p>
+                        </div>
+                        <div className="p-3 bg-neutral-50 rounded-lg">
+                          <p className="text-xs text-neutral-600 mb-1">Entity Name</p>
+                          <p className="font-semibold text-neutral-900">
+                            {sepoliaResult.data.data.entityName || "N/A"}
+                          </p>
+                        </div>
+                        <div className="p-3 bg-neutral-50 rounded-lg col-span-2">
+                          <p className="text-xs text-neutral-600 mb-1">Certificate ID</p>
+                          <p className="font-mono text-sm text-neutral-900 break-all">
+                            {sepoliaResult.data.data.certificateId || "N/A"}
+                          </p>
+                        </div>
+                        <div className="p-3 bg-neutral-50 rounded-lg col-span-2">
+                          <p className="text-xs text-neutral-600 mb-1">PDF Hash</p>
+                          <p className="font-mono text-xs text-neutral-900 break-all">
+                            {sepoliaResult.data.data.pdfHash || "N/A"}
+                          </p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Etherscan Link */}
+                  <div className="flex justify-center">
+                    <a
+                      href={`https://sepolia.etherscan.io/tx/${txHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-sm text-purple-600 hover:text-purple-700"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      View on Etherscan
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 p-4 bg-error-50 border border-error-200 rounded-lg">
+                    <XCircle className="h-8 w-8 text-error-600 flex-shrink-0" />
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-error-900 text-lg">
+                        ❌ Transaction Verification Failed
+                      </h3>
+                      <p className="text-sm text-error-700 mt-1">
+                        {sepoliaResult.error || "Could not verify this transaction on Sepolia."}
+                      </p>
                     </div>
                   </div>
                 </div>

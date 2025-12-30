@@ -32,6 +32,7 @@ import Contact from "./pages/ContactUs";
 import { PendingAgents } from "./pages/PendingAgents";
 import { AgentRegistration } from "./pages/AgentRegistration";
 import { LandingPage } from "./pages/LandingPage";
+import { MetaMaskProvider } from "./contexts/MetaMaskContext";
 
 interface ProtectedRoutesProps {
   children: ReactNode;
@@ -161,27 +162,28 @@ function App() {
   }, [isLoggedIn]);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <GlobalLoadingIndicator />
-      <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
-      />
-      <Routes>
-        {/* Public Routes */}
-        <Route
-          path="/login"
-          element={
-            <PublicRoute>
-              <AuthPage />
+    <MetaMaskProvider>
+      <div className="min-h-screen bg-background flex flex-col">
+        <GlobalLoadingIndicator />
+        <ToastContainer
+          position="top-right"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="light"
+        />
+        <Routes>
+          {/* Public Routes */}
+          <Route
+            path="/login"
+            element={
+              <PublicRoute>
+                <AuthPage />
             </PublicRoute>
           }
         />
@@ -319,11 +321,9 @@ function App() {
         <Route
           path="/verify-certificate"
           element={
-            <ProtectedRoutes>
-              <AppLayout>
-                <CertificateVerifier />
-              </AppLayout>
-            </ProtectedRoutes>
+            <AccessibleRoute>
+              <CertificateVerifier />
+            </AccessibleRoute>
           }
         />
         <Route
@@ -390,7 +390,8 @@ function App() {
         {/* 404 Catch-all */}
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
-    </div>
+      </div>
+    </MetaMaskProvider>
   );
 }
 

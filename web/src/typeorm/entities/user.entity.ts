@@ -24,6 +24,7 @@ export interface User {
   badgeId: string;
   idDocumentUrl?: string;
   selfieWithIdUrl?: string;
+  walletAddress?: string;
   createdAt?: Date | string;
   updatedAt?: Date | string;
 }

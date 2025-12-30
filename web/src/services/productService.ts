@@ -37,6 +37,8 @@ export interface CreateProductRequest {
   brandNameId?: string;
   classificationId?: string;
   subClassificationId?: string;
+  // Sepolia blockchain transaction ID (if verified on blockchain)
+  sepoliaTransactionId?: string;
 }
 
 export class ProductService {
