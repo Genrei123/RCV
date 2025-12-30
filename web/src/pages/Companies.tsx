@@ -37,6 +37,7 @@ export function Companies(props: CompaniesProps) {
   const [pagination, setPagination] = useState<any | null>(null);
   const pageSize = 10;
   const [searchQuery, setSearchQuery] = useState("");
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   // Disable body scroll when a modal is open
   useEffect(() => {
@@ -130,6 +131,9 @@ export function Companies(props: CompaniesProps) {
     event: React.MouseEvent
   ) => {
     event.stopPropagation(); // Prevent row click
+    if (downloadingId) return; // Prevent multiple downloads
+    
+    setDownloadingId(company._id);
     try {
       toast.info("Generating certificate PDF...", { autoClose: 1000 });
       await PDFGenerationService.generateAndDownloadCompanyCertificate(company);
@@ -137,6 +141,8 @@ export function Companies(props: CompaniesProps) {
     } catch (error) {
       console.error("Error generating certificate:", error);
       toast.error("Failed to generate certificate. Please try again.");
+    } finally {
+      setDownloadingId(null);
     }
   };
 
@@ -214,10 +220,11 @@ export function Companies(props: CompaniesProps) {
             size="sm"
             variant="outline"
             onClick={(e) => handleDownloadCertificate(row, e)}
-            className="app-text-primary hover:opacity-90 hover:app-bg-primary-soft"
+            disabled={downloadingId !== null}
+            className="app-text-primary hover:opacity-90 hover:app-bg-primary-soft disabled:opacity-50"
           >
-            <Download className="h-4 w-4 mr-1" />
-            Certificate
+            <Download className={`h-4 w-4 mr-1 ${downloadingId === row._id ? 'animate-pulse' : ''}`} />
+            {downloadingId === row._id ? 'Downloading...' : 'Certificate'}
           </Button>
         </div>
       ),

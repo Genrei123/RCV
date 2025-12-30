@@ -1,4 +1,4 @@
-import type { Company } from "@/typeorm/entities/company.entity";
+import type { Company, CompanyDocument } from "@/typeorm/entities/company.entity";
 import { apiClient } from "./axiosConfig";
 
 export interface CompanyApiResponse {
@@ -12,6 +12,20 @@ export interface CreateCompanyRequest {
   name: string;
   address: string;
   licenseNumber: string;
+  // Location
+  latitude?: number | null;
+  longitude?: number | null;
+  // Contact info
+  phone?: string | null;
+  email?: string | null;
+  website?: string | null;
+  // Business details
+  businessType?: string | null;
+  registrationDate?: string | null;
+  // Documents
+  documents?: CompanyDocument[] | null;
+  // Description
+  description?: string | null;
 }
 
 export interface CreateCompanyResponse {

@@ -99,8 +99,8 @@ export function Dashboard(props: DashboardProps) {
   const [statsLoading, setStatsLoading] = useState<boolean>(true);
   const pageSize = 10;
 
-  // View mode toggle: 'users' or 'invites'
-  const [viewMode, setViewMode] = useState<"users" | "invites">("users");
+  // View mode toggle: 'users', 'rejected', or 'invites'
+  const [viewMode, setViewMode] = useState<"users" | "rejected" | "invites">("users");
   const [invites, setInvites] = useState<AdminInvite[]>([]);
   const [invitesLoading, setInvitesLoading] = useState<boolean>(false);
 
@@ -116,8 +116,8 @@ export function Dashboard(props: DashboardProps) {
   const [rejectLoading, setRejectLoading] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
 
-  // Status filter state
-  const [statusFilter, setStatusFilter] = useState<"all" | "Pending" | "Rejected" | "Active">("all");
+  // Status filter state (Rejected users have their own tab)
+  const [statusFilter, setStatusFilter] = useState<"all" | "Pending" | "Active">("all");
 
   // Check if current user is an admin
   const isAdmin = (): boolean => {
@@ -249,18 +249,23 @@ export function Dashboard(props: DashboardProps) {
       label: "Access",
       render: (_, row: User) => (
         <div className="flex items-center gap-1">
-          {row.appAccess && (
-            <span title="Mobile App Access" className="inline-flex items-center justify-center w-6 h-6 rounded bg-blue-100 text-blue-600">
-              <Smartphone className="w-3.5 h-3.5" />
-            </span>
-          )}
-          {row.webAccess && (
-            <span title="Web Dashboard Access" className="inline-flex items-center justify-center w-6 h-6 rounded bg-green-100 text-green-600">
-              <Monitor className="w-3.5 h-3.5" />
-            </span>
-          )}
-          {!row.appAccess && !row.webAccess && (
-            <span className="text-xs text-gray-400">None</span>
+          {/* Rejected users have no access - show disabled/none state */}
+          {row.status === "Rejected" ? (
+            <span className="text-xs text-gray-400 italic">No Access</span>
+          ) : (
+            /* All active users must have at least one access type - default to app access if somehow missing */
+            <>
+              {(row.appAccess || (!row.appAccess && !row.webAccess)) && (
+                <span title="Mobile App Access" className="inline-flex items-center justify-center w-6 h-6 rounded bg-blue-100 text-blue-600">
+                  <Smartphone className="w-3.5 h-3.5" />
+                </span>
+              )}
+              {row.webAccess && (
+                <span title="Web Dashboard Access" className="inline-flex items-center justify-center w-6 h-6 rounded bg-green-100 text-green-600">
+                  <Monitor className="w-3.5 h-3.5" />
+                </span>
+              )}
+            </>
           )}
         </div>
       ),
@@ -327,7 +332,8 @@ export function Dashboard(props: DashboardProps) {
       label: "Access",
       render: (_, row: AdminInvite) => (
         <div className="flex items-center gap-1">
-          {row.appAccess && (
+          {/* All invites must have at least one access type - default to app access if somehow missing */}
+          {(row.appAccess || (!row.appAccess && !row.webAccess)) && (
             <span title="Mobile App Access" className="inline-flex items-center justify-center w-6 h-6 rounded bg-blue-100 text-blue-600">
               <Smartphone className="w-3.5 h-3.5" />
             </span>
@@ -336,9 +342,6 @@ export function Dashboard(props: DashboardProps) {
             <span title="Web Dashboard Access" className="inline-flex items-center justify-center w-6 h-6 rounded bg-green-100 text-green-600">
               <Monitor className="w-3.5 h-3.5" />
             </span>
-          )}
-          {!row.appAccess && !row.webAccess && (
-            <span className="text-xs text-gray-400">None</span>
           )}
         </div>
       ),
@@ -605,8 +608,10 @@ export function Dashboard(props: DashboardProps) {
     return allUsers;
   })();
 
-  // Filter users by status
+  // Filter users by status - exclude rejected users from main list (they have their own tab)
   const filteredUsers = usersArray.filter((user) => {
+    // Always exclude rejected users from the main users list
+    if (user.status === "Rejected") return false;
     if (statusFilter === "all") return true;
     return user.status === statusFilter;
   });
@@ -776,10 +781,19 @@ export function Dashboard(props: DashboardProps) {
                 Users
               </Button>
               <Button
+                variant={viewMode === "rejected" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("rejected")}
+                className="rounded-none border-l cursor-pointer"
+              >
+                <XCircle className="h-4 w-4 mr-2" />
+                Rejected
+              </Button>
+              <Button
                 variant={viewMode === "invites" ? "default" : "ghost"}
                 size="sm"
                 onClick={() => setViewMode("invites")}
-                className="rounded-l-none cursor-pointer"
+                className="rounded-l-none border-l cursor-pointer"
               >
                 <Mail className="h-4 w-4 mr-2" />
                 Invites
@@ -814,7 +828,7 @@ export function Dashboard(props: DashboardProps) {
                 <Select
                   value={statusFilter}
                   onValueChange={(value) =>
-                    setStatusFilter(value as "all" | "Pending" | "Rejected" | "Active")
+                    setStatusFilter(value as "all" | "Pending" | "Active")
                   }
                 >
                   <SelectTrigger className="w-full sm:w-[150px]">
@@ -826,7 +840,6 @@ export function Dashboard(props: DashboardProps) {
                       <SelectItem value="all">All Users</SelectItem>
                       <SelectItem value="Pending">Pending</SelectItem>
                       <SelectItem value="Active">Active</SelectItem>
-                      <SelectItem value="Rejected">Rejected</SelectItem>
                     </SelectGroup>
                   </SelectContent>
                 </Select>
@@ -949,6 +962,38 @@ export function Dashboard(props: DashboardProps) {
           </Pagination>
         </div>
         </div>
+        )}
+
+        {/* Rejected Users Table (Admin only) */}
+        {viewMode === "rejected" && isAdmin() && (
+          <div className="w-full">
+            <DataTable
+              title="Rejected Users"
+              columns={columns}
+              data={usersArray.filter(u => u.status === "Rejected")}
+              searchPlaceholder="Search rejected users..."
+              onSearch={(query) => onSearch(query)}
+              loading={loading}
+              emptyStateTitle="No Rejected Users"
+              emptyStateDescription="There are no rejected user accounts at this time."
+              customControls={
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fetchPage(currentPage)}
+                    disabled={loading}
+                  >
+                    <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                    Refresh
+                  </Button>
+                </div>
+              }
+            />
+            <div className="mt-4 text-sm text-muted-foreground">
+              Showing {usersArray.filter(u => u.status === "Rejected").length} rejected users
+            </div>
+          </div>
         )}
 
         {/* Invites Table (Admin only) */}

@@ -31,6 +31,7 @@ import About from "./pages/AboutUs";
 import Contact from "./pages/ContactUs";
 import { PendingAgents } from "./pages/PendingAgents";
 import { AgentRegistration } from "./pages/AgentRegistration";
+import { LandingPage } from "./pages/LandingPage";
 
 interface ProtectedRoutesProps {
   children: ReactNode;
@@ -220,17 +221,17 @@ function App() {
           }
         />
 
-        {/* Protected Routes wrapped with AppLayout */}
+        {/* Landing Page - Public */}
         <Route
           path="/"
           element={
-            <ProtectedRoutes>
-              <AppLayout>
-                <Dashboard {...dashboardData} />
-              </AppLayout>
-            </ProtectedRoutes>
+            <PublicRoute>
+              <LandingPage />
+            </PublicRoute>
           }
         />
+
+        {/* Protected Routes wrapped with AppLayout */}
         <Route
           path="/dashboard"
           element={

@@ -29,7 +29,16 @@ export const AuditLogValidation = z.object({
     'ARCHIVE_ACCOUNT',
     'LOCATION_UPDATE',
     'APP_CLOSED',
-    'COMPLIANCE_REPORT'
+    'COMPLIANCE_REPORT',
+    'CREATE_BRAND_NAME',
+    'UPDATE_BRAND_NAME',
+    'DELETE_BRAND_NAME',
+    'CREATE_CLASSIFICATION',
+    'UPDATE_CLASSIFICATION',
+    'DELETE_CLASSIFICATION',
+    'CREATE_COMPANY',
+    'UPDATE_COMPANY',
+    'DELETE_COMPANY'
   ]),
   userId: z.string().uuid().optional(),
   targetUserId: z.string().uuid().optional(),
@@ -74,7 +83,17 @@ export class AuditLog {
       'CHANGE_PASSWORD',
       'ARCHIVE_ACCOUNT',
       'LOCATION_UPDATE',
-      'APP_CLOSED'
+      'APP_CLOSED',
+      'COMPLIANCE_REPORT',
+      'CREATE_BRAND_NAME',
+      'UPDATE_BRAND_NAME',
+      'DELETE_BRAND_NAME',
+      'CREATE_CLASSIFICATION',
+      'UPDATE_CLASSIFICATION',
+      'DELETE_CLASSIFICATION',
+      'CREATE_COMPANY',
+      'UPDATE_COMPANY',
+      'DELETE_COMPANY'
     ],
   })
   actionType!: string;

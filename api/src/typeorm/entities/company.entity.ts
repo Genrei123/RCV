@@ -1,13 +1,35 @@
-import { Column, Entity, OneToMany, PrimaryColumn, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, OneToMany, PrimaryColumn, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from "typeorm";
 import { Product } from "./product.entity";
 import { z } from "zod";
 
+// Helper to transform null to undefined for TypeORM compatibility
+const nullToUndefined = <T>(val: T | null | undefined): T | undefined => 
+    val === null ? undefined : val;
+
 export const CompanyValidation = z.object({
-    id: z.uuidv4().optional(),
+    id: z.string().uuid().optional(),
     name: z.string().min(2).max(100),
     address: z.string().min(5).max(255),
     licenseNumber: z.string().min(2).max(50),
-    // products: z.array(z.instanceof(Product)).optional(),
+    // Location coordinates (optional)
+    latitude: z.number().min(-90).max(90).optional().nullable().transform(nullToUndefined),
+    longitude: z.number().min(-180).max(180).optional().nullable().transform(nullToUndefined),
+    // Contact information
+    phone: z.string().max(20).optional().nullable().transform(nullToUndefined),
+    email: z.string().email().max(100).optional().nullable().transform(nullToUndefined),
+    website: z.string().url().max(255).optional().nullable().transform(nullToUndefined),
+    // Business details
+    businessType: z.string().max(100).optional().nullable().transform(nullToUndefined),
+    registrationDate: z.string().or(z.date()).optional().nullable().transform(nullToUndefined),
+    // Documents (stored as JSON array of document URLs)
+    documents: z.array(z.object({
+        name: z.string(),
+        url: z.string().url(),
+        type: z.string(),
+        uploadedAt: z.string().or(z.date()),
+    })).optional().nullable().transform(nullToUndefined),
+    // Description
+    description: z.string().max(1000).optional().nullable().transform(nullToUndefined),
 });
 
 @Entity()
@@ -23,6 +45,44 @@ export class Company {
 
     @Column()
     licenseNumber!: string;
+
+    @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+    latitude?: number;
+
+    @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+    longitude?: number;
+
+    @Column({ nullable: true })
+    phone?: string;
+
+    @Column({ nullable: true })
+    email?: string;
+
+    @Column({ nullable: true })
+    website?: string;
+
+    @Column({ nullable: true })
+    businessType?: string;
+
+    @Column({ type: 'date', nullable: true })
+    registrationDate?: Date;
+
+    @Column({ type: 'jsonb', nullable: true })
+    documents?: {
+        name: string;
+        url: string;
+        type: string;
+        uploadedAt: string | Date;
+    }[];
+
+    @Column({ type: 'text', nullable: true })
+    description?: string;
+
+    @CreateDateColumn()
+    createdAt!: Date;
+
+    @UpdateDateColumn()
+    updatedAt!: Date;
 
     @OneToMany(() => Product, product => product._id)
     products!: Product[];

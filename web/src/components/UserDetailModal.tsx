@@ -55,8 +55,25 @@ export function UserDetailModal({
 
   if (!isOpen || !user) return null;
 
+  // Check if user is rejected - rejected users have no access and cannot be modified
+  const isRejected = user.status === "Rejected";
+  // Check if user is admin - admins always have full access
+  const isAdmin = user.role === "ADMIN";
+
   const handleAccessChange = async (type: 'web' | 'app', value: boolean) => {
     if (!user?._id) return;
+    
+    // Don't allow access changes for rejected users
+    if (isRejected) {
+      toast.error("Cannot modify access for rejected users");
+      return;
+    }
+
+    // Don't allow access changes for admin users - they always have full access
+    if (isAdmin) {
+      toast.error("Admin users always have full access to both platforms");
+      return;
+    }
 
     const newWebAccess = type === 'web' ? value : localWebAccess;
     const newAppAccess = type === 'app' ? value : localAppAccess;
@@ -459,54 +476,81 @@ export function UserDetailModal({
                 <Shield className="h-5 w-5" />
                 Access Permissions
               </h3>
-              <div className="app-bg-neutral rounded-lg p-4 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Smartphone className="h-5 w-5 text-blue-600" />
-                    <div>
-                      <Label htmlFor="app-access" className="text-sm font-medium cursor-pointer">
-                        Mobile App Access
-                      </Label>
-                      <p className="text-xs text-gray-500">
-                        Allow user to access the mobile application
-                      </p>
+              {isRejected ? (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <p className="text-sm text-red-700">
+                    This user has been rejected and has no access to any platform.
+                  </p>
+                </div>
+              ) : isAdmin ? (
+                /* Admin users always have full access */
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm text-blue-700">
+                    Admin users always have full access to both the mobile app and web dashboard.
+                  </p>
+                  <div className="mt-3 flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <Smartphone className="h-4 w-4 text-blue-600" />
+                      <span className="text-sm font-medium text-blue-700">Mobile App</span>
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Monitor className="h-4 w-4 text-green-600" />
+                      <span className="text-sm font-medium text-blue-700">Web Dashboard</span>
+                      <CheckCircle className="h-4 w-4 text-green-600" />
                     </div>
                   </div>
-                  <Checkbox
-                    id="app-access"
-                    checked={localAppAccess}
-                    onCheckedChange={(checked) => handleAccessChange('app', checked as boolean)}
-                    disabled={accessLoading}
-                    className="h-5 w-5"
-                  />
                 </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Monitor className="h-5 w-5 text-green-600" />
-                    <div>
-                      <Label htmlFor="web-access" className="text-sm font-medium cursor-pointer">
-                        Web Dashboard Access
-                      </Label>
-                      <p className="text-xs text-gray-500">
-                        Allow user to access the web dashboard
-                      </p>
+              ) : (
+                <div className="app-bg-neutral rounded-lg p-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Smartphone className="h-5 w-5 text-blue-600" />
+                      <div>
+                        <Label htmlFor="app-access" className="text-sm font-medium cursor-pointer">
+                          Mobile App Access
+                        </Label>
+                        <p className="text-xs text-gray-500">
+                          Allow user to access the mobile application
+                        </p>
+                      </div>
                     </div>
+                    <Checkbox
+                      id="app-access"
+                      checked={localAppAccess}
+                      onCheckedChange={(checked) => handleAccessChange('app', checked as boolean)}
+                      disabled={accessLoading}
+                      className="h-5 w-5"
+                    />
                   </div>
-                  <Checkbox
-                    id="web-access"
-                    checked={localWebAccess}
-                    onCheckedChange={(checked) => handleAccessChange('web', checked as boolean)}
-                    disabled={accessLoading}
-                    className="h-5 w-5"
-                  />
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Monitor className="h-5 w-5 text-green-600" />
+                      <div>
+                        <Label htmlFor="web-access" className="text-sm font-medium cursor-pointer">
+                          Web Dashboard Access
+                        </Label>
+                        <p className="text-xs text-gray-500">
+                          Allow user to access the web dashboard
+                        </p>
+                      </div>
+                    </div>
+                    <Checkbox
+                      id="web-access"
+                      checked={localWebAccess}
+                      onCheckedChange={(checked) => handleAccessChange('web', checked as boolean)}
+                      disabled={accessLoading}
+                      className="h-5 w-5"
+                    />
+                  </div>
+                  {accessLoading && (
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Updating permissions...
+                    </div>
+                  )}
                 </div>
-                {accessLoading && (
-                  <div className="flex items-center gap-2 text-sm text-gray-500">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Updating permissions...
-                  </div>
-                )}
-              </div>
+              )}
             </div>
 
             {/* Account Timestamps */}
@@ -541,7 +585,33 @@ export function UserDetailModal({
           {/* Action Buttons */}
           {onApprove && onReject && (
             <div className="pt-6 border-t mt-6">
-              {!user.approved ? (
+              {isRejected ? (
+                <>
+                  {/* Rejected User Section - Buttons Disabled */}
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                    <p className="text-sm text-red-700">
+                      This user has been rejected. The decision has already been made and cannot be changed.
+                    </p>
+                  </div>
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      disabled
+                      className="flex-1 opacity-50 cursor-not-allowed"
+                    >
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Reject User
+                    </Button>
+                    <Button
+                      disabled
+                      className="flex-1 opacity-50 cursor-not-allowed"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Approve User
+                    </Button>
+                  </div>
+                </>
+              ) : !user.approved ? (
                 <>
                   {/* Pending Approval Section */}
                   <div className="app-bg-secondary-soft border border-[color:var(--app-secondary)]/30 rounded-lg p-4 mb-4">

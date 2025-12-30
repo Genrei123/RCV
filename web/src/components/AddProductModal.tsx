@@ -1,10 +1,18 @@
 import { useEffect, useRef, useState } from "react";
-import { X, Package, Hash, Calendar, Building2 } from "lucide-react";
+import { X, Package, Hash, Calendar, Building2, Plus, ImagePlus, Camera, Tag, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProductService } from "@/services/productService";
 import type { CreateProductRequest } from "@/services/productService";
 import { CompanyService } from "@/services/companyService";
+import { BrandNameService } from "@/services/brandNameService";
+import { ProductClassificationService } from "@/services/productClassificationService";
+import { FirebaseStorageService } from "@/services/firebaseStorageService";
+import { AddCompanyModal } from "@/components/AddCompanyModal";
+import { AddBrandNameModal } from "@/components/AddBrandNameModal";
+import { AddClassificationModal } from "@/components/AddClassificationModal";
+import type { BrandName } from "@/typeorm/entities/brandName.entity";
+import type { ProductClassification } from "@/typeorm/entities/productClassification.entity";
 import { toast } from "react-toastify";
 
 interface AddProductModalProps {
@@ -43,6 +51,48 @@ export function AddProductModal({
   const companyDropdownRef = useRef<HTMLDivElement | null>(null);
   const hasFetchedAllCompanies = useRef(false);
   const COMPANY_FETCH_LIMIT = 2000;
+
+  // Add Company Modal state
+  const [showAddCompanyModal, setShowAddCompanyModal] = useState(false);
+
+  // Add Brand Name Modal state
+  const [showAddBrandNameModal, setShowAddBrandNameModal] = useState(false);
+  const [allBrandNames, setAllBrandNames] = useState<BrandName[]>([]);
+  const [brandNameOptions, setBrandNameOptions] = useState<BrandName[]>([]);
+  const [brandNameInputValue, setBrandNameInputValue] = useState("");
+  const [brandNameDropdownOpen, setBrandNameDropdownOpen] = useState(false);
+  const [brandNameLoading, setBrandNameLoading] = useState(false);
+  const brandNameDropdownRef = useRef<HTMLDivElement | null>(null);
+  const hasFetchedBrandNames = useRef(false);
+  const [selectedBrandName, setSelectedBrandName] = useState<BrandName | null>(null);
+
+  // Add Classification Modal state
+  const [showAddClassificationModal, setShowAddClassificationModal] = useState(false);
+  const [classificationParent, setClassificationParent] = useState<ProductClassification | null>(null);
+  const [allClassifications, setAllClassifications] = useState<ProductClassification[]>([]);
+  const [classificationOptions, setClassificationOptions] = useState<ProductClassification[]>([]);
+  const [classificationInputValue, setClassificationInputValue] = useState("");
+  const [classificationDropdownOpen, setClassificationDropdownOpen] = useState(false);
+  const [classificationLoading, setClassificationLoading] = useState(false);
+  const classificationDropdownRef = useRef<HTMLDivElement | null>(null);
+  const hasFetchedClassifications = useRef(false);
+
+  // Sub-classification state
+  const [selectedClassification, setSelectedClassification] = useState<ProductClassification | null>(null);
+  const [selectedSubClassification, setSelectedSubClassification] = useState<ProductClassification | null>(null);
+  const [subClassificationOptions, setSubClassificationOptions] = useState<ProductClassification[]>([]);
+  const [subClassificationInputValue, setSubClassificationInputValue] = useState("");
+  const [subClassificationDropdownOpen, setSubClassificationDropdownOpen] = useState(false);
+  const [subClassificationLoading, setSubClassificationLoading] = useState(false);
+  const subClassificationDropdownRef = useRef<HTMLDivElement | null>(null);
+
+  // Product Image states
+  const [frontImage, setFrontImage] = useState<File | null>(null);
+  const [backImage, setBackImage] = useState<File | null>(null);
+  const [frontImagePreview, setFrontImagePreview] = useState<string>("");
+  const [backImagePreview, setBackImagePreview] = useState<string>("");
+  const frontImageRef = useRef<HTMLInputElement>(null);
+  const backImageRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setAllCompanies(companies);
@@ -128,6 +178,362 @@ export function AddProductModal({
     }
   };
 
+  // Handle Add Company Modal success - refresh companies list and select the new one
+  const handleAddCompanySuccess = async () => {
+    // Refresh the companies list
+    try {
+      const response = await CompanyService.getCompaniesPage(1, COMPANY_FETCH_LIMIT);
+      const fetchedCompanies = response.companies || response.data || [];
+      setAllCompanies(fetchedCompanies);
+      setCompanyOptions(fetchedCompanies);
+      
+      // Find and select the most recently added company (last in the list by createdAt)
+      if (fetchedCompanies.length > 0) {
+        // Sort by createdAt descending to get the newest
+        const sortedCompanies = [...fetchedCompanies].sort((a: any, b: any) => {
+          return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+        });
+        const newestCompany = sortedCompanies[0];
+        if (newestCompany) {
+          handleCompanySelect(newestCompany);
+          toast.success(`Company "${newestCompany.name}" selected`);
+        }
+      }
+    } catch (error) {
+      console.error("Error refreshing companies:", error);
+    }
+  };
+
+  // ============ Brand Name Handlers ============
+  
+  // Fetch brand names when dropdown opens
+  useEffect(() => {
+    if (!brandNameDropdownOpen || hasFetchedBrandNames.current) return;
+
+    let isActive = true;
+    setBrandNameLoading(true);
+
+    BrandNameService.getAllBrandNames(1, 500)
+      .then((response) => {
+        if (!isActive) return;
+        const fetchedBrandNames = response.data || [];
+        setAllBrandNames(fetchedBrandNames);
+        setBrandNameOptions(fetchedBrandNames);
+        hasFetchedBrandNames.current = true;
+      })
+      .catch((error) => {
+        if (isActive) {
+          console.error("Error fetching brand names:", error);
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setBrandNameLoading(false);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [brandNameDropdownOpen]);
+
+  // Filter brand names based on input
+  useEffect(() => {
+    const query = brandNameInputValue.trim().toLowerCase();
+    if (!query) {
+      setBrandNameOptions(allBrandNames);
+      return;
+    }
+    setBrandNameOptions(
+      allBrandNames.filter((bn) => bn.name.toLowerCase().includes(query))
+    );
+  }, [brandNameInputValue, allBrandNames]);
+
+  // Click outside handler for brand name dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        brandNameDropdownRef.current &&
+        !brandNameDropdownRef.current.contains(event.target as Node)
+      ) {
+        setBrandNameDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const handleBrandNameInputChange = (value: string) => {
+    setBrandNameInputValue(value);
+    setFormData((prev) => ({ ...prev, brandName: value }));
+    setBrandNameDropdownOpen(true);
+    // Clear selected brand name when user types custom value
+    setSelectedBrandName(null);
+    if (errors.brandName) {
+      setErrors((prev) => ({ ...prev, brandName: "" }));
+    }
+  };
+
+  const handleBrandNameSelect = (brandName: BrandName) => {
+    setFormData((prev) => ({ ...prev, brandName: brandName.name }));
+    setBrandNameInputValue(brandName.name);
+    setSelectedBrandName(brandName);
+    setBrandNameDropdownOpen(false);
+    if (errors.brandName) {
+      setErrors((prev) => ({ ...prev, brandName: "" }));
+    }
+  };
+
+  const handleAddBrandNameSuccess = async () => {
+    try {
+      const response = await BrandNameService.getAllBrandNames(1, 500);
+      const fetchedBrandNames = response.data || [];
+      setAllBrandNames(fetchedBrandNames);
+      setBrandNameOptions(fetchedBrandNames);
+      
+      // Select the newest brand name
+      if (fetchedBrandNames.length > 0) {
+        const sortedBrandNames = [...fetchedBrandNames].sort((a, b) => {
+          return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+        });
+        const newestBrandName = sortedBrandNames[0];
+        if (newestBrandName) {
+          handleBrandNameSelect(newestBrandName);
+          toast.success(`Brand name "${newestBrandName.name}" selected`);
+        }
+      }
+    } catch (error) {
+      console.error("Error refreshing brand names:", error);
+    }
+  };
+
+  // ============ Classification Handlers ============
+  
+  // Fetch classifications when dropdown opens
+  useEffect(() => {
+    if (!classificationDropdownOpen || hasFetchedClassifications.current) return;
+
+    let isActive = true;
+    setClassificationLoading(true);
+
+    ProductClassificationService.getAllClassifications(1, 500)
+      .then((response) => {
+        if (!isActive) return;
+        const fetchedClassifications = response.data || [];
+        setAllClassifications(fetchedClassifications);
+        setClassificationOptions(fetchedClassifications);
+        hasFetchedClassifications.current = true;
+      })
+      .catch((error) => {
+        if (isActive) {
+          console.error("Error fetching classifications:", error);
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setClassificationLoading(false);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [classificationDropdownOpen]);
+
+  // Filter classifications based on input
+  useEffect(() => {
+    const query = classificationInputValue.trim().toLowerCase();
+    if (!query) {
+      setClassificationOptions(allClassifications);
+      return;
+    }
+    setClassificationOptions(
+      allClassifications.filter((c) => c.name.toLowerCase().includes(query))
+    );
+  }, [classificationInputValue, allClassifications]);
+
+  // Click outside handler for classification dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        classificationDropdownRef.current &&
+        !classificationDropdownRef.current.contains(event.target as Node)
+      ) {
+        setClassificationDropdownOpen(false);
+      }
+      if (
+        subClassificationDropdownRef.current &&
+        !subClassificationDropdownRef.current.contains(event.target as Node)
+      ) {
+        setSubClassificationDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const handleClassificationInputChange = (value: string) => {
+    setClassificationInputValue(value);
+    setFormData((prev) => ({ ...prev, productClassification: value }));
+    setClassificationDropdownOpen(true);
+    // Reset sub-classification when classification changes
+    if (selectedClassification) {
+      setSelectedClassification(null);
+      setSubClassificationOptions([]);
+      setSubClassificationInputValue("");
+      setFormData((prev) => ({ ...prev, productSubClassification: "" }));
+    }
+    if (errors.productClassification) {
+      setErrors((prev) => ({ ...prev, productClassification: "" }));
+    }
+  };
+
+  const handleClassificationSelect = async (classification: ProductClassification) => {
+    setFormData((prev) => ({ ...prev, productClassification: classification.name }));
+    setClassificationInputValue(classification.name);
+    setClassificationDropdownOpen(false);
+    setSelectedClassification(classification);
+    
+    // Reset sub-classification
+    setSubClassificationInputValue("");
+    setFormData((prev) => ({ ...prev, productSubClassification: "" }));
+    
+    if (errors.productClassification) {
+      setErrors((prev) => ({ ...prev, productClassification: "" }));
+    }
+    
+    // Load sub-classifications if available
+    if (classification.children && classification.children.length > 0) {
+      setSubClassificationOptions(classification.children);
+    } else {
+      // Try to fetch sub-classifications
+      try {
+        setSubClassificationLoading(true);
+        const response = await ProductClassificationService.getSubClassifications(classification._id);
+        setSubClassificationOptions(response.data || []);
+      } catch (error) {
+        console.error("Error fetching sub-classifications:", error);
+        setSubClassificationOptions([]);
+      } finally {
+        setSubClassificationLoading(false);
+      }
+    }
+  };
+
+  const handleSubClassificationInputChange = (value: string) => {
+    setSubClassificationInputValue(value);
+    setFormData((prev) => ({ ...prev, productSubClassification: value }));
+    setSubClassificationDropdownOpen(true);
+    // Clear selected sub-classification when user types custom value
+    setSelectedSubClassification(null);
+    if (errors.productSubClassification) {
+      setErrors((prev) => ({ ...prev, productSubClassification: "" }));
+    }
+  };
+
+  const handleSubClassificationSelect = (subClassification: ProductClassification) => {
+    setFormData((prev) => ({ ...prev, productSubClassification: subClassification.name }));
+    setSubClassificationInputValue(subClassification.name);
+    setSelectedSubClassification(subClassification);
+    setSubClassificationDropdownOpen(false);
+    if (errors.productSubClassification) {
+      setErrors((prev) => ({ ...prev, productSubClassification: "" }));
+    }
+  };
+
+  const handleAddClassificationSuccess = async () => {
+    try {
+      const response = await ProductClassificationService.getAllClassifications(1, 500);
+      const fetchedClassifications = response.data || [];
+      setAllClassifications(fetchedClassifications);
+      setClassificationOptions(fetchedClassifications);
+      
+      // If we were adding a sub-classification, refresh sub-classifications too
+      if (classificationParent && selectedClassification) {
+        const subResponse = await ProductClassificationService.getSubClassifications(selectedClassification._id);
+        setSubClassificationOptions(subResponse.data || []);
+        
+        // Select the newest sub-classification
+        if (subResponse.data && subResponse.data.length > 0) {
+          const sortedSubs = [...subResponse.data].sort((a, b) => {
+            return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+          });
+          const newestSub = sortedSubs[0];
+          if (newestSub) {
+            handleSubClassificationSelect(newestSub);
+            toast.success(`Sub-classification "${newestSub.name}" selected`);
+          }
+        }
+      } else {
+        // Select the newest classification
+        if (fetchedClassifications.length > 0) {
+          const sortedClassifications = [...fetchedClassifications].sort((a, b) => {
+            return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+          });
+          const newestClassification = sortedClassifications[0];
+          if (newestClassification) {
+            handleClassificationSelect(newestClassification);
+            toast.success(`Classification "${newestClassification.name}" selected`);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error refreshing classifications:", error);
+    }
+  };
+
+  // Handle image file selection
+  const handleImageChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    type: "front" | "back"
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File size must be less than 10MB");
+      return;
+    }
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (type === "front") {
+        setFrontImage(file);
+        setFrontImagePreview(reader.result as string);
+      } else {
+        setBackImage(file);
+        setBackImagePreview(reader.result as string);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeImage = (type: "front" | "back") => {
+    if (type === "front") {
+      setFrontImage(null);
+      setFrontImagePreview("");
+      if (frontImageRef.current) frontImageRef.current.value = "";
+    } else {
+      setBackImage(null);
+      setBackImagePreview("");
+      if (backImageRef.current) backImageRef.current.value = "";
+    }
+  };
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -194,6 +600,28 @@ export function AddProductModal({
     setLoading(true);
 
     try {
+      // Upload product images if provided
+      let productImageFrontUrl: string | undefined;
+      let productImageBackUrl: string | undefined;
+
+      if (frontImage || backImage) {
+        toast.info("Uploading product images...", { autoClose: 1500 });
+      }
+
+      const timestamp = Date.now();
+
+      if (frontImage) {
+        const frontPath = `product-images/${formData.LTONumber.replace(/[^a-zA-Z0-9]/g, '-')}/front-${timestamp}`;
+        const response = await FirebaseStorageService.uploadAgentVerificationDocument(frontImage, frontPath);
+        productImageFrontUrl = response.downloadUrl;
+      }
+
+      if (backImage) {
+        const backPath = `product-images/${formData.LTONumber.replace(/[^a-zA-Z0-9]/g, '-')}/back-${timestamp}`;
+        const response = await FirebaseStorageService.uploadAgentVerificationDocument(backImage, backPath);
+        productImageBackUrl = response.downloadUrl;
+      }
+
       // The JWT token is automatically included in the request via axios interceptor
       // The backend will extract the user from the JWT token
       const productData: CreateProductRequest = {
@@ -207,6 +635,12 @@ export function AddProductModal({
         expirationDate: new Date(formData.expirationDate),
         dateOfRegistration: new Date(formData.dateOfRegistration),
         companyId: formData.companyId,
+        productImageFront: productImageFrontUrl,
+        productImageBack: productImageBackUrl,
+        // Include entity IDs if a managed brand/classification was selected
+        brandNameId: selectedBrandName?._id,
+        classificationId: selectedClassification?._id,
+        subClassificationId: selectedSubClassification?._id,
       };
 
       const response = await ProductService.addProduct(productData);
@@ -233,6 +667,23 @@ export function AddProductModal({
       });
       setCompanyInputValue("");
       setCompanyDropdownOpen(false);
+      // Reset brand name dropdown
+      setBrandNameInputValue("");
+      setBrandNameDropdownOpen(false);
+      setSelectedBrandName(null);
+      // Reset classification dropdowns
+      setClassificationInputValue("");
+      setClassificationDropdownOpen(false);
+      setSelectedClassification(null);
+      setSubClassificationInputValue("");
+      setSubClassificationDropdownOpen(false);
+      setSelectedSubClassification(null);
+      setSubClassificationOptions([]);
+      // Reset image states
+      setFrontImage(null);
+      setBackImage(null);
+      setFrontImagePreview("");
+      setBackImagePreview("");
 
       onSuccess();
       onClose();
@@ -264,6 +715,20 @@ export function AddProductModal({
       });
       setCompanyInputValue("");
       setCompanyDropdownOpen(false);
+      setBrandNameInputValue("");
+      setBrandNameDropdownOpen(false);
+      setSelectedBrandName(null);
+      setClassificationInputValue("");
+      setClassificationDropdownOpen(false);
+      setSubClassificationInputValue("");
+      setSubClassificationDropdownOpen(false);
+      setSelectedClassification(null);
+      setSelectedSubClassification(null);
+      setSubClassificationOptions([]);
+      setFrontImage(null);
+      setBackImage(null);
+      setFrontImagePreview("");
+      setBackImagePreview("");
       setErrors({});
       onClose();
     }
@@ -384,27 +849,85 @@ export function AddProductModal({
 
             {/* Brand and Product Names */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Brand Name - with Add Brand Name button */}
               <div>
-                <label className="block text-sm font-medium app-text-subtle mb-2">
-                  Brand Name *
-                </label>
-                <div className="relative">
-                  <Package className="absolute left-3 top-1/2 -translate-y-1/2 app-text-subtle h-4 w-4" />
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium app-text-subtle">
+                    Brand Name *
+                  </label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAddBrandNameModal(true)}
+                    disabled={loading}
+                    className="text-xs h-7 px-2"
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Add Brand
+                  </Button>
+                </div>
+                <div className="relative" ref={brandNameDropdownRef}>
+                  <Tag className="absolute left-3 top-1/2 -translate-y-1/2 app-text-subtle h-4 w-4 z-10" />
                   <Input
-                    name="brandName"
-                    value={formData.brandName}
-                    onChange={handleChange}
-                    placeholder="Enter brand name"
+                    type="text"
+                    name="brandNameSearch"
+                    autoComplete="off"
+                    value={brandNameInputValue}
+                    onFocus={() => setBrandNameDropdownOpen(true)}
+                    onChange={(e) => handleBrandNameInputChange(e.target.value)}
+                    placeholder="Search or enter brand name"
                     className={`pl-10 ${
                       errors.brandName ? "border-[color:var(--app-error)]" : ""
                     }`}
                     disabled={loading}
                   />
+                  {brandNameDropdownOpen && (
+                    <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                      {brandNameLoading ? (
+                        <div className="p-3 text-sm text-gray-500">
+                          Loading brand names...
+                        </div>
+                      ) : brandNameOptions.length === 0 ? (
+                        <div className="p-3 text-sm text-gray-500">
+                          <p>{brandNameInputValue ? `No brand names matching "${brandNameInputValue}"` : "No brand names found"}</p>
+                          <p className="text-xs mt-1">You can type a custom brand name or add a new one</p>
+                          <Button
+                            type="button"
+                            variant="link"
+                            size="sm"
+                            onClick={() => {
+                              setBrandNameDropdownOpen(false);
+                              setShowAddBrandNameModal(true);
+                            }}
+                            className="text-xs p-0 h-auto mt-1"
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            Add a new brand name
+                          </Button>
+                        </div>
+                      ) : (
+                        brandNameOptions.map((bn) => (
+                          <button
+                            key={bn._id}
+                            type="button"
+                            onClick={() => handleBrandNameSelect(bn)}
+                            className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 ${
+                              formData.brandName === bn.name ? "bg-gray-100 font-medium" : ""
+                            }`}
+                          >
+                            {bn.name}
+                            {bn.productCount !== undefined && (
+                              <span className="text-xs text-gray-400 ml-2">({bn.productCount} products)</span>
+                            )}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
                 </div>
                 {errors.brandName && (
-                  <p className="app-text-error text-xs mt-1">
-                    {errors.brandName}
-                  </p>
+                  <p className="app-text-error text-xs mt-1">{errors.brandName}</p>
                 )}
               </div>
 
@@ -437,50 +960,174 @@ export function AddProductModal({
 
             {/* Classifications */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Product Classification - with Add Classification button */}
               <div>
-                <label className="block text-sm font-medium app-text-subtle mb-2">
-                  Product Classification *
-                </label>
-                <div className="relative">
-                  <Package className="absolute left-3 top-1/2 -translate-y-1/2 app-text-subtle h-4 w-4" />
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium app-text-subtle">
+                    Product Classification *
+                  </label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setClassificationParent(null);
+                      setShowAddClassificationModal(true);
+                    }}
+                    disabled={loading}
+                    className="text-xs h-7 px-2"
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Add
+                  </Button>
+                </div>
+                <div className="relative" ref={classificationDropdownRef}>
+                  <Layers className="absolute left-3 top-1/2 -translate-y-1/2 app-text-subtle h-4 w-4 z-10" />
                   <Input
-                    name="productClassification"
-                    value={formData.productClassification}
-                    onChange={handleChange}
-                    placeholder="e.g., Raw Product, Processed Product"
+                    type="text"
+                    name="classificationSearch"
+                    autoComplete="off"
+                    value={classificationInputValue}
+                    onFocus={() => setClassificationDropdownOpen(true)}
+                    onChange={(e) => handleClassificationInputChange(e.target.value)}
+                    placeholder="Search or select classification"
                     className={`pl-10 ${
-                      errors.productClassification
-                        ? "border-[color:var(--app-error)]"
-                        : ""
+                      errors.productClassification ? "border-[color:var(--app-error)]" : ""
                     }`}
                     disabled={loading}
                   />
+                  {classificationDropdownOpen && (
+                    <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                      {classificationLoading ? (
+                        <div className="p-3 text-sm text-gray-500">
+                          Loading classifications...
+                        </div>
+                      ) : classificationOptions.length === 0 ? (
+                        <div className="p-3 text-sm text-gray-500">
+                          <p>{classificationInputValue ? `No classifications matching "${classificationInputValue}"` : "No classifications found"}</p>
+                          <p className="text-xs mt-1">You can type a custom classification or add a new one</p>
+                          <Button
+                            type="button"
+                            variant="link"
+                            size="sm"
+                            onClick={() => {
+                              setClassificationDropdownOpen(false);
+                              setClassificationParent(null);
+                              setShowAddClassificationModal(true);
+                            }}
+                            className="text-xs p-0 h-auto mt-1"
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            Add a new classification
+                          </Button>
+                        </div>
+                      ) : (
+                        classificationOptions.map((c) => (
+                          <button
+                            key={c._id}
+                            type="button"
+                            onClick={() => handleClassificationSelect(c)}
+                            className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 ${
+                              formData.productClassification === c.name ? "bg-gray-100 font-medium" : ""
+                            }`}
+                          >
+                            {c.name}
+                            {c.productCount !== undefined && (
+                              <span className="text-xs text-gray-400 ml-2">({c.productCount} products)</span>
+                            )}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
                 </div>
                 {errors.productClassification && (
-                  <p className="app-text-error text-xs mt-1">
-                    {errors.productClassification}
-                  </p>
+                  <p className="app-text-error text-xs mt-1">{errors.productClassification}</p>
                 )}
               </div>
 
+              {/* Product Sub-Classification - with Add Sub-Classification button */}
               <div>
-                <label className="block text-sm font-medium app-text-subtle mb-2">
-                  Product Sub-Classification *
-                </label>
-                <div className="relative">
-                  <Package className="absolute left-3 top-1/2 -translate-y-1/2 app-text-subtle h-4 w-4" />
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium app-text-subtle">
+                    Product Sub-Classification *
+                  </label>
+                  {selectedClassification && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setClassificationParent(selectedClassification);
+                        setShowAddClassificationModal(true);
+                      }}
+                      disabled={loading}
+                      className="text-xs h-7 px-2"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Add Sub
+                    </Button>
+                  )}
+                </div>
+                <div className="relative" ref={subClassificationDropdownRef}>
+                  <Layers className="absolute left-3 top-1/2 -translate-y-1/2 app-text-subtle h-4 w-4 z-10" />
                   <Input
-                    name="productSubClassification"
-                    value={formData.productSubClassification}
-                    onChange={handleChange}
-                    placeholder="e.g., Layer Feeds, Gamecock Feeds"
+                    type="text"
+                    name="subClassificationSearch"
+                    autoComplete="off"
+                    value={subClassificationInputValue}
+                    onFocus={() => selectedClassification && setSubClassificationDropdownOpen(true)}
+                    onChange={(e) => handleSubClassificationInputChange(e.target.value)}
+                    placeholder={selectedClassification ? "Search or select sub-classification" : "Select classification first"}
                     className={`pl-10 ${
-                      errors.productSubClassification
-                        ? "border-[color:var(--app-error)]"
-                        : ""
+                      errors.productSubClassification ? "border-[color:var(--app-error)]" : ""
                     }`}
-                    disabled={loading}
+                    disabled={loading || !selectedClassification}
                   />
+                  {subClassificationDropdownOpen && selectedClassification && (
+                    <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                      {subClassificationLoading ? (
+                        <div className="p-3 text-sm text-gray-500">
+                          Loading sub-classifications...
+                        </div>
+                      ) : subClassificationOptions.length === 0 ? (
+                        <div className="p-3 text-sm text-gray-500">
+                          <p>{subClassificationInputValue ? `No sub-classifications matching "${subClassificationInputValue}"` : `No sub-classifications for "${selectedClassification.name}"`}</p>
+                          <p className="text-xs mt-1">You can type a custom sub-classification or add a new one</p>
+                          <Button
+                            type="button"
+                            variant="link"
+                            size="sm"
+                            onClick={() => {
+                              setSubClassificationDropdownOpen(false);
+                              setClassificationParent(selectedClassification);
+                              setShowAddClassificationModal(true);
+                            }}
+                            className="text-xs p-0 h-auto mt-1"
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            Add a sub-classification
+                          </Button>
+                        </div>
+                      ) : (
+                        subClassificationOptions.map((sc) => (
+                          <button
+                            key={sc._id}
+                            type="button"
+                            onClick={() => handleSubClassificationSelect(sc)}
+                            className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 ${
+                              formData.productSubClassification === sc.name ? "bg-gray-100 font-medium" : ""
+                            }`}
+                          >
+                            {sc.name}
+                            {sc.productCount !== undefined && (
+                              <span className="text-xs text-gray-400 ml-2">({sc.productCount} products)</span>
+                            )}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
                 </div>
                 {errors.productSubClassification && (
                   <p className="app-text-error text-xs mt-1">
@@ -536,11 +1183,24 @@ export function AddProductModal({
               </div>
             </div>
 
-            {/* Company */}
+            {/* Company - with Add Company button */}
             <div>
-              <label className="block text-sm font-medium app-text-subtle mb-2">
-                Company *
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium app-text-subtle">
+                  Company *
+                </label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAddCompanyModal(true)}
+                  disabled={loading}
+                  className="text-xs h-7 px-2"
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Add Company
+                </Button>
+              </div>
               <div className="relative" ref={companyDropdownRef}>
                 <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 app-text-subtle h-4 w-4" />
                 <Input
@@ -566,7 +1226,20 @@ export function AddProductModal({
                       </div>
                     ) : companyOptions.length === 0 ? (
                       <div className="p-3 text-sm text-gray-500">
-                        No companies found
+                        <p>No companies found</p>
+                        <Button
+                          type="button"
+                          variant="link"
+                          size="sm"
+                          onClick={() => {
+                            setCompanyDropdownOpen(false);
+                            setShowAddCompanyModal(true);
+                          }}
+                          className="text-xs p-0 h-auto mt-1"
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Add a new company
+                        </Button>
                       </div>
                     ) : (
                       companyOptions.map((company) => (
@@ -592,6 +1265,108 @@ export function AddProductModal({
                   {errors.companyId}
                 </p>
               )}
+            </div>
+
+            {/* Product Images Section */}
+            <div className="border-t pt-4 mt-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Camera className="h-4 w-4 app-text-primary" />
+                <label className="block text-sm font-medium app-text">
+                  Product Images
+                </label>
+                <span className="text-xs text-gray-400">(Optional)</span>
+              </div>
+              <p className="text-xs text-gray-500 mb-4">
+                Capture the front and back of the product to show how it should look for verification purposes.
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Front Image */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-600">
+                    Front Image
+                  </label>
+                  {frontImagePreview ? (
+                    <div className="relative">
+                      <img
+                        src={frontImagePreview}
+                        alt="Product Front Preview"
+                        className="w-full h-40 object-cover rounded-lg border"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeImage("front")}
+                        disabled={loading}
+                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 disabled:opacity-50"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      onClick={() => !loading && frontImageRef.current?.click()}
+                      className={`border-2 border-dashed border-gray-300 rounded-lg h-40 flex flex-col items-center justify-center cursor-pointer hover:border-gray-400 transition-colors ${
+                        loading ? "opacity-50 cursor-not-allowed" : ""
+                      }`}
+                    >
+                      <ImagePlus className="h-8 w-8 text-gray-400 mb-2" />
+                      <p className="text-sm text-gray-500">Click to upload</p>
+                      <p className="text-xs text-gray-400">Front of product</p>
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    ref={frontImageRef}
+                    onChange={(e) => handleImageChange(e, "front")}
+                    accept="image/*"
+                    className="hidden"
+                    disabled={loading}
+                  />
+                </div>
+
+                {/* Back Image */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-600">
+                    Back Image
+                  </label>
+                  {backImagePreview ? (
+                    <div className="relative">
+                      <img
+                        src={backImagePreview}
+                        alt="Product Back Preview"
+                        className="w-full h-40 object-cover rounded-lg border"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeImage("back")}
+                        disabled={loading}
+                        className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 disabled:opacity-50"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      onClick={() => !loading && backImageRef.current?.click()}
+                      className={`border-2 border-dashed border-gray-300 rounded-lg h-40 flex flex-col items-center justify-center cursor-pointer hover:border-gray-400 transition-colors ${
+                        loading ? "opacity-50 cursor-not-allowed" : ""
+                      }`}
+                    >
+                      <ImagePlus className="h-8 w-8 text-gray-400 mb-2" />
+                      <p className="text-sm text-gray-500">Click to upload</p>
+                      <p className="text-xs text-gray-400">Back of product</p>
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    ref={backImageRef}
+                    onChange={(e) => handleImageChange(e, "back")}
+                    accept="image/*"
+                    className="hidden"
+                    disabled={loading}
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Action Buttons */}
@@ -625,6 +1400,31 @@ export function AddProductModal({
           </form>
         </div>
       </div>
+
+      {/* Add Company Modal */}
+      <AddCompanyModal
+        isOpen={showAddCompanyModal}
+        onClose={() => setShowAddCompanyModal(false)}
+        onSuccess={handleAddCompanySuccess}
+      />
+
+      {/* Add Brand Name Modal */}
+      <AddBrandNameModal
+        isOpen={showAddBrandNameModal}
+        onClose={() => setShowAddBrandNameModal(false)}
+        onSuccess={handleAddBrandNameSuccess}
+      />
+
+      {/* Add Classification Modal */}
+      <AddClassificationModal
+        isOpen={showAddClassificationModal}
+        onClose={() => {
+          setShowAddClassificationModal(false);
+          setClassificationParent(null);
+        }}
+        onSuccess={handleAddClassificationSuccess}
+        parentClassification={classificationParent}
+      />
     </div>
   );
 }
