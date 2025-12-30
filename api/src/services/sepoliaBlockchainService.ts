@@ -6,9 +6,9 @@ import { ethers, JsonRpcProvider, Wallet } from 'ethers';
  */
 
 // Environment variables (should be set in .env)
-const INFURA_API_KEY = process.env.INFURA_API_KEY || 'a2d464efe65243f49bfcde69ad81a99c';
-const WALLET_PRIVATE_KEY = process.env.WALLET_PRIVATE_KEY || '8fa1fdab4a378dc783f6f319b95af7d1ad6d63d82ad64e515400a54438e9fc38';
-const ADMIN_WALLET_ADDRESS = process.env.ADMIN_WALLET_ADDRESS || '0x8F13740324D3e9AA9484D0F619eA1b7Fa52A5697';
+const INFURA_API_KEY = process.env.INFURA_API_KEY || '';
+const WALLET_PRIVATE_KEY = process.env.WALLET_PRIVATE_KEY || '';
+const ADMIN_WALLET_ADDRESS = process.env.ADMIN_WALLET_ADDRESS || '';
 
 // Provider and wallet instances
 let provider: JsonRpcProvider | null = null;
