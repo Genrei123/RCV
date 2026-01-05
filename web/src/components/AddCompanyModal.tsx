@@ -68,13 +68,18 @@ export function AddCompanyModal({ isOpen, onClose, onSuccess }: AddCompanyModalP
       newErrors.address = 'This information is too long';
     }
 
+    // LICENSE NUMBER VALIDATION
     if (!formData.licenseNumber.trim()) {
       newErrors.licenseNumber = 'License number is required';
     } else if (formData.licenseNumber.trim().length < 3) {
       newErrors.licenseNumber = 'License number must be at least 3 characters';
     } else if (formData.licenseNumber.trim().length > 50) {
       newErrors.licenseNumber = 'This information is too long';
-    }
+    } 
+    // OPTIONAL: Add this if you want to prevent special characters
+    // else if (!/^[a-zA-Z0-9-]+$/.test(formData.licenseNumber)) {
+    //   newErrors.licenseNumber = 'License number contains invalid characters';
+    // }
 
     setErrors(newErrors);
 

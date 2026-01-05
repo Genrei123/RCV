@@ -144,35 +144,60 @@ export function AddProductModal({
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
+    // Helper constraints (You can adjust these based on your specific rules)
+    const MAX_LENGTH = 50; 
+    const MSG_REQUIRED = "This field is required";
+    const MSG_TOO_LONG = `Must be ${MAX_LENGTH} characters or less`;
+
+    // --- Validate LTO Number ---
     if (!formData.LTONumber.trim()) {
       newErrors.LTONumber = "LTO Number is required";
+    } else if (formData.LTONumber.length > MAX_LENGTH) {
+      newErrors.LTONumber = MSG_TOO_LONG;
     }
 
+    // --- Validate CFPR Number ---
     if (!formData.CFPRNumber.trim()) {
       newErrors.CFPRNumber = "CFPR Number is required";
+    } else if (formData.CFPRNumber.length > MAX_LENGTH) {
+      newErrors.CFPRNumber = MSG_TOO_LONG;
     }
 
+    // --- Validate Lot Number ---
     if (!formData.lotNumber.trim()) {
       newErrors.lotNumber = "Lot Number is required";
+    } else if (formData.lotNumber.length > MAX_LENGTH) {
+      newErrors.lotNumber = MSG_TOO_LONG;
     }
 
+    // --- Validate Brand Name ---
     if (!formData.brandName.trim()) {
       newErrors.brandName = "Brand Name is required";
+    } else if (formData.brandName.length > MAX_LENGTH) {
+      newErrors.brandName = MSG_TOO_LONG;
     }
 
+    // --- Validate Product Name ---
     if (!formData.productName.trim()) {
       newErrors.productName = "Product Name is required";
+    } else if (formData.productName.length > MAX_LENGTH) {
+      newErrors.productName = MSG_TOO_LONG;
     }
 
+    // --- Validate Classifications ---
     if (!formData.productClassification.trim()) {
       newErrors.productClassification = "Product Classification is required";
+    } else if (formData.productClassification.length > MAX_LENGTH) {
+      newErrors.productClassification = MSG_TOO_LONG;
     }
 
     if (!formData.productSubClassification.trim()) {
-      newErrors.productSubClassification =
-        "Product Sub-Classification is required";
+      newErrors.productSubClassification = "Product Sub-Classification is required";
+    } else if (formData.productSubClassification.length > MAX_LENGTH) {
+      newErrors.productSubClassification = MSG_TOO_LONG;
     }
 
+    // --- Validate Dates ---
     if (!formData.expirationDate) {
       newErrors.expirationDate = "Expiration Date is required";
     }
@@ -183,7 +208,7 @@ export function AddProductModal({
 
     setErrors(newErrors);
 
-    // Build human-friendly summary and show toast popup for quick UX
+    // Build human-friendly summary for the toast
     const fieldLabelMap: Record<string, string> = {
       LTONumber: "LTO Number",
       CFPRNumber: "CFPR Number",
@@ -198,7 +223,6 @@ export function AddProductModal({
 
     const fields = Object.keys(newErrors).map((k) => fieldLabelMap[k] || k);
     if (fields.length > 0) {
-      // show a single toast listing the fields to fix; use toastId to avoid duplicates
       toast.error(`Please fix: ${fields.join(", ")}`, {
         toastId: "validation-error",
       });
