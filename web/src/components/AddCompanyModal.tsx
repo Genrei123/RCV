@@ -51,46 +51,53 @@ export function AddCompanyModal({ isOpen, onClose, onSuccess }: AddCompanyModalP
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
+    const MAX_NAME = 50;
+    const MAX_ADDR = 100;
+    const MAX_LIC = 50;
+    const MSG_REQUIRED = 'required';
+    const MSG_TOO_LONG = 'This input is a bit too long. Please shorten it.';
 
+    // Company Name Validation
     if (!formData.name.trim()) {
       newErrors.name = 'Company name is required';
     } else if (formData.name.trim().length < 2) {
       newErrors.name = 'Company name must be at least 2 characters';
-    } else if (formData.name.trim().length > 50) {
-      newErrors.name = 'This information is too long';
+    } else if (formData.name.trim().length > MAX_NAME) {
+      newErrors.name = MSG_TOO_LONG;
     }
 
+    // Address Validation
     if (!formData.address.trim()) {
       newErrors.address = 'Address is required';
     } else if (formData.address.trim().length < 5) {
       newErrors.address = 'Address must be at least 5 characters';
-    } else if (formData.address.trim().length > 100) {
-      newErrors.address = 'This information is too long';
+    } else if (formData.address.trim().length > MAX_ADDR) {
+      newErrors.address = MSG_TOO_LONG;
     }
 
-    // LICENSE NUMBER VALIDATION
+    // License Number Validation
     if (!formData.licenseNumber.trim()) {
       newErrors.licenseNumber = 'License number is required';
     } else if (formData.licenseNumber.trim().length < 3) {
       newErrors.licenseNumber = 'License number must be at least 3 characters';
-    } else if (formData.licenseNumber.trim().length > 50) {
-      newErrors.licenseNumber = 'This information is too long';
-    } 
-    // OPTIONAL: Add this if you want to prevent special characters
-    // else if (!/^[a-zA-Z0-9-]+$/.test(formData.licenseNumber)) {
-    //   newErrors.licenseNumber = 'License number contains invalid characters';
-    // }
+    } else if (formData.licenseNumber.trim().length > MAX_LIC) {
+      newErrors.licenseNumber = MSG_TOO_LONG;
+    }
 
     setErrors(newErrors);
 
-    const fieldLabelMap: Record<string, string> = {
-      name: 'Company Name',
-      address: 'Address',
-      licenseNumber: 'License Number',
-    };
-    const fields = Object.keys(newErrors).map((k) => fieldLabelMap[k] || k);
-    if (fields.length > 0) {
-      toast.error(`Please fix: ${fields.join(', ')}`, { toastId: 'validation-error' });
+    const errorValues = Object.values(newErrors) as string[];
+    
+    if (errorValues.length > 0) {
+      // Check if all errors are just "required" errors
+      const isOnlyEmptyFields = errorValues.every(err => err.toLowerCase().includes(MSG_REQUIRED));
+
+      if (isOnlyEmptyFields) {
+        toast.error("Please fill in all required fields", { toastId: 'validation-error' });
+      } else {
+        // Simple, clean pointer to the highlighted red borders
+        toast.error("Please review the highlighted fields.", { toastId: 'validation-error' });
+      }
     } else {
       toast.dismiss('validation-error');
     }

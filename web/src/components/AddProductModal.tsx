@@ -147,7 +147,7 @@ export function AddProductModal({
     // Helper constraints
     const MAX_LENGTH = 50; 
     const MSG_REQUIRED = "required"; // Keyword to check for emptiness
-    const MSG_TOO_LONG = `Must be ${MAX_LENGTH} characters or less`;
+    const MSG_TOO_LONG = "This input is a bit too long. Please shorten it.";
 
     // --- Validate LTO Number ---
     if (!formData.LTONumber.trim()) {
@@ -209,31 +209,20 @@ export function AddProductModal({
     setErrors(newErrors);
 
     // --- UPDATED NOTIFICATION LOGIC ---
+    // AddProductModal.tsx inside validateForm()
+
     const errorValues = Object.values(newErrors);
-    
+
     if (errorValues.length > 0) {
-      // Check if ALL errors are just missing fields (contain the word 'required')
       const isOnlyEmptyFields = errorValues.every(err => err.toLowerCase().includes(MSG_REQUIRED));
 
       if (isOnlyEmptyFields) {
-        toast.error("Please fill in all required fields", { toastId: "validation-error" });
+        // Generic announcement for missing data
+        toast.error("Required fields are missing", { toastId: "validation-error" });
       } else {
-        // If there are specific validation errors (like too long), show the specific list
-        const fieldLabelMap: Record<string, string> = {
-          LTONumber: "LTO Number",
-          CFPRNumber: "CFPR Number",
-          lotNumber: "Lot Number",
-          brandName: "Brand Name",
-          productName: "Product Name",
-          productClassification: "Product Classification",
-          productSubClassification: "Product Sub-Classification",
-          expirationDate: "Expiration Date",
-          companyId: "Company",
-        };
-
-        const fields = Object.keys(newErrors).map((k) => fieldLabelMap[k] || k);
-        toast.error(`Please fix: ${fields.join(", ")}`, {
-          toastId: "validation-error",
+        // Lead's suggested announcement style
+        toast.error("Invalid input fields", { 
+          toastId: "validation-error" 
         });
       }
     } else {
