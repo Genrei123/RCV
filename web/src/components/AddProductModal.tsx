@@ -144,9 +144,9 @@ export function AddProductModal({
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    // Helper constraints (You can adjust these based on your specific rules)
+    // Helper constraints
     const MAX_LENGTH = 50; 
-    const MSG_REQUIRED = "This field is required";
+    const MSG_REQUIRED = "required"; // Keyword to check for emptiness
     const MSG_TOO_LONG = `Must be ${MAX_LENGTH} characters or less`;
 
     // --- Validate LTO Number ---
@@ -208,24 +208,34 @@ export function AddProductModal({
 
     setErrors(newErrors);
 
-    // Build human-friendly summary for the toast
-    const fieldLabelMap: Record<string, string> = {
-      LTONumber: "LTO Number",
-      CFPRNumber: "CFPR Number",
-      lotNumber: "Lot Number",
-      brandName: "Brand Name",
-      productName: "Product Name",
-      productClassification: "Product Classification",
-      productSubClassification: "Product Sub-Classification",
-      expirationDate: "Expiration Date",
-      companyId: "Company",
-    };
+    // --- UPDATED NOTIFICATION LOGIC ---
+    const errorValues = Object.values(newErrors);
+    
+    if (errorValues.length > 0) {
+      // Check if ALL errors are just missing fields (contain the word 'required')
+      const isOnlyEmptyFields = errorValues.every(err => err.toLowerCase().includes(MSG_REQUIRED));
 
-    const fields = Object.keys(newErrors).map((k) => fieldLabelMap[k] || k);
-    if (fields.length > 0) {
-      toast.error(`Please fix: ${fields.join(", ")}`, {
-        toastId: "validation-error",
-      });
+      if (isOnlyEmptyFields) {
+        toast.error("Please fill in all required fields", { toastId: "validation-error" });
+      } else {
+        // If there are specific validation errors (like too long), show the specific list
+        const fieldLabelMap: Record<string, string> = {
+          LTONumber: "LTO Number",
+          CFPRNumber: "CFPR Number",
+          lotNumber: "Lot Number",
+          brandName: "Brand Name",
+          productName: "Product Name",
+          productClassification: "Product Classification",
+          productSubClassification: "Product Sub-Classification",
+          expirationDate: "Expiration Date",
+          companyId: "Company",
+        };
+
+        const fields = Object.keys(newErrors).map((k) => fieldLabelMap[k] || k);
+        toast.error(`Please fix: ${fields.join(", ")}`, {
+          toastId: "validation-error",
+        });
+      }
     } else {
       toast.dismiss("validation-error");
     }
@@ -237,11 +247,13 @@ export function AddProductModal({
     e.preventDefault();
 
     if (!validateForm()) {
-      toast.error("Please fill in all required fields");
+      // REMOVED: toast.error("Please fill in all required fields");
+      // The validateForm function now handles the toast display logic.
       return;
     }
 
     setLoading(true);
+    // ... rest of the function remains the same
 
     try {
       // The JWT token is automatically included in the request via axios interceptor
