@@ -2,14 +2,19 @@ import bcryptjs from 'bcryptjs';
 import CustomError from '../../utils/CustomError';
 import { ForgotPasswordRepo, UserRepo } from '../../typeorm/data-source';
 import type { NextFunction, Request, Response } from 'express';
-import { createForgotPasswordToken, createToken, createMobileToken, verifyToken } from '../../utils/JWT';
+import {
+  createForgotPasswordToken,
+  createToken,
+  createMobileToken,
+  verifyToken,
+  decryptToken,
+} from "../../utils/JWT";
 import { UserValidation, type User } from '../../typeorm/entities/user.entity';
 import nodemailer_transporter from '../../utils/nodemailer';
 import { AuditLogService } from '../../services/auditLogService';
 import { FirebaseAuthService } from '../../services/firebaseAuthService';
 import CryptoJS from 'crypto-js';
 import * as dotenv from 'dotenv';
-import { jwt } from 'zod';
 dotenv.config();
 
 export const userSignIn = async (req: Request, res: Response, next: NextFunction) => {
@@ -182,7 +187,7 @@ export const mobileSignIn = async (req: Request, res: Response, next: NextFuncti
 
     // Create mobile token with full user data
     const fullName = `${user.firstName} ${user.middleName ? user.middleName + ' ' : ''}${user.lastName}${user.extName ? ' ' + user.extName : ''}`.trim();
-    
+
     const mobileToken = createMobileToken({
       sub: user._id,
       email: user.email,
@@ -432,7 +437,22 @@ export const refreshToken = async (
   next: NextFunction
 ) => {
   if (req.cookies) {
-    const refreshToken = req.cookies.token;
+    let refreshToken = req.cookies.token;
+
+    // Decrypt the token if it came from cookie
+    if (refreshToken) {
+      try {
+        refreshToken = decryptToken(refreshToken);
+      } catch (decryptError) {
+        console.error("Error decrypting refresh token:", decryptError);
+        return next(
+          new CustomError(400, "Failed to decrypt token", {
+            token: refreshToken,
+          })
+        );
+      }
+    }
+
     const decoded = verifyToken(refreshToken);
     if (!decoded || !decoded.success) {
       return next(
@@ -464,13 +484,24 @@ export const me = async (req: Request, res: Response, next: NextFunction) => {
   try {
     // Try to get token from Authorization header first, then from cookie
     let token: string | undefined;
-    
+
     if (req.headers.authorization) {
       token = req.headers.authorization;
     } else if (req.cookies && req.cookies.token) {
-      token = req.cookies.token;
+      // Decrypt the token if it came from cookie
+      try {
+        const encryptedToken = req.cookies.token;
+        token = decryptToken(encryptedToken);
+      } catch (decryptError) {
+        console.error("Error decrypting token in me endpoint:", decryptError);
+        return next(
+          new CustomError(400, "Failed to decrypt token", {
+            token: null,
+          })
+        );
+      }
     }
-    
+
     if (!token) {
       return next(
         new CustomError(400, "No token provided", {
@@ -478,7 +509,7 @@ export const me = async (req: Request, res: Response, next: NextFunction) => {
         })
       );
     }
-    
+
     const decoded = verifyToken(token);
     if (!decoded || !decoded.success) {
       return next(
@@ -487,7 +518,7 @@ export const me = async (req: Request, res: Response, next: NextFunction) => {
         })
       );
     }
-    
+
     const User = await UserRepo.findOne({
       where: { _id: decoded.data?.sub },
       select: [
@@ -503,7 +534,7 @@ export const me = async (req: Request, res: Response, next: NextFunction) => {
         "avatarUrl",
       ],
     });
-    
+
     return res.send(User);
   } catch (error) {
     return next(error);
@@ -541,11 +572,11 @@ export const meMobile = async (req: Request, res: Response, next: NextFunction) 
         "extName",
       ],
     });
-    
+
     if (!user) {
       return next(new CustomError(404, "User not found"));
     }
-    
+
     return res.status(200).json(user);
   } catch (error) {
     return next(error);
@@ -809,10 +840,10 @@ export const generateForgotPassword = async (
   return res
     .status(200)
     .json({
-      message: "Forgot password key sent",
-      email: email,
-      hashKey: hashKey,
-    });
+    message: "Forgot password key sent",
+    email: email,
+    hashKey: hashKey,
+  });
 };
 
 export const forgotPassword = async (

@@ -10,12 +10,13 @@ import {
   BarChart3,
   Sliders,
   Verified,
-  ShieldCheck,
   ChevronDown,
+  Wallet,
 } from "lucide-react";
 import { LogoutModal } from "./LogoutModal";
 import { AuthService } from "@/services/authService";
 import { toast } from "react-toastify";
+import { useMetaMask } from "@/contexts/MetaMaskContext";
 
 interface CurrentUser {
   _id: string;
@@ -23,7 +24,8 @@ interface CurrentUser {
   lastName: string;
   middleName?: string;
   email: string;
-  role?: number;
+  role?: number | string;
+  isSuperAdmin?: boolean;
   avatar?: string;
 }
 
@@ -67,6 +69,7 @@ export function Sidebar({
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const visible = open;
   const closeDrawer = () => onClose?.();
+  const { isConnected, walletAddress, isAuthorized, connect, disconnect, switchAccount } = useMetaMask();
 
   useEffect(() => {
     fetchCurrentUser();
@@ -132,6 +135,16 @@ export function Sidebar({
     if (currentUser.role === undefined || currentUser.role === null)
       return "Agent";
 
+    // Handle both string and number role formats
+    if (typeof currentUser.role === 'string') {
+      const stringRoleMap: { [key: string]: string } = {
+        'AGENT': 'Agent',
+        'ADMIN': 'Admin',
+        'USER': 'User',
+      };
+      return stringRoleMap[currentUser.role] || "Agent";
+    }
+
     const roleMap: { [key: number]: string } = {
       1: "Agent",
       2: "Admin",
@@ -141,7 +154,7 @@ export function Sidebar({
   };
 
   const menuItems = [
-    { path: "/", label: "Dashboard", icon: LayoutDashboard },
+    { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { path: "/products", label: "Products", icon: Package },
     { path: "/companies", label: "Companies", icon: Building2 },
     { path: "/maps", label: "Maps", icon: MapPin },
@@ -150,11 +163,6 @@ export function Sidebar({
     // { path: '/kiosk-monitor', label: 'Kiosk Monitor', icon: Activity },
     // { path: '/users', label: 'Users', icon: Users },
     { path: "/blockchain", label: "Blockchain", icon: Verified },
-    {
-      path: "/verify-certificate",
-      label: "Verify Certificate",
-      icon: ShieldCheck,
-    },
   ];
 
   const handleLogout = async () => {
@@ -190,7 +198,7 @@ export function Sidebar({
           <button
             type="button"
             onClick={() => setShowProfileMenu((s) => !s)}
-            className="w-full flex items-center gap-3 text-left focus:outline-none"
+            className="w-full flex items-center gap-3 text-left focus:outline-none cursor-pointer"
           >
             <div className="w-10 h-10 rounded-full overflow-hidden bg-neutral-300 flex items-center justify-center flex-shrink-0 cursor-pointer">
               {avatarUrl ? (
@@ -214,15 +222,15 @@ export function Sidebar({
             <ChevronDown
               size={16}
               className={`transition-transform ${
-                showProfileMenu ? "rotate-180" : ""
+                showProfileMenu ? "rotate-180 cursor-pointer" : ""
               }`}
             />
           </button>
 
           {/* Profile dropdown (desktop) */}
           {showProfileMenu && (
-            <div className="absolute left-4 bottom-0 translate-y-full mt-2 w-48 bg-white border rounded-lg shadow-lg overflow-hidden z-50">
-              <div className="py-1">
+            <div className="absolute left-4 bottom-0 translate-y-full mt-2 w-48 bg-white border rounded-lg shadow-lg overflow-hidden z-50  ">
+              <div className="py-1 ">
                 <Link
                   to="/profile"
                   onClick={() => setShowProfileMenu(false)}
@@ -236,7 +244,7 @@ export function Sidebar({
                     setShowProfileMenu(false);
                     setShowLogoutModal(true);
                   }}
-                  className="w-full flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50"
+                  className="w-full flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-50 "
                 >
                   <LogOut size={16} />
                   <span className="text-sm">Sign Out</span>
@@ -273,6 +281,51 @@ export function Sidebar({
             })}
           </div>
         </nav>
+
+        {/* MetaMask Wallet Section */}
+        <div className="p-4 border-t border-neutral-200">
+          <div className="bg-neutral-50 rounded-lg p-3">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Wallet size={16} className="text-orange-500" />
+                <span className="text-xs font-medium text-neutral-700">Wallet</span>
+              </div>
+              {isConnected && (
+                <div className={`w-2 h-2 rounded-full ${isAuthorized ? 'bg-green-500' : 'bg-yellow-500'}`} />
+              )}
+            </div>
+            {isConnected && walletAddress ? (
+              <div className="space-y-2">
+                <p className="text-xs font-mono text-neutral-600 truncate" title={walletAddress}>
+                  {walletAddress.slice(0, 8)}...{walletAddress.slice(-6)}
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={switchAccount}
+                    className="flex-1 text-xs text-blue-500 hover:text-blue-700 py-1"
+                    title="Switch to another account"
+                  >
+                    Switch
+                  </button>
+                  <button
+                    onClick={disconnect}
+                    className="flex-1 text-xs text-red-500 hover:text-red-700 py-1"
+                  >
+                    Disconnect
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => connect(true)}
+                className="w-full text-xs app-text-primary hover:opacity-80 py-1 flex items-center justify-center gap-1"
+              >
+                <Wallet size={12} />
+                Connect MetaMask
+              </button>
+            )}
+          </div>
+        </div>
       </aside>
 
       {/* mobile/tablet drawer: visible below lg, use visible & closeDrawer */}
@@ -311,7 +364,7 @@ export function Sidebar({
               className="p-1 text-slate-600"
               aria-label="Close menu"
             >
-              <ChevronDown size={18} className="rotate-90" />
+              <ChevronDown size={18} className="rotate-90 " />
             </button>
           </div>
 

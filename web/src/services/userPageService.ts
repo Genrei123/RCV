@@ -89,11 +89,20 @@ export class UserPageService {
     }
   }
 
-  static async rejectUser(userId: string): Promise<void> {
+  static async rejectUser(userId: string, reason?: string): Promise<void> {
     try {
-      await apiClient.patch(`/user/users/${userId}/reject`);
+      await apiClient.patch(`/user/users/${userId}/reject`, { reason });
     } catch (error) {
       console.error("Error rejecting user:", error);
+      throw error;
+    }
+  }
+
+  static async updateUserAccess(userId: string, webAccess: boolean, appAccess: boolean): Promise<void> {
+    try {
+      await apiClient.patch(`/user/users/${userId}/access`, { webAccess, appAccess });
+    } catch (error) {
+      console.error("Error updating user access:", error);
       throw error;
     }
   }

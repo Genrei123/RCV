@@ -61,11 +61,11 @@ export const getAllCompanies = async (
     // Get ProductRepo
     const { ProductRepo } = require("../../typeorm/data-source");
 
-    // For each company, count products with matching LTO number
+    // For each company, count products with matching companyId
     const mappedCompanies = await Promise.all(
       companies.map(async (company) => {
         const productCount = await ProductRepo.count({ 
-          where: { LTONumber: company.licenseNumber } 
+          where: { companyId: company._id } 
         });
         return { ...company, productCount };
       })
@@ -127,27 +127,29 @@ export const createCompany = async (
       return next(new CustomError(401, "User not authenticated"));
     }
 
-    const Company = CompanyValidation.safeParse(req.body);
-    if (Company.error) {
+    const companyResult = CompanyValidation.safeParse(req.body);
+    if (companyResult.error) {
       return next(
         new CustomError(400, "Invalid Company Data or missing parameters", {
           body: req.body,
-          errors: Company.error.issues,
+          errors: companyResult.error.issues,
         })
       );
     }
 
     if (
-      await CompanyRepo.findOneBy({ licenseNumber: Company.data.licenseNumber })
+      await CompanyRepo.findOneBy({ licenseNumber: companyResult.data.licenseNumber })
     ) {
       return next(
         new CustomError(400, "Company with license number already exists", {
-          company: Company.data.licenseNumber,
+          company: companyResult.data.licenseNumber,
         })
       );
     }
 
-    const savedCompany = await CompanyRepo.save(Company.data);
+    // Create company entity with validated data
+    const companyToSave = CompanyRepo.create(companyResult.data);
+    const savedCompany = await CompanyRepo.save(companyToSave);
     
     // Clear companies cache when new company is created
     try {
@@ -159,7 +161,7 @@ export const createCompany = async (
     // Log company creation
     await AuditLogService.createLog({
       action: `Created company: ${savedCompany.name} (License: ${savedCompany.licenseNumber})`,
-      actionType: 'CREATE_PRODUCT', // Reusing CREATE_PRODUCT as there's no CREATE_COMPANY type yet
+      actionType: 'CREATE_COMPANY',
       userId: currentUser._id,
       platform: 'WEB',
       metadata: {

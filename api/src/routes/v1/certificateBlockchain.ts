@@ -10,36 +10,43 @@ import {
     calculatePDFHash,
     getCertificatePDFUrl
 } from '../../controllers/blockchain/CertificateBlockchain';
+import { verifyUser } from '../../middleware/verifyUser';
 
 const router = Router();
 
 // Certificate Blockchain Routes
 
-// Add certificate to blockchain
-router.post('/add', addCertificateToBlockchain);
+// ============ PUBLIC ROUTES ============
+// These routes are public for certificate verification
 
-// Verify certificate PDF hash
+// Verify certificate PDF hash (PUBLIC - for certificate verification page)
 router.post('/verify', verifyCertificatePDF);
 
-// Get certificate by ID
+// Utility: Calculate PDF hash from base64 (PUBLIC - for verification)
+router.post('/calculate-hash', calculatePDFHash);
+
+// Get certificate by ID (PUBLIC - for verification)
 router.get('/certificate/:certificateId', getCertificateById);
 
-// Get certificate PDF URL from Firebase Storage (for QR code scanning)
+// Get certificate PDF URL from Firebase Storage (PUBLIC - for QR code scanning)
 router.get('/pdf/:certificateId', getCertificatePDFUrl);
 
-// Get certificates by entity (company or product)
-router.get('/entity/:entityId', getCertificatesByEntity);
-
-// Get blockchain statistics
+// Get blockchain statistics (PUBLIC)
 router.get('/stats', getCertificateBlockchainStats);
 
-// Validate blockchain integrity
+// Validate blockchain integrity (PUBLIC)
 router.get('/validate', validateCertificateBlockchain);
 
-// Get paginated certificates list
-router.get('/certificates', getCertificatesList);
+// ============ PROTECTED ROUTES ============
+// These routes require authentication
 
-// Utility: Calculate PDF hash from base64
-router.post('/calculate-hash', calculatePDFHash);
+// Add certificate to blockchain (PROTECTED)
+router.post('/add', verifyUser, addCertificateToBlockchain);
+
+// Get certificates by entity (PROTECTED)
+router.get('/entity/:entityId', verifyUser, getCertificatesByEntity);
+
+// Get paginated certificates list (PROTECTED)
+router.get('/certificates', verifyUser, getCertificatesList);
 
 export default router;

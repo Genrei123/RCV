@@ -50,7 +50,13 @@ export const getAllUsers = async (
         "badgeId",
         "approved",
         "status",
+        "rejectionReason",
         "role",
+        "webAccess",
+        "appAccess",
+        "avatarUrl",
+        "idDocumentUrl",
+        "selfieWithIdUrl",
         "createdAt",
         "updatedAt",
       ],
@@ -95,6 +101,7 @@ export const getUserById = async (
         "role",
         "approved",
         "status",
+        "rejectionReason",
         "firstName",
         "middleName",
         "lastName",
@@ -106,6 +113,10 @@ export const getUserById = async (
         "currentLocation",
         "badgeId",
         "avatarUrl",
+        "webAccess",
+        "appAccess",
+        "idDocumentUrl",
+        "selfieWithIdUrl",
         "createdAt",
         "updatedAt",
       ],
@@ -386,6 +397,8 @@ export const rejectUser = async (
   }
 
   try {
+    const { reason } = req.body;
+    
     const user = await UserRepo.findOneBy({ _id: idResult.data });
     if (!user) {
       return res
@@ -394,9 +407,9 @@ export const rejectUser = async (
     }
 
     user.approved = false;
-    // Optionally set status back to Pending when rejected
-    if (user.status === "Active") {
-      user.status = "Pending";
+    user.status = "Rejected";
+    if (reason) {
+      user.rejectionReason = reason;
     }
 
     const saved = await UserRepo.save(user);
@@ -410,7 +423,51 @@ export const rejectUser = async (
     return res.status(200).json({
       success: true,
       user: saved,
-      message: "User approval revoked successfully",
+      message: "User account has been rejected",
+    });
+  } catch (error) {
+    return next(CustomError.security(500, "Server Error"));
+  }
+};
+
+// Update user access permissions (admin only)
+export const updateUserAccess = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const idResult = IdSchema.safeParse(req.params.id);
+  if (!idResult.success) {
+    return res.status(400).json({ success: false, message: "Invalid User ID" });
+  }
+
+  try {
+    const { webAccess, appAccess } = req.body;
+    
+    // Ensure at least one access type is enabled
+    if (webAccess === false && appAccess === false) {
+      return res.status(400).json({
+        success: false,
+        message: "User must have at least one access type enabled",
+      });
+    }
+
+    const user = await UserRepo.findOneBy({ _id: idResult.data });
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    if (webAccess !== undefined) user.webAccess = webAccess;
+    if (appAccess !== undefined) user.appAccess = appAccess;
+
+    const saved = await UserRepo.save(user);
+
+    return res.status(200).json({
+      success: true,
+      user: saved,
+      message: "User access permissions updated successfully",
     });
   } catch (error) {
     return next(CustomError.security(500, "Server Error"));

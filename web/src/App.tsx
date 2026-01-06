@@ -29,6 +29,10 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import About from "./pages/AboutUs";
 import Contact from "./pages/ContactUs";
+import { PendingAgents } from "./pages/PendingAgents";
+import { AgentRegistration } from "./pages/AgentRegistration";
+import { LandingPage } from "./pages/LandingPage";
+import { MetaMaskProvider } from "./contexts/MetaMaskContext";
 
 interface ProtectedRoutesProps {
   children: ReactNode;
@@ -107,10 +111,17 @@ function App() {
   const [productsData, setProductsData] = useState<ProductsProps>();
   const [companiesData, setCompanies] = useState<CompaniesProps>();
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
     AuthService.initializeAuthenticaiton().then((loggedIn) => {
       setIsLoggedIn(loggedIn);
+      if (loggedIn) {
+        // Fetch current user data
+        AuthService.getCurrentUser().then((user) => {
+          setCurrentUser(user);
+        });
+      }
     });
   }, []);
 
@@ -151,27 +162,28 @@ function App() {
   }, [isLoggedIn]);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <GlobalLoadingIndicator />
-      <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
-      />
-      <Routes>
-        {/* Public Routes */}
-        <Route
-          path="/login"
-          element={
-            <PublicRoute>
-              <AuthPage />
+    <MetaMaskProvider>
+      <div className="min-h-screen bg-background flex flex-col">
+        <GlobalLoadingIndicator />
+        <ToastContainer
+          position="top-right"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="light"
+        />
+        <Routes>
+          {/* Public Routes */}
+          <Route
+            path="/login"
+            element={
+              <PublicRoute>
+                <AuthPage />
             </PublicRoute>
           }
         />
@@ -200,18 +212,28 @@ function App() {
           }
         />
         <Route path="/pending-approval" element={<PendingApprovalPage />} />
+        
+        {/* Agent Registration - Accessible to invited users */}
+        <Route
+          path="/agent-registration"
+          element={
+            <AccessibleRoute>
+              <AgentRegistration />
+            </AccessibleRoute>
+          }
+        />
 
-        {/* Protected Routes wrapped with AppLayout */}
+        {/* Landing Page - Public */}
         <Route
           path="/"
           element={
-            <ProtectedRoutes>
-              <AppLayout>
-                <Dashboard {...dashboardData} />
-              </AppLayout>
-            </ProtectedRoutes>
+            <PublicRoute>
+              <LandingPage />
+            </PublicRoute>
           }
         />
+
+        {/* Protected Routes wrapped with AppLayout */}
         <Route
           path="/dashboard"
           element={
@@ -299,11 +321,9 @@ function App() {
         <Route
           path="/verify-certificate"
           element={
-            <ProtectedRoutes>
-              <AppLayout>
-                <CertificateVerifier />
-              </AppLayout>
-            </ProtectedRoutes>
+            <AccessibleRoute>
+              <CertificateVerifier />
+            </AccessibleRoute>
           }
         />
         <Route
@@ -356,11 +376,22 @@ function App() {
             </ProtectedRoutes>
           }
         />
+        <Route
+          path="/pending-agents"
+          element={
+            <ProtectedRoutes>
+              <AppLayout>
+                <PendingAgents user={currentUser} />
+              </AppLayout>
+            </ProtectedRoutes>
+          }
+        />
 
         {/* 404 Catch-all */}
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
-    </div>
+      </div>
+    </MetaMaskProvider>
   );
 }
 

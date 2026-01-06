@@ -13,6 +13,7 @@ export interface CertificateData {
     ltoNumber?: string; // For product certificates
     cfprNumber?: string; // For product certificates
     issuedDate: Date;
+    sepoliaTransactionId?: string; // Sepolia blockchain transaction hash
     metadata?: Record<string, any>;
 }
 

@@ -11,6 +11,7 @@ UserRouter.put("/users/:id", UserController.updateEntireUser);
 UserRouter.patch("/users/:id", UserController.partialUpdateUser);
 UserRouter.patch("/users/:id/approve", UserController.approveUser);
 UserRouter.patch("/users/:id/reject", UserController.rejectUser);
+UserRouter.patch("/users/:id/access", UserController.updateUserAccess);
 UserRouter.patch("/users/:id/toggle-approval", UserController.toggleUserApproval);
 UserRouter.delete("/users/:id", UserController.deleteUser);
 

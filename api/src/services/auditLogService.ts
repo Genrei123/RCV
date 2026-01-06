@@ -22,7 +22,16 @@ interface CreateAuditLogParams {
     | 'ARCHIVE_ACCOUNT'
     | 'LOCATION_UPDATE'
     | 'APP_CLOSED'
-    | 'COMPLIANCE_REPORT';
+    | 'COMPLIANCE_REPORT'
+    | 'CREATE_BRAND_NAME'
+    | 'UPDATE_BRAND_NAME'
+    | 'DELETE_BRAND_NAME'
+    | 'UPDATE_CLASSIFICATION'
+    | 'DELETE_CLASSIFICATION'
+    | 'CREATE_CLASSIFICATION'
+    | 'CREATE_COMPANY'
+    | 'UPDATE_COMPANY'
+    | 'DELETE_COMPANY';
   userId?: string;
   targetUserId?: string;
   targetProductId?: string;
