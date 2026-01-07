@@ -40,6 +40,7 @@ const mockUser: UserInput = {
   approved: false,
   appAccess: true,
   webAccess: false,
+  walletAuthorized: false,
 };
 
 describe("Sign In", () => {
