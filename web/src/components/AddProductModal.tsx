@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { X, Package, Hash, Calendar, Building2, Plus, ImagePlus, Camera, Tag, Layers, Wallet, AlertTriangle } from "lucide-react";
+import { X, Package, Hash, Calendar, Building2, Plus, ImagePlus, Camera, Tag, Layers, Wallet, AlertTriangle, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProductService } from "@/services/productService";
@@ -9,6 +9,7 @@ import { BrandNameService } from "@/services/brandNameService";
 import { ProductClassificationService } from "@/services/productClassificationService";
 import { FirebaseStorageService } from "@/services/firebaseStorageService";
 import { MetaMaskService } from "@/services/metaMaskService";
+import { CertificateApprovalService } from "@/services/approvalService";
 import { AddCompanyModal } from "@/components/AddCompanyModal";
 import { AddBrandNameModal } from "@/components/AddBrandNameModal";
 import { AddClassificationModal } from "@/components/AddClassificationModal";
@@ -16,6 +17,7 @@ import type { BrandName } from "@/typeorm/entities/brandName.entity";
 import type { ProductClassification } from "@/typeorm/entities/productClassification.entity";
 import { toast } from "react-toastify";
 import { useMetaMask } from "@/contexts/MetaMaskContext";
+import { AuthService } from "@/services/authService";
 
 interface AddProductModalProps {
   isOpen: boolean;
@@ -637,64 +639,7 @@ export function AddProductModal({
     setLoading(true);
 
     try {
-      // ============ PHASE 1: PREPARE DATA & BLOCKCHAIN (Optional) ============
-      // If wallet is connected, we do blockchain first to ensure atomicity
-      
-      let sepoliaTransactionId: string | undefined;
-      
-      // Generate hash for blockchain BEFORE creating product
-      if (isWalletConnected && isWalletAuthorized && walletAddress) {
-        toast.info("Preparing blockchain verification...", { autoClose: 2000 });
-        
-        // Generate a hash from product data
-        const productDataString = JSON.stringify({
-          LTONumber: formData.LTONumber,
-          CFPRNumber: formData.CFPRNumber,
-          lotNumber: formData.lotNumber,
-          productName: formData.productName,
-          brandName: formData.brandName,
-          timestamp: new Date().toISOString()
-        });
-        
-        // Create SHA-256 hash
-        const encoder = new TextEncoder();
-        const data = encoder.encode(productDataString);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        const pdfHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-        
-        toast.info("Storing certificate on Sepolia blockchain...", { autoClose: 2000 });
-        
-        const blockchainResult = await MetaMaskService.storeHashOnBlockchain(
-          pdfHash,
-          `CERT-PROD-${formData.LTONumber}-${Date.now()}`,
-          'product',
-          formData.productName,
-          walletAddress
-        );
-        
-        if (blockchainResult.success && blockchainResult.data) {
-          sepoliaTransactionId = blockchainResult.data.txHash;
-          toast.success(
-            `Blockchain verified! Tx: ${sepoliaTransactionId.slice(0, 10)}...`,
-            { autoClose: 3000 }
-          );
-        } else {
-          // Blockchain failed - ask user if they want to continue without it
-          const continueWithoutBlockchain = window.confirm(
-            "Blockchain storage failed. Do you want to create the product without blockchain verification?\n\n" +
-            "Note: The product can be verified on blockchain later."
-          );
-          
-          if (!continueWithoutBlockchain) {
-            toast.info("Product creation cancelled");
-            setLoading(false);
-            return;
-          }
-        }
-      }
-
-      // ============ PHASE 2: UPLOAD IMAGES ============
+      // ============ PHASE 1: UPLOAD IMAGES ============
       let productImageFrontUrl: string | undefined;
       let productImageBackUrl: string | undefined;
 
@@ -716,7 +661,7 @@ export function AddProductModal({
         productImageBackUrl = response.downloadUrl;
       }
 
-      // ============ PHASE 3: CREATE PRODUCT ============
+      // ============ PHASE 2: CREATE PRODUCT ============
       const productData: CreateProductRequest = {
         LTONumber: formData.LTONumber,
         CFPRNumber: formData.CFPRNumber,
@@ -734,27 +679,77 @@ export function AddProductModal({
         brandNameId: selectedBrandName?._id,
         classificationId: selectedClassification?._id,
         subClassificationId: selectedSubClassification?._id,
-        // Include Sepolia transaction ID if available
-        sepoliaTransactionId,
+        // Don't include sepoliaTransactionId - will be added after approval
       };
 
+      toast.info("Creating product...", { autoClose: 1500 });
       const response = await ProductService.addProduct(productData);
 
-      // Show success message
-      if (sepoliaTransactionId) {
-        toast.success(
-          `Product created & verified on blockchain by ${response.registeredBy.name}!`
-        );
+      // ============ PHASE 3: SUBMIT FOR MULTI-SIG APPROVAL ============
+      // Only submit for blockchain approval if wallet is connected and authorized
+      if (isWalletConnected && isWalletAuthorized && walletAddress) {
+        toast.info("Submitting for multi-signature approval...", { autoClose: 2000 });
+        
+        // Generate hash from product data for certificate
+        const productDataString = JSON.stringify({
+          LTONumber: formData.LTONumber,
+          CFPRNumber: formData.CFPRNumber,
+          lotNumber: formData.lotNumber,
+          productName: formData.productName,
+          brandName: formData.brandName,
+          productId: response.product?._id || response._id,
+          timestamp: new Date().toISOString()
+        });
+        
+        // Create SHA-256 hash
+        const encoder = new TextEncoder();
+        const data = encoder.encode(productDataString);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const pdfHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        
+        // Get current user for submitter info
+        const currentUser = await AuthService.getCurrentUser();
+        
+        // Submit for approval
+        const certificateId = `CERT-PROD-${formData.LTONumber}-${Date.now()}`;
+        const productId = response.product?._id || response._id;
+        
+        try {
+          const approval = await CertificateApprovalService.submitForApproval({
+            certificateId,
+            entityType: 'product',
+            entityId: productId,
+            entityName: formData.productName,
+            pdfHash,
+            submitterName: currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : undefined,
+            submitterWallet: walletAddress,
+          });
+          
+          toast.success(
+            `Product created! Submitted for approval (${approval.requiredApprovals} admins required)`,
+            { autoClose: 5000 }
+          );
+        } catch (approvalError: any) {
+          console.error("Failed to submit for approval:", approvalError);
+          toast.warning(
+            "Product created but failed to submit for approval. You can submit manually later.",
+            { autoClose: 5000 }
+          );
+        }
       } else {
+        // No wallet connected - just show success for product creation
         toast.success(
-          `Product created successfully by ${response.registeredBy.name}!`
+          `Product created successfully by ${response.registeredBy?.name || 'Unknown'}!`,
+          { autoClose: 3000 }
+        );
+        toast.info(
+          "Connect your wallet to submit products for blockchain verification",
+          { autoClose: 5000 }
         );
       }
 
       console.log("Product registered by:", response.registeredBy);
-      if (sepoliaTransactionId) {
-        console.log("Blockchain transaction:", sepoliaTransactionId);
-      }
 
       // Reset form
       setFormData({

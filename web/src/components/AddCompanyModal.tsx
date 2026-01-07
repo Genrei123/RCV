@@ -15,6 +15,7 @@ import {
   Map,
   Wallet,
   AlertTriangle,
+  Shield,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +31,8 @@ import {
 import { CompanyService, type CreateCompanyRequest } from "@/services/companyService";
 import { FirebaseStorageService } from "@/services/firebaseStorageService";
 import { MetaMaskService } from "@/services/metaMaskService";
+import { CertificateApprovalService } from "@/services/approvalService";
+import { AuthService } from "@/services/authService";
 import type { CompanyDocument } from "@/typeorm/entities/company.entity";
 import { toast } from "react-toastify";
 import { useMetaMask } from "@/contexts/MetaMaskContext";
@@ -424,59 +427,7 @@ export function AddCompanyModal({
     setLoading(true);
 
     try {
-      // ============ PHASE 1: BLOCKCHAIN VERIFICATION (Optional) ============
-      let sepoliaTransactionId: string | undefined;
-      
-      if (isWalletConnected && isWalletAuthorized && walletAddress) {
-        toast.info("Preparing blockchain verification...", { autoClose: 2000 });
-        
-        // Generate a hash from company data
-        const companyDataString = JSON.stringify({
-          name: formData.name,
-          licenseNumber: formData.licenseNumber,
-          address: formData.address,
-          timestamp: new Date().toISOString()
-        });
-        
-        // Create SHA-256 hash
-        const encoder = new TextEncoder();
-        const data = encoder.encode(companyDataString);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        const pdfHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-        
-        toast.info("Storing certificate on Sepolia blockchain...", { autoClose: 2000 });
-        
-        const blockchainResult = await MetaMaskService.storeHashOnBlockchain(
-          pdfHash,
-          `CERT-COMP-${formData.licenseNumber}-${Date.now()}`,
-          'company',
-          formData.name!,
-          walletAddress
-        );
-        
-        if (blockchainResult.success && blockchainResult.data) {
-          sepoliaTransactionId = blockchainResult.data.txHash;
-          toast.success(
-            `Blockchain verified! Tx: ${sepoliaTransactionId.slice(0, 10)}...`,
-            { autoClose: 3000 }
-          );
-        } else {
-          // Blockchain failed - ask user if they want to continue without it
-          const continueWithoutBlockchain = window.confirm(
-            "Blockchain storage failed. Do you want to create the company without blockchain verification?\n\n" +
-            "Note: The company can be verified on blockchain later."
-          );
-          
-          if (!continueWithoutBlockchain) {
-            toast.info("Company creation cancelled");
-            setLoading(false);
-            return;
-          }
-        }
-      }
-
-      // ============ PHASE 2: UPLOAD DOCUMENTS ============
+      // ============ PHASE 1: UPLOAD DOCUMENTS ============
       let uploadedDocuments: CompanyDocument[] = [];
       
       if (pendingDocuments.length > 0) {
@@ -506,22 +457,76 @@ export function AddCompanyModal({
         setUploading(false);
       }
 
-      // ============ PHASE 3: CREATE COMPANY ============
+      // ============ PHASE 2: CREATE COMPANY ============
       const companyData: CreateCompanyRequest = {
         ...formData,
         name: formData.name!.trim(),
         address: formData.address!.trim(),
         licenseNumber: formData.licenseNumber!.trim(),
         documents: uploadedDocuments.length > 0 ? uploadedDocuments : null,
-        sepoliaTransactionId,
+        // Don't include sepoliaTransactionId - will be added after approval
       };
 
+      toast.info("Creating company...", { autoClose: 1500 });
       const response = await CompanyService.createCompany(companyData);
-      
-      if (sepoliaTransactionId) {
-        toast.success("Company created & verified on blockchain!");
+
+      // ============ PHASE 3: SUBMIT FOR MULTI-SIG APPROVAL ============
+      // Only submit for blockchain approval if wallet is connected and authorized
+      if (isWalletConnected && isWalletAuthorized && walletAddress) {
+        toast.info("Submitting for multi-signature approval...", { autoClose: 2000 });
+        
+        // Generate hash from company data for certificate
+        const companyDataString = JSON.stringify({
+          name: formData.name,
+          licenseNumber: formData.licenseNumber,
+          address: formData.address,
+          companyId: response.company?._id || response._id,
+          timestamp: new Date().toISOString()
+        });
+        
+        // Create SHA-256 hash
+        const encoder = new TextEncoder();
+        const data = encoder.encode(companyDataString);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const pdfHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        
+        // Get current user for submitter info
+        const currentUser = await AuthService.getCurrentUser();
+        
+        // Submit for approval
+        const certificateId = `CERT-COMP-${formData.licenseNumber}-${Date.now()}`;
+        const companyId = response.company?._id || response._id;
+        
+        try {
+          const approval = await CertificateApprovalService.submitForApproval({
+            certificateId,
+            entityType: 'company',
+            entityId: companyId,
+            entityName: formData.name!,
+            pdfHash,
+            submitterName: currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : undefined,
+            submitterWallet: walletAddress,
+          });
+          
+          toast.success(
+            `Company created! Submitted for approval (${approval.requiredApprovals} admins required)`,
+            { autoClose: 5000 }
+          );
+        } catch (approvalError: any) {
+          console.error("Failed to submit for approval:", approvalError);
+          toast.warning(
+            "Company created but failed to submit for approval. You can submit manually later.",
+            { autoClose: 5000 }
+          );
+        }
       } else {
+        // No wallet connected - just show success for company creation
         toast.success(response.message || "Company created successfully!");
+        toast.info(
+          "Connect your wallet to submit companies for blockchain verification",
+          { autoClose: 5000 }
+        );
       }
 
       // Reset form

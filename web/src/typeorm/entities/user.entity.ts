@@ -25,6 +25,7 @@ export interface User {
   idDocumentUrl?: string;
   selfieWithIdUrl?: string;
   walletAddress?: string;
+  walletAuthorized?: boolean;
   createdAt?: Date | string;
   updatedAt?: Date | string;
 }

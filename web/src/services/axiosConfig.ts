@@ -2,6 +2,7 @@ import axios from 'axios';
 import type { AxiosInstance } from 'axios';
 import { CookieManager } from '@/utils/cookies';
 import { loadingManager } from '@/utils/loadingManager';
+import { toast } from 'sonner';
 
 // Base URL - change this to your actual API URL
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1';
@@ -41,7 +42,24 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Add response interceptor to stop loading
+// Handle wallet mismatch logout
+const handleWalletMismatchLogout = () => {
+  // Clear cookies
+  CookieManager.clearAuthCookies();
+  
+  // Show error toast
+  toast.error('Wallet Mismatch Detected', {
+    description: 'Your connected wallet does not match your account. Please reconnect with the correct wallet.',
+    duration: 5000,
+  });
+  
+  // Small delay to let user see the message before redirect
+  setTimeout(() => {
+    window.location.href = '/login';
+  }, 1500);
+};
+
+// Add response interceptor to handle errors and stop loading
 apiClient.interceptors.response.use(
   (response) => {
     // Stop loading on successful response
@@ -51,6 +69,15 @@ apiClient.interceptors.response.use(
   (error) => {
     // Stop loading on error response
     loadingManager.stopLoading();
+    
+    // Check for wallet mismatch response (logout required)
+    const responseData = error.response?.data;
+    if (responseData?.logout === true && responseData?.code === 'WALLET_MISMATCH') {
+      handleWalletMismatchLogout();
+      // Return a rejected promise with a specific error to prevent further handling
+      return Promise.reject(new Error('WALLET_MISMATCH_LOGOUT'));
+    }
+    
     return Promise.reject(error);
   }
 );

@@ -53,7 +53,7 @@ export function UserDetailModal({
   // Wallet management state
   const [walletAddress, setWalletAddress] = useState("");
   const [walletLoading, setWalletLoading] = useState(false);
-  const [addToAuthorized, setAddToAuthorized] = useState(false);
+  const [authorizeWallet, setAuthorizeWallet] = useState(false);
   const [copied, setCopied] = useState(false);
 
   // Update local state when user changes
@@ -62,8 +62,9 @@ export function UserDetailModal({
       setLocalWebAccess(user.webAccess ?? false);
       setLocalAppAccess(user.appAccess ?? true);
       setWalletAddress(user.walletAddress || "");
+      setAuthorizeWallet(user.walletAuthorized ?? false);
     }
-  }, [user?._id, user?.webAccess, user?.appAccess, user?.walletAddress]);
+  }, [user?._id, user?.webAccess, user?.appAccess, user?.walletAddress, user?.walletAuthorized]);
 
   if (!isOpen || !user) return null;
 
@@ -86,7 +87,7 @@ export function UserDetailModal({
   const handleUpdateWallet = async () => {
     if (!user?._id) return;
     
-    // Validate wallet address format
+    // Validate wallet address format if provided
     if (walletAddress && !/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
       toast.error("Invalid wallet address format. Must be a valid Ethereum address.");
       return;
@@ -97,17 +98,21 @@ export function UserDetailModal({
       const result = await MetaMaskService.updateUserWallet(
         user._id,
         walletAddress,
-        addToAuthorized
+        authorizeWallet
       );
       
       if (result.success) {
         toast.success(
-          addToAuthorized 
-            ? "Wallet updated and added to authorized list" 
+          authorizeWallet 
+            ? "Wallet updated and authorized for blockchain operations" 
             : "Wallet address updated successfully"
         );
-        // Update parent
-        onAccessUpdate?.({ ...user, walletAddress: walletAddress || undefined });
+        // Update parent with new data
+        onAccessUpdate?.({ 
+          ...user, 
+          walletAddress: walletAddress || undefined,
+          walletAuthorized: result.data?.walletAuthorized ?? authorizeWallet
+        });
       } else {
         toast.error(result.error || "Failed to update wallet");
       }
@@ -617,6 +622,12 @@ export function UserDetailModal({
               <h3 className="text-lg font-semibold app-text mb-4 flex items-center gap-2">
                 <Wallet className="h-5 w-5" />
                 Blockchain Wallet (MetaMask)
+                {user.walletAuthorized && (
+                  <Badge variant="default" className="ml-2 bg-green-600">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Authorized
+                  </Badge>
+                )}
               </h3>
               <div className="app-bg-neutral rounded-lg p-4 space-y-4">
                 <p className="text-sm text-gray-600">
@@ -654,20 +665,20 @@ export function UserDetailModal({
 
                   <div className="flex items-center gap-2">
                     <Checkbox
-                      id="add-authorized"
-                      checked={addToAuthorized}
-                      onCheckedChange={(checked) => setAddToAuthorized(checked as boolean)}
+                      id="authorize-wallet"
+                      checked={authorizeWallet}
+                      onCheckedChange={(checked) => setAuthorizeWallet(checked as boolean)}
                       disabled={walletLoading || isRejected || !walletAddress}
                     />
-                    <Label htmlFor="add-authorized" className="text-sm cursor-pointer">
-                      Add to authorized wallets list (allows blockchain operations)
+                    <Label htmlFor="authorize-wallet" className="text-sm cursor-pointer">
+                      Authorize wallet for blockchain operations
                     </Label>
                   </div>
 
                   <div className="flex gap-2">
                     <Button
                       onClick={handleUpdateWallet}
-                      disabled={walletLoading || isRejected}
+                      disabled={walletLoading || isRejected || !walletAddress}
                       size="sm"
                       className="bg-purple-600 hover:bg-purple-700"
                     >
@@ -679,17 +690,17 @@ export function UserDetailModal({
                       ) : (
                         <>
                           <Wallet className="h-4 w-4 mr-2" />
-                          Update Wallet
+                          {user.walletAddress ? "Update Wallet" : "Save Wallet"}
                         </>
                       )}
                     </Button>
-                    {user.walletAddress && (
+                    {walletAddress && (
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => {
                           setWalletAddress("");
-                          setAddToAuthorized(false);
+                          setAuthorizeWallet(false);
                         }}
                         disabled={walletLoading}
                       >
@@ -700,8 +711,27 @@ export function UserDetailModal({
                 </div>
 
                 {user.walletAddress && (
-                  <div className="mt-2 text-xs text-gray-500">
-                    Current wallet: <code className="bg-gray-100 px-1 py-0.5 rounded">{user.walletAddress}</code>
+                  <div className="mt-3 p-3 bg-gray-100 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Current wallet in database:</p>
+                        <code className="text-sm bg-white px-2 py-1 rounded border font-mono">{user.walletAddress}</code>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-gray-500 mb-1">Status:</p>
+                        {user.walletAuthorized ? (
+                          <Badge variant="default" className="bg-green-600">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Authorized
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary">
+                            <XCircle className="h-3 w-3 mr-1" />
+                            Not Authorized
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

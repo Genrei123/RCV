@@ -12,6 +12,7 @@ import {
   Verified,
   ChevronDown,
   Wallet,
+  ExternalLink,
 } from "lucide-react";
 import { LogoutModal } from "./LogoutModal";
 import { AuthService } from "@/services/authService";
@@ -69,7 +70,7 @@ export function Sidebar({
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const visible = open;
   const closeDrawer = () => onClose?.();
-  const { isConnected, walletAddress, isAuthorized, connect, disconnect, switchAccount } = useMetaMask();
+  const { isConnected, walletAddress, isAuthorized, isMetaMaskInstalled, connect, disconnect, switchAccount } = useMetaMask();
 
   useEffect(() => {
     fetchCurrentUser();
@@ -315,6 +316,14 @@ export function Sidebar({
                   </button>
                 </div>
               </div>
+            ) : !isMetaMaskInstalled ? (
+              <button
+                onClick={() => window.open('https://metamask.io/download/', '_blank')}
+                className="w-full text-xs text-white bg-[#f6851b] hover:bg-[#e2761b] py-2 px-3 rounded flex items-center justify-center gap-1"
+              >
+                <ExternalLink size={12} />
+                Install MetaMask
+              </button>
             ) : (
               <button
                 onClick={() => connect(true)}

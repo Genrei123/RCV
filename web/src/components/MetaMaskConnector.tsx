@@ -165,6 +165,20 @@ export function MetaMaskConnector({
 
   // Compact mode for sidebar/header
   if (compact) {
+    if (!isMetaMaskInstalled) {
+      return (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => window.open('https://metamask.io/download/', '_blank')}
+          className="text-xs bg-[#f6851b] hover:bg-[#e2761b] text-white border-none"
+        >
+          <ExternalLink className="h-3 w-3 mr-1" />
+          Install MetaMask
+        </Button>
+      );
+    }
+    
     return (
       <div className="flex items-center gap-2">
         {connectedAddress ? (
