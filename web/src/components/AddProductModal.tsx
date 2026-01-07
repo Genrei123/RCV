@@ -550,36 +550,53 @@ export function AddProductModal({
     }
   };
 
+  // === UPDATED VALIDATION LOGIC ===
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
+    const MAX_LENGTH = 50; 
+    const MSG_REQUIRED = "required";
+    const MSG_TOO_LONG = "This input is a bit too long. Please shorten it.";
 
     if (!formData.LTONumber.trim()) {
       newErrors.LTONumber = "LTO Number is required";
+    } else if (formData.LTONumber.length > MAX_LENGTH) {
+      newErrors.LTONumber = MSG_TOO_LONG;
     }
 
     if (!formData.CFPRNumber.trim()) {
       newErrors.CFPRNumber = "CFPR Number is required";
+    } else if (formData.CFPRNumber.length > MAX_LENGTH) {
+      newErrors.CFPRNumber = MSG_TOO_LONG;
     }
 
     if (!formData.lotNumber.trim()) {
       newErrors.lotNumber = "Lot Number is required";
+    } else if (formData.lotNumber.length > MAX_LENGTH) {
+      newErrors.lotNumber = MSG_TOO_LONG;
     }
 
     if (!formData.brandName.trim()) {
       newErrors.brandName = "Brand Name is required";
+    } else if (formData.brandName.length > MAX_LENGTH) {
+      newErrors.brandName = MSG_TOO_LONG;
     }
 
     if (!formData.productName.trim()) {
       newErrors.productName = "Product Name is required";
+    } else if (formData.productName.length > MAX_LENGTH) {
+      newErrors.productName = MSG_TOO_LONG;
     }
 
     if (!formData.productClassification.trim()) {
       newErrors.productClassification = "Product Classification is required";
+    } else if (formData.productClassification.length > MAX_LENGTH) {
+      newErrors.productClassification = MSG_TOO_LONG;
     }
 
     if (!formData.productSubClassification.trim()) {
-      newErrors.productSubClassification =
-        "Product Sub-Classification is required";
+      newErrors.productSubClassification = "Product Sub-Classification is required";
+    } else if (formData.productSubClassification.length > MAX_LENGTH) {
+      newErrors.productSubClassification = MSG_TOO_LONG;
     }
 
     if (!formData.expirationDate) {
@@ -591,6 +608,21 @@ export function AddProductModal({
     }
 
     setErrors(newErrors);
+
+    // === UPDATED TOAST LOGIC (Announcement Style) ===
+    const errorValues = Object.values(newErrors);
+    if (errorValues.length > 0) {
+      const isOnlyEmptyFields = errorValues.every(err => err.toLowerCase().includes(MSG_REQUIRED));
+
+      if (isOnlyEmptyFields) {
+        toast.error("Required fields are missing", { toastId: "validation-error" });
+      } else {
+        toast.error("Errors found in several fields", { toastId: "validation-error" });
+      }
+    } else {
+      toast.dismiss("validation-error");
+    }
+
     return Object.keys(newErrors).length === 0;
   };
 
@@ -598,7 +630,7 @@ export function AddProductModal({
     e.preventDefault();
 
     if (!validateForm()) {
-      toast.error("Please fill in all required fields");
+      // Toast is handled by validateForm
       return;
     }
 
@@ -908,8 +940,9 @@ export function AddProductModal({
                     value={formData.LTONumber}
                     onChange={handleChange}
                     placeholder="LTO-12345678"
+                    // UPDATED STYLE: Red glow
                     className={`pl-10 ${
-                      errors.LTONumber ? "border-[color:var(--app-error)]" : ""
+                      errors.LTONumber ? "!border-red-500 !ring-1 !ring-red-200" : ""
                     }`}
                     disabled={loading}
                   />
@@ -932,8 +965,9 @@ export function AddProductModal({
                     value={formData.CFPRNumber}
                     onChange={handleChange}
                     placeholder="CFPR-1234567"
+                    // UPDATED STYLE: Red glow
                     className={`pl-10 ${
-                      errors.CFPRNumber ? "border-[color:var(--app-error)]" : ""
+                      errors.CFPRNumber ? "!border-red-500 !ring-1 !ring-red-200" : ""
                     }`}
                     disabled={loading}
                   />
@@ -958,8 +992,9 @@ export function AddProductModal({
                   value={formData.lotNumber}
                   onChange={handleChange}
                   placeholder="Enter lot number"
+                  // UPDATED STYLE: Red glow
                   className={`pl-10 ${
-                    errors.lotNumber ? "border-[color:var(--app-error)]" : ""
+                    errors.lotNumber ? "!border-red-500 !ring-1 !ring-red-200" : ""
                   }`}
                   disabled={loading}
                 />
@@ -1001,8 +1036,9 @@ export function AddProductModal({
                     onFocus={() => setBrandNameDropdownOpen(true)}
                     onChange={(e) => handleBrandNameInputChange(e.target.value)}
                     placeholder="Search or enter brand name"
+                    // UPDATED STYLE: Red glow
                     className={`pl-10 ${
-                      errors.brandName ? "border-[color:var(--app-error)]" : ""
+                      errors.brandName ? "!border-red-500 !ring-1 !ring-red-200" : ""
                     }`}
                     disabled={loading}
                   />
@@ -1066,9 +1102,10 @@ export function AddProductModal({
                     value={formData.productName}
                     onChange={handleChange}
                     placeholder="Enter product name"
+                    // UPDATED STYLE: Red glow
                     className={`pl-10 ${
                       errors.productName
-                        ? "border-[color:var(--app-error)]"
+                        ? "!border-red-500 !ring-1 !ring-red-200"
                         : ""
                     }`}
                     disabled={loading}
@@ -1115,8 +1152,9 @@ export function AddProductModal({
                     onFocus={() => setClassificationDropdownOpen(true)}
                     onChange={(e) => handleClassificationInputChange(e.target.value)}
                     placeholder="Search or select classification"
+                    // UPDATED STYLE: Red glow
                     className={`pl-10 ${
-                      errors.productClassification ? "border-[color:var(--app-error)]" : ""
+                      errors.productClassification ? "!border-red-500 !ring-1 !ring-red-200" : ""
                     }`}
                     disabled={loading}
                   />
@@ -1203,8 +1241,9 @@ export function AddProductModal({
                     onFocus={() => selectedClassification && setSubClassificationDropdownOpen(true)}
                     onChange={(e) => handleSubClassificationInputChange(e.target.value)}
                     placeholder={selectedClassification ? "Search or select sub-classification" : "Select classification first"}
+                    // UPDATED STYLE: Red glow
                     className={`pl-10 ${
-                      errors.productSubClassification ? "border-[color:var(--app-error)]" : ""
+                      errors.productSubClassification ? "!border-red-500 !ring-1 !ring-red-200" : ""
                     }`}
                     disabled={loading || !selectedClassification}
                   />
@@ -1291,9 +1330,10 @@ export function AddProductModal({
                     name="expirationDate"
                     value={formData.expirationDate}
                     onChange={handleChange}
+                    // UPDATED STYLE: Red glow
                     className={`pl-10 ${
                       errors.expirationDate
-                        ? "border-[color:var(--app-error)]"
+                        ? "!border-red-500 !ring-1 !ring-red-200"
                         : ""
                     }`}
                     disabled={loading}
@@ -1335,9 +1375,10 @@ export function AddProductModal({
                   onFocus={() => setCompanyDropdownOpen(true)}
                   onChange={(e) => handleCompanyInputChange(e.target.value)}
                   placeholder="Search or select a company"
+                  // UPDATED STYLE: Red glow
                   className={`pl-10 ${
                     errors.companyId
-                      ? "border-[color:var(--app-error)]"
+                      ? "!border-red-500 !ring-1 !ring-red-200"
                       : "app-border-neutral"
                   }`}
                   disabled={loading}

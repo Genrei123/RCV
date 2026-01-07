@@ -347,27 +347,43 @@ export function AddCompanyModal({
     setPendingDocuments((prev) => prev.filter((_, i) => i !== index));
   };
 
+  // === UPDATED VALIDATION LOGIC (MERGED) ===
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
+    const MAX_NAME = 50;
+    const MAX_ADDR = 100;
+    const MAX_LIC = 50;
+    const MSG_REQUIRED = 'required';
+    const MSG_TOO_LONG = 'This input is a bit too long. Please shorten it.';
 
+    // 1. Name Validation (Required + Length)
     if (!formData.name?.trim()) {
       newErrors.name = "Company name is required";
     } else if (formData.name.trim().length < 2) {
       newErrors.name = "Company name must be at least 2 characters";
+    } else if (formData.name.trim().length > MAX_NAME) {
+      newErrors.name = MSG_TOO_LONG;
     }
 
+    // 2. Address Validation (Required + Length)
     if (!formData.address?.trim()) {
       newErrors.address = "Address is required";
     } else if (formData.address.trim().length < 5) {
       newErrors.address = "Address must be at least 5 characters";
+    } else if (formData.address.trim().length > MAX_ADDR) {
+      newErrors.address = MSG_TOO_LONG;
     }
 
+    // 3. License Validation (Required + Length)
     if (!formData.licenseNumber?.trim()) {
       newErrors.licenseNumber = "License number is required";
     } else if (formData.licenseNumber.trim().length < 2) {
       newErrors.licenseNumber = "License number must be at least 2 characters";
+    } else if (formData.licenseNumber.trim().length > MAX_LIC) {
+      newErrors.licenseNumber = MSG_TOO_LONG;
     }
 
+    // 4. Regex Validations (From Dev Branch)
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = "Invalid email address";
     }
@@ -377,6 +393,23 @@ export function AddCompanyModal({
     }
 
     setErrors(newErrors);
+
+    // === UPDATED TOAST LOGIC (Lead's Announcement Style) ===
+    const errorValues = Object.values(newErrors);
+    
+    if (errorValues.length > 0) {
+      const isOnlyEmptyFields = errorValues.every(err => err.toLowerCase().includes(MSG_REQUIRED));
+
+      if (isOnlyEmptyFields) {
+        toast.error("Required fields are missing", { toastId: 'validation-error' });
+      } else {
+        // Updated to: "Errors found in several fields"
+        toast.error("Errors found in several fields", { toastId: 'validation-error' });
+      }
+    } else {
+      toast.dismiss('validation-error');
+    }
+
     return Object.keys(newErrors).length === 0;
   };
 
@@ -384,7 +417,7 @@ export function AddCompanyModal({
     e.preventDefault();
 
     if (!validateForm()) {
-      toast.error("Please fill in all required fields correctly");
+      // Removed the generic toast here because validateForm handles it now
       return;
     }
 
@@ -646,7 +679,8 @@ export function AddCompanyModal({
                     value={formData.name || ""}
                     onChange={handleChange}
                     placeholder="Enter company name"
-                    className={errors.name ? "border-red-500" : ""}
+                    // UPDATED STYLE: Red glow
+                    className={errors.name ? "!border-red-500 !ring-1 !ring-red-200" : ""}
                   />
                   {errors.name && (
                     <p className="text-xs text-red-500">{errors.name}</p>
@@ -664,7 +698,8 @@ export function AddCompanyModal({
                     value={formData.licenseNumber || ""}
                     onChange={handleChange}
                     placeholder="Enter license number"
-                    className={errors.licenseNumber ? "border-red-500" : ""}
+                    // UPDATED STYLE: Red glow
+                    className={errors.licenseNumber ? "!border-red-500 !ring-1 !ring-red-200" : ""}
                   />
                   {errors.licenseNumber && (
                     <p className="text-xs text-red-500">{errors.licenseNumber}</p>
@@ -758,7 +793,8 @@ export function AddCompanyModal({
                       value={formData.email || ""}
                       onChange={handleChange}
                       placeholder="company@example.com"
-                      className={`pl-10 ${errors.email ? "border-red-500" : ""}`}
+                      // UPDATED STYLE: Red glow
+                      className={`pl-10 ${errors.email ? "!border-red-500 !ring-1 !ring-red-200" : ""}`}
                     />
                   </div>
                   {errors.email && (
@@ -777,7 +813,8 @@ export function AddCompanyModal({
                       value={formData.website || ""}
                       onChange={handleChange}
                       placeholder="https://www.example.com"
-                      className={`pl-10 ${errors.website ? "border-red-500" : ""}`}
+                      // UPDATED STYLE: Red glow
+                      className={`pl-10 ${errors.website ? "!border-red-500 !ring-1 !ring-red-200" : ""}`}
                     />
                   </div>
                   {errors.website && (
@@ -807,7 +844,8 @@ export function AddCompanyModal({
                     value={formData.address || ""}
                     onChange={handleChange}
                     placeholder="Enter company address"
-                    className={`pl-10 ${errors.address ? "border-red-500" : ""}`}
+                    // UPDATED STYLE: Red glow
+                    className={`pl-10 ${errors.address ? "!border-red-500 !ring-1 !ring-red-200" : ""}`}
                   />
                 </div>
                 {errors.address && (
