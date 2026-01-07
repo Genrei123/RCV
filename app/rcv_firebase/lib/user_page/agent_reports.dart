@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:rcv_firebase/themes/app_fonts.dart';
 import '../widgets/navigation_bar.dart';
 import '../widgets/title_logo_header_app_bar.dart';
+import '../services/api_service.dart';
 
 // Simple in-memory Report model (can be moved to models folder later)
 class ReportItem {
@@ -11,6 +12,8 @@ class ReportItem {
   final DateTime createdAt;
   final ReportStatus status;
   final ReportCategory category;
+  final String? productName;
+  final String? brandName;
 
   ReportItem({
     required this.id,
@@ -19,7 +22,49 @@ class ReportItem {
     required this.createdAt,
     required this.status,
     required this.category,
+    this.productName,
+    this.brandName,
   });
+
+  factory ReportItem.fromJson(Map<String, dynamic> json) {
+    // Map backend status to UI status
+    ReportStatus reportStatus;
+    final backendStatus = json['status']?.toString().toUpperCase();
+    if (backendStatus == 'COMPLIANT') {
+      reportStatus = ReportStatus.closed;
+    } else if (backendStatus == 'NON_COMPLIANT' || backendStatus == 'FRAUDULENT') {
+      reportStatus = ReportStatus.open;
+    } else {
+      reportStatus = ReportStatus.inReview;
+    }
+
+    // Map backend status to category
+    ReportCategory category;
+    if (backendStatus == 'COMPLIANT') {
+      category = ReportCategory.verified;
+    } else if (backendStatus == 'NON_COMPLIANT' || backendStatus == 'FRAUDULENT') {
+      category = ReportCategory.notVerified;
+    } else {
+      category = ReportCategory.inReview;
+    }
+
+    // Build title and description
+    final productName = json['scannedData']?['productName'] ?? 'Unknown Product';
+    final brandName = json['scannedData']?['brandName'] ?? 'Unknown Brand';
+    final title = '$productName - $brandName';
+    final description = json['nonComplianceReason'] ?? 'Compliance report submitted';
+
+    return ReportItem(
+      id: json['_id'] ?? '',
+      title: title,
+      description: description,
+      createdAt: DateTime.parse(json['createdAt']),
+      status: reportStatus,
+      category: category,
+      productName: productName,
+      brandName: brandName,
+    );
+  }
 }
 
 enum ReportStatus { open, inReview, closed }
@@ -59,11 +104,47 @@ class UserReportsPage extends StatefulWidget {
 }
 
 class _UserReportsPageState extends State<UserReportsPage> {
-final List<ReportItem> _reports = [];
-  final bool _loading = false; // UI-only mode: no fetching
+  List<ReportItem> _reports = [];
+  bool _loading = true;
   String? _error;
   ReportCategory? _activeFilter; // null = all
-  // UI-only mode: removed data fetching and mapping functions
+  final ApiService _apiService = ApiService();
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchReports();
+  }
+
+  Future<void> _fetchReports() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final result = await _apiService.getComplianceReports(page: 1, limit: 100);
+      
+      if (result['success'] == true) {
+        final List<dynamic> data = result['data'] ?? [];
+        
+        setState(() {
+          _reports = data.map((json) => ReportItem.fromJson(json)).toList();
+          _loading = false;
+        });
+      } else {
+        setState(() {
+          _error = 'Failed to load reports';
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _error = 'Error: ${e.toString()}';
+        _loading = false;
+      });
+    }
+  }
 
   String _relativeTime(DateTime dt) {
     final diff = DateTime.now().difference(dt);
@@ -102,22 +183,24 @@ final List<ReportItem> _reports = [];
                 ? const Center(child: CircularProgressIndicator())
                 : _filteredReports().isEmpty
                 ? _buildEmptyState()
-                : ListView.separated(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    itemCount: _filteredReports().length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final r = _filteredReports()[index];
-                      return _ReportCard(
-                        report: r,
-                        relativeTime: _relativeTime(r.createdAt),
-                        onTap: () {
-                          showDialog(
-                            context: context,
-                            builder: (ctx) => AlertDialog(
+                : RefreshIndicator(
+                    onRefresh: _fetchReports,
+                    child: ListView.separated(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      itemCount: _filteredReports().length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final r = _filteredReports()[index];
+                        return _ReportCard(
+                          report: r,
+                          relativeTime: _relativeTime(r.createdAt),
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
                               title: Text(r.title),
                               content: Text(r.description),
                               actions: [
@@ -132,6 +215,7 @@ final List<ReportItem> _reports = [];
                       );
                     },
                   ),
+                ),
           ),
         ],
       ),
@@ -143,18 +227,42 @@ final List<ReportItem> _reports = [];
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+    return RefreshIndicator(
+      onRefresh: _fetchReports,
+      child: ListView(
         children: [
-          Icon(Icons.inbox, size: 64, color: Colors.grey.shade400),
-          const SizedBox(height: 16),
-          Text('No reports yet', style: AppFonts.titleStyle),
-          const SizedBox(height: 8),
-          Text(
-            _error ?? 'Any reports you generate will appear here.',
-            style: AppFonts.contentStyle,
-            textAlign: TextAlign.center,
+          SizedBox(height: 100),
+          Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.inbox, size: 64, color: _error != null ? Colors.red.shade400 : Colors.grey.shade400),
+                const SizedBox(height: 16),
+                Text(
+                  _error != null ? 'Error Loading Reports' : 'No reports yet',
+                  style: AppFonts.titleStyle.copyWith(
+                    color: _error != null ? Colors.red : null,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Text(
+                    _error ?? 'Any reports you generate will appear here.',
+                    style: AppFonts.contentStyle,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                if (_error != null) ...[
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: _fetchReports,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Retry'),
+                  ),
+                ],
+              ],
+            ),
           ),
         ],
       ),

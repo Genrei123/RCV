@@ -17,7 +17,8 @@ class ApiService {
   // For iOS Simulator use: 'http://localhost:3000/api/v1'
   // For Physical Device use: 'http://YOUR_COMPUTER_IP:3000/api/v1'
   static const String baseUrl =
-      'https://rcv-production-cbd6.up.railway.app/api/v1';
+      'http://192.168.1.6:3000/api/v1';
+  // Update nalang tong link kung ano yung deployed na backend
 
   // Get authorization headers
   Future<Map<String, String>> _getHeaders() async {
@@ -196,14 +197,14 @@ class ApiService {
 
       final response = await http
           .get(
-            Uri.parse('$baseUrl/scan/getScans'),
+            Uri.parse('$baseUrl/mobile/scan/history'),
             headers: await _getHeaders(),
           )
           .timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
         final jsonData = jsonDecode(response.body);
-        return jsonData['scans'] ?? [];
+        return jsonData['data'] ?? [];
       } else {
         throw ApiException(
           statusCode: response.statusCode,
@@ -227,7 +228,7 @@ class ApiService {
 
       final response = await http
           .get(
-            Uri.parse('$baseUrl/scan/getScans/$id'),
+            Uri.parse('$baseUrl/mobile/scan/history/$id'),
             headers: await _getHeaders(),
           )
           .timeout(const Duration(seconds: 30));
@@ -257,17 +258,17 @@ class ApiService {
       developer.log('Testing connection to backend...');
 
       final response = await http
-          .get(Uri.parse('$baseUrl/auth/signin'), headers: await _getHeaders())
+          .get(Uri.parse('$baseUrl/mobile/me'), headers: await _getHeaders())
           .timeout(const Duration(seconds: 5));
 
       developer.log('Connection test response: ${response.statusCode}');
 
       return {
-        'success': response.statusCode == 200 || response.statusCode == 405,
+        'success': response.statusCode == 200 || response.statusCode == 401,
         'statusCode': response.statusCode,
         'message': response.statusCode == 200
-            ? 'Backend is running!'
-            : 'Backend is reachable but endpoint needs POST method',
+            ? 'Backend is running and authenticated!'
+            : 'Backend is reachable (authentication may be required)',
       };
     } catch (e) {
       developer.log('Connection test failed: $e');
@@ -488,6 +489,62 @@ class ApiService {
     } catch (e) {
       developer.log('Error submitting compliance report: $e');
       return {'success': false, 'message': 'Network error: ${e.toString()}'};
+    }
+  }
+
+  /// Get compliance reports for authenticated user
+  ///
+  /// Fetches paginated list of compliance reports submitted by the user
+  Future<Map<String, dynamic>> getComplianceReports({int page = 1, int limit = 10}) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('$baseUrl/mobile/compliance/reports?page=$page&limit=$limit'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        return {
+          'success': true,
+          'data': responseData['data'] ?? [],
+          'pagination': responseData['pagination'],
+          'links': responseData['links'],
+        };
+      } else {
+        final errorData = json.decode(response.body);
+        throw Exception(errorData['message'] ?? 'Failed to fetch reports');
+      }
+    } catch (e) {
+      throw Exception('Failed to fetch reports: ${e.toString()}');
+    }
+  }
+
+  /// Get a single compliance report by ID
+  Future<Map<String, dynamic>> getComplianceReportById(String reportId) async {
+    try {
+      developer.log('Fetching compliance report: $reportId');
+      
+      final headers = await _getHeaders();
+      
+      final response = await http.get(
+        Uri.parse('$baseUrl/mobile/compliance/reports/$reportId'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        return {
+          'success': true,
+          'data': responseData['data'],
+        };
+      } else {
+        final errorData = json.decode(response.body);
+        throw Exception(errorData['message'] ?? 'Failed to fetch report');
+      }
+    } catch (e) {
+      developer.log('Error fetching compliance report: $e');
+      throw Exception('Failed to fetch report: ${e.toString()}');
     }
   }
 

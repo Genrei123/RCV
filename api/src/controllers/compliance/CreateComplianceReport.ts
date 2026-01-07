@@ -15,11 +15,14 @@ export const createComplianceReport = async (
   next: NextFunction
 ) => {
   try {
-    const userId = (req as any).userId;
+    // Extract user from middleware
+    const user = (req as any).user;
     
-    if (!userId) {
+    if (!user || !user._id) {
       return next(new CustomError(401, 'User not authenticated'));
     }
+
+    const userId = user._id;
 
     const reportData = {
       ...req.body,
