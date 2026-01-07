@@ -2,7 +2,7 @@
 
 ## Overview
 
-RCV is a Web3-enabled regulatory compliance verification system designed for the Bureau of Animal Industry (BAI) to verify animal feed products against Administrative Order No. 12, series of 2017. The system combines blockchain technology with automated verification processes to ensure product authenticity and regulatory compliance.
+RCV is a Web3-enabled **R**egulatory **C**ompliance **V**erification system designed for the Bureau of Animal Industry (BAI) to verify animal feed products against Administrative Order No. 12, series of 2017. The system combines blockchain technology with automated verification processes to ensure product authenticity and regulatory compliance.
 
 ## Core Features
 
