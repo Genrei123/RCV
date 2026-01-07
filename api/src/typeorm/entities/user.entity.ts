@@ -23,6 +23,7 @@ export const UserValidation = z.object({
   approved: z.boolean().optional().default(false),
   avatarUrl: z.string().optional(),
   walletAddress: z.string().optional(), // MetaMask wallet address for blockchain operations
+  walletAuthorized: z.boolean().optional().default(false), // Whether the wallet is authorized for blockchain operations
   firstName: z.string().min(2).max(50),
   middleName: z.string().min(2).max(50).optional(),
   lastName: z.string().min(2).max(50),
@@ -74,8 +75,11 @@ export class User {
   @Column({ nullable: true })
   avatarUrl?: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, unique: true })
   walletAddress?: string; // MetaMask wallet address for blockchain operations
+
+  @Column({ type: 'boolean', default: false })
+  walletAuthorized!: boolean; // Whether the wallet is authorized for blockchain operations (set by Admin)
 
   @Column()
   firstName!: string;

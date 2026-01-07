@@ -6,6 +6,8 @@ import {
   checkWalletAuthorization,
   verifyUserWallet,
   updateUserWallet,
+  authorizeWallet,
+  revokeWallet,
   getAdminWallet,
   getBlockchainCertificates,
   getBlockchainCertificateById,
@@ -14,6 +16,8 @@ import {
   publicVerifyPDFHash,
   recoverCertificatesFromBlockchain
 } from '../../controllers/blockchain/SepoliaBlockchain';
+import { verifyUser } from '../../middleware/verifyUser';
+import { verifyAdmin } from '../../middleware/verifyAdmin';
 
 const router = Router();
 
@@ -55,10 +59,19 @@ router.get('/check-wallet/:address', checkWalletAuthorization);
 // Verify MetaMask wallet for a user
 router.post('/verify-wallet', verifyUserWallet);
 
-// Update user's wallet address (Admin only)
-router.put('/user-wallet/:userId', updateUserWallet);
-
 // Get admin wallet address
 router.get('/admin-wallet', getAdminWallet);
+
+// ============ ADMIN ONLY ROUTES ============
+// These routes require authentication and admin role
+
+// Update user's wallet address (Admin only)
+router.put('/user-wallet/:userId', verifyUser, verifyAdmin, updateUserWallet);
+
+// Authorize a user's wallet for blockchain operations (Admin only)
+router.post('/authorize-wallet', verifyUser, verifyAdmin, authorizeWallet);
+
+// Revoke a user's wallet authorization (Admin only)
+router.post('/revoke-wallet', verifyUser, verifyAdmin, revokeWallet);
 
 export default router;

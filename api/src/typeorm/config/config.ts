@@ -11,6 +11,7 @@ import { ComplianceReport } from "../entities/complianceReport.entity";
 import { AdminInvite } from "../entities/adminInvite.entity";
 import { BrandName } from "../entities/brandName.entity";
 import { ProductClassification } from "../entities/productClassification.entity";
+import { CertificateApproval } from "../entities/certificateApproval.entity";
 // import { AuditTrail } from '../entities/audit-trail.entity';
 
 const { DEV_DATABASE_URI, MAIN_DATABASE_URI, DB_PORT, NODE_ENV } = process.env;
@@ -18,7 +19,7 @@ const config: DataSourceOptions = {
   type: "postgres",
   url: NODE_ENV === "development" ? DEV_DATABASE_URI : MAIN_DATABASE_URI,
   port: parseInt(DB_PORT!, 10),
-  entities: [User, Product, Company, ScanHistory, ForgotPassword, AuditLog, ComplianceReport, AdminInvite, BrandName, ProductClassification], // Add yung models na ginagawa
+  entities: [User, Product, Company, ScanHistory, ForgotPassword, AuditLog, ComplianceReport, AdminInvite, BrandName, ProductClassification, CertificateApproval], // Add yung models na ginagawa
   migrations: ["src/typeorm/migrations/*.ts"],
   subscribers: [],
   // logging: NODE_ENV === 'development' ? true : false,

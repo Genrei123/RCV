@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { X, Package, Hash, Calendar, Building2, Plus, ImagePlus, Camera, Tag, Layers, Wallet, AlertTriangle, Shield } from "lucide-react";
+import { X, Package, Hash, Calendar, Building2, Plus, ImagePlus, Camera, Tag, Layers, Wallet, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProductService } from "@/services/productService";
@@ -8,7 +8,6 @@ import { CompanyService } from "@/services/companyService";
 import { BrandNameService } from "@/services/brandNameService";
 import { ProductClassificationService } from "@/services/productClassificationService";
 import { FirebaseStorageService } from "@/services/firebaseStorageService";
-import { MetaMaskService } from "@/services/metaMaskService";
 import { CertificateApprovalService } from "@/services/approvalService";
 import { AddCompanyModal } from "@/components/AddCompanyModal";
 import { AddBrandNameModal } from "@/components/AddBrandNameModal";
@@ -697,7 +696,7 @@ export function AddProductModal({
           lotNumber: formData.lotNumber,
           productName: formData.productName,
           brandName: formData.brandName,
-          productId: response.product?._id || response._id,
+          productId: response.product._id,
           timestamp: new Date().toISOString()
         });
         
@@ -713,7 +712,13 @@ export function AddProductModal({
         
         // Submit for approval
         const certificateId = `CERT-PROD-${formData.LTONumber}-${Date.now()}`;
-        const productId = response.product?._id || response._id;
+        const productId = response.product._id;
+        
+        if (!productId) {
+          console.error("Product ID not returned from server");
+          toast.warning("Product created but could not submit for approval - missing product ID");
+          return;
+        }
         
         try {
           const approval = await CertificateApprovalService.submitForApproval({
