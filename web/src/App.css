@@ -475,3 +475,160 @@
 .border-gray-300 {
   border-color: var(--app-neutral-soft) !important;
 }
+
+/* ============================================
+   STARTUP ANIMATION STYLES
+   ============================================ */
+
+@keyframes fadeInScale {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInOut {
+  0% {
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 50px rgba(0, 186, 142, 0.6))
+      drop-shadow(0 0 30px rgba(0, 186, 142, 0.4));
+  }
+  50% {
+    filter: drop-shadow(0 0 80px rgba(0, 186, 142, 1))
+      drop-shadow(0 0 50px rgba(0, 186, 142, 0.8));
+  }
+}
+
+@keyframes bounce {
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-10px);
+  }
+}
+
+.startup-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    135deg,
+    var(--app-primary) 50%,
+    var(--app-primary-light) 100%
+  );
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  animation: fadeInOut 3.5s ease-in-out forwards;
+}
+
+.startup-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.logo-wrapper {
+  position: relative;
+  animation: fadeInScale 0.8s ease-out 0.2s both;
+}
+
+.logo-wrapper img {
+  width: 120px;
+  height: 120px;
+  filter: drop-shadow(0 0 50px rgba(0, 186, 142, 0.8))
+    drop-shadow(0 0 30px rgba(0, 186, 142, 0.6));
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.startup-text {
+  text-align: center;
+  animation: slideInUp 0.8s ease-out 0.4s both;
+}
+
+.startup-text h1 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: 1px;
+}
+
+.startup-text p {
+  font-size: 14px;
+  color: #e0e7ff;
+  margin: 12px 0 0 0;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+.loading-dots {
+  display: flex;
+  gap: 6px;
+  margin-top: 24px;
+  animation: slideInUp 0.8s ease-out 0.6s both;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #14b8a6;
+  animation: bounce 1.4s infinite;
+}
+
+.dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+.startup-footer {
+  position: absolute;
+  bottom: 40px;
+  text-align: center;
+  color: #cbd5e1;
+  font-size: 12px;
+  animation: slideInUp 0.8s ease-out 0.8s both;
+}

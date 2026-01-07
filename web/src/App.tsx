@@ -33,6 +33,7 @@ import { PendingAgents } from "./pages/PendingAgents";
 import { AgentRegistration } from "./pages/AgentRegistration";
 import { LandingPage } from "./pages/LandingPage";
 import { MetaMaskProvider } from "./contexts/MetaMaskContext";
+import { Startup } from "./components/Startup";
 
 interface ProtectedRoutesProps {
   children: ReactNode;
@@ -163,6 +164,7 @@ function App() {
 
   return (
     <MetaMaskProvider>
+      <Startup />
       <div className="min-h-screen bg-background flex flex-col">
         <GlobalLoadingIndicator />
         <ToastContainer
@@ -184,212 +186,212 @@ function App() {
             element={
               <PublicRoute>
                 <AuthPage />
-            </PublicRoute>
-          }
-        />
-        <Route
-          path="/forgot-password"
-          element={
-            <PublicRoute>
-              <ForgotPasswordPage />
-            </PublicRoute>
-          }
-        />
-        <Route
-          path="/privacy"
-          element={
-            <AccessibleRoute>
-              <PrivacyPolicy />
-            </AccessibleRoute>
-          }
-        />
-        <Route
-          path="/terms"
-          element={
-            <AccessibleRoute>
-              <TermsOfService />
-            </AccessibleRoute>
-          }
-        />
-        <Route path="/pending-approval" element={<PendingApprovalPage />} />
-        
-        {/* Agent Registration - Accessible to invited users */}
-        <Route
-          path="/agent-registration"
-          element={
-            <AccessibleRoute>
-              <AgentRegistration />
-            </AccessibleRoute>
-          }
-        />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/forgot-password"
+            element={
+              <PublicRoute>
+                <ForgotPasswordPage />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/privacy"
+            element={
+              <AccessibleRoute>
+                <PrivacyPolicy />
+              </AccessibleRoute>
+            }
+          />
+          <Route
+            path="/terms"
+            element={
+              <AccessibleRoute>
+                <TermsOfService />
+              </AccessibleRoute>
+            }
+          />
+          <Route path="/pending-approval" element={<PendingApprovalPage />} />
 
-        {/* Landing Page - Public */}
-        <Route
-          path="/"
-          element={
-            <PublicRoute>
-              <LandingPage />
-            </PublicRoute>
-          }
-        />
+          {/* Agent Registration - Accessible to invited users */}
+          <Route
+            path="/agent-registration"
+            element={
+              <AccessibleRoute>
+                <AgentRegistration />
+              </AccessibleRoute>
+            }
+          />
 
-        {/* Protected Routes wrapped with AppLayout */}
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoutes>
-              <AppLayout>
-                <Dashboard {...dashboardData} />
-              </AppLayout>
-            </ProtectedRoutes>
-          }
-        />
-        <Route
-          path="/products"
-          element={
-            <ProtectedRoutes>
-              <AppLayout>
-                <Products
-                  {...productsData}
-                  companies={companiesData?.companies}
-                  onRefresh={fetchProductsData}
-                />
-              </AppLayout>
-            </ProtectedRoutes>
-          }
-        />
-        <Route
-          path="/companies"
-          element={
-            <ProtectedRoutes>
-              <AppLayout>
+          {/* Landing Page - Public */}
+          <Route
+            path="/"
+            element={
+              <PublicRoute>
+                <LandingPage />
+              </PublicRoute>
+            }
+          />
+
+          {/* Protected Routes wrapped with AppLayout */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoutes>
+                <AppLayout>
+                  <Dashboard {...dashboardData} />
+                </AppLayout>
+              </ProtectedRoutes>
+            }
+          />
+          <Route
+            path="/products"
+            element={
+              <ProtectedRoutes>
+                <AppLayout>
+                  <Products
+                    {...productsData}
+                    companies={companiesData?.companies}
+                    onRefresh={fetchProductsData}
+                  />
+                </AppLayout>
+              </ProtectedRoutes>
+            }
+          />
+          <Route
+            path="/companies"
+            element={
+              <ProtectedRoutes>
+                <AppLayout>
                 <Companies {...companiesData} onRefresh={fetchCompaniesData} />
-              </AppLayout>
-            </ProtectedRoutes>
-          }
-        />
-        <Route
-          path="/maps"
-          element={
-            <ProtectedRoutes>
-              <AppLayout fullBleed hideFooter>
-                <Maps />
-              </AppLayout>
-            </ProtectedRoutes>
-          }
-        />
-        <Route
-          path="/analytics"
-          element={
-            <ProtectedRoutes>
-              <AppLayout hideFooter fullBleed>
-                <Analytics />
-              </AppLayout>
-            </ProtectedRoutes>
-          }
-        />
-        <Route
-          path="/profile"
-          element={
-            <ProtectedRoutes>
-              <AppLayout>
-                <Profile />
-              </AppLayout>
-            </ProtectedRoutes>
-          }
-        />
-        <Route
-          path="/users/:id"
-          element={
-            <ProtectedRoutes>
-              <AppLayout>
-                <UserProfileView />
-              </AppLayout>
-            </ProtectedRoutes>
-          }
-        />
-        <Route
-          path="/blockchain"
-          element={
-            <ProtectedRoutes>
-              <AppLayout>
-                <Blockchain />
-              </AppLayout>
-            </ProtectedRoutes>
-          }
-        />
-        <Route
-          path="/verify-certificate"
-          element={
-            <AccessibleRoute>
-              <CertificateVerifier />
-            </AccessibleRoute>
-          }
-        />
-        <Route
-          path="/scan-history"
-          element={
-            <ProtectedRoutes>
-              <AppLayout>
-                <ScanHistory />
-              </AppLayout>
-            </ProtectedRoutes>
-          }
-        />
-        <Route
-          path="/remote-config"
-          element={
-            <ProtectedRoutes>
-              <AppLayout>
-                <RemoteConfig />
-              </AppLayout>
-            </ProtectedRoutes>
-          }
-        />
-        <Route
-          path="/kiosk-monitor"
-          element={
-            <ProtectedRoutes>
-              <AppLayout>
-                <KioskMonitor />
-              </AppLayout>
-            </ProtectedRoutes>
-          }
-        />
-        <Route
-          path="/about"
-          element={
-            <ProtectedRoutes>
-              <AppLayout>
+                </AppLayout>
+              </ProtectedRoutes>
+            }
+          />
+          <Route
+            path="/maps"
+            element={
+              <ProtectedRoutes>
+                <AppLayout fullBleed hideFooter>
+                  <Maps />
+                </AppLayout>
+              </ProtectedRoutes>
+            }
+          />
+          <Route
+            path="/analytics"
+            element={
+              <ProtectedRoutes>
+                <AppLayout hideFooter fullBleed>
+                  <Analytics />
+                </AppLayout>
+              </ProtectedRoutes>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoutes>
+                <AppLayout>
+                  <Profile />
+                </AppLayout>
+              </ProtectedRoutes>
+            }
+          />
+          <Route
+            path="/users/:id"
+            element={
+              <ProtectedRoutes>
+                <AppLayout>
+                  <UserProfileView />
+                </AppLayout>
+              </ProtectedRoutes>
+            }
+          />
+          <Route
+            path="/blockchain"
+            element={
+              <ProtectedRoutes>
+                <AppLayout>
+                  <Blockchain />
+                </AppLayout>
+              </ProtectedRoutes>
+            }
+          />
+          <Route
+            path="/verify-certificate"
+            element={
+              <AccessibleRoute>
+                <CertificateVerifier />
+              </AccessibleRoute>
+            }
+          />
+          <Route
+            path="/scan-history"
+            element={
+              <ProtectedRoutes>
+                <AppLayout>
+                  <ScanHistory />
+                </AppLayout>
+              </ProtectedRoutes>
+            }
+          />
+          <Route
+            path="/remote-config"
+            element={
+              <ProtectedRoutes>
+                <AppLayout>
+                  <RemoteConfig />
+                </AppLayout>
+              </ProtectedRoutes>
+            }
+          />
+          <Route
+            path="/kiosk-monitor"
+            element={
+              <ProtectedRoutes>
+                <AppLayout>
+                  <KioskMonitor />
+                </AppLayout>
+              </ProtectedRoutes>
+            }
+          />
+          <Route
+            path="/about"
+            element={
+              <ProtectedRoutes>
+                <AppLayout>
                 <About/>
-              </AppLayout>
-            </ProtectedRoutes>
-          }
-        />
-        <Route
-          path="/contact"
-          element={
-            <ProtectedRoutes>
-              <AppLayout>
+                </AppLayout>
+              </ProtectedRoutes>
+            }
+          />
+          <Route
+            path="/contact"
+            element={
+              <ProtectedRoutes>
+                <AppLayout>
                 <Contact/>
-              </AppLayout>
-            </ProtectedRoutes>
-          }
-        />
-        <Route
-          path="/pending-agents"
-          element={
-            <ProtectedRoutes>
-              <AppLayout>
-                <PendingAgents user={currentUser} />
-              </AppLayout>
-            </ProtectedRoutes>
-          }
-        />
+                </AppLayout>
+              </ProtectedRoutes>
+            }
+          />
+          <Route
+            path="/pending-agents"
+            element={
+              <ProtectedRoutes>
+                <AppLayout>
+                  <PendingAgents user={currentUser} />
+                </AppLayout>
+              </ProtectedRoutes>
+            }
+          />
 
-        {/* 404 Catch-all */}
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
+          {/* 404 Catch-all */}
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
       </div>
     </MetaMaskProvider>
   );
