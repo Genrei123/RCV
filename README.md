@@ -1,3 +1,8 @@
+<p align="center">
+<img width="125" height="136" alt="image" src="https://github.com/user-attachments/assets/3f63f493-04e0-4793-91e8-8009a2910608" />
+</p>
+
+
 # Regulatory Compliance Verification System (RCV)
 
 ## Overview
