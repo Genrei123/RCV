@@ -28,7 +28,7 @@
     "crypto-js": "^4.2.0",
     "exceljs": "^4.4.0",
     "firebase": "^12.4.0",
-    "jspdf": "^3.0.3",
+    "jspdf": "^4.0.0",
     "lucide-react": "^0.544.0",
     "qrcode": "^1.5.4",
     "react": "^19.1.1",
