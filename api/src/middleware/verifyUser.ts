@@ -120,9 +120,9 @@ export const isAdmin = (req: Request, res: Response, next: NextFunction) => {
 const extractRole = (role: number) => {
   switch (role) {
     case 0:
-      return 'Admin';
+      return 'ADMIN';
     case 1:
-      return 'Agent';
+      return 'AGENT';
   }
 }
 

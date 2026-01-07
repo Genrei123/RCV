@@ -15,9 +15,9 @@ class ApiConfig {
   static const Duration receiveTimeout = Duration(seconds: 30);
   
   // Endpoints
-  static const String scanProduct = '/api/$apiVersion/scan/scanProduct';
-  static const String getScans = '/api/$apiVersion/scan/getScans';
-  static String getScanById(String id) => '/api/$apiVersion/scan/getScans/$id';
+  static const String scanProduct = '/api/$apiVersion/mobile/scan';
+  static const String getScans = '/api/$apiVersion/mobile/scan/history';
+  static String getScanById(String id) => '/api/$apiVersion/mobile/scan/history/$id';
   
   // Headers
   static Map<String, String> get headers => {

@@ -98,7 +98,11 @@ export function MetaMaskProvider({ children }: { children: ReactNode }) {
   };
 
   const connect = async (switchAccount: boolean = false): Promise<boolean> => {
-    if (!isMetaMaskInstalled) return false;
+    if (!isMetaMaskInstalled) {
+      // Open MetaMask download page if not installed
+      window.open('https://metamask.io/download/', '_blank');
+      return false;
+    }
 
     try {
       const connection = await MetaMaskService.connectWallet(switchAccount);

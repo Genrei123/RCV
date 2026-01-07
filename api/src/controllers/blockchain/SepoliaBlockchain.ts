@@ -5,9 +5,11 @@ import {
   storePDFHashOnBlockchain,
   verifyTransactionOnBlockchain,
   isAuthorizedWallet,
-  addAuthorizedWallet,
-  removeAuthorizedWallet,
+  authorizeUserWallet,
+  revokeWalletAuthorization,
+  isWalletAddressInUse,
   getAdminWalletAddress,
+  isAdminWallet,
   isValidWalletAddress,
   extractCertificateFromTransaction,
   verifyPDFHashOnBlockchain
@@ -65,7 +67,7 @@ export const storeHashOnSepolia = async (
     }
     
     // Check if wallet is authorized (if provided)
-    if (walletAddress && !isAuthorizedWallet(walletAddress)) {
+    if (walletAddress && !(await isAuthorizedWallet(walletAddress))) {
       throw new CustomError(403, 'Unauthorized wallet', {
         success: false,
         message: 'The provided wallet address is not authorized for blockchain operations'
@@ -156,8 +158,9 @@ export const checkWalletAuthorization = async (
       });
     }
     
-    const isAuthorized = isAuthorizedWallet(address);
-    const isAdmin = address.toLowerCase() === getAdminWalletAddress().toLowerCase();
+    const isAuthorized = await isAuthorizedWallet(address);
+    const isAdmin = await isAdminWallet(address);
+    const adminWalletAddress = await getAdminWalletAddress();
     
     res.status(200).json({
       success: true,
@@ -165,7 +168,7 @@ export const checkWalletAuthorization = async (
         address,
         isAuthorized,
         isAdmin,
-        adminWalletAddress: getAdminWalletAddress()
+        adminWalletAddress
       }
     });
   } catch (error) {
@@ -218,8 +221,8 @@ export const verifyUserWallet = async (
     }
     
     // Check if wallet is authorized for blockchain operations
-    const isAuthorized = isAuthorizedWallet(walletAddress);
-    const isAdmin = walletAddress.toLowerCase() === getAdminWalletAddress().toLowerCase();
+    const isAuthorized = await isAuthorizedWallet(walletAddress);
+    const isAdmin = await isAdminWallet(walletAddress);
     
     res.status(200).json({
       success: true,
@@ -230,7 +233,8 @@ export const verifyUserWallet = async (
         isAuthorized,
         isAdmin,
         canPerformBlockchainOps: isAuthorized,
-        userRole: user.role
+        userRole: user.role,
+        walletAuthorized: user.walletAuthorized
       }
     });
   } catch (error) {
@@ -239,8 +243,10 @@ export const verifyUserWallet = async (
 };
 
 /**
- * Update user's wallet address (Admin only)
+ * Update user's wallet address and authorization (Admin only)
  * PUT /api/v1/sepolia/user-wallet/:userId
+ * 
+ * Note: This endpoint should be protected with verifyAdmin middleware in the routes
  */
 export const updateUserWallet = async (
   req: Request,
@@ -249,7 +255,16 @@ export const updateUserWallet = async (
 ) => {
   try {
     const { userId } = req.params;
-    const { walletAddress, addToAuthorized } = req.body;
+    const { walletAddress, authorize } = req.body;
+    
+    // Verify the requesting user is an admin
+    const requestingUser = (req as any).user;
+    if (!requestingUser || requestingUser.role !== 'ADMIN') {
+      throw new CustomError(403, 'Admin access required', {
+        success: false,
+        message: 'Only administrators can update user wallet addresses and authorizations'
+      });
+    }
     
     if (!walletAddress) {
       throw new CustomError(400, 'Missing wallet address', {
@@ -258,10 +273,19 @@ export const updateUserWallet = async (
       });
     }
     
-    if (walletAddress && !isValidWalletAddress(walletAddress)) {
+    if (!isValidWalletAddress(walletAddress)) {
       throw new CustomError(400, 'Invalid wallet address', {
         success: false,
         message: 'The provided address is not a valid Ethereum address'
+      });
+    }
+    
+    // Check if wallet is already used by another user
+    const walletInUse = await isWalletAddressInUse(walletAddress, userId);
+    if (walletInUse) {
+      throw new CustomError(409, 'Wallet address already in use', {
+        success: false,
+        message: 'This wallet address is already associated with another user'
       });
     }
     
@@ -276,13 +300,14 @@ export const updateUserWallet = async (
     }
     
     // Update wallet address
-    user.walletAddress = walletAddress;
-    await UserRepo.save(user);
+    user.walletAddress = walletAddress.toLowerCase();
     
-    // Add to authorized wallets if requested
-    if (addToAuthorized && walletAddress) {
-      addAuthorizedWallet(walletAddress);
+    // Update authorization if specified
+    if (authorize !== undefined) {
+      user.walletAuthorized = authorize;
     }
+    
+    await UserRepo.save(user);
     
     res.status(200).json({
       success: true,
@@ -290,8 +315,102 @@ export const updateUserWallet = async (
       data: {
         userId,
         walletAddress: user.walletAddress,
-        isAuthorized: walletAddress ? isAuthorizedWallet(walletAddress) : false
+        walletAuthorized: user.walletAuthorized,
+        isAuthorized: user.walletAuthorized
       }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Authorize a user's wallet for blockchain operations (Admin only)
+ * POST /api/v1/sepolia/authorize-wallet
+ */
+export const authorizeWallet = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { userId, walletAddress } = req.body;
+    
+    // Verify the requesting user is an admin
+    const requestingUser = (req as any).user;
+    if (!requestingUser || requestingUser.role !== 'ADMIN') {
+      throw new CustomError(403, 'Admin access required', {
+        success: false,
+        message: 'Only administrators can authorize wallet addresses'
+      });
+    }
+    
+    if (!userId || !walletAddress) {
+      throw new CustomError(400, 'Missing required fields', {
+        success: false,
+        message: 'userId and walletAddress are required'
+      });
+    }
+    
+    const result = await authorizeUserWallet(userId, walletAddress);
+    
+    if (!result.success) {
+      throw new CustomError(400, 'Authorization failed', {
+        success: false,
+        message: result.message
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: result.message,
+      data: result.user
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Revoke a user's wallet authorization (Admin only)
+ * POST /api/v1/sepolia/revoke-wallet
+ */
+export const revokeWallet = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { userId } = req.body;
+    
+    // Verify the requesting user is an admin
+    const requestingUser = (req as any).user;
+    if (!requestingUser || requestingUser.role !== 'ADMIN') {
+      throw new CustomError(403, 'Admin access required', {
+        success: false,
+        message: 'Only administrators can revoke wallet authorizations'
+      });
+    }
+    
+    if (!userId) {
+      throw new CustomError(400, 'Missing required fields', {
+        success: false,
+        message: 'userId is required'
+      });
+    }
+    
+    const result = await revokeWalletAuthorization(userId);
+    
+    if (!result.success) {
+      throw new CustomError(400, 'Revocation failed', {
+        success: false,
+        message: result.message
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: result.message
     });
   } catch (error) {
     next(error);
@@ -308,10 +427,12 @@ export const getAdminWallet = async (
   next: NextFunction
 ) => {
   try {
+    const adminWalletAddress = await getAdminWalletAddress();
+    
     res.status(200).json({
       success: true,
       data: {
-        adminWalletAddress: getAdminWalletAddress()
+        adminWalletAddress
       }
     });
   } catch (error) {
@@ -743,6 +864,8 @@ export default {
   checkWalletAuthorization,
   verifyUserWallet,
   updateUserWallet,
+  authorizeWallet,
+  revokeWallet,
   getAdminWallet,
   getBlockchainCertificates,
   getBlockchainCertificateById,

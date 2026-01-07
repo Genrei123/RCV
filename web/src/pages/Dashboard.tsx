@@ -66,8 +66,12 @@ import {
   RefreshCw,
   Loader2,
   Monitor,
-  Smartphone
+  Smartphone,
+  Shield,
+  FileCheck,
 } from "lucide-react";
+import ApprovalQueue from "@/components/ApprovalQueue";
+import MySubmissions from "@/components/MySubmissions";
 
 export interface DashboardProps {
   success?: boolean;
@@ -99,8 +103,8 @@ export function Dashboard(props: DashboardProps) {
   const [statsLoading, setStatsLoading] = useState<boolean>(true);
   const pageSize = 10;
 
-  // View mode toggle: 'users', 'rejected', or 'invites'
-  const [viewMode, setViewMode] = useState<"users" | "rejected" | "invites">("users");
+  // View mode toggle: 'users', 'rejected', 'invites', 'approvals', or 'my-submissions'
+  const [viewMode, setViewMode] = useState<"users" | "rejected" | "invites" | "approvals" | "my-submissions">("users");
   const [invites, setInvites] = useState<AdminInvite[]>([]);
   const [invitesLoading, setInvitesLoading] = useState<boolean>(false);
 
@@ -767,40 +771,60 @@ export function Dashboard(props: DashboardProps) {
           </Card>
         </div>
 
-        {/* View Toggle (Admin only) */}
-        {isAdmin() && (
-          <div className="flex items-center gap-2 mb-4">
-            <div className="flex border rounded-lg">
-              <Button
-                variant={viewMode === "users" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("users")}
-                className="rounded-r-none cursor-pointer"
-              >
-                <Users className="h-4 w-4 mr-2" />
-                Users
-              </Button>
-              <Button
-                variant={viewMode === "rejected" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("rejected")}
-                className="rounded-none border-l cursor-pointer"
-              >
-                <XCircle className="h-4 w-4 mr-2" />
-                Rejected
-              </Button>
-              <Button
-                variant={viewMode === "invites" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("invites")}
-                className="rounded-l-none border-l cursor-pointer"
-              >
-                <Mail className="h-4 w-4 mr-2" />
-                Invites
-              </Button>
-            </div>
+        {/* View Toggle */}
+        <div className="flex items-center gap-2 mb-4 overflow-x-auto">
+          <div className="flex border rounded-lg flex-wrap">
+            <Button
+              variant={viewMode === "users" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("users")}
+              className="rounded-r-none cursor-pointer"
+            >
+              <Users className="h-4 w-4 mr-2" />
+              Users
+            </Button>
+            {isAdmin() && (
+              <>
+                <Button
+                  variant={viewMode === "rejected" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("rejected")}
+                  className="rounded-none border-l cursor-pointer"
+                >
+                  <XCircle className="h-4 w-4 mr-2" />
+                  Rejected
+                </Button>
+                <Button
+                  variant={viewMode === "invites" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("invites")}
+                  className="rounded-none border-l cursor-pointer"
+                >
+                  <Mail className="h-4 w-4 mr-2" />
+                  Invites
+                </Button>
+                <Button
+                  variant={viewMode === "approvals" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("approvals")}
+                  className="rounded-none border-l cursor-pointer"
+                >
+                  <Shield className="h-4 w-4 mr-2" />
+                  Approvals
+                </Button>
+              </>
+            )}
+            <Button
+              variant={viewMode === "my-submissions" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("my-submissions")}
+              className="rounded-l-none border-l cursor-pointer"
+            >
+              <FileCheck className="h-4 w-4 mr-2" />
+              My Submissions
+            </Button>
           </div>
-        )}
+        </div>
 
         {/* Users Table */}
         {viewMode === "users" && (
@@ -1031,6 +1055,20 @@ export function Dashboard(props: DashboardProps) {
             <div className="mt-4 text-sm text-muted-foreground">
               Showing {invites.length} invitations
             </div>
+          </div>
+        )}
+
+        {/* Approvals Queue (Admin only) */}
+        {viewMode === "approvals" && isAdmin() && (
+          <div className="w-full">
+            <ApprovalQueue isAdmin={true} />
+          </div>
+        )}
+
+        {/* My Submissions (All users) */}
+        {viewMode === "my-submissions" && (
+          <div className="w-full">
+            <MySubmissions />
           </div>
         )}
       </PageContainer>

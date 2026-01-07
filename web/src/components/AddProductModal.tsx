@@ -8,7 +8,7 @@ import { CompanyService } from "@/services/companyService";
 import { BrandNameService } from "@/services/brandNameService";
 import { ProductClassificationService } from "@/services/productClassificationService";
 import { FirebaseStorageService } from "@/services/firebaseStorageService";
-import { MetaMaskService } from "@/services/metaMaskService";
+import { CertificateApprovalService } from "@/services/approvalService";
 import { AddCompanyModal } from "@/components/AddCompanyModal";
 import { AddBrandNameModal } from "@/components/AddBrandNameModal";
 import { AddClassificationModal } from "@/components/AddClassificationModal";
@@ -16,6 +16,7 @@ import type { BrandName } from "@/typeorm/entities/brandName.entity";
 import type { ProductClassification } from "@/typeorm/entities/productClassification.entity";
 import { toast } from "react-toastify";
 import { useMetaMask } from "@/contexts/MetaMaskContext";
+import { AuthService } from "@/services/authService";
 
 interface AddProductModalProps {
   isOpen: boolean;
@@ -550,36 +551,53 @@ export function AddProductModal({
     }
   };
 
+  // === UPDATED VALIDATION LOGIC ===
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
+    const MAX_LENGTH = 50; 
+    const MSG_REQUIRED = "required";
+    const MSG_TOO_LONG = "This input is a bit too long. Please shorten it.";
 
     if (!formData.LTONumber.trim()) {
       newErrors.LTONumber = "LTO Number is required";
+    } else if (formData.LTONumber.length > MAX_LENGTH) {
+      newErrors.LTONumber = MSG_TOO_LONG;
     }
 
     if (!formData.CFPRNumber.trim()) {
       newErrors.CFPRNumber = "CFPR Number is required";
+    } else if (formData.CFPRNumber.length > MAX_LENGTH) {
+      newErrors.CFPRNumber = MSG_TOO_LONG;
     }
 
     if (!formData.lotNumber.trim()) {
       newErrors.lotNumber = "Lot Number is required";
+    } else if (formData.lotNumber.length > MAX_LENGTH) {
+      newErrors.lotNumber = MSG_TOO_LONG;
     }
 
     if (!formData.brandName.trim()) {
       newErrors.brandName = "Brand Name is required";
+    } else if (formData.brandName.length > MAX_LENGTH) {
+      newErrors.brandName = MSG_TOO_LONG;
     }
 
     if (!formData.productName.trim()) {
       newErrors.productName = "Product Name is required";
+    } else if (formData.productName.length > MAX_LENGTH) {
+      newErrors.productName = MSG_TOO_LONG;
     }
 
     if (!formData.productClassification.trim()) {
       newErrors.productClassification = "Product Classification is required";
+    } else if (formData.productClassification.length > MAX_LENGTH) {
+      newErrors.productClassification = MSG_TOO_LONG;
     }
 
     if (!formData.productSubClassification.trim()) {
-      newErrors.productSubClassification =
-        "Product Sub-Classification is required";
+      newErrors.productSubClassification = "Product Sub-Classification is required";
+    } else if (formData.productSubClassification.length > MAX_LENGTH) {
+      newErrors.productSubClassification = MSG_TOO_LONG;
     }
 
     if (!formData.expirationDate) {
@@ -591,6 +609,21 @@ export function AddProductModal({
     }
 
     setErrors(newErrors);
+
+    // === UPDATED TOAST LOGIC (Announcement Style) ===
+    const errorValues = Object.values(newErrors);
+    if (errorValues.length > 0) {
+      const isOnlyEmptyFields = errorValues.every(err => err.toLowerCase().includes(MSG_REQUIRED));
+
+      if (isOnlyEmptyFields) {
+        toast.error("Required fields are missing", { toastId: "validation-error" });
+      } else {
+        toast.error("Errors found in several fields", { toastId: "validation-error" });
+      }
+    } else {
+      toast.dismiss("validation-error");
+    }
+
     return Object.keys(newErrors).length === 0;
   };
 
@@ -598,71 +631,14 @@ export function AddProductModal({
     e.preventDefault();
 
     if (!validateForm()) {
-      toast.error("Please fill in all required fields");
+      // Toast is handled by validateForm
       return;
     }
 
     setLoading(true);
 
     try {
-      // ============ PHASE 1: PREPARE DATA & BLOCKCHAIN (Optional) ============
-      // If wallet is connected, we do blockchain first to ensure atomicity
-      
-      let sepoliaTransactionId: string | undefined;
-      
-      // Generate hash for blockchain BEFORE creating product
-      if (isWalletConnected && isWalletAuthorized && walletAddress) {
-        toast.info("Preparing blockchain verification...", { autoClose: 2000 });
-        
-        // Generate a hash from product data
-        const productDataString = JSON.stringify({
-          LTONumber: formData.LTONumber,
-          CFPRNumber: formData.CFPRNumber,
-          lotNumber: formData.lotNumber,
-          productName: formData.productName,
-          brandName: formData.brandName,
-          timestamp: new Date().toISOString()
-        });
-        
-        // Create SHA-256 hash
-        const encoder = new TextEncoder();
-        const data = encoder.encode(productDataString);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        const pdfHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-        
-        toast.info("Storing certificate on Sepolia blockchain...", { autoClose: 2000 });
-        
-        const blockchainResult = await MetaMaskService.storeHashOnBlockchain(
-          pdfHash,
-          `CERT-PROD-${formData.LTONumber}-${Date.now()}`,
-          'product',
-          formData.productName,
-          walletAddress
-        );
-        
-        if (blockchainResult.success && blockchainResult.data) {
-          sepoliaTransactionId = blockchainResult.data.txHash;
-          toast.success(
-            `Blockchain verified! Tx: ${sepoliaTransactionId.slice(0, 10)}...`,
-            { autoClose: 3000 }
-          );
-        } else {
-          // Blockchain failed - ask user if they want to continue without it
-          const continueWithoutBlockchain = window.confirm(
-            "Blockchain storage failed. Do you want to create the product without blockchain verification?\n\n" +
-            "Note: The product can be verified on blockchain later."
-          );
-          
-          if (!continueWithoutBlockchain) {
-            toast.info("Product creation cancelled");
-            setLoading(false);
-            return;
-          }
-        }
-      }
-
-      // ============ PHASE 2: UPLOAD IMAGES ============
+      // ============ PHASE 1: UPLOAD IMAGES ============
       let productImageFrontUrl: string | undefined;
       let productImageBackUrl: string | undefined;
 
@@ -684,7 +660,7 @@ export function AddProductModal({
         productImageBackUrl = response.downloadUrl;
       }
 
-      // ============ PHASE 3: CREATE PRODUCT ============
+      // ============ PHASE 2: CREATE PRODUCT ============
       const productData: CreateProductRequest = {
         LTONumber: formData.LTONumber,
         CFPRNumber: formData.CFPRNumber,
@@ -702,27 +678,83 @@ export function AddProductModal({
         brandNameId: selectedBrandName?._id,
         classificationId: selectedClassification?._id,
         subClassificationId: selectedSubClassification?._id,
-        // Include Sepolia transaction ID if available
-        sepoliaTransactionId,
+        // Don't include sepoliaTransactionId - will be added after approval
       };
 
+      toast.info("Creating product...", { autoClose: 1500 });
       const response = await ProductService.addProduct(productData);
 
-      // Show success message
-      if (sepoliaTransactionId) {
-        toast.success(
-          `Product created & verified on blockchain by ${response.registeredBy.name}!`
-        );
+      // ============ PHASE 3: SUBMIT FOR MULTI-SIG APPROVAL ============
+      // Only submit for blockchain approval if wallet is connected and authorized
+      if (isWalletConnected && isWalletAuthorized && walletAddress) {
+        toast.info("Submitting for multi-signature approval...", { autoClose: 2000 });
+        
+        // Generate hash from product data for certificate
+        const productDataString = JSON.stringify({
+          LTONumber: formData.LTONumber,
+          CFPRNumber: formData.CFPRNumber,
+          lotNumber: formData.lotNumber,
+          productName: formData.productName,
+          brandName: formData.brandName,
+          productId: response.product._id,
+          timestamp: new Date().toISOString()
+        });
+        
+        // Create SHA-256 hash
+        const encoder = new TextEncoder();
+        const data = encoder.encode(productDataString);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const pdfHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        
+        // Get current user for submitter info
+        const currentUser = await AuthService.getCurrentUser();
+        
+        // Submit for approval
+        const certificateId = `CERT-PROD-${formData.LTONumber}-${Date.now()}`;
+        const productId = response.product._id;
+        
+        if (!productId) {
+          console.error("Product ID not returned from server");
+          toast.warning("Product created but could not submit for approval - missing product ID");
+          return;
+        }
+        
+        try {
+          const approval = await CertificateApprovalService.submitForApproval({
+            certificateId,
+            entityType: 'product',
+            entityId: productId,
+            entityName: formData.productName,
+            pdfHash,
+            submitterName: currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : undefined,
+            submitterWallet: walletAddress,
+          });
+          
+          toast.success(
+            `Product created! Submitted for approval (${approval.requiredApprovals} admins required)`,
+            { autoClose: 5000 }
+          );
+        } catch (approvalError: any) {
+          console.error("Failed to submit for approval:", approvalError);
+          toast.warning(
+            "Product created but failed to submit for approval. You can submit manually later.",
+            { autoClose: 5000 }
+          );
+        }
       } else {
+        // No wallet connected - just show success for product creation
         toast.success(
-          `Product created successfully by ${response.registeredBy.name}!`
+          `Product created successfully by ${response.registeredBy?.name || 'Unknown'}!`,
+          { autoClose: 3000 }
+        );
+        toast.info(
+          "Connect your wallet to submit products for blockchain verification",
+          { autoClose: 5000 }
         );
       }
 
       console.log("Product registered by:", response.registeredBy);
-      if (sepoliaTransactionId) {
-        console.log("Blockchain transaction:", sepoliaTransactionId);
-      }
 
       // Reset form
       setFormData({
@@ -908,8 +940,9 @@ export function AddProductModal({
                     value={formData.LTONumber}
                     onChange={handleChange}
                     placeholder="LTO-12345678"
+                    // UPDATED STYLE: Red glow
                     className={`pl-10 ${
-                      errors.LTONumber ? "border-[color:var(--app-error)]" : ""
+                      errors.LTONumber ? "!border-red-500 !ring-1 !ring-red-200" : ""
                     }`}
                     disabled={loading}
                   />
@@ -932,8 +965,9 @@ export function AddProductModal({
                     value={formData.CFPRNumber}
                     onChange={handleChange}
                     placeholder="CFPR-1234567"
+                    // UPDATED STYLE: Red glow
                     className={`pl-10 ${
-                      errors.CFPRNumber ? "border-[color:var(--app-error)]" : ""
+                      errors.CFPRNumber ? "!border-red-500 !ring-1 !ring-red-200" : ""
                     }`}
                     disabled={loading}
                   />
@@ -958,8 +992,9 @@ export function AddProductModal({
                   value={formData.lotNumber}
                   onChange={handleChange}
                   placeholder="Enter lot number"
+                  // UPDATED STYLE: Red glow
                   className={`pl-10 ${
-                    errors.lotNumber ? "border-[color:var(--app-error)]" : ""
+                    errors.lotNumber ? "!border-red-500 !ring-1 !ring-red-200" : ""
                   }`}
                   disabled={loading}
                 />
@@ -1001,8 +1036,9 @@ export function AddProductModal({
                     onFocus={() => setBrandNameDropdownOpen(true)}
                     onChange={(e) => handleBrandNameInputChange(e.target.value)}
                     placeholder="Search or enter brand name"
+                    // UPDATED STYLE: Red glow
                     className={`pl-10 ${
-                      errors.brandName ? "border-[color:var(--app-error)]" : ""
+                      errors.brandName ? "!border-red-500 !ring-1 !ring-red-200" : ""
                     }`}
                     disabled={loading}
                   />
@@ -1066,9 +1102,10 @@ export function AddProductModal({
                     value={formData.productName}
                     onChange={handleChange}
                     placeholder="Enter product name"
+                    // UPDATED STYLE: Red glow
                     className={`pl-10 ${
                       errors.productName
-                        ? "border-[color:var(--app-error)]"
+                        ? "!border-red-500 !ring-1 !ring-red-200"
                         : ""
                     }`}
                     disabled={loading}
@@ -1115,8 +1152,9 @@ export function AddProductModal({
                     onFocus={() => setClassificationDropdownOpen(true)}
                     onChange={(e) => handleClassificationInputChange(e.target.value)}
                     placeholder="Search or select classification"
+                    // UPDATED STYLE: Red glow
                     className={`pl-10 ${
-                      errors.productClassification ? "border-[color:var(--app-error)]" : ""
+                      errors.productClassification ? "!border-red-500 !ring-1 !ring-red-200" : ""
                     }`}
                     disabled={loading}
                   />
@@ -1203,8 +1241,9 @@ export function AddProductModal({
                     onFocus={() => selectedClassification && setSubClassificationDropdownOpen(true)}
                     onChange={(e) => handleSubClassificationInputChange(e.target.value)}
                     placeholder={selectedClassification ? "Search or select sub-classification" : "Select classification first"}
+                    // UPDATED STYLE: Red glow
                     className={`pl-10 ${
-                      errors.productSubClassification ? "border-[color:var(--app-error)]" : ""
+                      errors.productSubClassification ? "!border-red-500 !ring-1 !ring-red-200" : ""
                     }`}
                     disabled={loading || !selectedClassification}
                   />
@@ -1291,9 +1330,10 @@ export function AddProductModal({
                     name="expirationDate"
                     value={formData.expirationDate}
                     onChange={handleChange}
+                    // UPDATED STYLE: Red glow
                     className={`pl-10 ${
                       errors.expirationDate
-                        ? "border-[color:var(--app-error)]"
+                        ? "!border-red-500 !ring-1 !ring-red-200"
                         : ""
                     }`}
                     disabled={loading}
@@ -1335,9 +1375,10 @@ export function AddProductModal({
                   onFocus={() => setCompanyDropdownOpen(true)}
                   onChange={(e) => handleCompanyInputChange(e.target.value)}
                   placeholder="Search or select a company"
+                  // UPDATED STYLE: Red glow
                   className={`pl-10 ${
                     errors.companyId
-                      ? "border-[color:var(--app-error)]"
+                      ? "!border-red-500 !ring-1 !ring-red-200"
                       : "app-border-neutral"
                   }`}
                   disabled={loading}

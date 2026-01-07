@@ -11,6 +11,7 @@ import { ComplianceReport } from './entities/complianceReport.entity';
 import { AdminInvite } from './entities/adminInvite.entity';
 import { BrandName } from './entities/brandName.entity';
 import { ProductClassification } from './entities/productClassification.entity';
+import { CertificateApproval } from './entities/certificateApproval.entity';
 
 // Initialize the datasource/database connection
 export const DB = new DataSource(config);
@@ -28,5 +29,6 @@ const ComplianceReportRepo = DB.getRepository(ComplianceReport);
 const AdminInviteRepo = DB.getRepository(AdminInvite);
 const BrandNameRepo = DB.getRepository(BrandName);
 const ProductClassificationRepo = DB.getRepository(ProductClassification);
+const CertificateApprovalRepo = DB.getRepository(CertificateApproval);
 
-export { UserRepo, ProductRepo, AuditTrailRepo, CompanyRepo, ScanRepo, ForgotPasswordRepo, AuditLogRepo, ComplianceReportRepo, AdminInviteRepo, BrandNameRepo, ProductClassificationRepo };
+export { UserRepo, ProductRepo, AuditTrailRepo, CompanyRepo, ScanRepo, ForgotPasswordRepo, AuditLogRepo, ComplianceReportRepo, AdminInviteRepo, BrandNameRepo, ProductClassificationRepo, CertificateApprovalRepo };

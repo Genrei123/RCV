@@ -24,6 +24,7 @@ import ContactRouter from "./routes/v1/contact";
 import AuditLogRouter from "./routes/v1/auditLog";
 import CertificateBlockchainRouter from "./routes/v1/certificateBlockchain";
 import SepoliaBlockchainRouter from "./routes/v1/sepoliaBlockchain";
+import CertificateApprovalRouter from "./routes/v1/certificateApproval";
 import AnalyticsRouter from "./routes/v1/analytics";
 import AdminInviteRouter from "./routes/v1/adminInvite";
 import BrandNameRouter from "./routes/v1/brandName";
@@ -67,6 +68,7 @@ const setUpApp = async () => {
     CertificateBlockchainRouter
   );
   app.use("/api/v1/sepolia", SepoliaBlockchainRouter); // Sepolia blockchain routes (some public for verification)
+  app.use("/api/v1/certificate-approval", CertificateApprovalRouter); // Multi-sig certificate approval
   app.use("/api/v1/analytics", verifyUser, AnalyticsRouter);
   app.use("/api/v1/admin-invite", AdminInviteRouter);
   app.use("/api/v1/brand-name", verifyUser, BrandNameRouter);

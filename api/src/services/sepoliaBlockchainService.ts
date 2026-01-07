@@ -1,23 +1,24 @@
 import { ethers, JsonRpcProvider, Wallet } from 'ethers';
+import { UserRepo } from '../typeorm/data-source';
+import { Not, IsNull } from 'typeorm';
 
 /**
  * Sepolia Blockchain Service
  * Handles storing PDF hashes on the Ethereum Sepolia testnet
+ * 
+ * Authorization is now database-driven:
+ * - Users with walletAddress set and walletAuthorized=true can perform blockchain operations
+ * - Only ADMIN users can authorize other users' wallets
+ * - The admin wallet is determined by the first ADMIN user with an authorized wallet
  */
 
 // Environment variables (should be set in .env)
 const INFURA_API_KEY = process.env.INFURA_API_KEY || '';
 const WALLET_PRIVATE_KEY = process.env.WALLET_PRIVATE_KEY || '';
-const ADMIN_WALLET_ADDRESS = process.env.ADMIN_WALLET_ADDRESS || '';
 
 // Provider and wallet instances
 let provider: JsonRpcProvider | null = null;
 let wallet: Wallet | null = null;
-
-// Authorized wallet addresses for blockchain operations
-const authorizedWallets: Set<string> = new Set([
-  ADMIN_WALLET_ADDRESS.toLowerCase()
-]);
 
 export interface BlockchainTransaction {
   txHash: string;
@@ -89,9 +90,33 @@ const withTimeout = <T>(promise: Promise<T>, timeoutMs: number, fallback: T): Pr
 };
 
 /**
+ * Get all authorized wallet addresses from the database
+ */
+export const getAuthorizedWalletsFromDB = async (): Promise<string[]> => {
+  try {
+    const authorizedUsers = await UserRepo.find({
+      where: {
+        walletAddress: Not(IsNull()),
+        walletAuthorized: true
+      },
+      select: ['walletAddress']
+    });
+    return authorizedUsers
+      .map(u => u.walletAddress)
+      .filter((addr): addr is string => addr !== undefined && addr !== null);
+  } catch (error) {
+    console.error('Error fetching authorized wallets from DB:', error);
+    return [];
+  }
+};
+
+/**
  * Get blockchain connection stats
  */
 export const getSepoliaStats = async (): Promise<SepoliaStats> => {
+  // Get authorized wallets from database
+  const authorizedWallets = await getAuthorizedWalletsFromDB();
+  
   if (!provider || !wallet) {
     return {
       isConnected: false,
@@ -99,14 +124,14 @@ export const getSepoliaStats = async (): Promise<SepoliaStats> => {
       chainId: null,
       walletAddress: '',
       balance: '0',
-      authorizedWallets: Array.from(authorizedWallets)
+      authorizedWallets
     };
   }
   
-  // Return cached stats if still valid
+  // Return cached stats if still valid (but always refresh authorized wallets)
   const now = Date.now();
   if (cachedStats && (now - lastStatsFetch) < STATS_CACHE_DURATION) {
-    return cachedStats;
+    return { ...cachedStats, authorizedWallets };
   }
   
   try {
@@ -126,7 +151,7 @@ export const getSepoliaStats = async (): Promise<SepoliaStats> => {
       chainId: network.chainId.toString(),
       walletAddress: wallet.address,
       balance: ethers.formatEther(balance),
-      authorizedWallets: Array.from(authorizedWallets)
+      authorizedWallets
     };
     lastStatsFetch = now;
     
@@ -139,45 +164,170 @@ export const getSepoliaStats = async (): Promise<SepoliaStats> => {
       chainId: null,
       walletAddress: wallet.address,
       balance: '0',
-      authorizedWallets: Array.from(authorizedWallets)
+      authorizedWallets
     };
   }
 };
 
 /**
- * Check if a wallet address is authorized
+ * Check if a wallet address is authorized (database-driven)
  */
-export const isAuthorizedWallet = (walletAddress: string): boolean => {
-  return authorizedWallets.has(walletAddress.toLowerCase());
-};
-
-/**
- * Add an authorized wallet address
- */
-export const addAuthorizedWallet = (walletAddress: string): boolean => {
-  if (!ethers.isAddress(walletAddress)) {
+export const isAuthorizedWallet = async (walletAddress: string): Promise<boolean> => {
+  try {
+    const user = await UserRepo.findOne({
+      where: {
+        walletAddress: walletAddress.toLowerCase(),
+        walletAuthorized: true
+      }
+    });
+    return user !== null;
+  } catch (error) {
+    console.error('Error checking wallet authorization:', error);
     return false;
   }
-  authorizedWallets.add(walletAddress.toLowerCase());
-  return true;
 };
 
 /**
- * Remove an authorized wallet address
+ * Authorize a user's wallet address (Admin only operation - call from controller with admin check)
+ * @param userId The user ID whose wallet to authorize
+ * @param walletAddress The wallet address to set and authorize
+ * @returns Object with success status and message
  */
-export const removeAuthorizedWallet = (walletAddress: string): boolean => {
-  // Cannot remove the main admin wallet
-  if (walletAddress.toLowerCase() === ADMIN_WALLET_ADDRESS.toLowerCase()) {
+export const authorizeUserWallet = async (
+  userId: string,
+  walletAddress: string
+): Promise<{ success: boolean; message: string; user?: any }> => {
+  try {
+    if (!ethers.isAddress(walletAddress)) {
+      return { success: false, message: 'Invalid Ethereum wallet address' };
+    }
+
+    const normalizedAddress = walletAddress.toLowerCase();
+
+    // Check if wallet is already used by another user
+    const existingUser = await UserRepo.findOne({
+      where: { walletAddress: normalizedAddress }
+    });
+
+    if (existingUser && existingUser._id !== userId) {
+      return { 
+        success: false, 
+        message: 'This wallet address is already associated with another user' 
+      };
+    }
+
+    // Get the user to authorize
+    const user = await UserRepo.findOne({ where: { _id: userId } });
+    if (!user) {
+      return { success: false, message: 'User not found' };
+    }
+
+    // Update wallet address and authorize
+    user.walletAddress = normalizedAddress;
+    user.walletAuthorized = true;
+    await UserRepo.save(user);
+
+    return { 
+      success: true, 
+      message: 'Wallet authorized successfully',
+      user: {
+        _id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        walletAddress: user.walletAddress,
+        walletAuthorized: user.walletAuthorized,
+        role: user.role
+      }
+    };
+  } catch (error) {
+    console.error('Error authorizing wallet:', error);
+    return { success: false, message: 'Failed to authorize wallet' };
+  }
+};
+
+/**
+ * Revoke wallet authorization for a user (Admin only operation)
+ * @param userId The user ID whose wallet authorization to revoke
+ */
+export const revokeWalletAuthorization = async (
+  userId: string
+): Promise<{ success: boolean; message: string }> => {
+  try {
+    const user = await UserRepo.findOne({ where: { _id: userId } });
+    if (!user) {
+      return { success: false, message: 'User not found' };
+    }
+
+    user.walletAuthorized = false;
+    await UserRepo.save(user);
+
+    return { success: true, message: 'Wallet authorization revoked successfully' };
+  } catch (error) {
+    console.error('Error revoking wallet authorization:', error);
+    return { success: false, message: 'Failed to revoke wallet authorization' };
+  }
+};
+
+/**
+ * Check if a wallet address is already in use
+ */
+export const isWalletAddressInUse = async (
+  walletAddress: string,
+  excludeUserId?: string
+): Promise<boolean> => {
+  try {
+    const normalizedAddress = walletAddress.toLowerCase();
+    const query: any = { walletAddress: normalizedAddress };
+    
+    const existingUser = await UserRepo.findOne({ where: query });
+    
+    if (!existingUser) return false;
+    if (excludeUserId && existingUser._id === excludeUserId) return false;
+    
+    return true;
+  } catch (error) {
+    console.error('Error checking wallet address:', error);
     return false;
   }
-  return authorizedWallets.delete(walletAddress.toLowerCase());
 };
 
 /**
- * Get the admin wallet address
+ * Get the admin wallet address (from the first ADMIN user with an authorized wallet)
  */
-export const getAdminWalletAddress = (): string => {
-  return ADMIN_WALLET_ADDRESS;
+export const getAdminWalletAddress = async (): Promise<string | null> => {
+  try {
+    const adminUser = await UserRepo.findOne({
+      where: {
+        role: 'ADMIN',
+        walletAddress: Not(IsNull()),
+        walletAuthorized: true
+      },
+      order: { createdAt: 'ASC' }
+    });
+    return adminUser?.walletAddress || null;
+  } catch (error) {
+    console.error('Error getting admin wallet address:', error);
+    return null;
+  }
+};
+
+/**
+ * Check if a user is an admin with authorized wallet
+ */
+export const isAdminWallet = async (walletAddress: string): Promise<boolean> => {
+  try {
+    const user = await UserRepo.findOne({
+      where: {
+        walletAddress: walletAddress.toLowerCase(),
+        walletAuthorized: true,
+        role: 'ADMIN'
+      }
+    });
+    return user !== null;
+  } catch (error) {
+    console.error('Error checking admin wallet:', error);
+    return false;
+  }
 };
 
 /**
@@ -489,10 +639,13 @@ export default {
   initializeSepoliaBlockchain,
   isSepoliaInitialized,
   getSepoliaStats,
+  getAuthorizedWalletsFromDB,
   isAuthorizedWallet,
-  addAuthorizedWallet,
-  removeAuthorizedWallet,
+  authorizeUserWallet,
+  revokeWalletAuthorization,
+  isWalletAddressInUse,
   getAdminWalletAddress,
+  isAdminWallet,
   storePDFHashOnBlockchain,
   verifyTransactionOnBlockchain,
   isValidWalletAddress,

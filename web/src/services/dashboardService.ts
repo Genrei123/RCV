@@ -70,11 +70,6 @@ export class DashboardService {
         // fetch(`${kioskURL}/kiosk/health`).then(res => res.json()).catch(() => ({ isOnline: false, lastPoll: null, pollCount: 0 })),
       ]);
 
-      // Debug: Log the responses
-      console.log('Dashboard Stats - Users Response:', usersResponse.data);
-      console.log('Dashboard Stats - Products Response:', productsResponse.data);
-      console.log('Dashboard Stats - Companies Response:', companiesResponse.data);
-      // console.log('Dashboard Stats - Kiosk Response:', kioskResponse);
 
       // All endpoints now return { success, data, pagination }
       return {

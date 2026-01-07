@@ -28,6 +28,7 @@ import * as AuditLogController from '../../controllers/auditLog/AuditLog';
 // Import compliance controllers
 import { createComplianceReport } from '../../controllers/compliance/CreateComplianceReport';
 import { searchProduct } from '../../controllers/compliance/SearchProduct';
+import { getComplianceReports, getComplianceReportById } from '../../controllers/compliance/GetComplianceReports';
 
 const MobileRouter = Router();
 
@@ -74,6 +75,8 @@ MobileRouter.get('/audit/logs/:id', verifyMobileUser, AuditLogController.getAudi
 // ============================================
 MobileRouter.post('/compliance/search-product', verifyMobileUser, searchProduct);
 MobileRouter.post('/compliance/report', verifyMobileUser, createComplianceReport);
+MobileRouter.get('/compliance/reports', verifyMobileUser, getComplianceReports);
+MobileRouter.get('/compliance/reports/:id', verifyMobileUser, getComplianceReportById);
 
 // ============================================
 // FUTURE MOBILE ROUTES

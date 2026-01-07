@@ -248,6 +248,84 @@ export class MetaMaskService {
     }
   }
 
+  /**
+   * Sign a message with the connected wallet
+   * Uses personal_sign for human-readable messages
+   * @param message - The message to sign
+   * @param walletAddress - The address to sign with (must be connected)
+   * @returns The signature string
+   */
+  static async signMessage(message: string, walletAddress: string): Promise<string> {
+    if (!this.isMetaMaskInstalled()) {
+      throw new Error('MetaMask is not installed. Please install MetaMask to continue.');
+    }
+
+    // Verify the wallet is connected
+    const accounts = await this.getConnectedAccounts();
+    if (!accounts.some(acc => acc.toLowerCase() === walletAddress.toLowerCase())) {
+      throw new Error('Wallet not connected. Please connect your wallet first.');
+    }
+
+    try {
+      // Use personal_sign for human-readable messages
+      const signature = await window.ethereum!.request({
+        method: 'personal_sign',
+        params: [message, walletAddress]
+      });
+
+      return signature;
+    } catch (error: any) {
+      console.error('Signature error:', error);
+      if (error.code === 4001) {
+        throw new Error('Signature rejected. Please approve the signature request in MetaMask.');
+      }
+      throw new Error(`Failed to sign message: ${error.message || 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Sign typed data (EIP-712) - more structured signing for complex data
+   * @param domain - The signing domain
+   * @param types - The type definitions
+   * @param value - The data to sign
+   * @param walletAddress - The address to sign with
+   */
+  static async signTypedData(
+    domain: {
+      name: string;
+      version: string;
+      chainId: number;
+      verifyingContract?: string;
+    },
+    types: Record<string, Array<{ name: string; type: string }>>,
+    value: Record<string, any>,
+    walletAddress: string
+  ): Promise<string> {
+    if (!this.isMetaMaskInstalled()) {
+      throw new Error('MetaMask is not installed. Please install MetaMask to continue.');
+    }
+
+    const accounts = await this.getConnectedAccounts();
+    if (!accounts.some(acc => acc.toLowerCase() === walletAddress.toLowerCase())) {
+      throw new Error('Wallet not connected. Please connect your wallet first.');
+    }
+
+    try {
+      const signature = await window.ethereum!.request({
+        method: 'eth_signTypedData_v4',
+        params: [walletAddress, JSON.stringify({ domain, types, primaryType: Object.keys(types)[0], message: value })]
+      });
+
+      return signature;
+    } catch (error: any) {
+      console.error('Typed data signature error:', error);
+      if (error.code === 4001) {
+        throw new Error('Signature rejected. Please approve the signature request in MetaMask.');
+      }
+      throw new Error(`Failed to sign typed data: ${error.message || 'Unknown error'}`);
+    }
+  }
+
   // ============ API Methods ============
 
   /**
@@ -402,17 +480,26 @@ export class MetaMaskService {
   static async updateUserWallet(
     userId: string,
     walletAddress: string,
-    addToAuthorized: boolean = false
+    authorize: boolean = false
   ): Promise<{
     success: boolean;
+    data?: {
+      userId: string;
+      walletAddress: string;
+      walletAuthorized: boolean;
+      isAuthorized: boolean;
+    };
     error?: string;
   }> {
     try {
-      await apiClient.put(`/sepolia/user-wallet/${userId}`, {
+      const response = await apiClient.put(`/sepolia/user-wallet/${userId}`, {
         walletAddress,
-        addToAuthorized
+        authorize
       });
-      return { success: true };
+      return { 
+        success: true,
+        data: response.data?.data
+      };
     } catch (error: any) {
       return {
         success: false,
