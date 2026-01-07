@@ -3,7 +3,6 @@ import 'package:rcv_firebase/themes/app_fonts.dart';
 import '../widgets/navigation_bar.dart';
 import '../widgets/title_logo_header_app_bar.dart';
 import '../services/api_service.dart';
-import 'dart:developer' as developer;
 
 // Simple in-memory Report model (can be moved to models folder later)
 class ReportItem {
