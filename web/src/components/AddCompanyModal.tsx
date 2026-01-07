@@ -15,7 +15,6 @@ import {
   Map,
   Wallet,
   AlertTriangle,
-  Shield,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +29,6 @@ import {
 } from "@/components/ui/select";
 import { CompanyService, type CreateCompanyRequest } from "@/services/companyService";
 import { FirebaseStorageService } from "@/services/firebaseStorageService";
-import { MetaMaskService } from "@/services/metaMaskService";
 import { CertificateApprovalService } from "@/services/approvalService";
 import { AuthService } from "@/services/authService";
 import type { CompanyDocument } from "@/typeorm/entities/company.entity";
@@ -480,7 +478,7 @@ export function AddCompanyModal({
           name: formData.name,
           licenseNumber: formData.licenseNumber,
           address: formData.address,
-          companyId: response.company?._id || response._id,
+          companyId: response.company._id,
           timestamp: new Date().toISOString()
         });
         
@@ -496,7 +494,7 @@ export function AddCompanyModal({
         
         // Submit for approval
         const certificateId = `CERT-COMP-${formData.licenseNumber}-${Date.now()}`;
-        const companyId = response.company?._id || response._id;
+        const companyId = response.company._id;
         
         try {
           const approval = await CertificateApprovalService.submitForApproval({
