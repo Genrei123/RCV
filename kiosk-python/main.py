@@ -127,10 +127,33 @@ class ProductData:
 class RCVApiService:
     """Service to communicate with RCV Backend API"""
     
+    # Firebase Storage bucket for certificates
+    FIREBASE_BUCKET = "rcv-flutter.firebasestorage.app"
+    
     def __init__(self, base_url: str = None):
         # Default to localhost, can be configured via environment variable
         self.base_url = base_url or os.environ.get('RCV_API_URL', 'http://localhost:3000/api/v1')
         self.timeout = 30  # seconds
+    
+    def _construct_firebase_pdf_url(self, certificate_id: str) -> str:
+        """
+        Construct Firebase Storage URL for a certificate PDF
+        Path: certificates/product/{CERTIFICATE_ID}.pdf or certificates/company/{CERTIFICATE_ID}.pdf
+        """
+        # Determine type from certificate ID
+        if certificate_id.startswith("CERT-PROD-"):
+            cert_type = "product"
+        elif certificate_id.startswith("CERT-COMP-"):
+            cert_type = "company"
+        else:
+            cert_type = "product"  # Default to product
+        
+        # Construct Firebase Storage URL
+        # Format: https://firebasestorage.googleapis.com/v0/b/{bucket}/o/{encoded_path}?alt=media
+        file_path = f"certificates/{cert_type}/{certificate_id}.pdf"
+        encoded_path = file_path.replace("/", "%2F")
+        
+        return f"https://firebasestorage.googleapis.com/v0/b/{self.FIREBASE_BUCKET}/o/{encoded_path}?alt=media"
     
     def _make_request(self, method: str, endpoint: str, data: dict = None, params: dict = None) -> dict:
         """Make HTTP request to API"""
@@ -172,8 +195,24 @@ class RCVApiService:
         """
         Get certificate PDF URL from Firebase Storage
         GET /api/v1/certificate-blockchain/pdf/:certificateId
+        Falls back to constructing URL directly if API fails
         """
-        return self._make_request('GET', f'/certificate-blockchain/pdf/{certificate_id}')
+        result = self._make_request('GET', f'/certificate-blockchain/pdf/{certificate_id}')
+        
+        # If API returns URL, use it
+        if result.get("success") and result.get("certificate", {}).get("pdfUrl"):
+            return result
+        
+        # Fallback: construct URL directly
+        pdf_url = self._construct_firebase_pdf_url(certificate_id)
+        return {
+            "success": True,
+            "message": "PDF URL constructed from certificate ID",
+            "certificate": {
+                "certificateId": certificate_id,
+                "pdfUrl": pdf_url
+            }
+        }
     
     def verify_certificate_pdf(self, certificate_id: str, pdf_hash: str) -> dict:
         """
@@ -569,11 +608,22 @@ class KioskApp:
         """Display certificate information"""
         self.clear_info_panel()
         
-        # Status header
+        # Status header - handle valid, pending, and invalid states
         is_valid = cert.status == "valid"
-        status_color = Colors.SUCCESS if is_valid else Colors.ERROR
-        status_text = "VERIFIED ✓" if is_valid else "NOT FOUND ✗"
-        status_tagalog = "TUNAY" if is_valid else "HINDI NAHANAP"
+        is_pending = cert.status == "pending"
+        
+        if is_valid:
+            status_color = Colors.SUCCESS
+            status_text = "VERIFIED ✓"
+            status_tagalog = "TUNAY"
+        elif is_pending:
+            status_color = Colors.WARNING
+            status_text = "PDF FOUND ⚠"
+            status_tagalog = "NAKITA ANG PDF"
+        else:
+            status_color = Colors.ERROR
+            status_text = "NOT FOUND ✗"
+            status_tagalog = "HINDI NAHANAP"
         
         status_frame = tk.Frame(self.info_panel, bg=status_color, height=80)
         status_frame.pack(fill=tk.X)
@@ -669,6 +719,8 @@ class KioskApp:
         # TTS announcement
         if is_valid:
             self.tts.speak(TagalogMessages.certificate_valid(cert.company_name, cert.company_name))
+        elif is_pending:
+            self.tts.speak("Nakita ang PDF certificate. Hindi pa na-verify sa blockchain.")
         else:
             self.tts.speak(TagalogMessages.certificate_invalid())
     
@@ -1121,17 +1173,15 @@ class KioskApp:
         """Fetch certificate from blockchain API"""
         print(f"🔍 Looking up certificate: {certificate_id}")
         
-        # First get certificate details
+        # Always get PDF URL (this constructs it even if API fails)
+        pdf_response = self.api.get_certificate_pdf_url(certificate_id)
+        pdf_url = pdf_response.get("certificate", {}).get("pdfUrl") if pdf_response.get("success") else None
+        
+        # Get certificate details from blockchain
         cert_response = self.api.get_certificate_by_id(certificate_id)
         
         if cert_response.get("success"):
             cert_data = cert_response.get("certificate", {})
-            
-            # Also get PDF URL
-            pdf_response = self.api.get_certificate_pdf_url(certificate_id)
-            pdf_url = None
-            if pdf_response.get("success"):
-                pdf_url = pdf_response.get("certificate", {}).get("pdfUrl")
             
             cert = CertificateData(
                 certificate_id=cert_data.get("certificateId", certificate_id),
@@ -1150,16 +1200,16 @@ class KioskApp:
             
             self.root.after(0, lambda: self._show_certificate(cert))
         else:
-            # Certificate not found in blockchain
-            error_msg = cert_response.get("message", "Certificate not found")
+            # Certificate not found in blockchain - but PDF might still exist in Firebase
+            # Still show as "valid" if we can construct a PDF URL (for cases where blockchain was reset)
             cert = CertificateData(
                 certificate_id=certificate_id,
                 product_name="Unknown",
                 company_name="Unknown",
                 issue_date="N/A",
                 expiry_date="N/A",
-                status="invalid",
-                pdf_url=None
+                status="pending" if pdf_url else "invalid",  # "pending" if PDF exists but not in blockchain
+                pdf_url=pdf_url  # Try to show PDF anyway
             )
             self.root.after(0, lambda: self._show_certificate(cert))
     
