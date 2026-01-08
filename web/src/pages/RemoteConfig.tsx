@@ -322,7 +322,23 @@ export function RemoteConfig() {
                                                         />
                                                     </button>
                                                 ) : (
-                                                    <span className="text-sm text-neutral-500">N/A</span>
+                                                    (param.type === "string" || param.type === "number") ? (
+                                                        <input
+                                                            type={param.type === "number" ? "number" : "text"}
+                                                            value={param.value !== null && param.value !== undefined ? String(param.value) : ""}
+                                                            onChange={(e) =>
+                                                                handleValueChange(
+                                                                    param.key,
+                                                                    param.type === "number"
+                                                                        ? (e.target.value === "" ? "" : Number(e.target.value))
+                                                                        : e.target.value
+                                                                )
+                                                            }
+                                                            className="px-3 py-2 border border-neutral-200 rounded-md text-sm w-64"
+                                                        />
+                                                    ) : (
+                                                        <span className="text-sm text-neutral-500">N/A</span>
+                                                    )
                                                 )}
                                             </div>
                                         </div>
