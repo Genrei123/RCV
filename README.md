@@ -150,3 +150,9 @@ This system is part of a thesis study examining the integration of Web3 technolo
 - Real-time compliance verification against regulatory databases
 
 The system addresses current challenges in the Bureau of Animal Industry's manual verification processes, including time consumption, human error susceptibility, and limited audit capabilities.
+
+<p align="center">
+https://github.com/user-attachments/assets/682aa57a-7a8a-478c-a12e-1842a5151d06
+</p>
+
+
