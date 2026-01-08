@@ -24,24 +24,37 @@ export const healthCheck = async (req: Request, res: Response, next: NextFunctio
 
 export const analyzeCompliance = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    //fallback kapag di declared yung values
-    const { maxDistance = 1000, minPoints = 3, agentId } = req.query;
+    // Parse and validate query parameters
+    const maxDistance = Number(req.query.maxDistance) || 1000;
+    const minPoints = Number(req.query.minPoints) || 3;
+    const agentId = req.query.agentId as string | undefined;
+
+    // Validate parameters
+    if (maxDistance <= 0 || minPoints < 1) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid parameters',
+        message: 'maxDistance must be positive and minPoints must be at least 1'
+      });
+    }
     
-    // tanggalin nalang yung comment if may laman na main db
-    // let query = ComplianceReportRepo.createQueryBuilder('report')
-    //   .where('report.location IS NOT NULL');
-    // 
-    // // Filter by agent if provided
-    // if (agentId) {
-    //   query = query.andWhere('report.agentId = :agentId', { agentId });
-    // }
-    // 
-    // const reports = await query.getMany();
+    // Build query for reports with valid location data
+    let query = ComplianceReportRepo.createQueryBuilder('report')
+      .where('report.location IS NOT NULL')
+      .andWhere("report.location::jsonb ? 'latitude'")
+      .andWhere("report.location::jsonb ? 'longitude'");
+    
+    // Filter by agent if provided
+    if (agentId && typeof agentId === 'string') {
+      query = query.andWhere('report.agentId = :agentId', { agentId });
+    }
+    
+    const reports = await query.getMany();
     
     // Json file para sa testing ng data instead of db (comment out nalagn)
-    const jsonFilePath = path.join(__dirname, '../../../sample_reports_api.json');
-    const jsonData = fs.readFileSync(jsonFilePath, 'utf-8');
-    const reports: any[] = JSON.parse(jsonData);
+    //const jsonFilePath = path.join(__dirname, '../../../sample_reports_api.json');
+    //const jsonData = fs.readFileSync(jsonFilePath, 'utf-8');
+    //const reports: any[] = JSON.parse(jsonData);
     
     if (reports.length === 0) {
       return res.json({
@@ -61,8 +74,12 @@ export const analyzeCompliance = async (req: Request, res: Response, next: NextF
     }
 
     const analyticsReports: AnalyticsComplianceReport[] = reports
-      .filter((report: any) => report.location && report.location.latitude && report.location.longitude)
-      .map((report: any) => ({
+      .filter(report => 
+        report.location && 
+        typeof report.location.latitude === 'number' && 
+        typeof report.location.longitude === 'number'
+      )
+      .map(report => ({
         _id: report._id,
         agentId: report.agentId,
         status: report.status,
@@ -75,8 +92,8 @@ export const analyzeCompliance = async (req: Request, res: Response, next: NextF
         ocrBlobText: report.ocrBlobText,
         productSearchResult: report.productSearchResult,
         location: {
-          latitude: report.location!.latitude,
-          longitude: report.location!.longitude,
+          latitude: report.location!.latitude!,
+          longitude: report.location!.longitude!,
           address: report.location!.address
         }
       }));
@@ -84,8 +101,8 @@ export const analyzeCompliance = async (req: Request, res: Response, next: NextF
     // Perform DBSCAN clustering analysis
     const results = await GeospatialAnalyticsService.analyzeComplianceReports(
       analyticsReports,
-      Number(maxDistance),
-      Number(minPoints)
+      maxDistance,
+      minPoints
     );
     
     res.json({
@@ -93,8 +110,8 @@ export const analyzeCompliance = async (req: Request, res: Response, next: NextF
       message: 'Compliance analysis completed successfully',
       data: results,
       parameters: {
-        maxDistance: Number(maxDistance),
-        minPoints: Number(minPoints),
+        maxDistance,
+        minPoints,
         agentId: agentId || 'all'
       }
     });
