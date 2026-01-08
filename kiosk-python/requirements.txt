@@ -8,6 +8,9 @@ Pillow>=10.0.0
 pyzbar>=0.1.9
 pytesseract>=0.3.10
 
+# PDF rendering (for certificate preview)
+pdf2image>=1.16.0     # Convert PDF pages to images
+
 # Text-to-Speech
 pyttsx3>=2.90         # Offline TTS (English)
 gTTS>=2.4.0           # Online TTS with Tagalog support

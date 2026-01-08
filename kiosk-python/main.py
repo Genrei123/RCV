@@ -377,12 +377,13 @@ class KioskApp:
         os.makedirs(self.data_dir, exist_ok=True)
         
         # Performance optimization - cached display dimensions
-        self.display_width = 800  # Fixed display width
-        self.display_height = 600  # Fixed display height
+        self.display_width = 400  # Fixed display width (smaller for QR focus box)
+        self.display_height = 300  # Fixed display height (smaller for QR focus box)
         self.display_size_cached = False
         self.frame_skip_counter = 0
         self.frame_skip_rate = 2  # Process every Nth frame for display
         self.last_photo = None  # Cache last photo to avoid GC issues
+        self.pdf_photo = None  # Cache for PDF display
         
         # Setup UI
         self.setup_ui()
@@ -418,23 +419,47 @@ class KioskApp:
         self.content_frame = tk.Frame(self.main_frame, bg=Colors.BACKGROUND)
         self.content_frame.pack(fill=tk.BOTH, expand=True, padx=40, pady=20)
         
-        # Left side - Camera feed
+        # Left side - Camera feed (smaller for QR scanning focus)
         self.camera_container = tk.Frame(
             self.content_frame, 
             bg=Colors.SURFACE,
             highlightbackground=Colors.PRIMARY,
-            highlightthickness=3
+            highlightthickness=3,
+            width=420,
+            height=340
         )
-        self.camera_container.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 20))
+        self.camera_container.pack(side=tk.LEFT, fill=tk.NONE, expand=False, padx=(0, 10))
+        self.camera_container.pack_propagate(False)  # Keep fixed size
         
         self.camera_label = tk.Label(
             self.camera_container,
             text="Initializing Camera...",
-            font=("SF Pro Text", 18),
+            font=("SF Pro Text", 14),
             bg=Colors.SURFACE,
             fg=Colors.TEXT_SECONDARY
         )
         self.camera_label.pack(expand=True, fill=tk.BOTH)
+        
+        # Center - PDF display panel (shown when certificate is verified)
+        self.pdf_container = tk.Frame(
+            self.content_frame,
+            bg=Colors.SURFACE,
+            highlightbackground=Colors.PRIMARY,
+            highlightthickness=2,
+            width=400,
+            height=500
+        )
+        # PDF container is initially hidden, will be shown when certificate is verified
+        self.pdf_container.pack_propagate(False)
+        
+        self.pdf_label = tk.Label(
+            self.pdf_container,
+            text="",
+            font=("SF Pro Text", 12),
+            bg=Colors.SURFACE,
+            fg=Colors.TEXT_SECONDARY
+        )
+        self.pdf_label.pack(expand=True, fill=tk.BOTH)
         
         # Right side - Information panel
         self.info_panel = tk.Frame(
@@ -1021,15 +1046,50 @@ class KioskApp:
             try:
                 data = json.loads(qr_data)
                 
+                # Check the type field first for product certificates
+                qr_type = data.get("type", "").lower()
+                
+                # Product certificates have embedded product info + certificate ID
+                if qr_type == "product-certificate":
+                    cert_id = data.get("certificateId")
+                    # Process as certificate (which will verify on blockchain)
+                    # but also check if we can search for the product
+                    if cert_id:
+                        self._process_certificate_id(cert_id)
+                    else:
+                        # Fallback to product search using embedded data
+                        self._process_product_search({
+                            "productName": data.get("productName"),
+                            "LTONumber": data.get("ltoNumber") or data.get("LTONumber"),
+                            "CFPRNumber": data.get("cfprNumber") or data.get("CFPRNumber"),
+                            "brandName": data.get("brandName"),
+                        })
+                    return
+                
+                # Company certificates
+                if qr_type == "company-certificate":
+                    cert_id = data.get("certificateId")
+                    if cert_id:
+                        self._process_certificate_id(cert_id)
+                        return
+                
                 # Check if it contains a certificate ID
                 cert_id = data.get("certificateId") or data.get("certificate_id") or data.get("certId")
-                if cert_id:
+                if cert_id and (cert_id.startswith("CERT-COMP-") or cert_id.startswith("CERT-PROD-")):
                     self._process_certificate_id(cert_id)
                     return
                 
-                # Check if it's product data with search criteria
-                if any(key in data for key in ["productName", "product_name", "LTONumber", "CFPRNumber"]):
-                    self._process_product_search(data)
+                # Check if it's product data with search criteria (handle both camelCase variants)
+                if any(key in data for key in ["productName", "product_name", "LTONumber", "CFPRNumber", "ltoNumber", "cfprNumber"]):
+                    # Normalize the data keys for product search
+                    normalized_data = {
+                        "productName": data.get("productName") or data.get("product_name"),
+                        "LTONumber": data.get("LTONumber") or data.get("ltoNumber"),
+                        "CFPRNumber": data.get("CFPRNumber") or data.get("cfprNumber"),
+                        "brandName": data.get("brandName") or data.get("brand_name"),
+                        "manufacturer": data.get("manufacturer"),
+                    }
+                    self._process_product_search(normalized_data)
                     return
                 
                 # Generic certificate/product data
@@ -1272,6 +1332,13 @@ class KioskApp:
         self.state = KioskState.DISPLAY_CERTIFICATE
         self.setup_certificate_panel(cert)
         self.update_status(f"Certificate: {cert.product_name}")
+        
+        # Show PDF panel and fetch PDF if available
+        if cert.pdf_url:
+            self._show_pdf_panel(cert.pdf_url)
+        else:
+            self._hide_pdf_panel()
+        
         self.start_display_timer()
         self.log_scan("certificate", cert.__dict__)
     
@@ -1280,6 +1347,7 @@ class KioskApp:
         self.state = KioskState.DISPLAY_PRODUCT
         self.setup_product_panel(product)
         self.update_status(f"Product: {product.product_name}")
+        self._hide_pdf_panel()  # Hide PDF panel for products
         self.start_display_timer()
         self.log_scan("product", product.__dict__)
     
@@ -1305,9 +1373,103 @@ class KioskApp:
         self.state = KioskState.IDLE
         self.timer_label.config(text="")
         self.last_scan_data = ""  # Reset last scan to allow re-scanning same QR
+        self._hide_pdf_panel()  # Hide PDF panel when returning to idle
         self.setup_idle_panel()
         self.update_status("Ready to Scan / Handa na para mag-scan")
         self.tts.speak(TagalogMessages.READY_FOR_NEXT)
+    
+    def _show_pdf_panel(self, pdf_url: str):
+        """Show the PDF panel and load the PDF from Firebase"""
+        # Show the PDF container
+        self.pdf_container.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
+        
+        # Show loading indicator
+        self.pdf_label.config(text="Loading PDF...\nNaglo-load ng PDF...", image='')
+        
+        # Fetch PDF in background thread
+        thread = threading.Thread(target=self._fetch_and_display_pdf, args=(pdf_url,), daemon=True)
+        thread.start()
+    
+    def _hide_pdf_panel(self):
+        """Hide the PDF panel"""
+        try:
+            self.pdf_container.pack_forget()
+            self.pdf_label.config(image='', text='')
+            self.pdf_photo = None
+        except:
+            pass
+    
+    def _fetch_and_display_pdf(self, pdf_url: str):
+        """Fetch PDF from Firebase and display first page as image"""
+        try:
+            print(f"📄 Fetching PDF from: {pdf_url}")
+            
+            # Download PDF
+            response = requests.get(pdf_url, timeout=30)
+            if response.status_code != 200:
+                self.root.after(0, lambda: self.pdf_label.config(
+                    text="Failed to load PDF\nHindi ma-load ang PDF"
+                ))
+                return
+            
+            # Try to render PDF to image using pdf2image if available
+            try:
+                from pdf2image import convert_from_bytes
+                
+                # Convert first page of PDF to image
+                images = convert_from_bytes(
+                    response.content,
+                    first_page=1,
+                    last_page=1,
+                    dpi=100  # Lower DPI for faster rendering
+                )
+                
+                if images:
+                    pdf_image = images[0]
+                    
+                    # Resize to fit in the panel (max 380x480)
+                    max_width = 380
+                    max_height = 480
+                    
+                    # Calculate scaling
+                    width_ratio = max_width / pdf_image.width
+                    height_ratio = max_height / pdf_image.height
+                    scale = min(width_ratio, height_ratio)
+                    
+                    new_width = int(pdf_image.width * scale)
+                    new_height = int(pdf_image.height * scale)
+                    
+                    pdf_image = pdf_image.resize((new_width, new_height), Image.LANCZOS)
+                    
+                    # Convert to PhotoImage and display
+                    self.root.after(0, lambda: self._display_pdf_image(pdf_image))
+                else:
+                    self.root.after(0, lambda: self.pdf_label.config(
+                        text="✓ PDF Loaded\n(Preview not available)"
+                    ))
+                    
+            except ImportError:
+                # pdf2image not available, show text indicator
+                print("⚠️ pdf2image not installed, showing text indicator")
+                self.root.after(0, lambda: self.pdf_label.config(
+                    text="✓ PDF Certificate Available\nNakuha ang PDF Certificate\n\n(Install pdf2image for preview)"
+                ))
+                
+        except Exception as e:
+            print(f"Error fetching PDF: {e}")
+            self.root.after(0, lambda: self.pdf_label.config(
+                text=f"Error loading PDF\n{str(e)[:50]}"
+            ))
+    
+    def _display_pdf_image(self, pil_image):
+        """Display the PDF image in the panel"""
+        try:
+            photo = ImageTk.PhotoImage(pil_image)
+            self.pdf_label.config(image=photo, text='')
+            self.pdf_photo = photo  # Keep reference
+        except Exception as e:
+            print(f"Error displaying PDF: {e}")
+            self.pdf_label.config(text="Error displaying PDF")
     
     def display_frame(self, frame):
         """Display camera frame in UI - optimized for performance"""
