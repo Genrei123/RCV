@@ -25,6 +25,7 @@ interface ProcessApprovalInput {
   approvalId: string;
   approverId: string;
   signature: string;
+  timestamp?: string; // Timestamp from the signed message
 }
 
 interface RejectCertificateInput {
@@ -32,6 +33,7 @@ interface RejectCertificateInput {
   rejectorId: string;
   reason: string;
   signature: string;
+  timestamp?: string; // Timestamp from the signed message
 }
 
 /**
@@ -121,15 +123,27 @@ export function verifyApprovalSignature(
 
 /**
  * Generate the approval message that must be signed
+ * @param approval - The approval record
+ * @param approvalNumber - The current approval number (1, 2, etc.)
+ * @param totalRequired - Total approvals required
+ * @param timestamp - Optional timestamp to use (for verification, must match the signed message)
  */
-export function generateApprovalMessage(approval: CertificateApproval, approvalNumber: number, totalRequired: number): string {
+export function generateApprovalMessage(
+  approval: CertificateApproval, 
+  approvalNumber: number, 
+  totalRequired: number,
+  timestamp?: string
+): string {
+  // Use provided timestamp or generate new one
+  const messageTimestamp = timestamp || new Date().toISOString();
+  
   return `I approve this certificate registration on RCV Blockchain
 
 Certificate ID: ${approval.certificateId}
 Entity: ${approval.entityName} (${approval.entityType})
 PDF Hash: ${approval.pdfHash}
 Approval: ${approvalNumber} of ${totalRequired} required
-Timestamp: ${new Date().toISOString()}`;
+Timestamp: ${messageTimestamp}`;
 }
 
 /**
@@ -185,8 +199,21 @@ export async function processApproval(input: ProcessApprovalInput): Promise<Cert
   const currentApprovalCount = approval.approvers?.length || 0;
   const nextApprovalNumber = currentApprovalCount + 1;
 
-  // Generate and verify the signature
-  const expectedMessage = generateApprovalMessage(approval, nextApprovalNumber, approval.requiredApprovals);
+  // Generate and verify the signature using the same timestamp that was signed
+  // If no timestamp provided, this will fail for signatures created with the new flow
+  const expectedMessage = generateApprovalMessage(
+    approval, 
+    nextApprovalNumber, 
+    approval.requiredApprovals,
+    input.timestamp // Use the timestamp from the signed message
+  );
+  
+  console.log('=== Signature Verification Debug ===');
+  console.log('Approver ID:', input.approverId);
+  console.log('Approver Wallet:', approver.walletAddress);
+  console.log('Timestamp used:', input.timestamp);
+  console.log('Expected Message:', expectedMessage);
+  
   const isValidSignature = verifyApprovalSignature(
     expectedMessage,
     input.signature,
@@ -194,8 +221,12 @@ export async function processApproval(input: ProcessApprovalInput): Promise<Cert
   );
 
   if (!isValidSignature) {
-    throw new CustomError(400, 'Invalid signature');
+    console.error('Signature verification failed!');
+    console.error('Signature:', input.signature);
+    throw new CustomError(400, 'Invalid signature - please try again');
   }
+  
+  console.log('Signature verified successfully!');
 
   // Add to approvers array
   const newApprover = {
@@ -269,6 +300,9 @@ export async function rejectCertificate(input: RejectCertificateInput): Promise<
     throw new CustomError(403, 'Only Admins can reject certificates');
   }
 
+  // Use provided timestamp or generate new one
+  const messageTimestamp = input.timestamp || new Date().toISOString();
+
   // Generate rejection message and verify signature
   const rejectionMessage = `I reject this certificate registration on RCV Blockchain
 
@@ -276,7 +310,7 @@ Certificate ID: ${approval.certificateId}
 Entity: ${approval.entityName} (${approval.entityType})
 PDF Hash: ${approval.pdfHash}
 Reason: ${input.reason}
-Timestamp: ${new Date().toISOString()}`;
+Timestamp: ${messageTimestamp}`;
 
   const isValidSignature = verifyApprovalSignature(
     rejectionMessage,

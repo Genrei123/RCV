@@ -1,0 +1,26 @@
+# RCV Kiosk Machine Dependencies
+# Install with: pip install -r requirements.txt
+
+# Core dependencies
+opencv-python>=4.8.0
+numpy>=1.24.0
+Pillow>=10.0.0
+pyzbar>=0.1.9
+pytesseract>=0.3.10
+
+# PDF rendering (for certificate preview)
+pdf2image>=1.16.0     # Convert PDF pages to images
+
+# Text-to-Speech
+pyttsx3>=2.90         # Offline TTS (English)
+gTTS>=2.4.0           # Online TTS with Tagalog support
+
+# HTTP requests for API calls
+requests>=2.31.0
+
+# Environment configuration
+python-dotenv>=1.0.0
+
+# Windows-specific (installed automatically with pyttsx3)
+# pywin32
+# comtypes

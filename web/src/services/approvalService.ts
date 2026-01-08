@@ -67,6 +67,7 @@ export interface CertificateApproval {
 
 export interface ApprovalMessageResponse {
   message: string;
+  timestamp: string; // Timestamp used in the message - must be sent back with signature
   approvalNumber: number;
   totalRequired: number;
   currentApprovals: number;
@@ -79,6 +80,7 @@ export interface ApprovalMessageResponse {
 
 export interface RejectionMessageResponse {
   message: string;
+  timestamp: string; // Timestamp used in the message - must be sent back with signature
   approvalId: string;
   certificateId: string;
   entityName: string;
@@ -174,22 +176,30 @@ export class CertificateApprovalService {
   /**
    * Approve a certificate with MetaMask signature
    * This handles the entire approval flow:
-   * 1. Gets the message to sign from the backend
+   * 1. Gets the message to sign from the backend (includes timestamp)
    * 2. Signs the message with MetaMask
-   * 3. Submits the approval with signature
+   * 3. Submits the approval with signature AND timestamp
    */
   static async approveWithSignature(
     approvalId: string,
     walletAddress: string
   ): Promise<{ approval: CertificateApproval; isFullyApproved: boolean }> {
-    // Step 1: Get the message to sign
+    // Step 1: Get the message to sign (includes timestamp)
     const messageData = await this.getApprovalMessage(approvalId);
+    
+    console.log('=== Approval Message Data ===');
+    console.log('Message:', messageData.message);
+    console.log('Timestamp:', (messageData as any).timestamp);
 
     // Step 2: Sign the message with MetaMask
     const signature = await MetaMaskService.signMessage(messageData.message, walletAddress);
 
-    // Step 3: Submit the approval
-    const response = await apiClient.post(`${this.BASE_URL}/${approvalId}/approve`, { signature });
+    // Step 3: Submit the approval with signature AND timestamp
+    // The timestamp is critical - it must match what was in the signed message
+    const response = await apiClient.post(`${this.BASE_URL}/${approvalId}/approve`, { 
+      signature,
+      timestamp: (messageData as any).timestamp // Include the timestamp for verification
+    });
     
     return {
       approval: response.data.data,
@@ -200,25 +210,30 @@ export class CertificateApprovalService {
   /**
    * Reject a certificate with MetaMask signature
    * This handles the entire rejection flow:
-   * 1. Gets the rejection message from the backend
+   * 1. Gets the rejection message from the backend (includes timestamp)
    * 2. Signs the message with MetaMask
-   * 3. Submits the rejection with signature
+   * 3. Submits the rejection with signature AND timestamp
    */
   static async rejectWithSignature(
     approvalId: string,
     reason: string,
     walletAddress: string
   ): Promise<CertificateApproval> {
-    // Step 1: Get the rejection message
+    // Step 1: Get the rejection message (includes timestamp)
     const messageData = await this.getRejectionMessage(approvalId, reason);
+    
+    console.log('=== Rejection Message Data ===');
+    console.log('Message:', messageData.message);
+    console.log('Timestamp:', (messageData as any).timestamp);
 
     // Step 2: Sign the message with MetaMask
     const signature = await MetaMaskService.signMessage(messageData.message, walletAddress);
 
-    // Step 3: Submit the rejection
+    // Step 3: Submit the rejection with signature AND timestamp
     const response = await apiClient.post(`${this.BASE_URL}/${approvalId}/reject`, {
       reason,
-      signature
+      signature,
+      timestamp: (messageData as any).timestamp // Include timestamp for verification
     });
     
     return response.data.data;
