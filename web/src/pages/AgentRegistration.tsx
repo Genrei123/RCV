@@ -41,7 +41,6 @@ import {
 import { FirebaseStorageService } from "@/services/firebaseStorageService";
 import {
   validatePhilippinePhoneNumber,
-  formatPhoneNumberForDatabase,
 } from "@/utils/phoneValidation";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -420,7 +419,7 @@ export function AgentRegistration() {
   // =========================================================================
   if (step === "verifying") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-linear-to-br from-green-50 via-white to-green-50 flex items-center justify-center p-4">
         <Card className="p-8 max-w-md w-full text-center">
           <Loader2 className="w-12 h-12 animate-spin text-green-600 mx-auto mb-4" />
           <h2 className="text-xl font-semibold mb-2">Verifying Invitation</h2>
@@ -437,7 +436,7 @@ export function AgentRegistration() {
   // =========================================================================
   if (step === "error") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-linear-to-br from-green-50 via-white to-green-50 flex items-center justify-center p-4">
         <Card className="p-8 max-w-md w-full text-center">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
           <h2 className="text-xl font-semibold mb-2">Invitation Error</h2>
@@ -458,7 +457,7 @@ export function AgentRegistration() {
   // =========================================================================
   if (step === "complete") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-linear-to-br from-green-50 via-white to-green-50 flex items-center justify-center p-4">
         <Card className="p-8 max-w-md w-full text-center">
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle2 className="w-10 h-10 text-green-600" />
@@ -495,7 +494,7 @@ export function AgentRegistration() {
   // =========================================================================
   if (step === "badge_verification") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-linear-to-br from-green-50 via-white to-green-50 flex items-center justify-center p-4">
         <ToastContainer position="top-right" autoClose={3000} />
         <Card className="p-8 max-w-md w-full">
           <div className="text-center mb-6">
@@ -577,7 +576,7 @@ export function AgentRegistration() {
   // RENDER - Registration Form Step
   // =========================================================================
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50 py-8 px-4">
+    <div className="min-h-screen bg-linear-to-br from-green-50 via-white to-green-50 py-8 px-4">
       <ToastContainer position="top-right" autoClose={3000} />
 
       <div className="max-w-2xl mx-auto">
