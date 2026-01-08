@@ -7,6 +7,7 @@ import {
   isAuthorizedWallet,
   authorizeUserWallet,
   revokeWalletAuthorization,
+  linkUserWallet,
   isWalletAddressInUse,
   getAdminWalletAddress,
   isAdminWallet,
@@ -411,6 +412,60 @@ export const revokeWallet = async (
     res.status(200).json({
       success: true,
       message: result.message
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Link user's own wallet address (any authenticated user)
+ * This allows users to link their wallet, but only Admin can authorize it
+ * POST /api/v1/sepolia/link-my-wallet
+ */
+export const linkMyWallet = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const requestingUser = (req as any).user;
+    if (!requestingUser) {
+      throw new CustomError(401, 'Authentication required', {
+        success: false,
+        message: 'You must be logged in to link a wallet'
+      });
+    }
+    
+    const { walletAddress } = req.body;
+    
+    if (!walletAddress) {
+      throw new CustomError(400, 'Missing wallet address', {
+        success: false,
+        message: 'walletAddress is required'
+      });
+    }
+    
+    if (!isValidWalletAddress(walletAddress)) {
+      throw new CustomError(400, 'Invalid wallet address', {
+        success: false,
+        message: 'The provided address is not a valid Ethereum address'
+      });
+    }
+    
+    const result = await linkUserWallet(requestingUser._id, walletAddress);
+    
+    if (!result.success) {
+      throw new CustomError(400, 'Link failed', {
+        success: false,
+        message: result.message
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: result.message,
+      data: result.user
     });
   } catch (error) {
     next(error);

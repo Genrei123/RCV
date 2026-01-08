@@ -8,6 +8,7 @@ import {
   updateUserWallet,
   authorizeWallet,
   revokeWallet,
+  linkMyWallet,
   getAdminWallet,
   getBlockchainCertificates,
   getBlockchainCertificateById,
@@ -61,6 +62,12 @@ router.post('/verify-wallet', verifyUserWallet);
 
 // Get admin wallet address
 router.get('/admin-wallet', getAdminWallet);
+
+// ============ USER ROUTES (Auth Required) ============
+// Users can link their own wallet, but only Admin can authorize it
+
+// Link user's own wallet address
+router.post('/link-my-wallet', verifyUser, linkMyWallet);
 
 // ============ ADMIN ONLY ROUTES ============
 // These routes require authentication and admin role
