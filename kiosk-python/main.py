@@ -376,6 +376,14 @@ class KioskApp:
         self.data_dir = os.path.expanduser("~/kiosk_data")
         os.makedirs(self.data_dir, exist_ok=True)
         
+        # Performance optimization - cached display dimensions
+        self.display_width = 800  # Fixed display width
+        self.display_height = 600  # Fixed display height
+        self.display_size_cached = False
+        self.frame_skip_counter = 0
+        self.frame_skip_rate = 2  # Process every Nth frame for display
+        self.last_photo = None  # Cache last photo to avoid GC issues
+        
         # Setup UI
         self.setup_ui()
         
@@ -889,9 +897,12 @@ class KioskApp:
             if not self.camera or not self.camera.isOpened():
                 raise Exception("No camera found. Please connect a camera.")
             
-            # Set camera resolution
-            self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-            self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+            # Set camera resolution (lower resolution for better performance)
+            self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+            self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+            
+            # Set camera buffer size to 1 to reduce latency
+            self.camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
             
             self.is_running = True
             self.state = KioskState.IDLE
@@ -910,13 +921,18 @@ class KioskApp:
             self.update_status(f"Camera Error: {str(e)}")
     
     def video_loop(self):
-        """Main video loop - continuous scanning"""
+        """Main video loop - continuous scanning with performance optimization"""
+        target_fps = 15  # Target frame rate for smooth display
+        frame_time = 1.0 / target_fps
+        
         while self.is_running and self.camera:
+            loop_start = time.time()
+            
             ret, frame = self.camera.read()
             if not ret:
                 continue
             
-            # Only process if in scanning state
+            # Only process QR detection if in scanning state
             if self.state == KioskState.IDLE:
                 # Try to detect QR code
                 frame, qr_data = self.process_qr_frame(frame)
@@ -926,6 +942,12 @@ class KioskApp:
             
             # Display frame
             self.display_frame(frame)
+            
+            # Frame rate limiting
+            elapsed = time.time() - loop_start
+            sleep_time = frame_time - elapsed
+            if sleep_time > 0:
+                time.sleep(sleep_time)
     
     def process_qr_frame(self, frame):
         """Process frame for QR codes"""
@@ -1282,40 +1304,54 @@ class KioskApp:
         
         self.state = KioskState.IDLE
         self.timer_label.config(text="")
+        self.last_scan_data = ""  # Reset last scan to allow re-scanning same QR
         self.setup_idle_panel()
         self.update_status("Ready to Scan / Handa na para mag-scan")
         self.tts.speak(TagalogMessages.READY_FOR_NEXT)
     
     def display_frame(self, frame):
-        """Display camera frame in UI"""
+        """Display camera frame in UI - optimized for performance"""
         try:
+            # Frame skipping for performance
+            self.frame_skip_counter += 1
+            if self.frame_skip_counter < self.frame_skip_rate:
+                return
+            self.frame_skip_counter = 0
+            
+            # Cache display dimensions once (after UI is fully rendered)
+            if not self.display_size_cached:
+                label_width = self.camera_label.winfo_width()
+                label_height = self.camera_label.winfo_height()
+                if label_width > 100 and label_height > 100:
+                    # Calculate fixed display size maintaining aspect ratio
+                    frame_h, frame_w = frame.shape[:2]
+                    frame_ratio = frame_w / frame_h
+                    label_ratio = label_width / label_height
+                    
+                    if frame_ratio > label_ratio:
+                        self.display_width = label_width
+                        self.display_height = int(label_width / frame_ratio)
+                    else:
+                        self.display_height = label_height
+                        self.display_width = int(label_height * frame_ratio)
+                    
+                    self.display_size_cached = True
+            
+            # Resize using OpenCV (much faster than PIL)
+            resized = cv2.resize(frame, (self.display_width, self.display_height), 
+                                interpolation=cv2.INTER_LINEAR)
+            
             # Convert BGR to RGB
-            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            frame_rgb = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
             
-            # Resize to fit display area
+            # Convert to PIL Image and then to PhotoImage
             frame_pil = Image.fromarray(frame_rgb)
-            
-            # Get label size
-            label_width = self.camera_label.winfo_width()
-            label_height = self.camera_label.winfo_height()
-            
-            if label_width > 1 and label_height > 1:
-                # Maintain aspect ratio
-                frame_ratio = frame_pil.width / frame_pil.height
-                label_ratio = label_width / label_height
-                
-                if frame_ratio > label_ratio:
-                    new_width = label_width
-                    new_height = int(label_width / frame_ratio)
-                else:
-                    new_height = label_height
-                    new_width = int(label_height * frame_ratio)
-                
-                frame_pil = frame_pil.resize((new_width, new_height), Image.Resampling.LANCZOS)
-            
             photo = ImageTk.PhotoImage(image=frame_pil)
+            
+            # Update label
             self.camera_label.config(image=photo, text='')
-            self.camera_label.image = photo
+            self.camera_label.image = photo  # Keep reference
+            self.last_photo = photo  # Extra reference to prevent GC
             
         except Exception as e:
             pass  # Ignore display errors to keep loop running
