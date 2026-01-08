@@ -26,6 +26,7 @@ from dataclasses import dataclass, field
 from typing import Optional, Dict, Any, List
 import base64
 from urllib.parse import urljoin
+import math
 
 # Load environment variables
 try:
@@ -72,22 +73,31 @@ if platform.system() == 'Windows':
 class Colors:
     PRIMARY = "#005440"          # Dark green from Flutter theme
     PRIMARY_LIGHT = "#00755A"    # Lighter green
+    PRIMARY_DARK = "#003D2E"     # Darker green for gradients
     BACKGROUND = "#FFFFFF"       # White background
+    BACKGROUND_DARK = "#1A1A1A"  # Dark background for standby
     SURFACE = "#F5F5F5"          # Light gray surface
+    SURFACE_DARK = "#2D2D2D"     # Dark surface
     TEXT_PRIMARY = "#1A1A1A"     # Dark text
     TEXT_SECONDARY = "#666666"   # Gray text
+    TEXT_WHITE = "#FFFFFF"       # White text
     SUCCESS = "#4CAF50"          # Green for verified
+    SUCCESS_LIGHT = "#E8F5E9"    # Light green background
     ERROR = "#F44336"            # Red for fraud/error
+    ERROR_LIGHT = "#FFEBEE"      # Light red background
     WARNING = "#FF9800"          # Orange for warnings
+    WARNING_LIGHT = "#FFF3E0"    # Light orange background
     ACCENT = "#00BFA5"           # Teal accent
+    GRADIENT_START = "#005440"   # Gradient start
+    GRADIENT_END = "#00755A"     # Gradient end
 
 class KioskState(Enum):
-    IDLE = "idle"                      # Waiting for scan
+    IDLE = "idle"                      # Ready to scan - camera active
     SCANNING = "scanning"              # Actively scanning
-    PROCESSING = "processing"          # Processing QR/OCR data
-    DISPLAY_CERTIFICATE = "certificate" # Showing certificate info
-    DISPLAY_PRODUCT = "product"        # Showing product info
-    ERROR = "error"                    # Error state
+    PROCESSING = "processing"          # Processing QR/OCR data - HUGE loading screen
+    DISPLAY_CERTIFICATE = "certificate" # Showing certificate info - MASSIVE display
+    DISPLAY_PRODUCT = "product"        # Showing product info - MASSIVE display
+    ERROR = "error"                    # Error state - 10 second timeout
 
 @dataclass
 class CertificateData:
@@ -385,8 +395,9 @@ class TagalogMessages:
 # ============================================================================
 class KioskApp:
     # Display duration in seconds
-    DISPLAY_DURATION = 20
-    SCAN_COOLDOWN = 2  # Seconds between scans
+    RESULT_DISPLAY_DURATION = 30   # 30 seconds for results (2-page PDF)
+    ERROR_DISPLAY_DURATION = 10    # 10 seconds for errors
+    SCAN_COOLDOWN = 2              # Seconds between scans
     
     def __init__(self, root: tk.Tk):
         self.root = root
@@ -395,6 +406,10 @@ class KioskApp:
         # Fullscreen for kiosk mode
         self.root.attributes('-fullscreen', True)
         self.root.configure(bg=Colors.BACKGROUND)
+        
+        # Get screen dimensions early
+        self.screen_width = self.root.winfo_screenwidth()
+        self.screen_height = self.root.winfo_screenheight()
         
         # Escape key to exit (for development)
         self.root.bind('<Escape>', lambda e: self.on_closing())
@@ -406,6 +421,9 @@ class KioskApp:
         self.last_scan_time = 0
         self.last_scan_data = ""
         self.display_timer = None
+        self.loading_animation_id = None
+        self.loading_angle = 0
+        self.is_error_timer = False
         
         # Services
         self.tts = TTSService()
@@ -416,13 +434,14 @@ class KioskApp:
         os.makedirs(self.data_dir, exist_ok=True)
         
         # Performance optimization - cached display dimensions
-        self.display_width = 400  # Fixed display width (smaller for QR focus box)
-        self.display_height = 300  # Fixed display height (smaller for QR focus box)
+        self.display_width = 500   # Camera display width
+        self.display_height = 400  # Camera display height
         self.display_size_cached = False
         self.frame_skip_counter = 0
         self.frame_skip_rate = 2  # Process every Nth frame for display
         self.last_photo = None  # Cache last photo to avoid GC issues
-        self.pdf_photo = None  # Cache for PDF display
+        self.pdf_photos = []    # Cache for PDF pages (2 pages)
+        self.logo_photo = None  # Cache for logo
         
         # Setup UI
         self.setup_ui()
@@ -431,515 +450,731 @@ class KioskApp:
         self.root.after(500, self.initialize_kiosk)
     
     def setup_ui(self):
-        """Setup the kiosk user interface - no buttons, display only"""
-        # Get screen dimensions
-        screen_width = self.root.winfo_screenwidth()
-        screen_height = self.root.winfo_screenheight()
-        
-        # Main container
+        """Setup the kiosk user interface - fullscreen layouts for each state"""
+        # Main container - fills entire screen
         self.main_frame = tk.Frame(self.root, bg=Colors.BACKGROUND)
         self.main_frame.pack(fill=tk.BOTH, expand=True)
         
-        # Header with logo/title
-        self.header_frame = tk.Frame(self.main_frame, bg=Colors.PRIMARY, height=80)
-        self.header_frame.pack(fill=tk.X)
-        self.header_frame.pack_propagate(False)
+        # ============ SCAN SCREEN (Camera centered with logo) ============
+        self.scan_frame = tk.Frame(self.main_frame, bg=Colors.BACKGROUND)
         
-        self.title_label = tk.Label(
-            self.header_frame,
-            text="RCV Product Verification Kiosk",
-            font=("SF Pro Display", 28, "bold"),
+        # ============ LOADING SCREEN (HUGE) ============
+        self.loading_frame = tk.Frame(self.main_frame, bg=Colors.PRIMARY)
+        
+        # ============ RESULT SCREEN (MASSIVE with PDF) ============
+        self.result_frame = tk.Frame(self.main_frame, bg=Colors.BACKGROUND)
+        
+        # ============ ERROR SCREEN ============
+        self.error_frame = tk.Frame(self.main_frame, bg=Colors.BACKGROUND)
+        
+        # Setup each screen
+        self._setup_scan_screen()
+        self._setup_loading_screen()
+        self._setup_result_screen()
+        self._setup_error_screen()
+        
+        # Start with scan screen
+        self._show_scan_screen()
+    
+    def _setup_scan_screen(self):
+        """Setup the scanning screen with centered camera and logo"""
+        # Header with logo
+        header = tk.Frame(self.scan_frame, bg=Colors.PRIMARY, height=100)
+        header.pack(fill=tk.X)
+        header.pack_propagate(False)
+        
+        # Logo and title row
+        header_content = tk.Frame(header, bg=Colors.PRIMARY)
+        header_content.pack(expand=True)
+        
+        # RCV Logo text
+        tk.Label(
+            header_content,
+            text="RCV",
+            font=("SF Pro Display", 36, "bold"),
             bg=Colors.PRIMARY,
-            fg=Colors.BACKGROUND
+            fg=Colors.TEXT_WHITE
+        ).pack(side=tk.LEFT, padx=(0, 20))
+        
+        tk.Label(
+            header_content,
+            text="Product Verification Kiosk",
+            font=("SF Pro Display", 28),
+            bg=Colors.PRIMARY,
+            fg=Colors.TEXT_WHITE
+        ).pack(side=tk.LEFT)
+        
+        # Center content area
+        center_area = tk.Frame(self.scan_frame, bg=Colors.BACKGROUND)
+        center_area.pack(fill=tk.BOTH, expand=True)
+        
+        # Camera preview container - CENTERED
+        camera_outer = tk.Frame(center_area, bg=Colors.BACKGROUND)
+        camera_outer.place(relx=0.5, rely=0.45, anchor=tk.CENTER)
+        
+        # Instructions above camera
+        tk.Label(
+            camera_outer,
+            text="Place QR Code in Front of Camera",
+            font=("SF Pro Display", 28, "bold"),
+            bg=Colors.BACKGROUND,
+            fg=Colors.TEXT_PRIMARY
+        ).pack(pady=(0, 10))
+        
+        tk.Label(
+            camera_outer,
+            text="Ilagay ang QR Code sa harap ng camera",
+            font=("SF Pro Text", 20),
+            bg=Colors.BACKGROUND,
+            fg=Colors.TEXT_SECONDARY
+        ).pack(pady=(0, 30))
+        
+        # Camera frame with decorative border
+        camera_border = tk.Frame(
+            camera_outer,
+            bg=Colors.PRIMARY,
+            padx=6,
+            pady=6
         )
-        self.title_label.pack(expand=True)
+        camera_border.pack()
         
-        # Content area (camera + info panel)
-        self.content_frame = tk.Frame(self.main_frame, bg=Colors.BACKGROUND)
-        self.content_frame.pack(fill=tk.BOTH, expand=True, padx=40, pady=20)
-        
-        # Left side - Camera feed (smaller for QR scanning focus)
+        # Inner camera container
         self.camera_container = tk.Frame(
-            self.content_frame, 
+            camera_border,
             bg=Colors.SURFACE,
-            highlightbackground=Colors.PRIMARY,
-            highlightthickness=3,
-            width=420,
-            height=340
+            width=560,
+            height=420
         )
-        self.camera_container.pack(side=tk.LEFT, fill=tk.NONE, expand=False, padx=(0, 10))
-        self.camera_container.pack_propagate(False)  # Keep fixed size
+        self.camera_container.pack()
+        self.camera_container.pack_propagate(False)
         
+        # Camera label
         self.camera_label = tk.Label(
             self.camera_container,
             text="Initializing Camera...",
-            font=("SF Pro Text", 14),
+            font=("SF Pro Text", 16),
             bg=Colors.SURFACE,
             fg=Colors.TEXT_SECONDARY
         )
         self.camera_label.pack(expand=True, fill=tk.BOTH)
         
-        # Center - PDF display panel (shown when certificate is verified)
-        self.pdf_container = tk.Frame(
-            self.content_frame,
-            bg=Colors.SURFACE,
-            highlightbackground=Colors.PRIMARY,
-            highlightthickness=2,
-            width=400,
-            height=500
+        # Scanning indicator below camera
+        self.scan_status_frame = tk.Frame(camera_outer, bg=Colors.BACKGROUND)
+        self.scan_status_frame.pack(pady=(30, 0))
+        
+        self.scan_indicator = tk.Label(
+            self.scan_status_frame,
+            text="● Scanning Active",
+            font=("SF Pro Text", 20, "bold"),
+            bg=Colors.BACKGROUND,
+            fg=Colors.SUCCESS
         )
-        # PDF container is initially hidden, will be shown when certificate is verified
-        self.pdf_container.pack_propagate(False)
+        self.scan_indicator.pack()
         
-        self.pdf_label = tk.Label(
-            self.pdf_container,
-            text="",
-            font=("SF Pro Text", 12),
-            bg=Colors.SURFACE,
-            fg=Colors.TEXT_SECONDARY
-        )
-        self.pdf_label.pack(expand=True, fill=tk.BOTH)
+        # Footer with hints
+        footer = tk.Frame(self.scan_frame, bg=Colors.SURFACE, height=80)
+        footer.pack(fill=tk.X, side=tk.BOTTOM)
+        footer.pack_propagate(False)
         
-        # Right side - Information panel
-        self.info_panel = tk.Frame(
-            self.content_frame,
-            bg=Colors.SURFACE,
-            width=450
-        )
-        self.info_panel.pack(side=tk.RIGHT, fill=tk.Y)
-        self.info_panel.pack_propagate(False)
+        hints_frame = tk.Frame(footer, bg=Colors.SURFACE)
+        hints_frame.pack(expand=True)
         
-        # Info panel content - will be dynamically updated
-        self.setup_idle_panel()
-        
-        # Footer with status
-        self.footer_frame = tk.Frame(self.main_frame, bg=Colors.PRIMARY, height=60)
-        self.footer_frame.pack(fill=tk.X, side=tk.BOTTOM)
-        self.footer_frame.pack_propagate(False)
-        
-        self.status_label = tk.Label(
-            self.footer_frame,
-            text="Ready to Scan",
-            font=("SF Pro Text", 16),
-            bg=Colors.PRIMARY,
-            fg=Colors.BACKGROUND
-        )
-        self.status_label.pack(expand=True)
-        
-        # Timer indicator
-        self.timer_label = tk.Label(
-            self.footer_frame,
-            text="",
-            font=("SF Pro Text", 14),
-            bg=Colors.PRIMARY,
-            fg=Colors.BACKGROUND
-        )
-        self.timer_label.pack(side=tk.RIGHT, padx=20)
-    
-    def setup_idle_panel(self):
-        """Setup the idle state information panel"""
-        self.clear_info_panel()
-        
-        # Icon placeholder
-        icon_frame = tk.Frame(self.info_panel, bg=Colors.SURFACE)
-        icon_frame.pack(pady=(60, 30))
-        
-        # Create a simple scan icon using canvas
-        canvas = tk.Canvas(icon_frame, width=120, height=120, bg=Colors.SURFACE, highlightthickness=0)
-        canvas.pack()
-        
-        # Draw QR code icon
-        canvas.create_rectangle(20, 20, 100, 100, outline=Colors.PRIMARY, width=4)
-        canvas.create_rectangle(30, 30, 50, 50, fill=Colors.PRIMARY, outline="")
-        canvas.create_rectangle(70, 30, 90, 50, fill=Colors.PRIMARY, outline="")
-        canvas.create_rectangle(30, 70, 50, 90, fill=Colors.PRIMARY, outline="")
-        canvas.create_rectangle(55, 55, 65, 65, fill=Colors.PRIMARY, outline="")
-        
-        # Instructions
-        tk.Label(
-            self.info_panel,
-            text="Scan QR Code or Product",
-            font=("SF Pro Display", 22, "bold"),
-            bg=Colors.SURFACE,
-            fg=Colors.TEXT_PRIMARY
-        ).pack(pady=(0, 20))
-        
-        instructions = [
-            "1. Place QR code in front of camera",
-            "2. Hold steady for scanning",
-            "3. View results on screen",
-            "",
-            "I-scan ang QR Code o Produkto",
-            "Ilagay sa harap ng camera"
+        hints = [
+            "Scan Certificate QR Code",
+            "Scan Product Barcode",
+            "Results in seconds"
         ]
-        
-        for instruction in instructions:
+        for hint in hints:
             tk.Label(
-                self.info_panel,
-                text=instruction,
+                hints_frame,
+                text=hint,
                 font=("SF Pro Text", 14),
                 bg=Colors.SURFACE,
                 fg=Colors.TEXT_SECONDARY
-            ).pack(pady=3)
-        
-        # Animated scanning indicator
-        self.scan_indicator = tk.Label(
-            self.info_panel,
-            text="● Scanning Active",
-            font=("SF Pro Text", 16, "bold"),
-            bg=Colors.SURFACE,
-            fg=Colors.SUCCESS
-        )
-        self.scan_indicator.pack(pady=(40, 0))
-        self.animate_scan_indicator()
+            ).pack(side=tk.LEFT, padx=40)
     
-    def animate_scan_indicator(self):
+    def _setup_loading_screen(self):
+        """Setup the HUGE loading screen"""
+        # Full screen loading with spinner
+        center = tk.Frame(self.loading_frame, bg=Colors.PRIMARY)
+        center.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+        
+        # Large spinner canvas
+        self.loading_canvas = tk.Canvas(
+            center,
+            width=200,
+            height=200,
+            bg=Colors.PRIMARY,
+            highlightthickness=0
+        )
+        self.loading_canvas.pack(pady=(0, 50))
+        
+        # Loading text - HUGE
+        tk.Label(
+            center,
+            text="VERIFYING",
+            font=("SF Pro Display", 72, "bold"),
+            bg=Colors.PRIMARY,
+            fg=Colors.TEXT_WHITE
+        ).pack()
+        
+        tk.Label(
+            center,
+            text="Please Wait...",
+            font=("SF Pro Display", 36),
+            bg=Colors.PRIMARY,
+            fg=Colors.TEXT_WHITE
+        ).pack(pady=(10, 0))
+        
+        tk.Label(
+            center,
+            text="Mangyaring maghintay...",
+            font=("SF Pro Text", 28),
+            bg=Colors.PRIMARY,
+            fg="#CCCCCC"
+        ).pack(pady=(20, 0))
+        
+        # Processing details
+        self.loading_detail_label = tk.Label(
+            center,
+            text="Connecting to blockchain...",
+            font=("SF Pro Text", 18),
+            bg=Colors.PRIMARY,
+            fg="#AAAAAA"
+        )
+        self.loading_detail_label.pack(pady=(50, 0))
+    
+    def _setup_result_screen(self):
+        """Setup the MASSIVE result screen with 2-page PDF support"""
+        # Header
+        self.result_header = tk.Frame(self.result_frame, bg=Colors.SUCCESS, height=120)
+        self.result_header.pack(fill=tk.X)
+        self.result_header.pack_propagate(False)
+        
+        self.result_status_label = tk.Label(
+            self.result_header,
+            text="✓ VERIFIED",
+            font=("SF Pro Display", 48, "bold"),
+            bg=Colors.SUCCESS,
+            fg=Colors.TEXT_WHITE
+        )
+        self.result_status_label.pack(expand=True)
+        
+        # Main content area - split into left (info) and right (PDF)
+        content = tk.Frame(self.result_frame, bg=Colors.BACKGROUND)
+        content.pack(fill=tk.BOTH, expand=True, padx=30, pady=20)
+        
+        # Left side - Information panel
+        self.result_info_frame = tk.Frame(content, bg=Colors.SURFACE, width=500)
+        self.result_info_frame.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 20))
+        self.result_info_frame.pack_propagate(False)
+        
+        # Right side - PDF display (2 pages side by side)
+        self.pdf_display_frame = tk.Frame(content, bg=Colors.SURFACE)
+        self.pdf_display_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+        
+        # PDF pages container
+        self.pdf_pages_frame = tk.Frame(self.pdf_display_frame, bg=Colors.SURFACE)
+        self.pdf_pages_frame.pack(expand=True, fill=tk.BOTH, padx=10, pady=10)
+        
+        # Two PDF page labels for 2-page display
+        self.pdf_page1_label = tk.Label(
+            self.pdf_pages_frame,
+            text="Loading PDF Page 1...",
+            font=("SF Pro Text", 14),
+            bg=Colors.SURFACE,
+            fg=Colors.TEXT_SECONDARY
+        )
+        self.pdf_page1_label.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5))
+        
+        self.pdf_page2_label = tk.Label(
+            self.pdf_pages_frame,
+            text="Loading PDF Page 2...",
+            font=("SF Pro Text", 14),
+            bg=Colors.SURFACE,
+            fg=Colors.TEXT_SECONDARY
+        )
+        self.pdf_page2_label.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(5, 0))
+        
+        # Footer with timer
+        self.result_footer = tk.Frame(self.result_frame, bg=Colors.PRIMARY, height=70)
+        self.result_footer.pack(fill=tk.X, side=tk.BOTTOM)
+        self.result_footer.pack_propagate(False)
+        
+        self.result_timer_label = tk.Label(
+            self.result_footer,
+            text="Returning to scanner in 30s",
+            font=("SF Pro Text", 18),
+            bg=Colors.PRIMARY,
+            fg=Colors.TEXT_WHITE
+        )
+        self.result_timer_label.pack(expand=True)
+    
+    def _setup_error_screen(self):
+        """Setup the error screen with 10 second timeout"""
+        # Red header
+        error_header = tk.Frame(self.error_frame, bg=Colors.ERROR, height=150)
+        error_header.pack(fill=tk.X)
+        error_header.pack_propagate(False)
+        
+        tk.Label(
+            error_header,
+            text="ERROR",
+            font=("SF Pro Display", 64, "bold"),
+            bg=Colors.ERROR,
+            fg=Colors.TEXT_WHITE
+        ).pack(expand=True)
+        
+        # Center content
+        center = tk.Frame(self.error_frame, bg=Colors.BACKGROUND)
+        center.pack(fill=tk.BOTH, expand=True)
+        
+        error_content = tk.Frame(center, bg=Colors.BACKGROUND)
+        error_content.place(relx=0.5, rely=0.4, anchor=tk.CENTER)
+        
+        # Error icon
+        error_icon = tk.Canvas(error_content, width=150, height=150, bg=Colors.BACKGROUND, highlightthickness=0)
+        error_icon.pack(pady=(0, 40))
+        error_icon.create_oval(10, 10, 140, 140, outline=Colors.ERROR, width=8)
+        error_icon.create_text(75, 75, text="!", font=("SF Pro Display", 80, "bold"), fill=Colors.ERROR)
+        
+        self.error_message_label = tk.Label(
+            error_content,
+            text="An error occurred",
+            font=("SF Pro Display", 32, "bold"),
+            bg=Colors.BACKGROUND,
+            fg=Colors.TEXT_PRIMARY,
+            wraplength=800
+        )
+        self.error_message_label.pack(pady=(0, 20))
+        
+        self.error_detail_label = tk.Label(
+            error_content,
+            text="May nangyaring problema",
+            font=("SF Pro Text", 24),
+            bg=Colors.BACKGROUND,
+            fg=Colors.TEXT_SECONDARY,
+            wraplength=800
+        )
+        self.error_detail_label.pack()
+        
+        # Suggestions
+        suggestions_frame = tk.Frame(error_content, bg=Colors.ERROR_LIGHT, padx=30, pady=20)
+        suggestions_frame.pack(pady=(50, 0))
+        
+        tk.Label(
+            suggestions_frame,
+            text="Please try:",
+            font=("SF Pro Text", 18, "bold"),
+            bg=Colors.ERROR_LIGHT,
+            fg=Colors.TEXT_PRIMARY
+        ).pack(anchor=tk.W)
+        
+        suggestions = [
+            "• Hold the QR code steady",
+            "• Ensure good lighting",
+            "• Try a different QR code"
+        ]
+        for s in suggestions:
+            tk.Label(
+                suggestions_frame,
+                text=s,
+                font=("SF Pro Text", 16),
+                bg=Colors.ERROR_LIGHT,
+                fg=Colors.TEXT_SECONDARY
+            ).pack(anchor=tk.W, pady=2)
+        
+        # Footer with timer
+        error_footer = tk.Frame(self.error_frame, bg=Colors.ERROR, height=70)
+        error_footer.pack(fill=tk.X, side=tk.BOTTOM)
+        error_footer.pack_propagate(False)
+        
+        self.error_timer_label = tk.Label(
+            error_footer,
+            text="Returning to scanner in 10s",
+            font=("SF Pro Text", 18),
+            bg=Colors.ERROR,
+            fg=Colors.TEXT_WHITE
+        )
+        self.error_timer_label.pack(expand=True)
+    
+    def _draw_qr_icon(self, canvas, size, color):
+        """Draw a QR code icon on canvas"""
+        margin = size * 0.15
+        inner = size - margin * 2
+        
+        # Outer square
+        canvas.create_rectangle(
+            margin, margin, size - margin, size - margin,
+            outline=color, width=4
+        )
+        
+        # QR pattern squares
+        cell = inner / 5
+        positions = [(0, 0), (3, 0), (0, 3), (1, 1), (2, 2), (3, 3)]
+        for px, py in positions:
+            x = margin + cell * px + cell * 0.5
+            y = margin + cell * py + cell * 0.5
+            canvas.create_rectangle(
+                x, y, x + cell * 0.8, y + cell * 0.8,
+                fill=color, outline=""
+            )
+    
+    def _hide_all_screens(self):
+        """Hide all screen frames"""
+        for frame in [self.scan_frame, self.loading_frame, 
+                      self.result_frame, self.error_frame]:
+            frame.pack_forget()
+    
+    def _show_scan_screen(self):
+        """Show scanning screen"""
+        self._hide_all_screens()
+        self.scan_frame.pack(fill=tk.BOTH, expand=True)
+        self.state = KioskState.IDLE
+        self._animate_scan_indicator()
+    
+    def _show_loading_screen(self, detail_text="Connecting to blockchain..."):
+        """Show HUGE loading screen"""
+        self._hide_all_screens()
+        self.loading_frame.pack(fill=tk.BOTH, expand=True)
+        self.state = KioskState.PROCESSING
+        self.loading_detail_label.config(text=detail_text)
+        self._animate_loading_spinner()
+    
+    def _show_result_screen(self):
+        """Show result screen"""
+        self._hide_all_screens()
+        self.result_frame.pack(fill=tk.BOTH, expand=True)
+    
+    def _show_error_screen(self, message: str, detail: str = "May nangyaring problema"):
+        """Show error screen"""
+        self._hide_all_screens()
+        self.error_message_label.config(text=message)
+        self.error_detail_label.config(text=detail)
+        self.error_frame.pack(fill=tk.BOTH, expand=True)
+        self.state = KioskState.ERROR
+        self.start_display_timer(self.ERROR_DISPLAY_DURATION, is_error=True)
+        self.tts.speak(TagalogMessages.ERROR_OCCURRED)
+    
+    def _animate_scan_indicator(self):
         """Animate the scanning indicator"""
-        if self.state == KioskState.IDLE and hasattr(self, 'scan_indicator') and self.scan_indicator.winfo_exists():
-            try:
-                current = self.scan_indicator.cget("fg")
-                new_color = Colors.SUCCESS if current == Colors.PRIMARY else Colors.PRIMARY
-                self.scan_indicator.config(fg=new_color)
-                self.root.after(800, self.animate_scan_indicator)
-            except tk.TclError:
-                pass  # Widget was destroyed
+        if self.state != KioskState.IDLE:
+            return
+        
+        try:
+            current = self.scan_indicator.cget("fg")
+            new_color = Colors.SUCCESS if current == Colors.PRIMARY else Colors.PRIMARY
+            self.scan_indicator.config(fg=new_color)
+            self.root.after(800, self._animate_scan_indicator)
+        except tk.TclError:
+            pass
+    
+    def _animate_loading_spinner(self):
+        """Animate the loading spinner"""
+        if self.state != KioskState.PROCESSING:
+            return
+        
+        try:
+            self.loading_canvas.delete("all")
+            
+            # Draw spinning arc
+            cx, cy = 100, 100
+            radius = 80
+            
+            # Background circle
+            self.loading_canvas.create_oval(
+                cx - radius, cy - radius, cx + radius, cy + radius,
+                outline="#FFFFFF33", width=10
+            )
+            
+            # Spinning arc
+            start = self.loading_angle
+            extent = 90
+            self.loading_canvas.create_arc(
+                cx - radius, cy - radius, cx + radius, cy + radius,
+                start=start, extent=extent,
+                outline=Colors.TEXT_WHITE, width=10, style=tk.ARC
+            )
+            
+            self.loading_angle = (self.loading_angle + 15) % 360
+            self.loading_animation_id = self.root.after(50, self._animate_loading_spinner)
+        except tk.TclError:
+            pass
+    
+    def _populate_result_info(self, cert: CertificateData = None, product: ProductData = None):
+        """Populate the result info panel with certificate or product data"""
+        # Clear existing content
+        for widget in self.result_info_frame.winfo_children():
+            widget.destroy()
+        
+        if cert:
+            # Certificate info
+            is_valid = cert.status == "valid"
+            is_pending = cert.status == "pending"
+            
+            # Title
+            title_bg = Colors.SUCCESS_LIGHT if is_valid else (Colors.WARNING_LIGHT if is_pending else Colors.ERROR_LIGHT)
+            title_frame = tk.Frame(self.result_info_frame, bg=title_bg, height=60)
+            title_frame.pack(fill=tk.X)
+            title_frame.pack_propagate(False)
+            
+            status_text = "VERIFIED" if is_valid else ("PDF FOUND" if is_pending else "NOT FOUND")
+            tk.Label(
+                title_frame,
+                text=f"Certificate {status_text}",
+                font=("SF Pro Display", 20, "bold"),
+                bg=title_bg,
+                fg=Colors.SUCCESS if is_valid else (Colors.WARNING if is_pending else Colors.ERROR)
+            ).pack(expand=True)
+            
+            # Blockchain badge
+            if is_valid and cert.block_index is not None:
+                blockchain_frame = tk.Frame(self.result_info_frame, bg=Colors.PRIMARY_LIGHT, height=40)
+                blockchain_frame.pack(fill=tk.X)
+                blockchain_frame.pack_propagate(False)
+                
+                tk.Label(
+                    blockchain_frame,
+                    text=f"Blockchain Verified - Block #{cert.block_index}",
+                    font=("SF Pro Text", 14, "bold"),
+                    bg=Colors.PRIMARY_LIGHT,
+                    fg=Colors.TEXT_WHITE
+                ).pack(expand=True)
+            
+            # Details
+            details_frame = tk.Frame(self.result_info_frame, bg=Colors.SURFACE, padx=20, pady=15)
+            details_frame.pack(fill=tk.BOTH, expand=True)
+            
+            details = [
+                ("Certificate ID", cert.certificate_id),
+                ("Type", cert.certificate_type.title() if cert.certificate_type else "N/A"),
+                ("Entity", cert.company_name),
+                ("Issued Date", cert.issue_date),
+            ]
+            
+            if cert.additional_info:
+                if cert.additional_info.get("ltoNumber"):
+                    details.append(("LTO Number", cert.additional_info.get("ltoNumber")))
+                if cert.additional_info.get("cfprNumber"):
+                    details.append(("CFPR Number", cert.additional_info.get("cfprNumber")))
+            
+            for label, value in details:
+                row = tk.Frame(details_frame, bg=Colors.SURFACE)
+                row.pack(fill=tk.X, pady=8)
+                
+                tk.Label(
+                    row,
+                    text=label,
+                    font=("SF Pro Text", 14),
+                    bg=Colors.SURFACE,
+                    fg=Colors.TEXT_SECONDARY
+                ).pack(anchor=tk.W)
+                
+                tk.Label(
+                    row,
+                    text=str(value)[:40],
+                    font=("SF Pro Text", 16, "bold"),
+                    bg=Colors.SURFACE,
+                    fg=Colors.TEXT_PRIMARY
+                ).pack(anchor=tk.W)
+            
+            # TTS
+            if is_valid:
+                self.tts.speak(TagalogMessages.certificate_valid(cert.company_name, cert.company_name))
+            elif is_pending:
+                self.tts.speak("Nakita ang PDF certificate. Hindi pa na-verify sa blockchain.")
+            else:
+                self.tts.speak(TagalogMessages.certificate_invalid())
+        
+        elif product:
+            # Product info
+            is_authentic = product.is_authentic and product.confidence_score >= 0.5 and product.source != "not_found"
+            
+            # Title
+            if product.source == "not_found":
+                title_bg = Colors.ERROR_LIGHT
+                status_text = "NOT FOUND"
+                status_color = Colors.ERROR
+            elif is_authentic:
+                title_bg = Colors.SUCCESS_LIGHT
+                status_text = "REGISTERED"
+                status_color = Colors.SUCCESS
+            else:
+                title_bg = Colors.WARNING_LIGHT
+                status_text = "SUSPICIOUS"
+                status_color = Colors.WARNING
+            
+            title_frame = tk.Frame(self.result_info_frame, bg=title_bg, height=60)
+            title_frame.pack(fill=tk.X)
+            title_frame.pack_propagate(False)
+            
+            tk.Label(
+                title_frame,
+                text=f"Product {status_text}",
+                font=("SF Pro Display", 20, "bold"),
+                bg=title_bg,
+                fg=status_color
+            ).pack(expand=True)
+            
+            # Source indicator
+            source_text = {
+                "internal_database": "Found in RCV Database",
+                "grounded_search_pdf": "Found in FDA Registry",
+                "not_found": "Not in any registry",
+                "qr_code": "From QR Code"
+            }.get(product.source, "Unknown Source")
+            
+            source_frame = tk.Frame(self.result_info_frame, bg=Colors.SURFACE)
+            source_frame.pack(fill=tk.X, padx=20, pady=10)
+            
+            tk.Label(
+                source_frame,
+                text=source_text,
+                font=("SF Pro Text", 14, "bold"),
+                bg=Colors.SURFACE,
+                fg=Colors.SUCCESS if product.source in ["internal_database", "grounded_search_pdf"] else Colors.ERROR
+            ).pack(anchor=tk.W)
+            
+            # Confidence bar
+            if product.source != "not_found" and product.confidence_score > 0:
+                conf_frame = tk.Frame(self.result_info_frame, bg=Colors.SURFACE, padx=20)
+                conf_frame.pack(fill=tk.X)
+                
+                tk.Label(
+                    conf_frame,
+                    text=f"Confidence: {product.confidence_score * 100:.0f}%",
+                    font=("SF Pro Text", 14),
+                    bg=Colors.SURFACE,
+                    fg=status_color
+                ).pack(anchor=tk.W)
+                
+                bar_canvas = tk.Canvas(conf_frame, width=450, height=20, bg=Colors.SURFACE, highlightthickness=0)
+                bar_canvas.pack(pady=5, anchor=tk.W)
+                bar_canvas.create_rectangle(0, 0, 450, 20, fill="#E0E0E0", outline="")
+                bar_canvas.create_rectangle(0, 0, int(450 * product.confidence_score), 20, fill=status_color, outline="")
+            
+            # Details
+            details_frame = tk.Frame(self.result_info_frame, bg=Colors.SURFACE, padx=20, pady=10)
+            details_frame.pack(fill=tk.BOTH, expand=True)
+            
+            details = [("Product", product.product_name)]
+            
+            if product.brand and product.brand != "Unknown":
+                details.append(("Brand", product.brand))
+            if product.lto_number:
+                details.append(("LTO Number", product.lto_number))
+            if product.cfpr_number:
+                details.append(("CFPR Number", product.cfpr_number))
+            if product.manufacturer and product.manufacturer != product.brand:
+                details.append(("Manufacturer", product.manufacturer))
+            if product.manufacture_date and product.manufacture_date != "N/A":
+                details.append(("Registered", product.manufacture_date))
+            
+            for label, value in details:
+                row = tk.Frame(details_frame, bg=Colors.SURFACE)
+                row.pack(fill=tk.X, pady=6)
+                
+                tk.Label(
+                    row,
+                    text=label,
+                    font=("SF Pro Text", 13),
+                    bg=Colors.SURFACE,
+                    fg=Colors.TEXT_SECONDARY
+                ).pack(anchor=tk.W)
+                
+                display_value = str(value)[:40] + "..." if len(str(value)) > 40 else str(value)
+                tk.Label(
+                    row,
+                    text=display_value,
+                    font=("SF Pro Text", 15, "bold"),
+                    bg=Colors.SURFACE,
+                    fg=Colors.TEXT_PRIMARY
+                ).pack(anchor=tk.W)
+            
+            # Warnings
+            if product.warnings:
+                warn_frame = tk.Frame(self.result_info_frame, bg=Colors.WARNING_LIGHT, padx=15, pady=10)
+                warn_frame.pack(fill=tk.X, padx=20, pady=(10, 0))
+                
+                for warning in product.warnings[:3]:
+                    warn_color = Colors.ERROR if "NOT found" in warning or "counterfeit" in warning else Colors.WARNING
+                    tk.Label(
+                        warn_frame,
+                        text=f"* {warning}",
+                        font=("SF Pro Text", 12),
+                        bg=Colors.WARNING_LIGHT,
+                        fg=warn_color,
+                        wraplength=420,
+                        anchor=tk.W,
+                        justify=tk.LEFT
+                    ).pack(pady=2, anchor=tk.W)
+            
+            # TTS
+            if is_authentic:
+                self.tts.speak(TagalogMessages.product_authentic(product.product_name, product.brand))
+            else:
+                self.tts.speak(TagalogMessages.product_suspicious(product.product_name))
     
     def setup_certificate_panel(self, cert: CertificateData):
-        """Display certificate information"""
-        self.clear_info_panel()
-        
-        # Status header - handle valid, pending, and invalid states
+        """Display certificate information on the MASSIVE result screen"""
+        # Update header color based on status
         is_valid = cert.status == "valid"
         is_pending = cert.status == "pending"
         
         if is_valid:
-            status_color = Colors.SUCCESS
-            status_text = "VERIFIED ✓"
-            status_tagalog = "TUNAY"
+            header_color = Colors.SUCCESS
+            status_text = "VERIFIED / TUNAY"
         elif is_pending:
-            status_color = Colors.WARNING
-            status_text = "PDF FOUND ⚠"
-            status_tagalog = "NAKITA ANG PDF"
+            header_color = Colors.WARNING
+            status_text = "PDF FOUND / NAKITA ANG PDF"
         else:
-            status_color = Colors.ERROR
-            status_text = "NOT FOUND ✗"
-            status_tagalog = "HINDI NAHANAP"
+            header_color = Colors.ERROR
+            status_text = "NOT FOUND / HINDI NAHANAP"
         
-        status_frame = tk.Frame(self.info_panel, bg=status_color, height=80)
-        status_frame.pack(fill=tk.X)
-        status_frame.pack_propagate(False)
+        self.result_header.config(bg=header_color)
+        self.result_status_label.config(bg=header_color, text=status_text)
         
-        tk.Label(
-            status_frame,
-            text=f"{status_text} / {status_tagalog}",
-            font=("SF Pro Display", 24, "bold"),
-            bg=status_color,
-            fg=Colors.BACKGROUND
-        ).pack(expand=True)
+        # Populate info panel
+        self._populate_result_info(cert=cert)
         
-        # Blockchain verification badge
-        if is_valid and cert.block_index is not None:
-            blockchain_frame = tk.Frame(self.info_panel, bg=Colors.PRIMARY_LIGHT)
-            blockchain_frame.pack(fill=tk.X, padx=20, pady=(15, 0))
-            
-            tk.Label(
-                blockchain_frame,
-                text=f"🔗 Blockchain Verified • Block #{cert.block_index}",
-                font=("SF Pro Text", 12, "bold"),
-                bg=Colors.PRIMARY_LIGHT,
-                fg=Colors.BACKGROUND,
-                pady=8
-            ).pack()
-        
-        # Certificate details
-        details_frame = tk.Frame(self.info_panel, bg=Colors.SURFACE)
-        details_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
-        
-        tk.Label(
-            details_frame,
-            text="Certificate Details",
-            font=("SF Pro Display", 18, "bold"),
-            bg=Colors.SURFACE,
-            fg=Colors.TEXT_PRIMARY
-        ).pack(anchor=tk.W, pady=(0, 15))
-        
-        # Build details list based on available data
-        details = [
-            ("Certificate ID:", cert.certificate_id),
-            ("Type:", cert.certificate_type.title() if cert.certificate_type else "N/A"),
-            ("Entity:", cert.company_name),
-            ("Issued:", cert.issue_date),
-        ]
-        
-        # Add LTO/CFPR if available
-        if cert.additional_info:
-            if cert.additional_info.get("ltoNumber"):
-                details.append(("LTO Number:", cert.additional_info.get("ltoNumber")))
-            if cert.additional_info.get("cfprNumber"):
-                details.append(("CFPR Number:", cert.additional_info.get("cfprNumber")))
-        
-        details.append(("Status:", "VERIFIED" if is_valid else "NOT FOUND"))
-        
-        for label, value in details:
-            row = tk.Frame(details_frame, bg=Colors.SURFACE)
-            row.pack(fill=tk.X, pady=5)
-            
-            tk.Label(
-                row,
-                text=label,
-                font=("SF Pro Text", 13),
-                bg=Colors.SURFACE,
-                fg=Colors.TEXT_SECONDARY,
-                width=15,
-                anchor=tk.W
-            ).pack(side=tk.LEFT)
-            
-            tk.Label(
-                row,
-                text=str(value)[:30],  # Truncate long values
-                font=("SF Pro Text", 13, "bold"),
-                bg=Colors.SURFACE,
-                fg=Colors.TEXT_PRIMARY,
-                anchor=tk.W
-            ).pack(side=tk.LEFT, fill=tk.X, expand=True)
-        
-        # PDF URL indicator
-        if cert.pdf_url:
-            pdf_frame = tk.Frame(self.info_panel, bg=Colors.SURFACE)
-            pdf_frame.pack(fill=tk.X, padx=20, pady=(0, 15))
-            
-            tk.Label(
-                pdf_frame,
-                text="📄 PDF Certificate Available",
-                font=("SF Pro Text", 12),
-                bg=Colors.SURFACE,
-                fg=Colors.PRIMARY
-            ).pack(anchor=tk.W)
-        
-        # TTS announcement
-        if is_valid:
-            self.tts.speak(TagalogMessages.certificate_valid(cert.company_name, cert.company_name))
-        elif is_pending:
-            self.tts.speak("Nakita ang PDF certificate. Hindi pa na-verify sa blockchain.")
-        else:
-            self.tts.speak(TagalogMessages.certificate_invalid())
+        # Show result screen
+        self._show_result_screen()
     
     def setup_product_panel(self, product: ProductData):
-        """Display product scan results"""
-        self.clear_info_panel()
-        
-        # Determine authenticity
+        """Display product scan results on the MASSIVE result screen"""
+        # Update header
         is_authentic = product.is_authentic and product.confidence_score >= 0.5 and product.source != "not_found"
         
-        # Status header
         if product.source == "not_found":
-            status_color = Colors.ERROR
-            status_text = "NOT FOUND ✗"
-            status_tagalog = "HINDI NAHANAP"
+            header_color = Colors.ERROR
+            status_text = "NOT FOUND / HINDI NAHANAP"
         elif is_authentic:
-            status_color = Colors.SUCCESS
-            status_text = "REGISTERED ✓"
-            status_tagalog = "REHISTRADO"
+            header_color = Colors.SUCCESS
+            status_text = "REGISTERED / REHISTRADO"
         else:
-            status_color = Colors.WARNING
-            status_text = "SUSPICIOUS ⚠"
-            status_tagalog = "KAHINA-HINALA"
+            header_color = Colors.WARNING
+            status_text = "SUSPICIOUS / KAHINA-HINALA"
         
-        status_frame = tk.Frame(self.info_panel, bg=status_color, height=80)
-        status_frame.pack(fill=tk.X)
-        status_frame.pack_propagate(False)
+        self.result_header.config(bg=header_color)
+        self.result_status_label.config(bg=header_color, text=status_text)
         
-        tk.Label(
-            status_frame,
-            text=f"{status_text} / {status_tagalog}",
-            font=("SF Pro Display", 24, "bold"),
-            bg=status_color,
-            fg=Colors.BACKGROUND
-        ).pack(expand=True)
+        # Populate info panel
+        self._populate_result_info(product=product)
         
-        # Source indicator
-        source_text = {
-            "internal_database": "✓ Found in RCV Database",
-            "grounded_search_pdf": "✓ Found in FDA Registry",
-            "not_found": "✗ Not in any registry",
-            "qr_code": "From QR Code"
-        }.get(product.source, "Unknown Source")
+        # Hide PDF panels for products
+        self.pdf_page1_label.config(text="", image="")
+        self.pdf_page2_label.config(text="", image="")
         
-        source_color = Colors.SUCCESS if product.source in ["internal_database", "grounded_search_pdf"] else Colors.ERROR
-        
-        source_frame = tk.Frame(self.info_panel, bg=Colors.SURFACE)
-        source_frame.pack(fill=tk.X, padx=20, pady=(15, 0))
-        
-        tk.Label(
-            source_frame,
-            text=source_text,
-            font=("SF Pro Text", 12, "bold"),
-            bg=Colors.SURFACE,
-            fg=source_color
-        ).pack(anchor=tk.W)
-        
-        # Confidence score (only show if product was found)
-        if product.source != "not_found" and product.confidence_score > 0:
-            confidence_frame = tk.Frame(self.info_panel, bg=Colors.SURFACE)
-            confidence_frame.pack(fill=tk.X, padx=20, pady=10)
-            
-            tk.Label(
-                confidence_frame,
-                text=f"Confidence: {product.confidence_score * 100:.0f}%",
-                font=("SF Pro Text", 14),
-                bg=Colors.SURFACE,
-                fg=status_color
-            ).pack(anchor=tk.W)
-            
-            # Progress bar for confidence
-            bar_width = 380
-            bar_height = 15
-            canvas = tk.Canvas(confidence_frame, width=bar_width, height=bar_height, 
-                              bg=Colors.SURFACE, highlightthickness=0)
-            canvas.pack(pady=5, anchor=tk.W)
-            
-            # Background bar
-            canvas.create_rectangle(0, 0, bar_width, bar_height, fill="#E0E0E0", outline="")
-            # Filled portion
-            fill_width = int(bar_width * product.confidence_score)
-            canvas.create_rectangle(0, 0, fill_width, bar_height, fill=status_color, outline="")
-        
-        # Product details
-        details_frame = tk.Frame(self.info_panel, bg=Colors.SURFACE)
-        details_frame.pack(fill=tk.BOTH, expand=True, padx=20)
-        
-        tk.Label(
-            details_frame,
-            text="Product Information",
-            font=("SF Pro Display", 16, "bold"),
-            bg=Colors.SURFACE,
-            fg=Colors.TEXT_PRIMARY
-        ).pack(anchor=tk.W, pady=(10, 10))
-        
-        # Build details based on available data
-        details = [("Product:", product.product_name)]
-        
-        if product.brand and product.brand != "Unknown":
-            details.append(("Brand:", product.brand))
-        
-        if product.lto_number:
-            details.append(("LTO Number:", product.lto_number))
-        
-        if product.cfpr_number:
-            details.append(("CFPR Number:", product.cfpr_number))
-        
-        if product.manufacturer and product.manufacturer != product.brand:
-            details.append(("Manufacturer:", product.manufacturer))
-        
-        if product.batch_number and product.batch_number != "N/A":
-            details.append(("Batch No:", product.batch_number))
-        
-        if product.manufacture_date and product.manufacture_date != "N/A":
-            details.append(("Registered:", product.manufacture_date))
-        
-        if product.expiry_date and product.expiry_date != "N/A":
-            details.append(("Valid Until:", product.expiry_date))
-        
-        for label, value in details:
-            row = tk.Frame(details_frame, bg=Colors.SURFACE)
-            row.pack(fill=tk.X, pady=3)
-            
-            tk.Label(
-                row,
-                text=label,
-                font=("SF Pro Text", 12),
-                bg=Colors.SURFACE,
-                fg=Colors.TEXT_SECONDARY,
-                width=12,
-                anchor=tk.W
-            ).pack(side=tk.LEFT)
-            
-            # Truncate long values
-            display_value = str(value)[:35] + "..." if len(str(value)) > 35 else str(value)
-            tk.Label(
-                row,
-                text=display_value,
-                font=("SF Pro Text", 12, "bold"),
-                bg=Colors.SURFACE,
-                fg=Colors.TEXT_PRIMARY,
-                anchor=tk.W
-            ).pack(side=tk.LEFT, fill=tk.X, expand=True)
-        
-        # Warnings if any
-        if product.warnings:
-            warning_frame = tk.Frame(self.info_panel, bg=Colors.SURFACE)
-            warning_frame.pack(fill=tk.X, padx=20, pady=10)
-            
-            for warning in product.warnings[:3]:  # Limit to 3 warnings
-                warning_color = Colors.ERROR if "NOT found" in warning or "counterfeit" in warning else Colors.WARNING
-                tk.Label(
-                    warning_frame,
-                    text=f"⚠ {warning}",
-                    font=("SF Pro Text", 11),
-                    bg=Colors.SURFACE,
-                    fg=warning_color,
-                    wraplength=380,
-                    anchor=tk.W,
-                    justify=tk.LEFT
-                ).pack(pady=2, anchor=tk.W)
-        
-        # TTS announcement
-        if is_authentic:
-            self.tts.speak(TagalogMessages.product_authentic(product.product_name, product.brand))
-        else:
-            self.tts.speak(TagalogMessages.product_suspicious(product.product_name))
+        # Show result screen
+        self._show_result_screen()
     
     def setup_processing_panel(self):
-        """Display processing indicator"""
-        self.clear_info_panel()
-        
-        tk.Label(
-            self.info_panel,
-            text="Processing...",
-            font=("SF Pro Display", 24, "bold"),
-            bg=Colors.SURFACE,
-            fg=Colors.PRIMARY
-        ).pack(expand=True)
-        
-        tk.Label(
-            self.info_panel,
-            text="Pinoproseso...",
-            font=("SF Pro Text", 18),
-            bg=Colors.SURFACE,
-            fg=Colors.TEXT_SECONDARY
-        ).pack()
+        """Display HUGE processing/loading screen"""
+        self._show_loading_screen("Connecting to verification server...")
     
     def setup_error_panel(self, message: str):
-        """Display error state"""
-        self.clear_info_panel()
-        
-        error_frame = tk.Frame(self.info_panel, bg=Colors.ERROR, height=80)
-        error_frame.pack(fill=tk.X)
-        error_frame.pack_propagate(False)
-        
-        tk.Label(
-            error_frame,
-            text="ERROR / MAY PROBLEMA",
-            font=("SF Pro Display", 24, "bold"),
-            bg=Colors.ERROR,
-            fg=Colors.BACKGROUND
-        ).pack(expand=True)
-        
-        tk.Label(
-            self.info_panel,
-            text=message,
-            font=("SF Pro Text", 14),
-            bg=Colors.SURFACE,
-            fg=Colors.TEXT_PRIMARY,
-            wraplength=400
-        ).pack(expand=True, pady=40)
-        
-        self.tts.speak(TagalogMessages.ERROR_OCCURRED)
-    
-    def clear_info_panel(self):
-        """Clear all widgets from info panel"""
-        for widget in self.info_panel.winfo_children():
-            widget.destroy()
+        """Display error screen with 10 second timeout"""
+        self._show_error_screen(message, "May nangyaring problema. Subukan muli.")
     
     def initialize_kiosk(self):
         """Initialize kiosk - check API and start camera"""
@@ -947,8 +1182,10 @@ class KioskApp:
         thread = threading.Thread(target=self._check_api_connection, daemon=True)
         thread.start()
         
-        # Start camera
+        # Start camera and show scan screen
+        self._show_scan_screen()
         self.start_camera()
+        self.tts.speak(TagalogMessages.WELCOME)
     
     def _check_api_connection(self):
         """Check if RCV API is accessible"""
@@ -961,6 +1198,9 @@ class KioskApp:
     
     def start_camera(self):
         """Initialize and start the camera automatically"""
+        if self.camera and self.camera.isOpened():
+            return  # Camera already running
+        
         try:
             # Try different camera indices
             camera_indices = [0, 1, 2, -1]
@@ -982,20 +1222,17 @@ class KioskApp:
             self.camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
             
             self.is_running = True
-            self.state = KioskState.IDLE
-            self.update_status("Ready to Scan / Handa na para mag-scan")
             
             # Start video thread
             self.video_thread = threading.Thread(target=self.video_loop, daemon=True)
             self.video_thread.start()
             
-            # Welcome TTS
-            self.tts.speak(TagalogMessages.WELCOME)
-            
         except Exception as e:
             self.state = KioskState.ERROR
-            self.setup_error_panel(f"Camera initialization failed:\n{str(e)}\n\nPlease connect a camera and restart.")
-            self.update_status(f"Camera Error: {str(e)}")
+            self._show_error_screen(
+                f"Camera Error: {str(e)}",
+                "Hindi mahanap ang camera. Mangyaring ikonekta ang camera."
+            )
     
     def video_loop(self):
         """Main video loop - continuous scanning with performance optimization"""
@@ -1017,8 +1254,9 @@ class KioskApp:
                 if qr_data and self.can_process_scan(qr_data):
                     self.handle_qr_detection(qr_data)
             
-            # Display frame
-            self.display_frame(frame)
+            # Display frame only when in scan mode
+            if self.state == KioskState.IDLE:
+                self.display_frame(frame)
             
             # Frame rate limiting
             elapsed = time.time() - loop_start
@@ -1078,8 +1316,7 @@ class KioskApp:
         self.last_scan_data = qr_data
         
         self.state = KioskState.PROCESSING
-        self.setup_processing_panel()
-        self.update_status("Processing scan... / Pinoproseso...")
+        self._show_loading_screen("Analyzing QR code...")
         self.tts.speak(TagalogMessages.SCAN_DETECTED)
         
         # Process in background thread
@@ -1171,7 +1408,10 @@ class KioskApp:
     
     def _process_certificate_id(self, certificate_id: str):
         """Fetch certificate from blockchain API"""
-        print(f"🔍 Looking up certificate: {certificate_id}")
+        print(f"Looking up certificate: {certificate_id}")
+        
+        # Update loading screen detail
+        self.root.after(0, lambda: self.loading_detail_label.config(text="Verifying on blockchain..."))
         
         # Always get PDF URL (this constructs it even if API fails)
         pdf_response = self.api.get_certificate_pdf_url(certificate_id)
@@ -1215,7 +1455,7 @@ class KioskApp:
     
     def _process_product_search(self, data: dict):
         """Search for product using API"""
-        print(f"🔍 Searching for product: {data}")
+        print(f"Searching for product: {data}")
         
         response = self.api.search_product(
             product_name=data.get("productName") or data.get("product_name"),
@@ -1259,7 +1499,7 @@ class KioskApp:
     
     def _process_ocr_text(self, text: str):
         """Process plain text (possibly from OCR) to search for product"""
-        print(f"🔍 Processing OCR text: {text[:100]}...")
+        print(f"Processing OCR text: {text[:100]}...")
         
         # First try to extract product info via AI
         response = self.api.scan_product_ocr(text)
@@ -1368,158 +1608,190 @@ class KioskApp:
     def _handle_error(self, message: str):
         """Handle processing error"""
         self.state = KioskState.ERROR
-        self.setup_error_panel(f"Processing Error:\n{message}")
-        self.start_display_timer()
+        self._show_error_screen(f"Processing Error: {message}", "May problema sa pagproseso. Subukan muli.")
     
     def _handle_unknown_qr(self, data: str):
         """Handle unrecognized QR code"""
         self.state = KioskState.ERROR
-        self.setup_error_panel(f"Unrecognized QR code format.\n\nData: {data[:100]}...")
-        self.start_display_timer()
+        self._show_error_screen(
+            "Unrecognized QR Code",
+            f"Hindi kilalang QR code format.\n\nData: {data[:80]}..."
+        )
     
     def _show_certificate(self, cert: CertificateData):
         """Display certificate information"""
         self.state = KioskState.DISPLAY_CERTIFICATE
         self.setup_certificate_panel(cert)
-        self.update_status(f"Certificate: {cert.product_name}")
-        
-        # Show PDF panel and fetch PDF if available
-        if cert.pdf_url:
-            self._show_pdf_panel(cert.pdf_url)
-        else:
-            self._hide_pdf_panel()
-        
-        self.start_display_timer()
         self.log_scan("certificate", cert.__dict__)
+        
+        # Show PDF panel and fetch PDF if available (2 pages)
+        # Timer will start after PDF loads or if no PDF
+        if cert.pdf_url:
+            self._fetch_and_display_pdf_pages(cert.pdf_url)
+        else:
+            self.pdf_page1_label.config(text="No PDF available", image="")
+            self.pdf_page2_label.config(text="", image="")
+            # Start timer immediately if no PDF to load
+            self.start_display_timer(self.RESULT_DISPLAY_DURATION, is_error=False)
     
     def _show_product(self, product: ProductData):
         """Display product information"""
         self.state = KioskState.DISPLAY_PRODUCT
         self.setup_product_panel(product)
-        self.update_status(f"Product: {product.product_name}")
-        self._hide_pdf_panel()  # Hide PDF panel for products
-        self.start_display_timer()
         self.log_scan("product", product.__dict__)
+        
+        # Start 30 second timer for results (no PDF to load for products)
+        self.start_display_timer(self.RESULT_DISPLAY_DURATION, is_error=False)
     
-    def start_display_timer(self):
+    def start_display_timer(self, duration: int, is_error: bool = False):
         """Start countdown timer for display"""
-        self.remaining_time = self.DISPLAY_DURATION
+        self.remaining_time = duration
+        self.is_error_timer = is_error
         self.update_timer()
     
     def update_timer(self):
         """Update the countdown timer"""
         if self.remaining_time > 0:
-            self.timer_label.config(text=f"Next scan in: {self.remaining_time}s")
+            timer_text = f"Returning to scanner in {self.remaining_time}s"
+            
+            # Update the correct timer label based on current screen
+            if self.is_error_timer:
+                self.error_timer_label.config(text=timer_text)
+            else:
+                self.result_timer_label.config(text=timer_text)
+            
             self.remaining_time -= 1
             self.display_timer = self.root.after(1000, self.update_timer)
         else:
             self.reset_to_idle()
     
     def reset_to_idle(self):
-        """Reset kiosk to idle state"""
+        """Reset kiosk to idle/scan state"""
         if self.display_timer:
             self.root.after_cancel(self.display_timer)
         
-        self.state = KioskState.IDLE
-        self.timer_label.config(text="")
+        # Clear PDF cache
+        self.pdf_photos = []
         self.last_scan_data = ""  # Reset last scan to allow re-scanning same QR
-        self._hide_pdf_panel()  # Hide PDF panel when returning to idle
-        self.setup_idle_panel()
-        self.update_status("Ready to Scan / Handa na para mag-scan")
+        
+        # Return to scan screen
+        self._show_scan_screen()
+        
+        # Restart camera if needed
+        if not self.camera or not self.camera.isOpened():
+            self.start_camera()
+        
         self.tts.speak(TagalogMessages.READY_FOR_NEXT)
     
-    def _show_pdf_panel(self, pdf_url: str):
-        """Show the PDF panel and load the PDF from Firebase"""
-        # Show the PDF container
-        self.pdf_container.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
-        
-        # Show loading indicator
-        self.pdf_label.config(text="Loading PDF...\nNaglo-load ng PDF...", image='')
+    def _fetch_and_display_pdf_pages(self, pdf_url: str):
+        """Fetch PDF and display 2 pages side by side"""
+        # Show loading state
+        self.pdf_page1_label.config(text="Loading PDF...\nNaglo-load ng PDF...", image="")
+        self.pdf_page2_label.config(text="", image="")
         
         # Fetch PDF in background thread
-        thread = threading.Thread(target=self._fetch_and_display_pdf, args=(pdf_url,), daemon=True)
+        thread = threading.Thread(target=self._fetch_pdf_pages, args=(pdf_url,), daemon=True)
         thread.start()
     
-    def _hide_pdf_panel(self):
-        """Hide the PDF panel"""
+    def _fetch_pdf_pages(self, pdf_url: str):
+        """Fetch PDF from Firebase and display both pages"""
         try:
-            self.pdf_container.pack_forget()
-            self.pdf_label.config(image='', text='')
-            self.pdf_photo = None
-        except:
-            pass
-    
-    def _fetch_and_display_pdf(self, pdf_url: str):
-        """Fetch PDF from Firebase and display first page as image"""
-        try:
-            print(f"📄 Fetching PDF from: {pdf_url}")
+            print(f"Fetching PDF from: {pdf_url}")
             
             # Download PDF
             response = requests.get(pdf_url, timeout=30)
             if response.status_code != 200:
-                self.root.after(0, lambda: self.pdf_label.config(
-                    text="Failed to load PDF\nHindi ma-load ang PDF"
-                ))
+                self.root.after(0, lambda: self._show_pdf_error("Failed to load PDF\nHindi ma-load ang PDF"))
                 return
             
-            # Try to render PDF to image using pdf2image if available
+            # Try to render PDF to images using pdf2image if available
             try:
                 from pdf2image import convert_from_bytes
                 
-                # Convert first page of PDF to image
+                # Convert first 2 pages of PDF to images
                 images = convert_from_bytes(
                     response.content,
                     first_page=1,
-                    last_page=1,
-                    dpi=100  # Lower DPI for faster rendering
+                    last_page=2,  # Get 2 pages
+                    dpi=120  # Good quality for display
                 )
                 
                 if images:
-                    pdf_image = images[0]
+                    # Calculate sizes to fit in available space
+                    # Each page gets half the available width
+                    max_width = 400  # Each page max width
+                    max_height = self.screen_height - 300  # Leave room for header/footer
                     
-                    # Resize to fit in the panel (max 380x480)
-                    max_width = 380
-                    max_height = 480
+                    processed_images = []
+                    for i, pdf_image in enumerate(images):
+                        # Calculate scaling
+                        width_ratio = max_width / pdf_image.width
+                        height_ratio = max_height / pdf_image.height
+                        scale = min(width_ratio, height_ratio)
+                        
+                        new_width = int(pdf_image.width * scale)
+                        new_height = int(pdf_image.height * scale)
+                        
+                        resized = pdf_image.resize((new_width, new_height), Image.LANCZOS)
+                        processed_images.append(resized)
                     
-                    # Calculate scaling
-                    width_ratio = max_width / pdf_image.width
-                    height_ratio = max_height / pdf_image.height
-                    scale = min(width_ratio, height_ratio)
-                    
-                    new_width = int(pdf_image.width * scale)
-                    new_height = int(pdf_image.height * scale)
-                    
-                    pdf_image = pdf_image.resize((new_width, new_height), Image.LANCZOS)
-                    
-                    # Convert to PhotoImage and display
-                    self.root.after(0, lambda: self._display_pdf_image(pdf_image))
+                    # Display on main thread
+                    self.root.after(0, lambda imgs=processed_images: self._display_pdf_pages(imgs))
                 else:
-                    self.root.after(0, lambda: self.pdf_label.config(
-                        text="✓ PDF Loaded\n(Preview not available)"
-                    ))
+                    self.root.after(0, lambda: self._show_pdf_error("PDF Loaded\n(Preview not available)"))
                     
             except ImportError:
-                # pdf2image not available, show text indicator
-                print("⚠️ pdf2image not installed, showing text indicator")
-                self.root.after(0, lambda: self.pdf_label.config(
-                    text="✓ PDF Certificate Available\nNakuha ang PDF Certificate\n\n(Install pdf2image for preview)"
-                ))
+                # pdf2image not available
+                print("pdf2image not installed, showing text indicator")
+                self.root.after(0, lambda: self._show_pdf_success_no_preview())
                 
         except Exception as e:
             print(f"Error fetching PDF: {e}")
-            self.root.after(0, lambda: self.pdf_label.config(
-                text=f"Error loading PDF\n{str(e)[:50]}"
-            ))
+            self.root.after(0, lambda: self._show_pdf_error(f"Error loading PDF\n{str(e)[:50]}"))
     
-    def _display_pdf_image(self, pil_image):
-        """Display the PDF image in the panel"""
+    def _display_pdf_pages(self, images: list):
+        """Display PDF pages in the result screen"""
         try:
-            photo = ImageTk.PhotoImage(pil_image)
-            self.pdf_label.config(image=photo, text='')
-            self.pdf_photo = photo  # Keep reference
+            self.pdf_photos = []  # Clear old photos
+            
+            # Display page 1
+            if len(images) >= 1:
+                photo1 = ImageTk.PhotoImage(images[0])
+                self.pdf_photos.append(photo1)
+                self.pdf_page1_label.config(image=photo1, text="")
+            
+            # Display page 2
+            if len(images) >= 2:
+                photo2 = ImageTk.PhotoImage(images[1])
+                self.pdf_photos.append(photo2)
+                self.pdf_page2_label.config(image=photo2, text="")
+            elif len(images) == 1:
+                # Only 1 page, hide second label
+                self.pdf_page2_label.config(text="(Single page document)", image="")
+            
+            # NOW start the countdown timer after PDF is displayed
+            self.start_display_timer(self.RESULT_DISPLAY_DURATION, is_error=False)
+                
         except Exception as e:
-            print(f"Error displaying PDF: {e}")
-            self.pdf_label.config(text="Error displaying PDF")
+            print(f"Error displaying PDF pages: {e}")
+            self._show_pdf_error("Error displaying PDF")
+    
+    def _show_pdf_error(self, message: str):
+        """Show PDF loading error - also starts timer"""
+        self.pdf_page1_label.config(text=message, image="")
+        self.pdf_page2_label.config(text="", image="")
+        # Start timer after PDF load attempt completes
+        self.start_display_timer(self.RESULT_DISPLAY_DURATION, is_error=False)
+    
+    def _show_pdf_success_no_preview(self):
+        """Show PDF loaded but no preview available"""
+        self.pdf_page1_label.config(
+            text="PDF Certificate Available\nNakuha ang PDF Certificate\n\n(Install pdf2image for preview)",
+            image=""
+        )
+        self.pdf_page2_label.config(text="", image="")
+        # Start timer after PDF load attempt completes
+        self.start_display_timer(self.RESULT_DISPLAY_DURATION, is_error=False)
     
     def display_frame(self, frame):
         """Display camera frame in UI - optimized for performance"""
@@ -1530,27 +1802,29 @@ class KioskApp:
                 return
             self.frame_skip_counter = 0
             
-            # Cache display dimensions once (after UI is fully rendered)
-            if not self.display_size_cached:
-                label_width = self.camera_label.winfo_width()
-                label_height = self.camera_label.winfo_height()
-                if label_width > 100 and label_height > 100:
-                    # Calculate fixed display size maintaining aspect ratio
-                    frame_h, frame_w = frame.shape[:2]
-                    frame_ratio = frame_w / frame_h
-                    label_ratio = label_width / label_height
-                    
-                    if frame_ratio > label_ratio:
-                        self.display_width = label_width
-                        self.display_height = int(label_width / frame_ratio)
-                    else:
-                        self.display_height = label_height
-                        self.display_width = int(label_height * frame_ratio)
-                    
-                    self.display_size_cached = True
+            # Get camera label dimensions
+            label_width = self.camera_label.winfo_width()
+            label_height = self.camera_label.winfo_height()
+            
+            if label_width < 100 or label_height < 100:
+                # Widget not ready yet, use defaults
+                label_width = 540
+                label_height = 400
+            
+            # Calculate display size maintaining aspect ratio
+            frame_h, frame_w = frame.shape[:2]
+            frame_ratio = frame_w / frame_h
+            label_ratio = label_width / label_height
+            
+            if frame_ratio > label_ratio:
+                display_width = label_width
+                display_height = int(label_width / frame_ratio)
+            else:
+                display_height = label_height
+                display_width = int(label_height * frame_ratio)
             
             # Resize using OpenCV (much faster than PIL)
-            resized = cv2.resize(frame, (self.display_width, self.display_height), 
+            resized = cv2.resize(frame, (display_width, display_height), 
                                 interpolation=cv2.INTER_LINEAR)
             
             # Convert BGR to RGB
@@ -1567,10 +1841,6 @@ class KioskApp:
             
         except Exception as e:
             pass  # Ignore display errors to keep loop running
-    
-    def update_status(self, message: str):
-        """Update status bar"""
-        self.status_label.config(text=message)
     
     def log_scan(self, scan_type: str, data: dict):
         """Log scan to file"""
@@ -1604,6 +1874,12 @@ class KioskApp:
         """Handle application closing"""
         self.is_running = False
         self.tts.stop()
+        
+        # Cancel any pending timers
+        if self.display_timer:
+            self.root.after_cancel(self.display_timer)
+        if self.loading_animation_id:
+            self.root.after_cancel(self.loading_animation_id)
         
         if self.camera:
             self.camera.release()

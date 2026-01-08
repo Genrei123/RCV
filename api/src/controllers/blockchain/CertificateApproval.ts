@@ -84,16 +84,21 @@ export async function approveCertificate(req: Request, res: Response, next: Next
     }
 
     const { approvalId } = req.params;
-    const { signature } = req.body;
+    const { signature, timestamp } = req.body;
 
     if (!signature) {
       throw new CustomError(400, 'Signature is required');
+    }
+
+    if (!timestamp) {
+      throw new CustomError(400, 'Timestamp is required - must match the signed message');
     }
 
     const approval = await processApproval({
       approvalId,
       approverId: userId,
       signature,
+      timestamp, // Pass the timestamp from the signed message
     });
 
     const isFullyApproved = approval.status === 'approved';
@@ -123,7 +128,7 @@ export async function rejectApproval(req: Request, res: Response, next: NextFunc
     }
 
     const { approvalId } = req.params;
-    const { reason, signature } = req.body;
+    const { reason, signature, timestamp } = req.body;
 
     if (!reason) {
       throw new CustomError(400, 'Rejection reason is required');
@@ -138,6 +143,7 @@ export async function rejectApproval(req: Request, res: Response, next: NextFunc
       rejectorId: userId,
       reason,
       signature,
+      timestamp, // Pass timestamp from signed message
     });
 
     res.status(200).json({
@@ -298,12 +304,17 @@ export async function getApprovalMessage(req: Request, res: Response, next: Next
 
     const currentApprovalCount = approval.approvers?.length || 0;
     const nextApprovalNumber = currentApprovalCount + 1;
-    const message = generateApprovalMessage(approval, nextApprovalNumber, approval.requiredApprovals);
+    
+    // Generate timestamp once and include it in response
+    // This ensures the same timestamp is used for signing and verification
+    const timestamp = new Date().toISOString();
+    const message = generateApprovalMessage(approval, nextApprovalNumber, approval.requiredApprovals, timestamp);
 
     res.status(200).json({
       success: true,
       data: {
         message,
+        timestamp, // Include timestamp so frontend can send it back
         approvalNumber: nextApprovalNumber,
         totalRequired: approval.requiredApprovals,
         currentApprovals: currentApprovalCount,
@@ -342,18 +353,22 @@ export async function getRejectionMessage(req: Request, res: Response, next: Nex
       throw new CustomError(400, `Cannot reject a ${approval.status} approval`);
     }
 
+    // Generate timestamp once and include it in response
+    const timestamp = new Date().toISOString();
+    
     const message = `I reject this certificate registration on RCV Blockchain
 
 Certificate ID: ${approval.certificateId}
 Entity: ${approval.entityName} (${approval.entityType})
 PDF Hash: ${approval.pdfHash}
 Reason: ${reason}
-Timestamp: ${new Date().toISOString()}`;
+Timestamp: ${timestamp}`;
 
     res.status(200).json({
       success: true,
       data: {
         message,
+        timestamp, // Include timestamp for verification
         approvalId: approval._id,
         certificateId: approval.certificateId,
         entityName: approval.entityName,
