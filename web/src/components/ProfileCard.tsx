@@ -16,6 +16,8 @@ export function ProfileCard({
 }: ProfileCardProps) {
   return (
     <div
+      draggable={false}
+      onDragStart={(e) => e.preventDefault()}
       className={`relative w-full aspect-[3/4] overflow-hidden rounded-xl shadow-lg ${className}`}
     >
       {/* Foreground person image when provided */}
@@ -23,6 +25,8 @@ export function ProfileCard({
         <img
           src={imageUrl}
           alt={name}
+          draggable={false}
+          onDragStart={(e) => e.preventDefault()}
           className="absolute inset-0 w-full h-full object-cover object-top"
         />
       )}
@@ -31,11 +35,11 @@ export function ProfileCard({
       <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[var(--app-primary)]/90 via-[var(--app-primary)]/40 to-transparent" />
 
       {/* Content */}
-      <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-        <h3 className="font-bold text-base sm:text-lg md:text-xl leading-tight">
+      <div className="absolute bottom-0 left-0 right-0 p-4 text-white" draggable={false} onDragStart={(e) => e.preventDefault()}>
+        <h3 className="font-bold text-base sm:text-lg md:text-xl leading-tight" draggable={false} onDragStart={(e) => e.preventDefault()}>
           {name}
         </h3>
-        <p className="text-[11px] sm:text-xs opacity-90">{role}</p>
+        <p className="text-[11px] sm:text-xs opacity-90" draggable={false} onDragStart={(e) => e.preventDefault()}>{role}</p>
       </div>
     </div>
   );  
