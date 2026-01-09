@@ -39,9 +39,7 @@ import {
   type InviteVerificationResponse,
 } from "@/services/adminInviteService";
 import { FirebaseStorageService } from "@/services/firebaseStorageService";
-import {
-  validatePhilippinePhoneNumber,
-} from "@/utils/phoneValidation";
+import { validatePhilippinePhoneNumber } from "@/utils/phoneValidation";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -293,13 +291,13 @@ export function AgentRegistration() {
     if (!formData.phoneNumber) {
       newErrors.phoneNumber = "Phone number is required";
     } else if (formData.phoneNumber.length !== 10) {
-      newErrors.phoneNumber = "Phone number must be 10 digits";
+      newErrors.phoneNumber = "Invalid phone number";
     } else {
       const phoneValidation = validatePhilippinePhoneNumber(
         `0${formData.phoneNumber}`
       );
       if (!phoneValidation.isValid) {
-        newErrors.phoneNumber = phoneValidation.error || "Invalid phone number";
+        newErrors.phoneNumber = "Invalid phone number";
       }
     }
 
@@ -722,16 +720,22 @@ export function AgentRegistration() {
                     </span>
                     <Input
                       id="phoneNumber"
-                      placeholder="9XXXXXXXXX"
+                      placeholder="9991113333"
                       maxLength={10}
                       className={`pl-12 h-11 ${
                         errors.phoneNumber ? "border-red-500" : ""
                       }`}
                       value={formData.phoneNumber}
                       onChange={(e) => {
-                        const value = e.target.value
-                          .replace(/\D/g, "")
-                          .slice(0, 10);
+                        let value = e.target.value.replace(/\D/g, "");
+
+                        // If user typed +63 prefix, remove it (first 2 digits)
+                        if (value.startsWith("63") && value.length > 10) {
+                          value = value.substring(2);
+                        }
+
+                        // Take only first 10 digits
+                        value = value.slice(0, 10);
                         setFormData({ ...formData, phoneNumber: value });
                         // Clear error when user starts typing
                         if (errors.phoneNumber) {
@@ -749,8 +753,7 @@ export function AgentRegistration() {
                           if (!phoneValidation.isValid) {
                             setErrors({
                               ...errors,
-                              phoneNumber:
-                                phoneValidation.error || "Invalid phone number",
+                              phoneNumber: "Invalid phone number",
                             });
                           }
                         }
