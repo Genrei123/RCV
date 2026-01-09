@@ -27,6 +27,11 @@ export function AnalyticsMapComponent() {
   const deckOverlayRef = useRef<any>(null);
   const [show3DHeatmap, setShow3DHeatmap] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const hamburgerRef = useRef<HTMLDivElement | null>(null);
+  const drawerRef = useRef<HTMLDivElement | null>(null);
+  const hamburgerOriginalParentRef = useRef<HTMLElement | null>(null);
+  const drawerOriginalParentRef = useRef<HTMLElement | null>(null);
 
   const callDBSCANAPI = async () => {
     setLoading(true);
@@ -45,6 +50,97 @@ export function AnalyticsMapComponent() {
       setLoading(false);
     }
   };
+
+  // Store original parents for overlays on mount
+  useEffect(() => {
+    if (hamburgerRef.current?.parentElement && !hamburgerOriginalParentRef.current) {
+      hamburgerOriginalParentRef.current = hamburgerRef.current.parentElement;
+    }
+    if (drawerRef.current?.parentElement && !drawerOriginalParentRef.current) {
+      drawerOriginalParentRef.current = drawerRef.current.parentElement;
+    }
+  }, []);
+
+  // Track fullscreen state and keep overlays inside the fullscreen element
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const fullscreenElement =
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement;
+
+      const nowFullscreen = !!fullscreenElement;
+      setIsFullscreen(nowFullscreen);
+
+      // Ensure we always have original parents stored
+      if (hamburgerRef.current?.parentElement && !hamburgerOriginalParentRef.current) {
+        hamburgerOriginalParentRef.current = hamburgerRef.current.parentElement;
+      }
+      if (drawerRef.current?.parentElement && !drawerOriginalParentRef.current) {
+        drawerOriginalParentRef.current = drawerRef.current.parentElement;
+      }
+
+      // Move elements into or out of the fullscreen element
+      setTimeout(() => {
+        if (!hamburgerRef.current || !drawerRef.current) return;
+
+        if (nowFullscreen && fullscreenElement) {
+          if (hamburgerRef.current.parentElement !== fullscreenElement) {
+            fullscreenElement.appendChild(hamburgerRef.current);
+          }
+          if (drawerRef.current.parentElement !== fullscreenElement) {
+            fullscreenElement.appendChild(drawerRef.current);
+          }
+        } else {
+          if (
+            hamburgerOriginalParentRef.current &&
+            hamburgerRef.current.parentElement !== hamburgerOriginalParentRef.current
+          ) {
+            hamburgerOriginalParentRef.current.appendChild(hamburgerRef.current);
+          }
+          if (
+            drawerOriginalParentRef.current &&
+            drawerRef.current.parentElement !== drawerOriginalParentRef.current
+          ) {
+            drawerOriginalParentRef.current.appendChild(drawerRef.current);
+          }
+        }
+      }, 0);
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange as any);
+    document.addEventListener("mozfullscreenchange", handleFullscreenChange as any);
+    document.addEventListener("MSFullscreenChange", handleFullscreenChange as any);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange as any);
+      document.removeEventListener("mozfullscreenchange", handleFullscreenChange as any);
+      document.removeEventListener("MSFullscreenChange", handleFullscreenChange as any);
+    };
+  }, []);
+
+  // When already in fullscreen, ensure overlays stay attached to the fullscreen element
+  useEffect(() => {
+    if (!isFullscreen) return;
+
+    const fullscreenElement =
+      document.fullscreenElement ||
+      (document as any).webkitFullscreenElement ||
+      (document as any).mozFullScreenElement ||
+      (document as any).msFullscreenElement;
+
+    if (!fullscreenElement) return;
+
+    if (hamburgerRef.current && hamburgerRef.current.parentElement !== fullscreenElement) {
+      fullscreenElement.appendChild(hamburgerRef.current);
+    }
+    if (drawerRef.current && drawerRef.current.parentElement !== fullscreenElement) {
+      fullscreenElement.appendChild(drawerRef.current);
+    }
+  }, [isFullscreen, drawerOpen]);
 
   // Google Maps initialization
   useEffect(() => {
@@ -505,7 +601,11 @@ export function AnalyticsMapComponent() {
       <div ref={mapRef} className="w-full h-full" />
 
       {/* Hamburger Button */}
-      <div className="absolute top-20 right-3 z-20 pointer-events-auto">
+      <div
+        ref={hamburgerRef}
+        className="absolute top-20 right-3 z-20 pointer-events-auto"
+        style={{ pointerEvents: "auto" }}
+      >
         <Button
           variant="outline"
           className="rounded-full shadow-md"
@@ -517,6 +617,7 @@ export function AnalyticsMapComponent() {
 
       {/* Right-side Drawer */}
       <div
+        ref={drawerRef}
         className={`fixed top-0 right-0 h-full w-80 z-30 transform transition-transform duration-300 ${
           drawerOpen ? "translate-x-0" : "translate-x-full"
         }`}
