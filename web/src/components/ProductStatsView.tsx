@@ -121,11 +121,14 @@ export function ProductStatsView() {
     }
   };
 
-  // Fetch products by classification
-  const fetchProductsByClassification = async (classificationId: string) => {
+  // Fetch products by classification (supports sub-classifications)
+  const fetchProductsByClassification = async (
+    classificationId: string,
+    type: "classification" | "subClassification" = "classification"
+  ) => {
     setProductsLoading(true);
     try {
-      const response = await ProductClassificationService.getProductsByClassification(classificationId);
+      const response = await ProductClassificationService.getProductsByClassification(classificationId, type);
       setProducts(response.data || []);
     } catch (error) {
       console.error("Error fetching products by classification:", error);
@@ -154,11 +157,11 @@ export function ProductStatsView() {
     fetchProductsByBrand(brand._id);
   };
 
-  // Handle classification click
-  const handleClassificationClick = (classification: ClassificationStat) => {
+  // Handle classification click. `isSub` should be true for sub-classification items.
+  const handleClassificationClick = (classification: ClassificationStat, isSub: boolean = false) => {
     setSelectedClassification(classification);
     setSelectedBrand(null);
-    fetchProductsByClassification(classification._id);
+    fetchProductsByClassification(classification._id, isSub ? "subClassification" : "classification");
   };
 
   // Toggle classification expansion (to show children)
@@ -311,7 +314,7 @@ export function ProductStatsView() {
             }`}
             style={{ paddingLeft: `${12 + level * 20}px` }}
           >
-            <div className="flex items-center flex-1" onClick={() => handleClassificationClick(classification)}>
+              <div className="flex items-center flex-1" onClick={() => handleClassificationClick(classification, level > 0)}>
               {hasChildren && (
                 <button
                   onClick={(e) => {
