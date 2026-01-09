@@ -77,6 +77,7 @@ const DOCUMENT_TYPES = [
   { value: "registration", label: "Registration Document" },
   { value: "tax-document", label: "Tax Document" },
   { value: "insurance", label: "Insurance Document" },
+  { value: "mayors-permit", label: "Mayor's Permit" },
   { value: "other", label: "Other Document" },
 ];
 
@@ -746,7 +747,7 @@ export function AddCompanyModal({
                     <SelectTrigger>
                       <SelectValue placeholder="Select business type" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent position="popper" sideOffset={5}>
                       {BUSINESS_TYPES.map((type) => (
                         <SelectItem key={type} value={type}>
                           {type}
@@ -947,7 +948,7 @@ export function AddCompanyModal({
                     <SelectTrigger className="mt-2">
                       <SelectValue placeholder="Select document type" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent position="popper" sideOffset={5}>
                       {DOCUMENT_TYPES.map((type) => (
                         <SelectItem key={type.value} value={type.value}>
                           {type.label}
