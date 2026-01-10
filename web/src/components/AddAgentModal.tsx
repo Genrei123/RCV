@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -40,6 +40,33 @@ export function AddAgentModal({ open, onOpenChange, onSuccess }: AddAgentModalPr
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Disable body scroll when modal is open
+  useEffect(() => {
+    if (open) {
+      const html = document.documentElement;
+      const body = document.body;
+      const previousHtmlOverflow = html.style.overflow;
+      const previousBodyOverflow = body.style.overflow;
+      const previousBodyPosition = body.style.position;
+      const scrollY = window.scrollY;
+      
+      html.style.overflow = "hidden";
+      body.style.overflow = "hidden";
+      body.style.position = "fixed";
+      body.style.width = "100%";
+      body.style.top = `-${scrollY}px`;
+      
+      return () => {
+        html.style.overflow = previousHtmlOverflow;
+        body.style.overflow = previousBodyOverflow;
+        body.style.position = previousBodyPosition;
+        body.style.width = "";
+        body.style.top = "";
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [open]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -109,7 +136,7 @@ export function AddAgentModal({ open, onOpenChange, onSuccess }: AddAgentModalPr
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[480px]">
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="w-5 h-5 text-green-600" />
@@ -121,55 +148,58 @@ export function AddAgentModal({ open, onOpenChange, onSuccess }: AddAgentModalPr
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-          {/* Email Field */}
-          <div className="space-y-2">
-            <Label htmlFor="email" className="flex items-center gap-1">
-              <Mail className="w-4 h-4" />
-              Email Address <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="agent@example.com"
-              value={formData.email}
-              onChange={(e) => {
-                setFormData({ ...formData, email: e.target.value });
-                if (errors.email) setErrors({ ...errors, email: "" });
-              }}
-              disabled={loading}
-              className={errors.email ? "border-red-500" : ""}
-            />
-            {errors.email && (
-              <p className="text-sm text-red-500">{errors.email}</p>
-            )}
-          </div>
+        <form onSubmit={handleSubmit} className="space-y-3 mt-4">
+          {/* Email and Badge ID Fields - Side by Side */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Email Field */}
+            <div className="space-y-2">
+              <Label htmlFor="email" className="flex items-center gap-1">
+                <Mail className="w-4 h-4" />
+                Email Address <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="agent@example.com"
+                value={formData.email}
+                onChange={(e) => {
+                  setFormData({ ...formData, email: e.target.value });
+                  if (errors.email) setErrors({ ...errors, email: "" });
+                }}
+                disabled={loading}
+                className={errors.email ? "border-red-500" : ""}
+              />
+              {errors.email && (
+                <p className="text-sm text-red-500">{errors.email}</p>
+              )}
+            </div>
 
-          {/* Badge ID Field */}
-          <div className="space-y-2">
-            <Label htmlFor="badgeId" className="flex items-center gap-1">
-              <BadgeCheck className="w-4 h-4" />
-              Badge ID <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="badgeId"
-              type="text"
-              placeholder="e.g., AGT-2024-001"
-              value={formData.badgeId}
-              onChange={(e) => {
-                setFormData({ ...formData, badgeId: e.target.value.toUpperCase() });
-                if (errors.badgeId) setErrors({ ...errors, badgeId: "" });
-              }}
-              disabled={loading}
-              className={errors.badgeId ? "border-red-500" : ""}
-            />
-            {errors.badgeId && (
-              <p className="text-sm text-red-500">{errors.badgeId}</p>
-            )}
-            <p className="text-xs text-gray-500">
-              The agent must enter this exact badge ID to verify their identity during registration.
-            </p>
+            {/* Badge ID Field */}
+            <div className="space-y-2">
+              <Label htmlFor="badgeId" className="flex items-center gap-1">
+                <BadgeCheck className="w-4 h-4" />
+                Badge ID <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="badgeId"
+                type="text"
+                placeholder="e.g., AGT-2024-001"
+                value={formData.badgeId}
+                onChange={(e) => {
+                  setFormData({ ...formData, badgeId: e.target.value.toUpperCase() });
+                  if (errors.badgeId) setErrors({ ...errors, badgeId: "" });
+                }}
+                disabled={loading}
+                className={errors.badgeId ? "border-red-500" : ""}
+              />
+              {errors.badgeId && (
+                <p className="text-sm text-red-500">{errors.badgeId}</p>
+              )}
+            </div>
           </div>
+          <p className="text-xs text-gray-500 -mt-2">
+            The agent must enter this exact badge ID to verify their identity during registration.
+          </p>
 
           {/* Personal Message Field (Optional) */}
           <div className="space-y-2">
@@ -182,7 +212,7 @@ export function AddAgentModal({ open, onOpenChange, onSuccess }: AddAgentModalPr
               value={formData.personalMessage}
               onChange={(e) => setFormData({ ...formData, personalMessage: e.target.value })}
               disabled={loading}
-              rows={3}
+              rows={2}
               className="resize-none"
             />
             <p className="text-xs text-gray-500">
@@ -191,11 +221,11 @@ export function AddAgentModal({ open, onOpenChange, onSuccess }: AddAgentModalPr
           </div>
 
           {/* Access Permissions */}
-          <div className="space-y-3">
+          <div className="space-y-2">
             <Label className="text-sm font-medium">
               Access Permissions <span className="text-red-500">*</span>
             </Label>
-            <div className="space-y-3 p-3 border rounded-lg bg-gray-50">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 border rounded-lg bg-gray-50">
               <div className="flex items-center space-x-3">
                 <Checkbox
                   id="appAccess"
@@ -245,7 +275,7 @@ export function AddAgentModal({ open, onOpenChange, onSuccess }: AddAgentModalPr
               <strong>Note:</strong> After the agent completes registration, their account 
               will be pending your approval. They will need to upload:
             </p>
-            <ul className="mt-2 ml-4 list-disc text-blue-700">
+            <ul className="mt-1 ml-4 list-disc text-blue-700">
               <li>A valid ID document</li>
               <li>A selfie holding the ID document</li>
             </ul>

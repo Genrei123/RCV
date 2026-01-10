@@ -210,9 +210,20 @@ export async function processApproval(input: ProcessApprovalInput): Promise<Cert
   
   console.log('=== Signature Verification Debug ===');
   console.log('Approver ID:', input.approverId);
-  console.log('Approver Wallet:', approver.walletAddress);
+  console.log('Approver Email:', approver.email);
+  console.log('Approver Wallet (from DB):', approver.walletAddress);
   console.log('Timestamp used:', input.timestamp);
   console.log('Expected Message:', expectedMessage);
+  
+  // IMPORTANT: Recover the actual signer address from the signature to help debug
+  let recoveredAddress: string | null = null;
+  try {
+    recoveredAddress = ethers.verifyMessage(expectedMessage, input.signature);
+    console.log('Recovered address from signature:', recoveredAddress);
+    console.log('Wallet match:', recoveredAddress.toLowerCase() === approver.walletAddress?.toLowerCase());
+  } catch (e) {
+    console.error('Failed to recover address:', e);
+  }
   
   const isValidSignature = verifyApprovalSignature(
     expectedMessage,
@@ -223,7 +234,13 @@ export async function processApproval(input: ProcessApprovalInput): Promise<Cert
   if (!isValidSignature) {
     console.error('Signature verification failed!');
     console.error('Signature:', input.signature);
-    throw new CustomError(400, 'Invalid signature - please try again');
+    console.error('');
+    console.error('=== WALLET MISMATCH DETECTED ===');
+    console.error(`The signature was created by: ${recoveredAddress}`);
+    console.error(`But the database shows this user's wallet as: ${approver.walletAddress}`);
+    console.error('The user needs to have their correct MetaMask wallet address saved in the database.');
+    console.error('An Admin should update this user\'s wallet address in User Management.');
+    throw new CustomError(400, `Invalid signature - wallet mismatch. Your connected MetaMask wallet (${recoveredAddress?.slice(0, 10)}...) doesn't match your registered wallet (${approver.walletAddress?.slice(0, 10)}...). Please ask an Admin to update your wallet address.`);
   }
   
   console.log('Signature verified successfully!');
@@ -312,6 +329,21 @@ PDF Hash: ${approval.pdfHash}
 Reason: ${input.reason}
 Timestamp: ${messageTimestamp}`;
 
+  console.log('=== Rejection Signature Verification Debug ===');
+  console.log('Rejector ID:', input.rejectorId);
+  console.log('Rejector Email:', rejector.email);
+  console.log('Rejector Wallet (from DB):', rejector.walletAddress);
+  console.log('Timestamp used:', messageTimestamp);
+  
+  // Recover the actual signer address for debugging
+  let recoveredAddress: string | null = null;
+  try {
+    recoveredAddress = ethers.verifyMessage(rejectionMessage, input.signature);
+    console.log('Recovered address from signature:', recoveredAddress);
+  } catch (e) {
+    console.error('Failed to recover address:', e);
+  }
+
   const isValidSignature = verifyApprovalSignature(
     rejectionMessage,
     input.signature,
@@ -319,7 +351,10 @@ Timestamp: ${messageTimestamp}`;
   );
 
   if (!isValidSignature) {
-    throw new CustomError(400, 'Invalid signature');
+    console.error('Rejection signature verification failed!');
+    console.error(`The signature was created by: ${recoveredAddress}`);
+    console.error(`But the database shows this user's wallet as: ${rejector.walletAddress}`);
+    throw new CustomError(400, `Invalid signature - wallet mismatch. Your connected MetaMask wallet (${recoveredAddress?.slice(0, 10)}...) doesn't match your registered wallet (${rejector.walletAddress?.slice(0, 10)}...). Please ask an Admin to update your wallet address.`);
   }
 
   approval.status = 'rejected';

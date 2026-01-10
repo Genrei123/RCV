@@ -269,6 +269,67 @@ export const revokeWalletAuthorization = async (
 };
 
 /**
+ * Link wallet address to a user (user can link their own wallet, but only Admin can authorize)
+ * @param userId The user ID to link the wallet to
+ * @param walletAddress The wallet address to link
+ * @returns Object with success status and user data
+ */
+export const linkUserWallet = async (
+  userId: string,
+  walletAddress: string
+): Promise<{ success: boolean; message: string; user?: any }> => {
+  try {
+    if (!ethers.isAddress(walletAddress)) {
+      return { success: false, message: 'Invalid Ethereum wallet address' };
+    }
+
+    const normalizedAddress = walletAddress.toLowerCase();
+
+    // Check if wallet is already used by another user
+    const existingUser = await UserRepo.findOne({
+      where: { walletAddress: normalizedAddress }
+    });
+
+    if (existingUser && existingUser._id !== userId) {
+      return { 
+        success: false, 
+        message: 'This wallet address is already associated with another user' 
+      };
+    }
+
+    // Get the user
+    const user = await UserRepo.findOne({ where: { _id: userId } });
+    if (!user) {
+      return { success: false, message: 'User not found' };
+    }
+
+    // Link wallet but DON'T authorize (only Admin can authorize)
+    // If user already had a different wallet, they lose authorization
+    if (user.walletAddress !== normalizedAddress) {
+      user.walletAuthorized = false; // Reset authorization when wallet changes
+    }
+    user.walletAddress = normalizedAddress;
+    await UserRepo.save(user);
+
+    return { 
+      success: true, 
+      message: 'Wallet linked successfully. Please contact an administrator to authorize your wallet for blockchain operations.',
+      user: {
+        _id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        walletAddress: user.walletAddress,
+        walletAuthorized: user.walletAuthorized,
+        role: user.role
+      }
+    };
+  } catch (error) {
+    console.error('Error linking wallet:', error);
+    return { success: false, message: 'Failed to link wallet' };
+  }
+};
+
+/**
  * Check if a wallet address is already in use
  */
 export const isWalletAddressInUse = async (
@@ -643,6 +704,7 @@ export default {
   isAuthorizedWallet,
   authorizeUserWallet,
   revokeWalletAuthorization,
+  linkUserWallet,
   isWalletAddressInUse,
   getAdminWalletAddress,
   isAdminWallet,

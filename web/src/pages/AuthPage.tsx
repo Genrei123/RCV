@@ -16,6 +16,7 @@ import {
   Mail,
   Lock,
   AlertCircle,
+  ArrowLeft,
 } from "lucide-react";
 import { AuthService } from "@/services/authService";
 import { toast, ToastContainer } from "react-toastify";
@@ -140,6 +141,16 @@ export function AuthPage() {
         pauseOnHover
         theme="light"
       />
+      
+      {/* Back to Home Button */}
+      <button
+        onClick={() => navigate('/')}
+        className="fixed top-6 left-6 flex items-center gap-2 text-gray-600 hover:text-green-600 transition-colors group"
+      >
+        <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+        <span className="font-medium">Back to Home</span>
+      </button>
+
       <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-8 items-center">
         {/* Left Side - Branding */}
         <div className="hidden lg:block">
