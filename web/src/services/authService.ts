@@ -1,6 +1,5 @@
 import type { User, RegisterResponse } from "@/typeorm/entities/user.entity";
 import { apiClient } from "./axiosConfig";
-import axios from "axios";
 import { CookieManager } from "@/utils/cookies";
 
 export interface LoginRequest {
