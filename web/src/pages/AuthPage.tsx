@@ -33,22 +33,35 @@ export function AuthPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const inviteToken = searchParams.get("invite");
+  const [verifyingInvite, setVerifyingInvite] = useState(!!inviteToken);
+  
+  // Debug: Log invite token on mount
+  console.log("[AuthPage] Mounted. Invite token:", inviteToken);
   
   // If invite token is present, verify with backend first then redirect to agent registration
   useEffect(() => {
     const verifyAndRedirect = async () => {
       if (inviteToken) {
+        console.log("[AuthPage] Starting invite verification for token:", inviteToken);
+        setVerifyingInvite(true);
         try {
+          console.log("[AuthPage] Calling AdminInviteService.verifyInviteToken...");
           const response = await AdminInviteService.verifyInviteToken(inviteToken);
+          console.log("[AuthPage] Verification response:", response);
           if (response.success && response.invite) {
+            console.log("[AuthPage] Token valid, redirecting to agent-registration...");
             navigate(`/agent-registration?invite=${inviteToken}`, { replace: true });
           } else {
+            console.log("[AuthPage] Token invalid (no success/invite in response)");
             toast.error("Invalid or expired invitation link.");
+            setVerifyingInvite(false);
           }
         } catch (err: any) {
-          const errorMessage = err.response?.data?.message || "Invalid or expired invitation link.";
+          console.error("[AuthPage] Verification error:", err);
+          console.error("[AuthPage] Error response:", err.response);
+          const errorMessage = err.response?.data?.message || err.message || "Invalid or expired invitation link.";
           toast.error(errorMessage);
-          console.error("Invite token verification failed:", err);
+          setVerifyingInvite(false);
         }
       }
     };
@@ -142,6 +155,33 @@ export function AuthPage() {
   const handleForgotPassword = () => {
     navigate("/forgot-password");
   };
+
+  // Show loading state when verifying invite token
+  if (verifyingInvite) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50 flex items-center justify-center p-4">
+        <ToastContainer
+          position="top-right"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="light"
+        />
+        <Card className="p-8 max-w-md w-full text-center">
+          <div className="w-12 h-12 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <h2 className="text-xl font-semibold mb-2">Verifying Invitation</h2>
+          <p className="text-gray-600">
+            Please wait while we verify your invitation link...
+          </p>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50 flex items-center justify-center p-4">

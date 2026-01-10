@@ -1,7 +1,4 @@
 import { apiClient } from "./axiosConfig";
-import axios from "axios";
-
-const API_BASE = import.meta.env.BACKEND_URL;
 
 export interface AdminInvite {
   _id: string;
@@ -78,7 +75,7 @@ export class AdminInviteService {
    * Verify an invite token (public)
    */
   static async verifyInviteToken(token: string): Promise<InviteVerificationResponse> {
-    const response = await axios.get(`${API_BASE}/admin-invite/verify/${token}`);
+    const response = await apiClient.get(`/admin-invite/verify/${token}`);
     return response.data;
   }
 
@@ -86,7 +83,7 @@ export class AdminInviteService {
    * Verify badge number for invitation (public)
    */
   static async verifyBadgeNumber(data: VerifyBadgeRequest) {
-    const response = await axios.post(`${API_BASE}/admin-invite/verify-badge`, data);
+    const response = await apiClient.post(`/admin-invite/verify-badge`, data);
     return response.data;
   }
 
@@ -94,7 +91,7 @@ export class AdminInviteService {
    * Complete agent registration with documents (public)
    */
   static async completeRegistration(data: CompleteRegistrationRequest) {
-    const response = await axios.post(`${API_BASE}/admin-invite/complete-registration`, data);
+    const response = await apiClient.post(`/admin-invite/complete-registration`, data);
     return response.data;
   }
 
