@@ -126,7 +126,7 @@ export class AuthService {
 
     static async requestPasswordReset(email: string): Promise<PasswordResetResponse> {
         try {
-            const response = await axios.post(import.meta.env.BACKEND_URL + '/auth/forgot-password', { email })
+            const response = await apiClient.post('/auth/forgot-password', { email })
             return response.data;
         } catch (error: any) {
             console.error('Request password reset error:', error);
@@ -136,7 +136,7 @@ export class AuthService {
 
     static async verifyResetCode(email: string, code: string): Promise<boolean> {
         try {
-            const response = await axios.post<{ valid: boolean }>(import.meta.env.BACKEND_URL + '/auth/verify-reset-code', { 
+            const response = await apiClient.post<{ valid: boolean }>('/auth/verify-reset-code', { 
                 email, 
                 code 
             });
@@ -149,7 +149,7 @@ export class AuthService {
 
     static async resetPassword(email: string, code: string, newPassword: string): Promise<PasswordResetResponse> {
         try {
-            const response = await axios.post<PasswordResetResponse>(import.meta.env.BACKEND_URL + '/auth/reset-password', { 
+            const response = await apiClient.post<PasswordResetResponse>('/auth/reset-password', { 
                 email, 
                 code, 
                 newPassword 
