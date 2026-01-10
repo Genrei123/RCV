@@ -1,7 +1,7 @@
 import { apiClient } from "./axiosConfig";
 import axios from "axios";
 
-const API_BASE = import.meta.env.VITE_NGROK_BASE_URL;
+const API_BASE = import.meta.env.BACKEND_URL;
 
 export interface AdminInvite {
   _id: string;
