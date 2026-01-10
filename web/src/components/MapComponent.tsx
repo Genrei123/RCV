@@ -50,6 +50,7 @@ export function MapComponent({
   const [searchQuery, setSearchQuery] = useState("");
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
   const googleMapRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
@@ -57,6 +58,10 @@ export function MapComponent({
   const markersByIdRef = useRef<Map<string, any>>(new Map());
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [pendingFocusId, setPendingFocusId] = useState<string | null>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const inspectorCountRef = useRef<HTMLDivElement>(null);
+  const originalSearchParentRef = useRef<HTMLElement | null>(null);
+  const originalCountParentRef = useRef<HTMLElement | null>(null);
 
   // Load Google Maps script
   useEffect(() => {
@@ -212,6 +217,91 @@ export function MapComponent({
     }
   }, [inspectors, mapLoaded, onInspectorClick]);
 
+  // Store original parent references on mount
+  useEffect(() => {
+    if (searchContainerRef.current?.parentElement && !originalSearchParentRef.current) {
+      originalSearchParentRef.current = searchContainerRef.current.parentElement;
+    }
+    if (inspectorCountRef.current?.parentElement && !originalCountParentRef.current) {
+      originalCountParentRef.current = inspectorCountRef.current.parentElement;
+    }
+  }, []);
+
+  // Ensure elements stay in correct position after re-renders when in fullscreen
+  useEffect(() => {
+    if (!isFullscreen) return;
+
+    const fullscreenElement = document.fullscreenElement || 
+                              (document as any).webkitFullscreenElement ||
+                              (document as any).mozFullScreenElement ||
+                              (document as any).msFullscreenElement;
+
+    if (fullscreenElement) {
+      // Ensure elements are in fullscreen container after render
+      if (searchContainerRef.current && searchContainerRef.current.parentElement !== fullscreenElement) {
+        fullscreenElement.appendChild(searchContainerRef.current);
+      }
+      if (inspectorCountRef.current && inspectorCountRef.current.parentElement !== fullscreenElement) {
+        fullscreenElement.appendChild(inspectorCountRef.current);
+      }
+    }
+  }, [isFullscreen, searchQuery, inspectors.length]);
+
+  // Track fullscreen state and move overlay elements
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const fullscreenElement = document.fullscreenElement || 
+                                (document as any).webkitFullscreenElement ||
+                                (document as any).mozFullScreenElement ||
+                                (document as any).msFullscreenElement;
+      const nowFullscreen = !!fullscreenElement;
+      setIsFullscreen(nowFullscreen);
+
+      // Use setTimeout to ensure DOM is ready after fullscreen transition
+      setTimeout(() => {
+        if (searchContainerRef.current && inspectorCountRef.current) {
+          // Ensure original parents are stored
+          if (!originalSearchParentRef.current && searchContainerRef.current.parentElement) {
+            originalSearchParentRef.current = searchContainerRef.current.parentElement;
+          }
+          if (!originalCountParentRef.current && inspectorCountRef.current.parentElement) {
+            originalCountParentRef.current = inspectorCountRef.current.parentElement;
+          }
+
+          if (nowFullscreen) {
+            // Move to fullscreen element if not already there
+            if (fullscreenElement && searchContainerRef.current.parentElement !== fullscreenElement) {
+              fullscreenElement.appendChild(searchContainerRef.current);
+            }
+            if (fullscreenElement && inspectorCountRef.current.parentElement !== fullscreenElement) {
+              fullscreenElement.appendChild(inspectorCountRef.current);
+            }
+          } else {
+            // Move back to original parents
+            if (originalSearchParentRef.current && searchContainerRef.current.parentElement !== originalSearchParentRef.current) {
+              originalSearchParentRef.current.appendChild(searchContainerRef.current);
+            }
+            if (originalCountParentRef.current && inspectorCountRef.current.parentElement !== originalCountParentRef.current) {
+              originalCountParentRef.current.appendChild(inspectorCountRef.current);
+            }
+          }
+        }
+      }, 0);
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+    document.addEventListener("mozfullscreenchange", handleFullscreenChange);
+    document.addEventListener("MSFullscreenChange", handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
+      document.removeEventListener("mozfullscreenchange", handleFullscreenChange);
+      document.removeEventListener("MSFullscreenChange", handleFullscreenChange);
+    };
+  }, []);
+
   // Build suggestions from API results first, then local lists
   useEffect(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -289,8 +379,12 @@ export function MapComponent({
   return (
     <div className="relative w-full h-full">
       <div ref={mapRef} className="w-full h-full" />
-      {/* Search panel: responsive width and offset below header on mobile */}
-      <div className="absolute top-16 sm:top-20 left-3 sm:left-4 z-10 w-[calc(100vw-2rem)] sm:w-80 md:w-96 max-w-[28rem]">
+      {/* Search panel: absolute positioning normally, fixed when in fullscreen */}
+      <div 
+        ref={searchContainerRef}
+        className={`${isFullscreen ? 'fixed' : 'absolute'} top-16 sm:top-20 left-3 sm:left-4 z-[9999] w-[calc(100vw-2rem)] sm:w-80 md:w-96 max-w-[28rem]`}
+        style={{ pointerEvents: 'auto' }}
+      >
         <Card className="bg-white rounded-lg border-0 shadow-xl ">
           <div className="relative p-2">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -384,7 +478,12 @@ export function MapComponent({
           )}
         </Card>
       </div>
-      <div className="absolute top-4 sm:top-6 left-1/2 -translate-x-1/2 z-10">
+      {/* Inspector count container: absolute positioning normally, fixed when in fullscreen */}
+      <div 
+        ref={inspectorCountRef}
+        className={`${isFullscreen ? 'fixed' : 'absolute'} top-4 sm:top-6 left-1/2 -translate-x-1/2 z-[9999]`}
+        style={{ pointerEvents: 'auto' }}
+      >
         <Card className="bg-white shadow-lg px-4 py-2">
           <div className="flex items-center gap-2">
             <MapPin className="h-4 w-4 app-text-primary" />

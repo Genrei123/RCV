@@ -145,9 +145,14 @@ export const validatePhilippinePhoneNumber = (
   phoneNumber: string
 ): { isValid: boolean; error?: string } => {
   // Extract only digits
-  const digitsOnly = phoneNumber.replace(/\D/g, "");
+  let digitsOnly = phoneNumber.replace(/\D/g, "");
 
-  // Check if it's exactly 10 or 12 digits (10 digits + 63 prefix)
+  // Remove leading 0 if present (e.g., "099XXXXXXX" -> "99XXXXXXX")
+  if (digitsOnly.startsWith("0") && digitsOnly.length === 11) {
+    digitsOnly = digitsOnly.substring(1);
+  }
+
+  // Check if it's exactly 10 digits
   let tenDigitNumber = digitsOnly;
 
   if (digitsOnly.length === 12 && digitsOnly.startsWith("63")) {
@@ -161,7 +166,7 @@ export const validatePhilippinePhoneNumber = (
   }
 
   // Check if prefix is valid
-  if (!isValidPhilippineMobilePrefix(`0${tenDigitNumber.substring(0, 9)}`)) {
+  if (!isValidPhilippineMobilePrefix(`0${tenDigitNumber}`)) {
     return {
       isValid: false,
       error: "Invalid Philippine mobile network prefix",
