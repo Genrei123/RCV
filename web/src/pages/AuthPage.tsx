@@ -19,6 +19,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { AuthService } from "@/services/authService";
+import { AdminInviteService } from "@/services/adminInviteService";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { CookieManager } from "@/utils/cookies";
@@ -33,11 +34,26 @@ export function AuthPage() {
   const [searchParams] = useSearchParams();
   const inviteToken = searchParams.get("invite");
   
-  // If invite token is present, redirect to agent registration
+  // If invite token is present, verify with backend first then redirect to agent registration
   useEffect(() => {
-    if (inviteToken) {
-      navigate(`/agent-registration?invite=${inviteToken}`, { replace: true });
-    }
+    const verifyAndRedirect = async () => {
+      if (inviteToken) {
+        try {
+          const response = await AdminInviteService.verifyInviteToken(inviteToken);
+          if (response.success && response.invite) {
+            navigate(`/agent-registration?invite=${inviteToken}`, { replace: true });
+          } else {
+            toast.error("Invalid or expired invitation link.");
+          }
+        } catch (err: any) {
+          const errorMessage = err.response?.data?.message || "Invalid or expired invitation link.";
+          toast.error(errorMessage);
+          console.error("Invite token verification failed:", err);
+        }
+      }
+    };
+    
+    verifyAndRedirect();
   }, [inviteToken, navigate]);
   
   const [showPassword, setShowPassword] = useState(false);
