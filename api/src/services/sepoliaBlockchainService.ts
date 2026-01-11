@@ -392,17 +392,56 @@ export const isAdminWallet = async (walletAddress: string): Promise<boolean> => 
 };
 
 /**
- * Store a PDF hash on the Sepolia blockchain
+ * Entity data interface for blockchain storage
+ */
+export interface BlockchainEntityData {
+  // For products
+  LTONumber?: string;
+  CFPRNumber?: string;
+  lotNumber?: string;
+  brandName?: string;
+  productName?: string;
+  productClassification?: string;
+  productSubClassification?: string;
+  expirationDate?: string;
+  companyName?: string;
+  companyLicense?: string;
+  // Product images (URLs for front and back)
+  productImageFront?: string;
+  productImageBack?: string;
+  // For companies
+  address?: string;
+  licenseNumber?: string;
+  phone?: string;
+  email?: string;
+  businessType?: string;
+}
+
+/**
+ * Approver record for blockchain storage
+ */
+export interface BlockchainApprover {
+  wallet: string;
+  name: string;
+  date: string;
+}
+
+/**
+ * Store a PDF hash on the Sepolia blockchain with full entity details
  * @param pdfHash The SHA-256 hash of the PDF
  * @param certificateId The certificate ID
  * @param entityType 'product' or 'company'
  * @param entityName Name of the product or company
+ * @param entityData Optional detailed entity data for recovery
+ * @param approvers Optional list of admin approvers
  */
 export const storePDFHashOnBlockchain = async (
   pdfHash: string,
   certificateId: string,
   entityType: 'product' | 'company',
-  entityName: string
+  entityName: string,
+  entityData?: BlockchainEntityData,
+  approvers?: BlockchainApprover[]
 ): Promise<BlockchainTransaction | null> => {
   if (!provider || !wallet) {
     console.error('Sepolia blockchain not initialized');
@@ -412,15 +451,44 @@ export const storePDFHashOnBlockchain = async (
   try {
     console.log('Storing PDF hash on Sepolia blockchain...');
     
-    // Create the data payload
+    // Create the data payload with full entity details for recovery
     const dataPayload = JSON.stringify({
       type: 'RCV_CERTIFICATE',
-      version: '1.0',
+      version: '2.0', // Updated version to indicate new format with entity details
       certificateId,
       entityType,
       entityName,
       pdfHash,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      // Entity details for recovery - allows rebuilding records from blockchain
+      entity: entityData ? {
+        ...(entityType === 'product' ? {
+          LTONumber: entityData.LTONumber,
+          CFPRNumber: entityData.CFPRNumber,
+          lotNumber: entityData.lotNumber,
+          brandName: entityData.brandName,
+          productName: entityData.productName,
+          classification: entityData.productClassification,
+          subClassification: entityData.productSubClassification,
+          expirationDate: entityData.expirationDate,
+          company: entityData.companyName ? {
+            name: entityData.companyName,
+            license: entityData.companyLicense
+          } : undefined
+        } : {
+          address: entityData.address,
+          licenseNumber: entityData.licenseNumber,
+          phone: entityData.phone,
+          email: entityData.email,
+          businessType: entityData.businessType
+        })
+      } : undefined,
+      // Admin approvers who signed off on this certificate
+      approvers: approvers?.map(a => ({
+        wallet: a.wallet,
+        name: a.name,
+        date: a.date
+      }))
     });
     
     // Convert to hex
@@ -434,7 +502,7 @@ export const storePDFHashOnBlockchain = async (
       to: wallet.address, // Sending to self to store data
       value: 0,
       data: dataInHex,
-      gasLimit: 100000, // Set a reasonable gas limit
+      gasLimit: 150000, // Increased gas limit for larger payload
       maxFeePerGas: feeData.maxFeePerGas,
       maxPriorityFeePerGas: feeData.maxPriorityFeePerGas
     });

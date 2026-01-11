@@ -18,4 +18,6 @@ export interface Product {
   // Product images (front and back) - captured by System Admin to show how the product should look
   productImageFront?: string;
   productImageBack?: string;
+  // Sepolia blockchain transaction ID for verification
+  sepoliaTransactionId?: string;
 }

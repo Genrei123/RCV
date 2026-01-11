@@ -80,4 +80,90 @@ router.post('/:approvalId/approve', verifyUser, verifyAdmin, verifyWalletMatch, 
 // Reject a certificate (requires admin/brand_admin role + wallet verification)
 router.post('/:approvalId/reject', verifyUser, verifyAdmin, verifyWalletMatch, rejectApproval);
 
+// Submit a renewal request for an expired product or company
+router.post('/renewal', verifyUser, async (req, res, next) => {
+  try {
+    const { entityType, entityId, entityName } = req.body;
+    const user = (req as any).user;
+
+    if (!entityType || !entityId) {
+      return res.status(400).json({
+        success: false,
+        message: 'entityType and entityId are required'
+      });
+    }
+
+    if (entityType !== 'product' && entityType !== 'company') {
+      return res.status(400).json({
+        success: false,
+        message: 'entityType must be "product" or "company"'
+      });
+    }
+
+    // Check if entity exists and is expired (for products)
+    const { ProductRepo, CompanyRepo } = await import('../../typeorm/data-source');
+    
+    if (entityType === 'product') {
+      const product = await ProductRepo.findOne({ where: { _id: entityId } });
+      if (!product) {
+        return res.status(404).json({
+          success: false,
+          message: 'Product not found'
+        });
+      }
+      
+      // Check if expired
+      if (product.expirationDate && new Date(product.expirationDate) > new Date()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Certificate has not expired yet. Renewal is only available for expired certificates.'
+        });
+      }
+    } else {
+      const company = await CompanyRepo.findOne({ where: { _id: entityId } });
+      if (!company) {
+        return res.status(404).json({
+          success: false,
+          message: 'Company not found'
+        });
+      }
+    }
+
+    // Create a renewal request as a certificate approval
+    const { submitCertificateForApproval } = await import('../../services/certificateApprovalService');
+    
+    // Generate a new certificate ID for renewal
+    const renewalCertId = `RENEWAL-${entityType.toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
+    
+    const approval = await submitCertificateForApproval({
+      certificateId: renewalCertId,
+      entityType,
+      entityId,
+      entityName: entityName || `${entityType} renewal`,
+      pdfHash: `RENEWAL-PENDING-${entityId}`,
+      submittedBy: user._id,
+      submitterName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
+      submitterWallet: user.walletAddress,
+      pendingEntityData: {
+        renewalRequest: true,
+        originalEntityId: entityId,
+        requestedAt: new Date().toISOString(),
+        requestedBy: user._id
+      }
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Renewal request submitted successfully',
+      data: {
+        approvalId: approval._id,
+        certificateId: renewalCertId,
+        status: approval.status
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

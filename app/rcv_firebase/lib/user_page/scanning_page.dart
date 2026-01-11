@@ -42,7 +42,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
   String? _frontImagePath;
   String? _backImagePath;
   String? _frontImageUrl; // Firebase URL
-  String? _backImageUrl;  // Firebase URL
+  String? _backImageUrl; // Firebase URL
   String? _ocrBlobText; // Store raw OCR text for compliance reports
 
   @override
@@ -74,10 +74,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              const Color(0xFF005440),
-              const Color(0xFF00796B),
-            ],
+            colors: [const Color(0xFF005440), const Color(0xFF00796B)],
           ),
         ),
         child: SafeArea(
@@ -85,14 +82,13 @@ class _QRScannerPageState extends State<QRScannerPage> {
             children: [
               // Header section
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 20,
+                ),
                 child: Column(
                   children: [
-                    Icon(
-                      Icons.text_fields,
-                      size: 64,
-                      color: Colors.white,
-                    ),
+                    Icon(Icons.text_fields, size: 64, color: Colors.white),
                     const SizedBox(height: 16),
                     const Text(
                       'OCR Mode',
@@ -126,7 +122,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
                   ],
                 ),
               ),
-              
+
               // Main content - centered with flex
               Expanded(
                 child: Center(
@@ -204,7 +200,8 @@ class _QRScannerPageState extends State<QRScannerPage> {
                               ),
                             ),
                           ),
-                          if (_frontImagePath != null && _backImagePath != null) ...[
+                          if (_frontImagePath != null &&
+                              _backImagePath != null) ...[
                             const SizedBox(height: 24),
                             const Divider(),
                             const SizedBox(height: 8),
@@ -254,28 +251,28 @@ class _QRScannerPageState extends State<QRScannerPage> {
           height: double.infinity,
           child: CustomPaint(painter: ScannerOverlayPainter()),
         ),
-          Positioned(
-            bottom: 40,
-            left: 0,
-            right: 0,
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 20),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.7),
-                borderRadius: BorderRadius.circular(20),
+        Positioned(
+          bottom: 40,
+          left: 0,
+          right: 0,
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Text(
+              'Position QR code within the frame to scan',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
               ),
-              child: const Text(
-                'Position QR code within the frame to scan',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-                textAlign: TextAlign.center,
-              ),
+              textAlign: TextAlign.center,
             ),
           ),
+        ),
       ],
     );
   }
@@ -285,19 +282,19 @@ class _QRScannerPageState extends State<QRScannerPage> {
     for (final barcode in barcodes) {
       if (barcode.rawValue != null && barcode.rawValue!.isNotEmpty) {
         String scannedData = barcode.rawValue!;
-        if (result != scannedData) {
-          setState(() {
-            result = scannedData;
-          });
+        // Always process the scan - don't skip duplicate scans
+        // Reset result to empty after showing modal to allow re-scanning
+        setState(() {
+          result = scannedData;
+        });
 
-          // Log scan to audit trail
-          AuditLogService.logScanProduct(
-            scanData: {'scannedData': scannedData, 'scanType': 'QR'},
-          );
+        // Log scan to audit trail
+        AuditLogService.logScanProduct(
+          scanData: {'scannedData': scannedData, 'scanType': 'QR'},
+        );
 
-          // Show QR Code result in modal
-          _showQRCodeModal(scannedData);
-        }
+        // Show QR Code result in modal
+        _showQRCodeModal(scannedData);
         break;
       }
     }
@@ -308,9 +305,10 @@ class _QRScannerPageState extends State<QRScannerPage> {
     try {
       final Map<String, dynamic> data = jsonDecode(qrData);
       // Check if this is a certificate QR code
-      if (data.containsKey('certificateId') && 
+      if (data.containsKey('certificateId') &&
           data.containsKey('type') &&
-          (data['type'] == 'company-certificate' || data['type'] == 'product-certificate')) {
+          (data['type'] == 'company-certificate' ||
+              data['type'] == 'product-certificate')) {
         return data['certificateId'] as String?;
       }
     } catch (e) {
@@ -327,15 +325,13 @@ class _QRScannerPageState extends State<QRScannerPage> {
         context: context,
         barrierDismissible: false,
         builder: (context) => const Center(
-          child: CircularProgressIndicator(
-            color: Color(0xFF005440),
-          ),
+          child: CircularProgressIndicator(color: Color(0xFF005440)),
         ),
       );
 
       // Fetch PDF URL from API
       final response = await ApiService.getCertificatePDFUrl(certificateId);
-      
+
       if (!mounted) return;
       Navigator.of(context).pop(); // Close loading
 
@@ -396,7 +392,9 @@ class _QRScannerPageState extends State<QRScannerPage> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: isCertificate ? const Color(0xFF005440) : const Color(0xFF005440),
+                    color: isCertificate
+                        ? const Color(0xFF005440)
+                        : const Color(0xFF005440),
                     borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(20),
                       topRight: Radius.circular(20),
@@ -412,7 +410,9 @@ class _QRScannerPageState extends State<QRScannerPage> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          isCertificate ? 'Certificate Scanned' : 'QR Code Scanned',
+                          isCertificate
+                              ? 'Certificate Scanned'
+                              : 'QR Code Scanned',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 20,
@@ -439,7 +439,9 @@ class _QRScannerPageState extends State<QRScannerPage> {
                           Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF005440).withValues(alpha: 0.1),
+                              color: const Color(
+                                0xFF005440,
+                              ).withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
                                 color: const Color(0xFF005440),
@@ -456,7 +458,8 @@ class _QRScannerPageState extends State<QRScannerPage> {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       const Text(
                                         'RCV Certificate',
@@ -483,7 +486,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
                           ),
                           const SizedBox(height: 16),
                         ],
-                        
+
                         const Text(
                           'Scanned Content:',
                           style: TextStyle(
@@ -495,7 +498,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
                         const SizedBox(height: 12),
                         _buildFormattedContent(qrData),
                         const SizedBox(height: 20),
-                        
+
                         // View Original PDF button for certificates
                         if (isCertificate) ...[
                           SizedBox(
@@ -510,7 +513,9 @@ class _QRScannerPageState extends State<QRScannerPage> {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF00796B),
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -529,7 +534,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
                           ),
                           const SizedBox(height: 16),
                         ],
-                        
+
                         Row(
                           children: [
                             Expanded(
@@ -589,7 +594,14 @@ class _QRScannerPageState extends State<QRScannerPage> {
           ),
         );
       },
-    );
+    ).then((_) {
+      // Reset result when modal is closed to allow re-scanning the same QR code
+      if (mounted) {
+        setState(() {
+          result = '';
+        });
+      }
+    });
   }
 
   void _showErrorModal({
@@ -854,7 +866,9 @@ class _QRScannerPageState extends State<QRScannerPage> {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF005440),
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -894,7 +908,9 @@ class _QRScannerPageState extends State<QRScannerPage> {
                                   color: Colors.grey.shade400,
                                   width: 1.5,
                                 ),
-                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -1087,10 +1103,8 @@ class _QRScannerPageState extends State<QRScannerPage> {
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton(
-                                onPressed: () => _conductReport(
-                                  extractedInfo,
-                                  ocrText,
-                                ),
+                                onPressed: () =>
+                                    _conductReport(extractedInfo, ocrText),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF005440),
                                   foregroundColor: Colors.white,
@@ -1176,7 +1190,14 @@ class _QRScannerPageState extends State<QRScannerPage> {
       // Try to parse as JSON
       final Map<String, dynamic> data = jsonDecode(qrData);
 
-      // If successful, display formatted data
+      // Check if this is a v2.0 RCV Certificate with blockchain data
+      if (data.containsKey('type') &&
+          data['type'] == 'RCV_CERTIFICATE' &&
+          data.containsKey('version')) {
+        return _buildCertificateV2Content(data);
+      }
+
+      // Legacy format - display formatted data
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(16),
@@ -1251,6 +1272,408 @@ class _QRScannerPageState extends State<QRScannerPage> {
           ),
         ),
       );
+    }
+  }
+
+  // Build content for v2.0 blockchain certificate format
+  Widget _buildCertificateV2Content(Map<String, dynamic> data) {
+    final entity = data['entity'] as Map<String, dynamic>?;
+    final approvers = data['approvers'] as List<dynamic>?;
+    final entityType = data['entityType'] as String?;
+    final transactionHash = data['transactionHash'] as String?;
+    final blockNumber = data['blockNumber'];
+    final verifiedAt = data['verifiedAt'] as String?;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Blockchain Verification Badge
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [const Color(0xFF005440), const Color(0xFF00796B)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            children: [
+              const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.verified, color: Colors.white, size: 24),
+                  SizedBox(width: 8),
+                  Text(
+                    'Blockchain Verified',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Version ${data['version'] ?? '2.0'}',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  fontSize: 12,
+                ),
+              ),
+              if (blockNumber != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  'Block #$blockNumber',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.8),
+                    fontSize: 11,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Transaction Hash (if available)
+        if (transactionHash != null) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey[300]!),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.tag, size: 14, color: Colors.grey[600]),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Transaction Hash',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  transactionHash,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontFamily: 'monospace',
+                    color: Colors.black87,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+
+        // Entity Details Section
+        if (entity != null) ...[
+          _buildSectionHeader(
+            entityType == 'product' ? 'Product Details' : 'Company Details',
+            entityType == 'product' ? Icons.inventory_2 : Icons.business,
+          ),
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFF005440), width: 1.5),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (entityType == 'product') ...[
+                  if (entity['productName'] != null)
+                    _buildInfoRow('Product Name:', entity['productName']),
+                  if (entity['brandName'] != null)
+                    _buildInfoRow('Brand Name:', entity['brandName']),
+                  if (entity['companyName'] != null)
+                    _buildInfoRow('Company:', entity['companyName']),
+                  if (entity['registrationNumber'] != null)
+                    _buildInfoRow(
+                      'Registration No:',
+                      entity['registrationNumber'],
+                    ),
+                  if (entity['LTONumber'] != null)
+                    _buildInfoRow('LTO Number:', entity['LTONumber']),
+                  if (entity['CFPRNumber'] != null)
+                    _buildInfoRow('CFPR Number:', entity['CFPRNumber']),
+                  if (entity['manufacturer'] != null)
+                    _buildInfoRow('Manufacturer:', entity['manufacturer']),
+                  if (entity['expirationDate'] != null)
+                    _buildInfoRowWithIcon(
+                      'Expiration:',
+                      _formatDate(entity['expirationDate']),
+                      _isExpired(entity['expirationDate'])
+                          ? Icons.warning_amber
+                          : Icons.event_available,
+                      _isExpired(entity['expirationDate'])
+                          ? Colors.red
+                          : Colors.green,
+                    ),
+                ] else ...[
+                  // Company details
+                  if (entity['companyName'] != null)
+                    _buildInfoRow('Company Name:', entity['companyName']),
+                  if (entity['companyAddress'] != null)
+                    _buildInfoRow('Address:', entity['companyAddress']),
+                  if (entity['companyLTONumber'] != null)
+                    _buildInfoRow('LTO Number:', entity['companyLTONumber']),
+                  if (entity['companyLTOExpiryDate'] != null)
+                    _buildInfoRowWithIcon(
+                      'LTO Expiry:',
+                      _formatDate(entity['companyLTOExpiryDate']),
+                      _isExpired(entity['companyLTOExpiryDate'])
+                          ? Icons.warning_amber
+                          : Icons.event_available,
+                      _isExpired(entity['companyLTOExpiryDate'])
+                          ? Colors.red
+                          : Colors.green,
+                    ),
+                  if (entity['companyContactNumber'] != null)
+                    _buildInfoRow('Contact:', entity['companyContactNumber']),
+                  if (entity['companyContactEmail'] != null)
+                    _buildInfoRow('Email:', entity['companyContactEmail']),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+
+        // Approvers Section
+        if (approvers != null && approvers.isNotEmpty) ...[
+          _buildSectionHeader('Certificate Approvers', Icons.verified_user),
+          const SizedBox(height: 8),
+          ...approvers.asMap().entries.map((entry) {
+            final index = entry.key;
+            final approver = entry.value as Map<String, dynamic>;
+            return _buildApproverCard(approver, index + 1);
+          }),
+        ],
+
+        // Verification Timestamp
+        if (verifiedAt != null) ...[
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blue[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.blue[200]!),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.access_time, size: 16, color: Colors.blue[700]),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Verified at: ${_formatDateTime(verifiedAt)}',
+                    style: TextStyle(fontSize: 12, color: Colors.blue[700]),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildSectionHeader(String title, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: const Color(0xFF005440)),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF005440),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildApproverCard(Map<String, dynamic> approver, int index) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF005440),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child: Text(
+                    '$index',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  approver['name'] ?? 'Unknown Approver',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+              Icon(Icons.check_circle, size: 18, color: Colors.green[600]),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (approver['walletAddress'] != null) ...[
+            Row(
+              children: [
+                Icon(
+                  Icons.account_balance_wallet,
+                  size: 12,
+                  color: Colors.grey[600],
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    approver['walletAddress'],
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontFamily: 'monospace',
+                      color: Colors.grey[600],
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ],
+          if (approver['approvedAt'] != null) ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(Icons.schedule, size: 12, color: Colors.grey[600]),
+                const SizedBox(width: 4),
+                Text(
+                  'Approved: ${_formatDateTime(approver['approvedAt'])}',
+                  style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRowWithIcon(
+    String label,
+    String value,
+    IconData icon,
+    Color iconColor,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 2),
+          Row(
+            children: [
+              Icon(icon, size: 16, color: iconColor),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: iconColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(String? dateString) {
+    if (dateString == null) return 'N/A';
+    try {
+      final date = DateTime.parse(dateString);
+      return '${date.day}/${date.month}/${date.year}';
+    } catch (e) {
+      return dateString;
+    }
+  }
+
+  String _formatDateTime(String? dateString) {
+    if (dateString == null) return 'N/A';
+    try {
+      final date = DateTime.parse(dateString);
+      return '${date.day}/${date.month}/${date.year} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    } catch (e) {
+      return dateString;
+    }
+  }
+
+  bool _isExpired(String? dateString) {
+    if (dateString == null) return false;
+    try {
+      final date = DateTime.parse(dateString);
+      return date.isBefore(DateTime.now());
+    } catch (e) {
+      return false;
     }
   }
 
@@ -1360,7 +1783,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
         }
         return;
       }
-      
+
       // Close the extracted info modal
       Navigator.of(context).pop();
 
@@ -1517,7 +1940,9 @@ class _QRScannerPageState extends State<QRScannerPage> {
                                   border: Border.all(color: Colors.grey[300]!),
                                 ),
                                 child: SelectableText(
-                                  frontText.isEmpty ? 'No text detected' : frontText,
+                                  frontText.isEmpty
+                                      ? 'No text detected'
+                                      : frontText,
                                   style: const TextStyle(fontSize: 14),
                                 ),
                               ),
@@ -1538,7 +1963,9 @@ class _QRScannerPageState extends State<QRScannerPage> {
                                   border: Border.all(color: Colors.grey[300]!),
                                 ),
                                 child: SelectableText(
-                                  backText.isEmpty ? 'No text detected' : backText,
+                                  backText.isEmpty
+                                      ? 'No text detected'
+                                      : backText,
                                   style: const TextStyle(fontSize: 14),
                                 ),
                               ),
@@ -1563,7 +1990,9 @@ class _QRScannerPageState extends State<QRScannerPage> {
                                   border: Border.all(color: Colors.grey[300]!),
                                 ),
                                 child: SelectableText(
-                                  frontText.isEmpty ? 'No text detected' : frontText,
+                                  frontText.isEmpty
+                                      ? 'No text detected'
+                                      : frontText,
                                   style: const TextStyle(fontSize: 14),
                                 ),
                               ),
@@ -1668,7 +2097,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
           ),
           const SizedBox(height: 4),
           Text(
-            _formatDate(date),
+            _formatDateFromDateTime(date),
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.bold,
@@ -1680,7 +2109,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
     );
   }
 
-  String _formatDate(DateTime date) {
+  String _formatDateFromDateTime(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
   }
 
@@ -1724,7 +2153,10 @@ class _QRScannerPageState extends State<QRScannerPage> {
             barrierDismissible: false,
             builder: (context) => Dialog(
               backgroundColor: Colors.transparent,
-              insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+              insetPadding: const EdgeInsets.symmetric(
+                horizontal: 40,
+                vertical: 24,
+              ),
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -1747,7 +2179,9 @@ class _QRScannerPageState extends State<QRScannerPage> {
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF005440).withValues(alpha: 0.12),
+                            color: const Color(
+                              0xFF005440,
+                            ).withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: const SizedBox(
@@ -1755,7 +2189,9 @@ class _QRScannerPageState extends State<QRScannerPage> {
                             height: 28,
                             child: CircularProgressIndicator(
                               strokeWidth: 3,
-                              valueColor: AlwaysStoppedAnimation(Color(0xFF005440)),
+                              valueColor: AlwaysStoppedAnimation(
+                                Color(0xFF005440),
+                              ),
                             ),
                           ),
                         ),
@@ -1794,7 +2230,11 @@ class _QRScannerPageState extends State<QRScannerPage> {
                     // Message
                     const Text(
                       'Uploading images to Firebase. This may take a few seconds.',
-                      style: TextStyle(fontSize: 13, color: Colors.black87, height: 1.35),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.black87,
+                        height: 1.35,
+                      ),
                     ),
                     const SizedBox(height: 12),
 
@@ -1804,7 +2244,9 @@ class _QRScannerPageState extends State<QRScannerPage> {
                       child: LinearProgressIndicator(
                         minHeight: 8,
                         backgroundColor: Colors.grey.shade200,
-                        valueColor: const AlwaysStoppedAnimation(Color(0xFF00A47D)),
+                        valueColor: const AlwaysStoppedAnimation(
+                          Color(0xFF00A47D),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -1833,7 +2275,8 @@ class _QRScannerPageState extends State<QRScannerPage> {
         if (mounted) Navigator.pop(context);
 
         // Check if upload succeeded
-        if (uploadResults['frontUrl'] == null || uploadResults['backUrl'] == null) {
+        if (uploadResults['frontUrl'] == null ||
+            uploadResults['backUrl'] == null) {
           throw Exception('Failed to upload images to Firebase');
         }
 
@@ -1850,7 +2293,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
         if (mounted) {
           Navigator.of(context).popUntil((route) => route.isFirst);
         }
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -1860,7 +2303,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
             ),
           );
         }
-        
+
         // Reset state on failure
         setState(() {
           _frontImagePath = null;
@@ -1900,7 +2343,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
           dpi: 300,
           saveResult: false,
         );
-        
+
         developer.log('🔍 Processing back image with auto-detection...');
         final ocrBack = await _ocrService.smartOcr(
           backFile,
@@ -1911,8 +2354,12 @@ class _QRScannerPageState extends State<QRScannerPage> {
         frontText = ocrFront.text;
         backText = ocrBack.text;
 
-        developer.log('📊 Front OCR: ${ocrFront.language} - ${frontText.length} chars');
-        developer.log('📊 Back OCR: ${ocrBack.language} - ${backText.length} chars');
+        developer.log(
+          '📊 Front OCR: ${ocrFront.language} - ${frontText.length} chars',
+        );
+        developer.log(
+          '📊 Back OCR: ${ocrBack.language} - ${backText.length} chars',
+        );
 
         // If any side is too short, automatically fall back to ML Kit for that side only
         if (frontText.trim().length < 10) {
@@ -1962,7 +2409,8 @@ class _QRScannerPageState extends State<QRScannerPage> {
         // Show error for insufficient text
         _showErrorModal(
           title: 'Insufficient Text Detected',
-          message: 'Could not extract enough text from the images.\n\n'
+          message:
+              'Could not extract enough text from the images.\n\n'
               'Tips for better results:\n'
               '• Ensure good lighting\n'
               '• Hold the camera steady\n'
@@ -1987,11 +2435,9 @@ class _QRScannerPageState extends State<QRScannerPage> {
       // Send to backend API for OCR processing (without uploading images)
       final apiService = ApiService();
       Map<String, dynamic> response;
-      
+
       try {
-        response = await apiService.scanProduct(
-          combinedText,
-        );
+        response = await apiService.scanProduct(combinedText);
       } on ApiException catch (apiError) {
         // Close loading dialog
         if (mounted) Navigator.pop(context);
@@ -2003,7 +2449,8 @@ class _QRScannerPageState extends State<QRScannerPage> {
         // Show user-friendly error modal (technical details only in logs)
         _showErrorModal(
           title: 'Unable to Process Image',
-          message: 'We couldn\'t process the text from your images.\n\n'
+          message:
+              'We couldn\'t process the text from your images.\n\n'
               'This might be because:\n'
               '• The text wasn\'t clear enough\n'
               '• The image quality was too low\n'
@@ -2026,7 +2473,8 @@ class _QRScannerPageState extends State<QRScannerPage> {
         // Show generic error modal for other exceptions
         _showErrorModal(
           title: 'Something Went Wrong',
-          message: 'An unexpected error occurred while processing the images.\n\n'
+          message:
+              'An unexpected error occurred while processing the images.\n\n'
               'This could be due to:\n'
               '• Network connection issues\n'
               '• Server temporarily unavailable\n'
@@ -2108,7 +2556,8 @@ class _QRScannerPageState extends State<QRScannerPage> {
       if (mounted) {
         _showErrorModal(
           title: 'OCR Error',
-          message: 'Something went wrong while processing the images.\n\n'
+          message:
+              'Something went wrong while processing the images.\n\n'
               'This could be due to:\n'
               '• Poor image quality\n'
               '• Insufficient lighting\n'
@@ -2171,17 +2620,23 @@ class _QRScannerPageState extends State<QRScannerPage> {
                 width: double.infinity,
                 margin: isOCRMode ? EdgeInsets.zero : const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  borderRadius: isOCRMode ? BorderRadius.zero : BorderRadius.circular(20),
-                  boxShadow: isOCRMode ? [] : [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+                  borderRadius: isOCRMode
+                      ? BorderRadius.zero
+                      : BorderRadius.circular(20),
+                  boxShadow: isOCRMode
+                      ? []
+                      : [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                 ),
                 child: ClipRRect(
-                  borderRadius: isOCRMode ? BorderRadius.zero : BorderRadius.circular(20),
+                  borderRadius: isOCRMode
+                      ? BorderRadius.zero
+                      : BorderRadius.circular(20),
                   child: _buildQrView(context),
                 ),
               ),

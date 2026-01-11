@@ -29,6 +29,8 @@ import AnalyticsRouter from "./routes/v1/analytics";
 import AdminInviteRouter from "./routes/v1/adminInvite";
 import BrandNameRouter from "./routes/v1/brandName";
 import ProductClassificationRouter from "./routes/v1/productClassification";
+import PublicRouter from "./routes/v1/public";
+import BlockchainRecoveryRouter from "./routes/v1/blockchainRecovery";
 import { verifyUser } from "./middleware/verifyUser";
 import { verifyMobileUser } from "./middleware/verifyMobileUser";
 import helmet from "helmet";
@@ -54,6 +56,7 @@ const setUpApp = async () => {
 
   // API VERSIONING - Version 1.0
   app.use("/api/v1/auth", AuthRouter);
+  app.use("/api/v1/public", PublicRouter); // Public endpoints - no auth required
   app.use("/api/v1/mobile", MobileRouter); // Mobile-specific routes (no cookies)
   app.use("/api/v1/scan", verifyMobileUser, ScanRouter);
   app.use("/api/v1/user", verifyUser, UserRouter);
@@ -73,6 +76,7 @@ const setUpApp = async () => {
   app.use("/api/v1/admin-invite", AdminInviteRouter);
   app.use("/api/v1/brand-name", verifyUser, BrandNameRouter);
   app.use("/api/v1/classification", verifyUser, ProductClassificationRouter);
+  app.use("/api/v1/blockchain-recovery", BlockchainRecoveryRouter); // Blockchain data recovery - some routes public
 
   // Serve static uploads (avatars, etc.)
   const uploadsPath = path.resolve(process.cwd(), "uploads");

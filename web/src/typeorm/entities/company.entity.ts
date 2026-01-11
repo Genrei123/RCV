@@ -29,6 +29,8 @@ export interface Company {
     // Timestamps
     createdAt?: string | Date;
     updatedAt?: string | Date;
+    // Sepolia blockchain transaction ID for verification
+    sepoliaTransactionId?: string;
     // Relations
     products?: Product[];
     productCount?: number;

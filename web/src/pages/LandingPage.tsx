@@ -15,10 +15,12 @@ import {
   Globe,
   Lock,
   Zap,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Footer } from "@/components/Footer";
+import { TransparencyTables } from "@/components/TransparencyTables";
 
 // Hero carousel slides
 const heroSlides = [
@@ -181,6 +183,12 @@ export function LandingPage() {
                 className="text-sm text-text hover:text-primary transition-colors"
               >
                 Features
+              </a>
+              <a
+                href="#transparency"
+                className="text-sm text-text hover:text-primary transition-colors"
+              >
+                Transparency
               </a>
               <a
                 href="#about"
@@ -348,8 +356,29 @@ export function LandingPage() {
         </div>
       </section>
 
+      {/* Transparency Section - Public Blockchain Records */}
+      <section id="transparency" className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <span className="inline-block px-4 py-1.5 app-bg-primary text-white rounded-full text-sm font-medium mb-4">
+              <Eye className="h-4 w-4 inline-block mr-1" />
+              Transparency
+            </span>
+            <h2 className="text-3xl md:text-4xl font-bold text-text mb-4">
+              Blockchain-Verified Records
+            </h2>
+            <p className="text-lg text-text-subtle max-w-2xl mx-auto">
+              All our verified products and companies are publicly recorded on the blockchain. 
+              Every transaction can be independently verified on Etherscan.
+            </p>
+          </div>
+
+          <TransparencyTables />
+        </div>
+      </section>
+
       {/* About Section */}
-      <section id="about" className="py-20 bg-white">
+      <section id="about" className="py-20 app-bg-neutral-soft">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>

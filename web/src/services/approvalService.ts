@@ -59,6 +59,10 @@ export interface CertificateApproval {
   submissionVersion?: number;
   previousApprovalId?: string;
   
+  // Pending entity data (for deferred entity creation)
+  pendingEntityData?: Record<string, any>;
+  entityCreated?: boolean;
+  
   createdAt: string;
   updatedAt: string;
   approvalCount: number;
@@ -90,12 +94,14 @@ export interface RejectionMessageResponse {
 export interface SubmitApprovalInput {
   certificateId: string;
   entityType: 'product' | 'company';
-  entityId: string;
+  entityId?: string; // Optional - will be created after approval if pendingEntityData is provided
   entityName: string;
   pdfHash: string;
   pdfUrl?: string;
   submitterName?: string;
   submitterWallet?: string;
+  // NEW: Store pending entity data to be created after full approval
+  pendingEntityData?: Record<string, any>;
 }
 
 export class CertificateApprovalService {
@@ -251,13 +257,23 @@ export class CertificateApprovalService {
    */
   static canUserApprove(approval: CertificateApproval, userId: string): boolean {
     if (approval.status !== 'pending') return false;
-    if (approval.submittedBy === userId) return false;
-    // Check if user has already approved in the approvers array
+    // Check if user has already approved in the approvers array (includes auto-approval on submission)
     if (approval.approvers?.some(a => a.approverId === userId)) return false;
     // Legacy check
     if (approval.firstApproverId === userId) return false;
     if (approval.secondApproverId === userId) return false;
     return true;
+  }
+
+  /**
+   * Check if user is the submitter AND has auto-approved
+   */
+  static hasSubmitterAutoApproved(approval: CertificateApproval, userId: string): boolean {
+    if (approval.submittedBy !== userId) return false;
+    // Check if submitter is in the approvers list with auto-approval signature
+    return approval.approvers?.some(
+      a => a.approverId === userId && a.signature === 'submission-auto-approval'
+    ) || false;
   }
 
   /**

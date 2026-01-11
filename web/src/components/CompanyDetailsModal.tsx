@@ -1,9 +1,33 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Building2, MapPin, FileText, Package, Download, Phone, Mail, Globe, Calendar, ExternalLink, Map } from 'lucide-react';
+import { X, Building2, MapPin, FileText, Package, Download, Phone, Mail, Globe, Calendar, ExternalLink, Map, Shield, Wallet, Link2, User, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import type { Company } from '@/typeorm/entities/company.entity';
 import { PDFGenerationService } from '@/services/pdfGenerationService';
 import { toast } from 'react-toastify';
+import axios from 'axios';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
+
+interface ApproverRecord {
+  approverId: string;
+  approverName: string;
+  approverWallet: string;
+  approvalDate: string;
+  signature: string;
+}
+
+interface ApprovalData {
+  _id: string;
+  certificateId: string;
+  status: 'pending' | 'approved' | 'rejected';
+  approvers: ApproverRecord[];
+  blockchainTxHash?: string;
+  blockchainTimestamp?: string;
+  blockchainBlockNumber?: number;
+  submitterName?: string;
+  createdAt: string;
+}
 
 declare global {
   interface Window {
@@ -21,8 +45,34 @@ export function CompanyDetailsModal({ isOpen, onClose, company }: CompanyDetails
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [approvalData, setApprovalData] = useState<ApprovalData | null>(null);
+  const [loadingApproval, setLoadingApproval] = useState(false);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
+
+  // Fetch approval info when modal opens
+  useEffect(() => {
+    const fetchApprovalInfo = async () => {
+      if (!isOpen || !company?._id) return;
+      
+      setLoadingApproval(true);
+      try {
+        const response = await axios.get(
+          `${API_URL}/certificate-approval/entity/company/${company._id}`,
+          { withCredentials: true }
+        );
+        if (response.data.success && response.data.data) {
+          setApprovalData(response.data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching approval info:', error);
+      } finally {
+        setLoadingApproval(false);
+      }
+    };
+
+    fetchApprovalInfo();
+  }, [isOpen, company?._id]);
 
   // Load Google Maps
   useEffect(() => {
@@ -380,6 +430,113 @@ export function CompanyDetailsModal({ isOpen, onClose, company }: CompanyDetails
                     ))}
                   </div>
                 </div>
+              )}
+            </div>
+
+            {/* Blockchain Verification & Approval Info */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                <Shield className="h-5 w-5 text-teal-600" />
+                Blockchain Verification & Approvals
+              </h3>
+              
+              {/* Transaction Info */}
+              {company.sepoliaTransactionId ? (
+                <div className="p-4 bg-green-50 border border-green-200 rounded-lg mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-green-700">
+                      ✓ Verified on Sepolia Blockchain
+                    </span>
+                    <Badge className="bg-green-600">On-Chain</Badge>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-green-600">
+                    <Link2 className="h-3 w-3" />
+                    <code className="flex-1 truncate">{company.sepoliaTransactionId}</code>
+                    <a 
+                      href={`https://sepolia.etherscan.io/tx/${company.sepoliaTransactionId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-1 hover:bg-green-200 rounded"
+                      title="View on Etherscan"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg mb-4">
+                  <span className="text-sm text-yellow-700">
+                    ⚠ Not yet registered on blockchain
+                  </span>
+                </div>
+              )}
+
+              {/* Approval Info */}
+              {loadingApproval ? (
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading approval details...
+                </div>
+              ) : approvalData ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-700">Approval Status:</span>
+                    <Badge 
+                      variant={approvalData.status === 'approved' ? 'default' : 
+                               approvalData.status === 'rejected' ? 'destructive' : 'secondary'}
+                      className={approvalData.status === 'approved' ? 'bg-green-600' : ''}
+                    >
+                      {approvalData.status.charAt(0).toUpperCase() + approvalData.status.slice(1)}
+                    </Badge>
+                  </div>
+
+                  {approvalData.submitterName && (
+                    <div className="text-sm">
+                      <span className="text-gray-500">Submitted by:</span>{' '}
+                      <span className="text-gray-900 font-medium">{approvalData.submitterName}</span>
+                    </div>
+                  )}
+
+                  {/* Admin Approvers */}
+                  {approvalData.approvers && approvalData.approvers.length > 0 && (
+                    <div className="mt-3">
+                      <span className="text-sm font-medium text-gray-700 mb-2 block">
+                        Admin Approvers ({approvalData.approvers.length}):
+                      </span>
+                      <div className="space-y-2">
+                        {approvalData.approvers.map((approver, index) => (
+                          <div 
+                            key={index} 
+                            className="flex items-center justify-between p-2 bg-gray-50 rounded-lg text-sm"
+                          >
+                            <div className="flex items-center gap-2">
+                              <User className="h-4 w-4 text-gray-400" />
+                              <span className="text-gray-900 font-medium">{approver.approverName}</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className="text-xs text-gray-500">
+                                {new Date(approver.approvalDate).toLocaleString()}
+                              </span>
+                              <div className="flex items-center gap-1 text-xs text-gray-500" title={approver.approverWallet}>
+                                <Wallet className="h-3 w-3" />
+                                <code>{approver.approverWallet.substring(0, 6)}...{approver.approverWallet.substring(38)}</code>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Blockchain timestamp */}
+                  {approvalData.blockchainTimestamp && (
+                    <div className="text-xs text-gray-500 mt-2">
+                      Registered on blockchain: {new Date(approvalData.blockchainTimestamp).toLocaleString()}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">No approval history available</p>
               )}
             </div>
 

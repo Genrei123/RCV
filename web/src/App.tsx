@@ -7,6 +7,7 @@ import { Analytics } from "./pages/Analytics";
 import { Profile } from "./pages/Profile";
 import { UserProfileView } from "./pages/UserProfileView";
 import { Blockchain } from "./pages/Blockchain";
+import { BlockchainRecovery } from "./pages/BlockchainRecovery";
 import { CertificateVerifier } from "./pages/CertificateVerifier";
 import { ScanHistory } from "./pages/ScanHistory";
 import { RemoteConfig } from "./pages/RemoteConfig";
@@ -316,6 +317,16 @@ function App() {
               <ProtectedRoutes>
                 <AppLayout>
                   <Blockchain />
+                </AppLayout>
+              </ProtectedRoutes>
+            }
+          />
+          <Route
+            path="/blockchain-recovery"
+            element={
+              <ProtectedRoutes>
+                <AppLayout>
+                  <BlockchainRecovery />
                 </AppLayout>
               </ProtectedRoutes>
             }
