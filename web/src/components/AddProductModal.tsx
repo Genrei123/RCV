@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { X, Package, Hash, Calendar, Building2, Plus, ImagePlus, Camera, Tag, Layers, Wallet, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ProductService } from "@/services/productService";
 import type { CreateProductRequest } from "@/services/productService";
 import { CompanyService } from "@/services/companyService";
 import { BrandNameService } from "@/services/brandNameService";

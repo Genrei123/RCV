@@ -27,7 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CompanyService, type CreateCompanyRequest } from "@/services/companyService";
+import { type CreateCompanyRequest } from "@/services/companyService";
 import { FirebaseStorageService } from "@/services/firebaseStorageService";
 import { CertificateApprovalService } from "@/services/approvalService";
 import { AuthService } from "@/services/authService";
