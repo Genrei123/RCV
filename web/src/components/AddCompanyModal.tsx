@@ -27,7 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CompanyService, type CreateCompanyRequest } from "@/services/companyService";
+import { type CreateCompanyRequest } from "@/services/companyService";
 import { FirebaseStorageService } from "@/services/firebaseStorageService";
 import { CertificateApprovalService } from "@/services/approvalService";
 import { AuthService } from "@/services/authService";
@@ -450,6 +450,12 @@ export function AddCompanyModal({
       return;
     }
 
+    // Require wallet connection for company submission
+    if (!isWalletConnected || !isWalletAuthorized || !walletAddress) {
+      toast.error("Please connect and authorize your MetaMask wallet to submit companies for approval.");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -483,88 +489,71 @@ export function AddCompanyModal({
         setUploading(false);
       }
 
-      // ============ PHASE 2: CREATE COMPANY ============
+      // ============ PHASE 2: PREPARE COMPANY DATA (NOT SAVING TO DB YET) ============
+      // Get current user for submitter info
+      const currentUser = await AuthService.getCurrentUser();
+      if (!currentUser) {
+        throw new Error("Unable to get current user information");
+      }
+
       const companyData: CreateCompanyRequest = {
         ...formData,
         name: formData.name!.trim(),
         address: formData.address!.trim(),
         licenseNumber: formData.licenseNumber!.trim(),
         documents: uploadedDocuments.length > 0 ? uploadedDocuments : null,
-        // Don't include sepoliaTransactionId - will be added after approval
       };
 
-      toast.info("Creating company...", { autoClose: 1500 });
-      const response = await CompanyService.createCompany(companyData);
+      // ============ PHASE 3: SUBMIT FOR MULTI-SIG APPROVAL (WITH PENDING ENTITY DATA) ============
+      toast.info("Submitting for multi-signature approval...", { autoClose: 2000 });
+      
+      // Generate hash from company data for certificate
+      const companyDataString = JSON.stringify({
+        name: formData.name,
+        licenseNumber: formData.licenseNumber,
+        address: formData.address,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Create SHA-256 hash
+      const encoder = new TextEncoder();
+      const data = encoder.encode(companyDataString);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const pdfHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      
+      // Submit for approval with pending entity data
+      // Company will be created ONLY after all required approvals are received
+      const certificateId = `CERT-COMP-${formData.licenseNumber}-${Date.now()}`;
+      
+      const approval = await CertificateApprovalService.submitForApproval({
+        certificateId,
+        entityType: 'company',
+        // entityId is not provided - company will be created after approval
+        entityName: formData.name!,
+        pdfHash,
+        submitterName: `${currentUser.firstName} ${currentUser.lastName}`,
+        submitterWallet: walletAddress,
+        pendingEntityData: companyData, // Full company data to be created after approval
+      });
+      
+      toast.success(
+        `Company submitted for approval! (${approval.requiredApprovals} admin${approval.requiredApprovals > 1 ? 's' : ''} required). Company will be created after full approval.`,
+        { autoClose: 6000 }
+      );
 
-      // ============ PHASE 3: SUBMIT FOR MULTI-SIG APPROVAL ============
-      // Only submit for blockchain approval if wallet is connected and authorized
-      if (isWalletConnected && isWalletAuthorized && walletAddress) {
-        toast.info("Submitting for multi-signature approval...", { autoClose: 2000 });
-        
-        // Generate hash from company data for certificate
-        const companyDataString = JSON.stringify({
-          name: formData.name,
-          licenseNumber: formData.licenseNumber,
-          address: formData.address,
-          companyId: response.company._id,
-          timestamp: new Date().toISOString()
-        });
-        
-        // Create SHA-256 hash
-        const encoder = new TextEncoder();
-        const data = encoder.encode(companyDataString);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        const pdfHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-        
-        // Get current user for submitter info
-        const currentUser = await AuthService.getCurrentUser();
-        
-        // Submit for approval
-        const certificateId = `CERT-COMP-${formData.licenseNumber}-${Date.now()}`;
-        const companyId = response.company._id;
-        
-        try {
-          const approval = await CertificateApprovalService.submitForApproval({
-            certificateId,
-            entityType: 'company',
-            entityId: companyId,
-            entityName: formData.name!,
-            pdfHash,
-            submitterName: currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : undefined,
-            submitterWallet: walletAddress,
-          });
-          
-          toast.success(
-            `Company created! Submitted for approval (${approval.requiredApprovals} admins required)`,
-            { autoClose: 5000 }
-          );
-        } catch (approvalError: any) {
-          console.error("Failed to submit for approval:", approvalError);
-          toast.warning(
-            "Company created but failed to submit for approval. You can submit manually later.",
-            { autoClose: 5000 }
-          );
-        }
-      } else {
-        // No wallet connected - just show success for company creation
-        toast.success(response.message || "Company created successfully!");
-        toast.info(
-          "Connect your wallet to submit companies for blockchain verification",
-          { autoClose: 5000 }
-        );
-      }
+      console.log("Company submitted for approval by:", currentUser.email);
 
       // Reset form
       resetForm();
       onSuccess();
       onClose();
     } catch (error: any) {
-      console.error("Error creating company:", error);
+      console.error("Error submitting company for approval:", error);
       const errorMessage =
         error.response?.data?.message ||
         error.message ||
-        "Failed to create company. Please try again.";
+        "Failed to submit company for approval. Please try again.";
       toast.error(errorMessage);
     } finally {
       setLoading(false);

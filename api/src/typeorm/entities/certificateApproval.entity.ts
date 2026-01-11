@@ -136,6 +136,15 @@ export class CertificateApproval {
   @Column({ nullable: true })
   previousApprovalId?: string;
 
+  // Store pending entity data (product/company) until approval is complete
+  // This allows the entity to be created ONLY after full approval
+  @Column({ type: 'jsonb', nullable: true })
+  pendingEntityData?: Record<string, any>;
+
+  // Flag to indicate if entity has been created in the database
+  @Column({ default: false })
+  entityCreated!: boolean;
+
   @BeforeInsert()
   assignId() {
     if (!this._id) this._id = uuidv4();

@@ -99,8 +99,8 @@ const ApprovalQueue: React.FC<ApprovalQueueProps> = ({ isAdmin = false }) => {
 
       alert(
         isFullyApproved
-          ? 'Certificate fully approved! Ready for blockchain registration.'
-          : 'First approval recorded. Awaiting second approval.'
+          ? 'Certificate fully approved and registered on the blockchain! ✓'
+          : `Approval recorded (${selectedApproval.approvalCount + 1}/${selectedApproval.requiredApprovals}). Awaiting remaining approvals.`
       );
 
       // Remove from pending list
@@ -275,13 +275,37 @@ const ApprovalQueue: React.FC<ApprovalQueueProps> = ({ isAdmin = false }) => {
                     </span>
                   </div>
 
+                  {/* Show entity creation status */}
+                  {approval.pendingEntityData && !approval.entityCreated && (
+                    <div className="flex items-center gap-2 text-amber-600 bg-amber-50 p-2 rounded text-xs">
+                      <Clock className="w-3 h-3" />
+                      <span>
+                        {approval.entityType === 'product' ? 'Product' : 'Company'} will be created after full approval
+                      </span>
+                    </div>
+                  )}
+                  
+                  {approval.entityCreated && (
+                    <div className="flex items-center gap-2 text-green-600 bg-green-50 p-2 rounded text-xs">
+                      <CheckCircle className="w-3 h-3" />
+                      <span>
+                        {approval.entityType === 'product' ? 'Product' : 'Company'} has been created
+                      </span>
+                    </div>
+                  )}
+
                   {/* Show approvers list */}
                   {approval.approvers && approval.approvers.length > 0 && (
                     <div className="text-xs text-muted-foreground mt-2 p-2 bg-muted rounded space-y-1">
                       <span className="font-medium">Approvers:</span>
                       {approval.approvers.map((approver, index) => (
-                        <div key={index} className="ml-2">
-                          {index + 1}. {approver.approverName} - {CertificateApprovalService.formatDate(approver.approvalDate)}
+                        <div key={index} className="ml-2 flex items-center gap-1">
+                          {index + 1}. {approver.approverName}
+                          {approver.signature === 'submission-auto-approval' ? (
+                            <span className="text-blue-600 text-xs">(auto: submitted)</span>
+                          ) : (
+                            <span> - {CertificateApprovalService.formatDate(approver.approvalDate)}</span>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -335,10 +359,13 @@ const ApprovalQueue: React.FC<ApprovalQueueProps> = ({ isAdmin = false }) => {
                   </>
                 ) : (
                   <div className="flex-1 text-center text-sm text-muted-foreground">
-                    {approval.submittedBy === currentUser?._id
-                      ? 'You submitted this'
+                    {/* Check if user already approved (including auto-approval on submission) */}
+                    {approval.approvers?.some(a => a.approverId === currentUser?._id && a.signature === 'submission-auto-approval')
+                      ? '✓ Your submission counts as approval'
                       : approval.approvers?.some(a => a.approverId === currentUser?._id) || approval.firstApproverId === currentUser?._id
-                      ? 'Already approved by you'
+                      ? '✓ Already approved by you'
+                      : approval.submittedBy === currentUser?._id
+                      ? 'You submitted this (not an admin)'
                       : 'Cannot approve'}
                   </div>
                 )}

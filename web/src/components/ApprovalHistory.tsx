@@ -26,6 +26,7 @@ import {
   AlertTriangle,
   RefreshCw,
   FileText,
+  Link2,
 } from 'lucide-react';
 import {
   CertificateApprovalService,
@@ -177,6 +178,8 @@ const ApprovalHistory: React.FC<ApprovalHistoryProps> = ({ isAdmin = false }) =>
                     <TableHead>Status</TableHead>
                     <TableHead>Progress</TableHead>
                     <TableHead>Submitted</TableHead>
+                    <TableHead>Tx Hash</TableHead>
+                    <TableHead>Blockchain Time</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -193,6 +196,28 @@ const ApprovalHistory: React.FC<ApprovalHistoryProps> = ({ isAdmin = false }) =>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {CertificateApprovalService.formatDate(approval.createdAt)}
+                      </TableCell>
+                      <TableCell>
+                        {approval.blockchainTxHash ? (
+                          <a
+                            href={`https://sepolia.etherscan.io/tx/${approval.blockchainTxHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-blue-600 hover:underline text-xs font-mono"
+                            title={approval.blockchainTxHash}
+                          >
+                            <Link2 className="w-3 h-3" />
+                            {approval.blockchainTxHash.substring(0, 10)}...
+                          </a>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {approval.blockchainTimestamp
+                          ? CertificateApprovalService.formatDate(approval.blockchainTimestamp)
+                          : <span className="text-xs">—</span>
+                        }
                       </TableCell>
                       <TableCell>
                         <Button

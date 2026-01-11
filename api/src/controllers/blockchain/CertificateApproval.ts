@@ -23,6 +23,10 @@ import { ApprovalStatus } from '../../typeorm/entities/certificateApproval.entit
 /**
  * Submit a certificate for multi-signature approval
  * POST /api/v1/certificate-approval/submit
+ * 
+ * IMPORTANT: This now accepts pendingEntityData to store the full product/company data.
+ * The entity will NOT be created in the database until FULL approval is received.
+ * After approval, the entity is created and registered on the blockchain.
  */
 export async function submitForApproval(req: Request, res: Response, next: NextFunction) {
   try {
@@ -34,20 +38,27 @@ export async function submitForApproval(req: Request, res: Response, next: NextF
     const {
       certificateId,
       entityType,
-      entityId,
+      entityId, // Optional - may not exist yet if entity is pending
       entityName,
       pdfHash,
       pdfUrl,
       submitterName,
       submitterWallet,
+      pendingEntityData, // NEW: Full entity data to be created after approval
     } = req.body;
 
-    if (!certificateId || !entityType || !entityId || !entityName || !pdfHash) {
-      throw new CustomError(400, 'Missing required fields: certificateId, entityType, entityId, entityName, pdfHash');
+    // entityId is now optional since we may be submitting before entity creation
+    if (!certificateId || !entityType || !entityName || !pdfHash) {
+      throw new CustomError(400, 'Missing required fields: certificateId, entityType, entityName, pdfHash');
     }
 
     if (entityType !== 'product' && entityType !== 'company') {
       throw new CustomError(400, 'entityType must be either "product" or "company"');
+    }
+
+    // If no entityId provided, pendingEntityData is required
+    if (!entityId && !pendingEntityData) {
+      throw new CustomError(400, 'Either entityId or pendingEntityData is required');
     }
 
     const approval = await submitCertificateForApproval({
@@ -60,11 +71,12 @@ export async function submitForApproval(req: Request, res: Response, next: NextF
       submittedBy: userId,
       submitterName,
       submitterWallet,
+      pendingEntityData, // Pass entity data for deferred creation
     });
 
     res.status(201).json({
       success: true,
-      message: 'Certificate submitted for approval',
+      message: 'Certificate submitted for approval. Entity will be created after full approval.',
       data: approval,
     });
   } catch (error) {

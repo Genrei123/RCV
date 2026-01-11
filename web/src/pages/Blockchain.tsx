@@ -1,5 +1,6 @@
 import { PageContainer } from "@/components/PageContainer";
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { 
   MetaMaskService, 
   type BlockchainCertificate, 
@@ -32,6 +33,7 @@ import {
   List,
   Globe,
   FileDown,
+  Database,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import { generateBlockchainCertificatePDF } from "@/utils/generateBlockchainCertificatePDF";
@@ -50,6 +52,8 @@ interface BlockchainStats {
 }
 
 export function Blockchain() {
+  const navigate = useNavigate();
+  
   // Tab state
   const [activeTab, setActiveTab] = useState("overview");
 
@@ -274,6 +278,12 @@ export function Blockchain() {
     <PageContainer
       title="Blockchain Dashboard"
       description="Sepolia blockchain certificate records and verification"
+      headerAction={
+        <Button onClick={() => navigate('/blockchain-recovery')} variant="outline">
+          <Database className="h-4 w-4 mr-2" />
+          Blockchain Recovery
+        </Button>
+      }
     >
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex">

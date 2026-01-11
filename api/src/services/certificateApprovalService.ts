@@ -1,10 +1,11 @@
 import { Repository } from 'typeorm';
-import { UserRepo, DB } from '../typeorm/data-source';
+import { UserRepo, DB, ProductRepo, CompanyRepo } from '../typeorm/data-source';
 import { CertificateApproval, ApprovalStatus } from '../typeorm/entities/certificateApproval.entity';
 import { User } from '../typeorm/entities/user.entity';
 import { ethers } from 'ethers';
 import CustomError from '../utils/CustomError';
-import { storePDFHashOnBlockchain, BlockchainTransaction } from './sepoliaBlockchainService';
+import { storePDFHashOnBlockchain, BlockchainTransaction, BlockchainEntityData, BlockchainApprover } from './sepoliaBlockchainService';
+import { redisService } from './redisService';
 
 const approvalRepo: Repository<CertificateApproval> = DB.getRepository(CertificateApproval);
 const userRepo = UserRepo;
@@ -12,13 +13,15 @@ const userRepo = UserRepo;
 interface SubmitCertificateInput {
   certificateId: string;
   entityType: 'product' | 'company';
-  entityId: string;
+  entityId?: string; // Optional - will be created after approval
   entityName: string;
   pdfHash: string;
   pdfUrl?: string;
   submittedBy: string;
   submitterName?: string;
   submitterWallet?: string;
+  // NEW: Store pending entity data to be created after full approval
+  pendingEntityData?: Record<string, any>;
 }
 
 interface ProcessApprovalInput {
@@ -34,6 +37,45 @@ interface RejectCertificateInput {
   reason: string;
   signature: string;
   timestamp?: string; // Timestamp from the signed message
+}
+
+/**
+ * Create the pending entity (product or company) after full approval
+ * This is called automatically when all required approvals are met
+ */
+async function createPendingEntity(approval: CertificateApproval): Promise<string | null> {
+  if (!approval.pendingEntityData || approval.entityCreated) {
+    console.log('Entity already created or no pending data:', approval._id);
+    return approval.entityId !== 'pending' ? approval.entityId : null;
+  }
+
+  console.log(`Creating pending ${approval.entityType} entity for approval:`, approval._id);
+
+  try {
+    if (approval.entityType === 'product') {
+      // Create the product
+      const productData = {
+        ...approval.pendingEntityData,
+        registeredAt: new Date(),
+      };
+      
+      const savedProduct = await ProductRepo.save(productData);
+      console.log('Product created successfully:', savedProduct._id);
+      return savedProduct._id;
+      
+    } else if (approval.entityType === 'company') {
+      // Create the company
+      const companyData = approval.pendingEntityData;
+      const savedCompany = await CompanyRepo.save(companyData);
+      console.log('Company created successfully:', savedCompany._id);
+      return savedCompany._id;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Failed to create pending entity:', error);
+    throw new CustomError(500, `Failed to create ${approval.entityType}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 }
 
 /**
@@ -66,6 +108,7 @@ export async function getAdminUserIds(): Promise<string[]> {
 /**
  * Submit a certificate for multi-signature approval
  * Requires ALL admins to approve before blockchain registration
+ * If the submitter is an admin with an authorized wallet, their submission counts as the first approval
  */
 export async function submitCertificateForApproval(input: SubmitCertificateInput): Promise<CertificateApproval> {
   // Check if there's already a pending approval for this certificate
@@ -86,10 +129,35 @@ export async function submitCertificateForApproval(input: SubmitCertificateInput
   // Must have at least 1 admin, default to 2 if none configured
   const requiredApprovals = Math.max(adminCount, 1);
 
+  // Check if the submitter is an admin with an authorized wallet
+  // If so, their submission counts as the first approval
+  const submitter = await userRepo.findOne({
+    where: { _id: input.submittedBy },
+  });
+
+  const isSubmitterAdmin = submitter?.role === 'ADMIN' && submitter?.walletAuthorized && submitter?.walletAddress;
+  
+  // Initialize approvers array and count
+  let initialApprovers: any[] = [];
+  let initialApprovalCount = 0;
+
+  // If submitter is an admin, automatically count their submission as the first approval
+  if (isSubmitterAdmin && input.submitterWallet) {
+    initialApprovers = [{
+      approverId: submitter._id,
+      approverName: input.submitterName || `${submitter.firstName} ${submitter.lastName}`,
+      approverWallet: input.submitterWallet,
+      approvalDate: new Date().toISOString(),
+      signature: 'submission-auto-approval', // Marker for auto-approval on submission
+    }];
+    initialApprovalCount = 1;
+    console.log(`Submitter ${submitter.email} is an admin - counting as first approval (1/${requiredApprovals})`);
+  }
+
   const approval = approvalRepo.create({
     certificateId: input.certificateId,
     entityType: input.entityType,
-    entityId: input.entityId,
+    entityId: input.entityId || 'pending', // Will be updated after entity is created
     entityName: input.entityName,
     pdfHash: input.pdfHash,
     pdfUrl: input.pdfUrl,
@@ -97,9 +165,80 @@ export async function submitCertificateForApproval(input: SubmitCertificateInput
     submittedBy: input.submittedBy,
     submitterName: input.submitterName,
     submitterWallet: input.submitterWallet,
-    approvalCount: 0,
+    pendingEntityData: input.pendingEntityData, // Store entity data for creation after approval
+    entityCreated: false, // Entity will be created after full approval
+    approvers: initialApprovers,
+    approvalCount: initialApprovalCount,
     requiredApprovals,
+    // Also set legacy first approver fields if submitter is admin
+    ...(isSubmitterAdmin && input.submitterWallet ? {
+      firstApproverId: submitter._id,
+      firstApproverName: input.submitterName || `${submitter.firstName} ${submitter.lastName}`,
+      firstApproverWallet: input.submitterWallet,
+      firstApprovalDate: new Date(),
+      firstApprovalSignature: 'submission-auto-approval',
+    } : {}),
   });
+
+  // Check if already fully approved (in case only 1 admin required and submitter is admin)
+  if (approval.approvalCount >= approval.requiredApprovals) {
+    approval.status = 'approved';
+    console.log('Certificate auto-approved - submitter is the only required admin');
+    
+    // Create the entity since it's fully approved
+    if (approval.pendingEntityData && !approval.entityCreated) {
+      const createdEntityId = await createPendingEntity(approval);
+      if (createdEntityId) {
+        approval.entityId = createdEntityId;
+        approval.entityCreated = true;
+      }
+    }
+
+    // ============ AUTOMATIC BLOCKCHAIN REGISTRATION (Auto-approval case) ============
+    console.log('Auto-approved - registering on blockchain...');
+    try {
+      const blockchainTx = await storePDFHashOnBlockchain(
+        approval.pdfHash,
+        approval.certificateId,
+        approval.entityType,
+        approval.entityName
+      );
+
+      if (blockchainTx) {
+        approval.blockchainTxHash = blockchainTx.txHash;
+        approval.blockchainTimestamp = blockchainTx.timestamp;
+        approval.blockchainBlockNumber = blockchainTx.blockNumber;
+        console.log(`Blockchain registration successful! Tx Hash: ${blockchainTx.txHash}`);
+
+        // Also update the entity with the transaction ID
+        if (approval.entityId && approval.entityId !== 'pending') {
+          if (approval.entityType === 'product') {
+            await ProductRepo.update(approval.entityId, {
+              sepoliaTransactionId: blockchainTx.txHash,
+            });
+            // Invalidate products cache
+            try {
+              await redisService.invalidateProductsCache();
+            } catch (cacheError) {
+              console.warn('Failed to invalidate products cache:', cacheError);
+            }
+          } else if (approval.entityType === 'company') {
+            await CompanyRepo.update(approval.entityId, {
+              sepoliaTransactionId: blockchainTx.txHash,
+            });
+            // Invalidate companies cache
+            try {
+              await redisService.invalidateCompaniesCache();
+            } catch (cacheError) {
+              console.warn('Failed to invalidate companies cache:', cacheError);
+            }
+          }
+        }
+      }
+    } catch (blockchainError) {
+      console.error('Failed to register on blockchain:', blockchainError);
+    }
+  }
 
   return await approvalRepo.save(approval);
 }
@@ -278,6 +417,126 @@ export async function processApproval(input: ProcessApprovalInput): Promise<Cert
   // Check if all required approvals are met
   if (approval.approvalCount >= approval.requiredApprovals) {
     approval.status = 'approved';
+    
+    // ============ CREATE ENTITY AFTER FULL APPROVAL ============
+    // If there's pending entity data, create the entity now
+    if (approval.pendingEntityData && !approval.entityCreated) {
+      console.log('Full approval received - creating entity from pending data');
+      const createdEntityId = await createPendingEntity(approval);
+      
+      if (createdEntityId) {
+        approval.entityId = createdEntityId;
+        approval.entityCreated = true;
+        console.log(`Entity created with ID: ${createdEntityId}`);
+      }
+    }
+
+    // ============ AUTOMATIC BLOCKCHAIN REGISTRATION ============
+    // Register the certificate on the Sepolia blockchain
+    console.log('All approvals received - registering on blockchain...');
+    try {
+      // Build entity data for blockchain storage (allows full recovery)
+      let entityData: BlockchainEntityData | undefined;
+      
+      if (approval.pendingEntityData) {
+        if (approval.entityType === 'product') {
+          // Get company info if available
+          let companyName: string | undefined;
+          let companyLicense: string | undefined;
+          if (approval.pendingEntityData.companyId) {
+            const company = await CompanyRepo.findOne({
+              where: { _id: approval.pendingEntityData.companyId }
+            });
+            if (company) {
+              companyName = company.name;
+              companyLicense = company.licenseNumber;
+            }
+          }
+          
+          entityData = {
+            LTONumber: approval.pendingEntityData.LTONumber,
+            CFPRNumber: approval.pendingEntityData.CFPRNumber,
+            lotNumber: approval.pendingEntityData.lotNumber,
+            brandName: approval.pendingEntityData.brandName,
+            productName: approval.pendingEntityData.productName,
+            productClassification: approval.pendingEntityData.productClassification,
+            productSubClassification: approval.pendingEntityData.productSubClassification,
+            expirationDate: approval.pendingEntityData.expirationDate?.toString(),
+            companyName,
+            companyLicense,
+            // Include product images for recovery
+            productImageFront: approval.pendingEntityData.productImageFront,
+            productImageBack: approval.pendingEntityData.productImageBack
+          };
+        } else {
+          entityData = {
+            address: approval.pendingEntityData.address,
+            licenseNumber: approval.pendingEntityData.licenseNumber,
+            phone: approval.pendingEntityData.phone,
+            email: approval.pendingEntityData.email,
+            businessType: approval.pendingEntityData.businessType
+          };
+        }
+      }
+      
+      // Build approvers list for blockchain storage
+      const blockchainApprovers: BlockchainApprover[] = approval.approvers?.map(a => ({
+        wallet: a.approverWallet,
+        name: a.approverName,
+        date: a.approvalDate
+      })) || [];
+      
+      const blockchainTx = await storePDFHashOnBlockchain(
+        approval.pdfHash,
+        approval.certificateId,
+        approval.entityType,
+        approval.entityName,
+        entityData,
+        blockchainApprovers
+      );
+
+      if (blockchainTx) {
+        approval.blockchainTxHash = blockchainTx.txHash;
+        approval.blockchainTimestamp = blockchainTx.timestamp;
+        approval.blockchainBlockNumber = blockchainTx.blockNumber;
+        console.log(`Blockchain registration successful! Tx Hash: ${blockchainTx.txHash}`);
+
+        // Also update the entity (Product/Company) with the transaction ID
+        if (approval.entityId && approval.entityId !== 'pending') {
+          if (approval.entityType === 'product') {
+            await ProductRepo.update(approval.entityId, {
+              sepoliaTransactionId: blockchainTx.txHash,
+            });
+            console.log(`Product ${approval.entityId} updated with transaction ID`);
+            // Invalidate products cache so fresh data is fetched
+            try {
+              await redisService.invalidateProductsCache();
+              console.log('Products cache invalidated');
+            } catch (cacheError) {
+              console.warn('Failed to invalidate products cache:', cacheError);
+            }
+          } else if (approval.entityType === 'company') {
+            await CompanyRepo.update(approval.entityId, {
+              sepoliaTransactionId: blockchainTx.txHash,
+            });
+            console.log(`Company ${approval.entityId} updated with transaction ID`);
+            // Invalidate companies cache so fresh data is fetched
+            try {
+              await redisService.invalidateCompaniesCache();
+              console.log('Companies cache invalidated');
+            } catch (cacheError) {
+              console.warn('Failed to invalidate companies cache:', cacheError);
+            }
+          }
+        }
+      } else {
+        console.warn('Blockchain registration returned null - transaction may have failed');
+      }
+    } catch (blockchainError) {
+      // Log the error but don't fail the approval - blockchain can be retried
+      console.error('Failed to register on blockchain:', blockchainError);
+      // The approval is still marked as approved, blockchain registration can be retried manually
+    }
   }
 
   return await approvalRepo.save(approval);

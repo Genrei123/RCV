@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Building2, Download } from "lucide-react";
+import { Plus, Building2, Download, Link2 } from "lucide-react";
 import { PageContainer } from "@/components/PageContainer";
 import { Button } from "@/components/ui/button";
 import { DataTable, type Column } from "@/components/DataTable";
@@ -198,6 +198,28 @@ export function Companies(props: CompaniesProps) {
           <span className="px-2 py-1 app-bg-primary-soft app-text-primary rounded text-sm font-medium">
             {productCount} {productCount === 1 ? "Product" : "Products"}
           </span>
+        );
+      },
+    },
+    {
+      key: "sepoliaTransactionId",
+      label: "Tx Hash",
+      render: (value: string) => {
+        if (!value) {
+          return <span className="text-muted-foreground text-xs">—</span>;
+        }
+        return (
+          <a
+            href={`https://sepolia.etherscan.io/tx/${value}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 text-blue-600 hover:underline text-xs font-mono"
+            title={value}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Link2 className="h-3 w-3" />
+            {value.substring(0, 10)}...
+          </a>
         );
       },
     },

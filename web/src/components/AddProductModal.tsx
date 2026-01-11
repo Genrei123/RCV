@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { X, Package, Hash, Calendar, Building2, Plus, ImagePlus, Camera, Tag, Layers, Wallet, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ProductService } from "@/services/productService";
 import type { CreateProductRequest } from "@/services/productService";
 import { CompanyService } from "@/services/companyService";
 import { BrandNameService } from "@/services/brandNameService";
@@ -662,6 +661,12 @@ export function AddProductModal({
       return;
     }
 
+    // Require wallet connection for product submission
+    if (!isWalletConnected || !isWalletAuthorized || !walletAddress) {
+      toast.error("Please connect and authorize your MetaMask wallet to submit products for approval.");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -687,8 +692,14 @@ export function AddProductModal({
         productImageBackUrl = response.downloadUrl;
       }
 
-      // ============ PHASE 2: CREATE PRODUCT ============
-      const productData: CreateProductRequest = {
+      // ============ PHASE 2: PREPARE PRODUCT DATA (NOT SAVING TO DB YET) ============
+      // Get current user for registeredById
+      const currentUser = await AuthService.getCurrentUser();
+      if (!currentUser) {
+        throw new Error("Unable to get current user information");
+      }
+
+      const productData: CreateProductRequest & { registeredById: string } = {
         LTONumber: formData.LTONumber,
         CFPRNumber: formData.CFPRNumber,
         lotNumber: formData.lotNumber,
@@ -705,83 +716,51 @@ export function AddProductModal({
         brandNameId: selectedBrandName?._id,
         classificationId: selectedClassification?._id,
         subClassificationId: selectedSubClassification?._id,
-        // Don't include sepoliaTransactionId - will be added after approval
+        // Include registeredById for when entity is created after approval
+        registeredById: currentUser._id,
       };
 
-      toast.info("Creating product...", { autoClose: 1500 });
-      const response = await ProductService.addProduct(productData);
+      // ============ PHASE 3: SUBMIT FOR MULTI-SIG APPROVAL (WITH PENDING ENTITY DATA) ============
+      toast.info("Submitting for multi-signature approval...", { autoClose: 2000 });
+      
+      // Generate hash from product data for certificate
+      const productDataString = JSON.stringify({
+        LTONumber: formData.LTONumber,
+        CFPRNumber: formData.CFPRNumber,
+        lotNumber: formData.lotNumber,
+        productName: formData.productName,
+        brandName: formData.brandName,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Create SHA-256 hash
+      const encoder = new TextEncoder();
+      const data = encoder.encode(productDataString);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const pdfHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      
+      // Submit for approval with pending entity data
+      // Product will be created ONLY after all required approvals are received
+      const certificateId = `CERT-PROD-${formData.LTONumber}-${Date.now()}`;
+      
+      const approval = await CertificateApprovalService.submitForApproval({
+        certificateId,
+        entityType: 'product',
+        // entityId is not provided - product will be created after approval
+        entityName: formData.productName,
+        pdfHash,
+        submitterName: `${currentUser.firstName} ${currentUser.lastName}`,
+        submitterWallet: walletAddress,
+        pendingEntityData: productData, // Full product data to be created after approval
+      });
+      
+      toast.success(
+        `Product submitted for approval! (${approval.requiredApprovals} admin${approval.requiredApprovals > 1 ? 's' : ''} required). Product will be created after full approval.`,
+        { autoClose: 6000 }
+      );
 
-      // ============ PHASE 3: SUBMIT FOR MULTI-SIG APPROVAL ============
-      // Only submit for blockchain approval if wallet is connected and authorized
-      if (isWalletConnected && isWalletAuthorized && walletAddress) {
-        toast.info("Submitting for multi-signature approval...", { autoClose: 2000 });
-        
-        // Generate hash from product data for certificate
-        const productDataString = JSON.stringify({
-          LTONumber: formData.LTONumber,
-          CFPRNumber: formData.CFPRNumber,
-          lotNumber: formData.lotNumber,
-          productName: formData.productName,
-          brandName: formData.brandName,
-          productId: response.product._id,
-          timestamp: new Date().toISOString()
-        });
-        
-        // Create SHA-256 hash
-        const encoder = new TextEncoder();
-        const data = encoder.encode(productDataString);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        const pdfHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-        
-        // Get current user for submitter info
-        const currentUser = await AuthService.getCurrentUser();
-        
-        // Submit for approval
-        const certificateId = `CERT-PROD-${formData.LTONumber}-${Date.now()}`;
-        const productId = response.product._id;
-        
-        if (!productId) {
-          console.error("Product ID not returned from server");
-          toast.warning("Product created but could not submit for approval - missing product ID");
-          return;
-        }
-        
-        try {
-          const approval = await CertificateApprovalService.submitForApproval({
-            certificateId,
-            entityType: 'product',
-            entityId: productId,
-            entityName: formData.productName,
-            pdfHash,
-            submitterName: currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : undefined,
-            submitterWallet: walletAddress,
-          });
-          
-          toast.success(
-            `Product created! Submitted for approval (${approval.requiredApprovals} admins required)`,
-            { autoClose: 5000 }
-          );
-        } catch (approvalError: any) {
-          console.error("Failed to submit for approval:", approvalError);
-          toast.warning(
-            "Product created but failed to submit for approval. You can submit manually later.",
-            { autoClose: 5000 }
-          );
-        }
-      } else {
-        // No wallet connected - just show success for product creation
-        toast.success(
-          `Product created successfully by ${response.registeredBy?.name || 'Unknown'}!`,
-          { autoClose: 3000 }
-        );
-        toast.info(
-          "Connect your wallet to submit products for blockchain verification",
-          { autoClose: 5000 }
-        );
-      }
-
-      console.log("Product registered by:", response.registeredBy);
+      console.log("Product submitted for approval by:", currentUser.email);
 
       // Reset form
       setFormData({
@@ -819,11 +798,11 @@ export function AddProductModal({
       onSuccess();
       onClose();
     } catch (error: any) {
-      console.error("Error creating product:", error);
+      console.error("Error submitting product for approval:", error);
       const errorMessage =
         error.message ||
         error.response?.data?.message ||
-        "Failed to create product. Please try again.";
+        "Failed to submit product for approval. Please try again.";
       toast.error(errorMessage);
     } finally {
       setLoading(false);

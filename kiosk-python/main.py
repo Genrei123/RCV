@@ -114,6 +114,12 @@ class CertificateData:
     block_hash: Optional[str] = None
     pdf_hash: Optional[str] = None
     additional_info: Dict[str, Any] = None
+    # V2.0 fields for entity details
+    entity_data: Dict[str, Any] = None  # Full entity details from blockchain
+    approvers: List[Dict[str, Any]] = None  # List of approvers with wallet addresses
+    transaction_hash: Optional[str] = None
+    verified_at: Optional[str] = None
+    version: str = "1.0"
 
 @dataclass
 class ProductData:
@@ -911,6 +917,7 @@ class KioskApp:
             # Certificate info
             is_valid = cert.status == "valid"
             is_pending = cert.status == "pending"
+            is_v2 = cert.version.startswith("2") if cert.version else False
             
             # Title
             title_bg = Colors.SUCCESS_LIGHT if is_valid else (Colors.WARNING_LIGHT if is_pending else Colors.ERROR_LIGHT)
@@ -927,60 +934,224 @@ class KioskApp:
                 fg=Colors.SUCCESS if is_valid else (Colors.WARNING if is_pending else Colors.ERROR)
             ).pack(expand=True)
             
-            # Blockchain badge
-            if is_valid and cert.block_index is not None:
-                blockchain_frame = tk.Frame(self.result_info_frame, bg=Colors.PRIMARY_LIGHT, height=40)
+            # V2.0 Blockchain verification badge with transaction hash
+            if is_valid and (cert.block_index is not None or cert.transaction_hash):
+                blockchain_frame = tk.Frame(self.result_info_frame, bg=Colors.PRIMARY_LIGHT, height=50)
                 blockchain_frame.pack(fill=tk.X)
                 blockchain_frame.pack_propagate(False)
                 
+                blockchain_content = tk.Frame(blockchain_frame, bg=Colors.PRIMARY_LIGHT)
+                blockchain_content.pack(expand=True)
+                
+                block_text = f"Blockchain Verified"
+                if cert.block_index is not None:
+                    block_text += f" - Block #{cert.block_index}"
+                if is_v2:
+                    block_text += f" (v{cert.version})"
+                
                 tk.Label(
-                    blockchain_frame,
-                    text=f"Blockchain Verified - Block #{cert.block_index}",
+                    blockchain_content,
+                    text=block_text,
                     font=("SF Pro Text", 14, "bold"),
                     bg=Colors.PRIMARY_LIGHT,
                     fg=Colors.TEXT_WHITE
-                ).pack(expand=True)
+                ).pack()
+                
+                if cert.transaction_hash:
+                    # Truncate transaction hash for display
+                    tx_short = cert.transaction_hash[:20] + "..." if len(cert.transaction_hash) > 20 else cert.transaction_hash
+                    tk.Label(
+                        blockchain_content,
+                        text=f"TX: {tx_short}",
+                        font=("SF Pro Text", 10),
+                        bg=Colors.PRIMARY_LIGHT,
+                        fg=Colors.TEXT_WHITE
+                    ).pack()
             
-            # Details
+            # Create scrollable frame for details
             details_frame = tk.Frame(self.result_info_frame, bg=Colors.SURFACE, padx=20, pady=15)
             details_frame.pack(fill=tk.BOTH, expand=True)
             
+            # Basic certificate details
             details = [
                 ("Certificate ID", cert.certificate_id),
                 ("Type", cert.certificate_type.title() if cert.certificate_type else "N/A"),
-                ("Entity", cert.company_name),
-                ("Issued Date", cert.issue_date),
             ]
             
-            if cert.additional_info:
-                if cert.additional_info.get("ltoNumber"):
-                    details.append(("LTO Number", cert.additional_info.get("ltoNumber")))
-                if cert.additional_info.get("cfprNumber"):
-                    details.append(("CFPR Number", cert.additional_info.get("cfprNumber")))
+            # Add entity details for v2.0
+            if is_v2 and cert.entity_data:
+                entity = cert.entity_data
+                if cert.certificate_type == "product":
+                    details.extend([
+                        ("Product Name", entity.get("productName", cert.product_name)),
+                        ("Brand Name", entity.get("brandName", "N/A")),
+                        ("Company", entity.get("companyName", cert.company_name)),
+                        ("Registration No.", entity.get("registrationNumber", "N/A")),
+                    ])
+                    if entity.get("LTONumber"):
+                        details.append(("LTO Number", entity.get("LTONumber")))
+                    if entity.get("CFPRNumber"):
+                        details.append(("CFPR Number", entity.get("CFPRNumber")))
+                    if entity.get("manufacturer"):
+                        details.append(("Manufacturer", entity.get("manufacturer")))
+                    if entity.get("expirationDate"):
+                        exp_date = self._format_date(entity.get("expirationDate"))
+                        is_expired = self._is_date_expired(entity.get("expirationDate"))
+                        details.append(("Expiration", f"{exp_date} {'⚠ EXPIRED' if is_expired else '✓'}"))
+                else:
+                    # Company certificate
+                    details.extend([
+                        ("Company Name", entity.get("companyName", cert.company_name)),
+                        ("Address", entity.get("companyAddress", "N/A")),
+                    ])
+                    if entity.get("companyLTONumber"):
+                        details.append(("LTO Number", entity.get("companyLTONumber")))
+                    if entity.get("companyLTOExpiryDate"):
+                        exp_date = self._format_date(entity.get("companyLTOExpiryDate"))
+                        is_expired = self._is_date_expired(entity.get("companyLTOExpiryDate"))
+                        details.append(("LTO Expiry", f"{exp_date} {'⚠ EXPIRED' if is_expired else '✓'}"))
+                    if entity.get("companyContactNumber"):
+                        details.append(("Contact", entity.get("companyContactNumber")))
+                    if entity.get("companyContactEmail"):
+                        details.append(("Email", entity.get("companyContactEmail")))
+            else:
+                # Fallback for v1.0 certificates
+                details.append(("Entity", cert.company_name))
+                details.append(("Issued Date", cert.issue_date))
+                
+                if cert.additional_info:
+                    if cert.additional_info.get("ltoNumber"):
+                        details.append(("LTO Number", cert.additional_info.get("ltoNumber")))
+                    if cert.additional_info.get("cfprNumber"):
+                        details.append(("CFPR Number", cert.additional_info.get("cfprNumber")))
             
+            # Display basic details
             for label, value in details:
                 row = tk.Frame(details_frame, bg=Colors.SURFACE)
-                row.pack(fill=tk.X, pady=8)
+                row.pack(fill=tk.X, pady=6)
                 
                 tk.Label(
                     row,
                     text=label,
-                    font=("SF Pro Text", 14),
+                    font=("SF Pro Text", 12),
                     bg=Colors.SURFACE,
                     fg=Colors.TEXT_SECONDARY
                 ).pack(anchor=tk.W)
                 
+                # Handle warning styling for expired items
+                value_str = str(value)[:50] if value else "N/A"
+                value_color = Colors.ERROR if "EXPIRED" in value_str else Colors.TEXT_PRIMARY
+                
                 tk.Label(
                     row,
-                    text=str(value)[:40],
-                    font=("SF Pro Text", 16, "bold"),
+                    text=value_str,
+                    font=("SF Pro Text", 14, "bold"),
                     bg=Colors.SURFACE,
-                    fg=Colors.TEXT_PRIMARY
+                    fg=value_color
                 ).pack(anchor=tk.W)
+            
+            # V2.0 Approvers section
+            if is_v2 and cert.approvers and len(cert.approvers) > 0:
+                # Approvers header
+                approvers_header = tk.Frame(self.result_info_frame, bg=Colors.PRIMARY, height=40)
+                approvers_header.pack(fill=tk.X)
+                approvers_header.pack_propagate(False)
+                
+                tk.Label(
+                    approvers_header,
+                    text=f"Certificate Approvers ({len(cert.approvers)})",
+                    font=("SF Pro Text", 14, "bold"),
+                    bg=Colors.PRIMARY,
+                    fg=Colors.TEXT_WHITE
+                ).pack(expand=True)
+                
+                # Approvers list
+                approvers_frame = tk.Frame(self.result_info_frame, bg=Colors.SURFACE, padx=15, pady=10)
+                approvers_frame.pack(fill=tk.X)
+                
+                for i, approver in enumerate(cert.approvers[:3]):  # Show max 3 approvers
+                    approver_row = tk.Frame(approvers_frame, bg=Colors.BACKGROUND, padx=10, pady=8)
+                    approver_row.pack(fill=tk.X, pady=4)
+                    
+                    # Approver number and name
+                    name_frame = tk.Frame(approver_row, bg=Colors.BACKGROUND)
+                    name_frame.pack(fill=tk.X)
+                    
+                    # Number badge
+                    badge = tk.Label(
+                        name_frame,
+                        text=f" {i + 1} ",
+                        font=("SF Pro Text", 10, "bold"),
+                        bg=Colors.PRIMARY,
+                        fg=Colors.TEXT_WHITE
+                    )
+                    badge.pack(side=tk.LEFT, padx=(0, 8))
+                    
+                    tk.Label(
+                        name_frame,
+                        text=approver.get("name", "Unknown Approver"),
+                        font=("SF Pro Text", 13, "bold"),
+                        bg=Colors.BACKGROUND,
+                        fg=Colors.TEXT_PRIMARY
+                    ).pack(side=tk.LEFT)
+                    
+                    # Verified icon
+                    tk.Label(
+                        name_frame,
+                        text="✓",
+                        font=("SF Pro Text", 14, "bold"),
+                        bg=Colors.BACKGROUND,
+                        fg=Colors.SUCCESS
+                    ).pack(side=tk.RIGHT)
+                    
+                    # Wallet address (truncated)
+                    if approver.get("walletAddress"):
+                        wallet = approver.get("walletAddress")
+                        wallet_short = wallet[:10] + "..." + wallet[-6:] if len(wallet) > 20 else wallet
+                        tk.Label(
+                            approver_row,
+                            text=f"Wallet: {wallet_short}",
+                            font=("SF Pro Text", 9),
+                            bg=Colors.BACKGROUND,
+                            fg=Colors.TEXT_SECONDARY
+                        ).pack(anchor=tk.W, padx=(28, 0))
+                    
+                    # Approval date
+                    if approver.get("approvedAt"):
+                        tk.Label(
+                            approver_row,
+                            text=f"Approved: {self._format_datetime(approver.get('approvedAt'))}",
+                            font=("SF Pro Text", 9),
+                            bg=Colors.BACKGROUND,
+                            fg=Colors.TEXT_SECONDARY
+                        ).pack(anchor=tk.W, padx=(28, 0))
+                
+                # Show more indicator if more than 3 approvers
+                if len(cert.approvers) > 3:
+                    tk.Label(
+                        approvers_frame,
+                        text=f"+{len(cert.approvers) - 3} more approver(s)",
+                        font=("SF Pro Text", 11),
+                        bg=Colors.SURFACE,
+                        fg=Colors.TEXT_SECONDARY
+                    ).pack(pady=5)
+            
+            # Verification timestamp for v2.0
+            if cert.verified_at:
+                verified_frame = tk.Frame(self.result_info_frame, bg=Colors.SUCCESS_LIGHT, padx=15, pady=8)
+                verified_frame.pack(fill=tk.X)
+                
+                tk.Label(
+                    verified_frame,
+                    text=f"Verified: {self._format_datetime(cert.verified_at)}",
+                    font=("SF Pro Text", 11),
+                    bg=Colors.SUCCESS_LIGHT,
+                    fg=Colors.SUCCESS
+                ).pack()
             
             # TTS
             if is_valid:
-                self.tts.speak(TagalogMessages.certificate_valid(cert.company_name, cert.company_name))
+                self.tts.speak(TagalogMessages.certificate_valid(cert.product_name, cert.company_name))
             elif is_pending:
                 self.tts.speak("Nakita ang PDF certificate. Hindi pa na-verify sa blockchain.")
             else:
@@ -1338,6 +1509,11 @@ class KioskApp:
                 # Check the type field first for product certificates
                 qr_type = data.get("type", "").lower()
                 
+                # V2.0 RCV Certificate with full entity details and approvers
+                if qr_type == "rcv_certificate" and data.get("version", "").startswith("2"):
+                    self._process_v2_certificate(data)
+                    return
+                
                 # Product certificates have embedded product info + certificate ID
                 if qr_type == "product-certificate":
                     cert_id = data.get("certificateId")
@@ -1405,6 +1581,65 @@ class KioskApp:
         except Exception as e:
             print(f"Error processing QR data: {e}")
             self.root.after(0, lambda: self._handle_error(str(e)))
+    
+    def _process_v2_certificate(self, data: dict):
+        """Process v2.0 RCV Certificate with full entity details and approvers"""
+        print(f"Processing v2.0 certificate: {data.get('certificateId', 'Unknown')}")
+        
+        # Update loading screen
+        self.root.after(0, lambda: self.loading_detail_label.config(text="Processing blockchain certificate..."))
+        
+        # Extract entity data
+        entity = data.get("entity", {})
+        entity_type = data.get("entityType", "product")
+        approvers = data.get("approvers", [])
+        
+        # Determine certificate type and extract relevant name
+        if entity_type == "product":
+            product_name = entity.get("productName", "Unknown Product")
+            company_name = entity.get("companyName", "Unknown Company")
+        else:
+            product_name = entity.get("companyName", "Unknown Company")
+            company_name = entity.get("companyName", "Unknown Company")
+        
+        # Get PDF URL if certificate ID is available
+        cert_id = data.get("certificateId")
+        pdf_url = None
+        if cert_id:
+            pdf_response = self.api.get_certificate_pdf_url(cert_id)
+            pdf_url = pdf_response.get("certificate", {}).get("pdfUrl") if pdf_response.get("success") else None
+        
+        # Create certificate data object with v2.0 fields
+        cert = CertificateData(
+            certificate_id=cert_id or "Unknown",
+            product_name=product_name,
+            company_name=company_name,
+            issue_date=self._format_date(entity.get("issuedDate") or entity.get("dateOfRegistration")),
+            expiry_date=self._format_date(entity.get("expirationDate") or entity.get("companyLTOExpiryDate")),
+            status="valid",  # V2.0 QR codes are pre-verified
+            pdf_url=pdf_url,
+            certificate_type=entity_type,
+            block_index=data.get("blockNumber"),
+            block_hash=None,
+            pdf_hash=entity.get("pdfHash"),
+            additional_info={
+                "registrationNumber": entity.get("registrationNumber"),
+                "ltoNumber": entity.get("LTONumber") or entity.get("companyLTONumber"),
+                "cfprNumber": entity.get("CFPRNumber"),
+                "brandName": entity.get("brandName"),
+                "manufacturer": entity.get("manufacturer"),
+                "companyAddress": entity.get("companyAddress"),
+                "companyContactNumber": entity.get("companyContactNumber"),
+                "companyContactEmail": entity.get("companyContactEmail"),
+            },
+            entity_data=entity,
+            approvers=approvers,
+            transaction_hash=data.get("transactionHash"),
+            verified_at=data.get("verifiedAt"),
+            version=data.get("version", "2.0")
+        )
+        
+        self.root.after(0, lambda: self._show_certificate(cert))
     
     def _process_certificate_id(self, certificate_id: str):
         """Fetch certificate from blockchain API"""
@@ -1567,6 +1802,40 @@ class KioskApp:
             return str(date_str)[:10]  # Fallback: just first 10 chars
         except:
             return str(date_str)
+    
+    def _format_datetime(self, date_str: str) -> str:
+        """Format datetime string for display with time"""
+        if not date_str or date_str == "N/A":
+            return "N/A"
+        
+        try:
+            # Try various date formats
+            for fmt in ["%Y-%m-%dT%H:%M:%S.%fZ", "%Y-%m-%dT%H:%M:%SZ", "%Y-%m-%d"]:
+                try:
+                    dt = datetime.strptime(date_str, fmt)
+                    return dt.strftime("%b %d, %Y %H:%M")
+                except ValueError:
+                    continue
+            return str(date_str)[:16]  # Fallback
+        except:
+            return str(date_str)
+    
+    def _is_date_expired(self, date_str: str) -> bool:
+        """Check if a date string represents an expired date"""
+        if not date_str or date_str == "N/A":
+            return False
+        
+        try:
+            # Try various date formats
+            for fmt in ["%Y-%m-%dT%H:%M:%S.%fZ", "%Y-%m-%dT%H:%M:%SZ", "%Y-%m-%d", "%d/%m/%Y"]:
+                try:
+                    dt = datetime.strptime(date_str, fmt)
+                    return dt < datetime.now()
+                except ValueError:
+                    continue
+            return False
+        except:
+            return False
     
     def _is_certificate_data(self, data: dict) -> bool:
         """Check if data represents a certificate"""
