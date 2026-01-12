@@ -361,24 +361,25 @@ export function Sidebar({
           } overflow-y-auto`}
         >
           {/* Drawer header: logo + title + close button */}
-          <div className="flex items-center justify-between px-4 py-4 border-b">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 flex items-center justify-center">
-                <LogoIcon className="w-6 h-6" />
-              </div>
-              <div className="text-sm font-semibold text-slate-800">RCV</div>
+          <div className="flex items-center justify-between px-6 py-5 border-b border-neutral-200">
+            <div className="flex items-center gap-2">
+              <LogoIcon className="w-7 h-7" />
+              <span className="text-base font-medium text-neutral-800">RCV</span>
+              <span className="text-xs text-neutral-400">v.01</span>
             </div>
             <button
               onClick={closeDrawer}
-              className="p-1 text-slate-600"
+              className="p-1 text-neutral-400 hover:text-neutral-600"
               aria-label="Close menu"
             >
-              <ChevronDown size={18} className="rotate-90 " />
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M15 18l-6-6 6-6"/>
+              </svg>
             </button>
           </div>
 
           {/* User Profile Section (Mobile) - Moved to top */}
-          <div className="px-4 py-4 border-b border-neutral-200">
+          <div className="px-6 py-4 border-b border-neutral-200">
             <button
               type="button"
               onClick={() => setShowProfileMenu((s) => !s)}
@@ -441,7 +442,7 @@ export function Sidebar({
           </div>
 
           {/* Drawer nav: reuse menuItems, ensure links call closeDrawer */}
-          <nav className="px-2 py-4 space-y-1 flex-1">
+          <nav className="px-4 py-4 space-y-1 flex-1">
             {menuItems.map((m) => {
               const Icon = m.icon;
               const isActive = location.pathname === m.path;
