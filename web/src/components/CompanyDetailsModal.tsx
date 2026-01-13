@@ -50,6 +50,33 @@ export function CompanyDetailsModal({ isOpen, onClose, company }: CompanyDetails
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
 
+  // Disable background scroll when modal is open (match AddAgentModal behavior)
+  useEffect(() => {
+    if (isOpen) {
+      const html = document.documentElement;
+      const body = document.body;
+      const previousHtmlOverflow = html.style.overflow;
+      const previousBodyOverflow = body.style.overflow;
+      const previousBodyPosition = body.style.position;
+      const scrollY = window.scrollY;
+
+      html.style.overflow = "hidden";
+      body.style.overflow = "hidden";
+      body.style.position = "fixed";
+      body.style.width = "100%";
+      body.style.top = `-${scrollY}px`;
+
+      return () => {
+        html.style.overflow = previousHtmlOverflow;
+        body.style.overflow = previousBodyOverflow;
+        body.style.position = previousBodyPosition;
+        body.style.width = "";
+        body.style.top = "";
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [isOpen]);
+
   // Fetch approval info when modal opens
   useEffect(() => {
     const fetchApprovalInfo = async () => {
@@ -169,7 +196,7 @@ export function CompanyDetailsModal({ isOpen, onClose, company }: CompanyDetails
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-hidden">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
