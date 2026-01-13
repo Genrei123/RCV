@@ -16,7 +16,7 @@ class ApiService {
   // For Android Emulator use: 'http://10.0.2.2:3000/api/v1'
   // For iOS Simulator use: 'http://localhost:3000/api/v1'
   // For Physical Device use: 'http://YOUR_COMPUTER_IP:3000/api/v1'
-  static const String baseUrl = 'https://rcv-app-4aab44d38521.herokuapp.com/api/v1';
+  static const String baseUrl = 'https://rcv-production-cbd6.up.railway.app/api/v1';
   // Update nalang tong link kung ano yung deployed na backend
 
   // Get authorization headers
