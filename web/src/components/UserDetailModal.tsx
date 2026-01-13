@@ -707,7 +707,7 @@ export function UserDetailModal({
                       onClick={handleUpdateWallet}
                       disabled={walletLoading || isRejected || !walletAddress}
                       size="sm"
-                      className="bg-purple-600 hover:bg-purple-700"
+                      className="app-bg-primary hover:app-bg-accent"
                     >
                       {walletLoading ? (
                         <>

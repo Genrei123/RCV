@@ -883,7 +883,7 @@ export function AddProductModal({
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* MetaMask Connection Warning */}
             {(!isWalletConnected || !isWalletAuthorized) && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+              <div className="bg-amber-50 border border-[color-mix(in_srgb,var(--app-secondary)_40%,transparent)] rounded-lg p-4 mb-4">
                 <div className="flex items-start gap-3">
                   <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
                   <div className="flex-1">
@@ -901,7 +901,7 @@ export function AddProductModal({
                       <Button
                         type="button"
                         onClick={() => connectWallet}
-                        className="mt-3 bg-amber-600 hover:bg-amber-700 text-white"
+                        className="mt-3 app-bg-primary hover:app-bg-accent"
                         size="sm"
                       >
                         <Wallet className="h-4 w-4 mr-2" />
