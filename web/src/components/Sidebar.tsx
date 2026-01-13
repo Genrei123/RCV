@@ -361,24 +361,88 @@ export function Sidebar({
           } overflow-y-auto`}
         >
           {/* Drawer header: logo + title + close button */}
-          <div className="flex items-center justify-between px-4 py-4 border-b">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 flex items-center justify-center">
-                <LogoIcon className="w-6 h-6" />
-              </div>
-              <div className="text-sm font-semibold text-slate-800">RCV</div>
+          <div className="flex items-center justify-between px-6 py-5 border-b border-neutral-200">
+            <div className="flex items-center gap-2">
+              <LogoIcon className="w-7 h-7" />
+              <span className="text-base font-medium text-neutral-800">RCV</span>
+              <span className="text-xs text-neutral-400">v.01</span>
             </div>
             <button
               onClick={closeDrawer}
-              className="p-1 text-slate-600"
+              className="p-1 text-neutral-400 hover:text-neutral-600"
               aria-label="Close menu"
             >
-              <ChevronDown size={18} className="rotate-90 " />
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M15 18l-6-6 6-6"/>
+              </svg>
             </button>
           </div>
 
+          {/* User Profile Section (Mobile) - Moved to top */}
+          <div className="px-6 py-4 border-b border-neutral-200">
+            <button
+              type="button"
+              onClick={() => setShowProfileMenu((s) => !s)}
+              className="w-full flex items-center gap-3 text-left focus:outline-none"
+            >
+              <div className="w-10 h-10 rounded-full overflow-hidden bg-neutral-300 flex items-center justify-center flex-shrink-0">
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt="Avatar"
+                    className="w-10 h-10 object-cover"
+                  />
+                ) : (
+                  <User size={20} className="text-neutral-600" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-neutral-800 text-sm truncate">
+                  {loading ? "Loading..." : getFullName()}
+                </p>
+                <p className="text-xs text-neutral-500">
+                  {loading ? "Please wait..." : getRoleName()}
+                </p>
+              </div>
+              <ChevronDown
+                size={16}
+                className={`transition-transform ${
+                  showProfileMenu ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+
+            {/* mobile inline profile menu */}
+            {showProfileMenu && (
+              <div className="mt-3 rounded-md bg-slate-50 p-2">
+                <Link
+                  to="/profile"
+                  onClick={() => {
+                    setShowProfileMenu(false);
+                    closeDrawer?.();
+                  }}
+                  className="flex items-center gap-3 px-3 py-2 text-slate-700 hover:bg-slate-100 rounded"
+                >
+                  <User size={16} />
+                  <span className="text-sm">View Profile</span>
+                </Link>
+                <button
+                  onClick={() => {
+                    setShowProfileMenu(false);
+                    setShowLogoutModal(true);
+                    closeDrawer();
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-red-600 hover:bg-red-50 rounded mt-1"
+                >
+                  <LogOut size={16} />
+                  <span className="text-sm">Sign Out</span>
+                </button>
+              </div>
+            )}
+          </div>
+
           {/* Drawer nav: reuse menuItems, ensure links call closeDrawer */}
-          <nav className="px-2 py-4 space-y-1">
+          <nav className="px-4 py-4 space-y-1 flex-1">
             {menuItems.map((m) => {
               const Icon = m.icon;
               const isActive = location.pathname === m.path;
@@ -389,82 +453,72 @@ export function Sidebar({
                   onClick={() => {
                     closeDrawer();
                   }}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg ${
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                     isActive
-                      ? "app-bg-primary-soft app-text-primary"
-                      : "text-slate-700 hover:bg-slate-100"
+                      ? "app-bg-primary text-white"
+                      : "text-neutral-600 hover:bg-neutral-100"
                   }`}
                 >
-                  <Icon size={18} />
-                  <span className="font-medium">{m.label}</span>
+                  <div className="flex items-center gap-3">
+                    <Icon size={20} />
+                    <span className="font-medium">{m.label}</span>
+                  </div>
+                  <span className="text-xs">›</span>
                 </Link>
               );
             })}
           </nav>
 
-          {/* Drawer profile + logout (mobile) */}
-          <div className="px-4 mt-auto pb-6">
-            <div className="border-t pt-4">
-              {/* make profile row toggleable on mobile */}
-              <div className="mb-2">
-                <button
-                  type="button"
-                  onClick={() => setShowProfileMenu((s) => !s)}
-                  className="w-full flex items-center gap-3 text-left focus:outline-none"
-                >
-                  <div className="w-10 h-10 rounded-full overflow-hidden app-bg-primary flex items-center justify-center">
-                    {avatarUrl ? (
-                      <img
-                        src={avatarUrl}
-                        alt="Avatar"
-                        className="w-10 h-10 object-cover"
-                      />
-                    ) : (
-                      <User size={16} className="text-white" />
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-sm font-medium">
-                      {loading ? "Loading..." : getFullName()}
-                    </div>
-                    <div className="text-xs text-slate-500">
-                      {loading ? "Please wait..." : getRoleName()}
-                    </div>
-                  </div>
-                  <ChevronDown
-                    size={16}
-                    className={`${showProfileMenu ? "rotate-180" : ""}`}
-                  />
-                </button>
-
-                {/* mobile inline profile menu */}
-                {showProfileMenu && (
-                  <div className="mt-2 rounded-md bg-slate-50 p-2">
-                    <Link
-                      to="/profile"
-                      onClick={() => {
-                        setShowProfileMenu(false);
-                        closeDrawer?.();
-                      }}
-                      className="flex items-center gap-3 px-3 py-2 text-slate-700 hover:bg-slate-100 rounded"
-                    >
-                      <User size={16} />
-                      <span>View Profile</span>
-                    </Link>
-                    <button
-                      onClick={() => {
-                        setShowProfileMenu(false);
-                        setShowLogoutModal(true);
-                        closeDrawer();
-                      }}
-                      className="w-full flex items-center gap-3 px-3 py-2 text-red-600 hover:bg-red-50 rounded mt-1"
-                    >
-                      <LogOut size={16} />
-                      <span>Sign Out</span>
-                    </button>
-                  </div>
+          {/* MetaMask Wallet Section (Mobile) */}
+          <div className="px-4 pb-4 border-t border-neutral-200 pt-4">
+            <div className="bg-neutral-50 rounded-lg p-3">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Wallet size={16} className="text-orange-500" />
+                  <span className="text-xs font-medium text-neutral-700">Wallet</span>
+                </div>
+                {isConnected && (
+                  <div className={`w-2 h-2 rounded-full ${isAuthorized ? 'bg-green-500' : 'bg-yellow-500'}`} />
                 )}
               </div>
+              {isConnected && walletAddress ? (
+                <div className="space-y-2">
+                  <p className="text-xs font-mono text-neutral-600 truncate" title={walletAddress}>
+                    {walletAddress.slice(0, 8)}...{walletAddress.slice(-6)}
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={switchAccount}
+                      className="flex-1 text-xs text-blue-500 hover:text-blue-700 py-1"
+                      title="Switch to another account"
+                    >
+                      Switch
+                    </button>
+                    <button
+                      onClick={disconnect}
+                      className="flex-1 text-xs text-red-500 hover:text-red-700 py-1"
+                    >
+                      Disconnect
+                    </button>
+                  </div>
+                </div>
+              ) : !isMetaMaskInstalled ? (
+                <button
+                  onClick={() => window.open('https://metamask.io/download/', '_blank')}
+                  className="w-full text-xs text-white bg-[#f6851b] hover:bg-[#e2761b] py-2 px-3 rounded flex items-center justify-center gap-1"
+                >
+                  <ExternalLink size={12} />
+                  Install MetaMask
+                </button>
+              ) : (
+                <button
+                  onClick={() => connect(true)}
+                  className="w-full text-xs app-text-primary hover:opacity-80 py-1 flex items-center justify-center gap-1"
+                >
+                  <Wallet size={12} />
+                  Connect MetaMask
+                </button>
+              )}
             </div>
           </div>
         </div>
