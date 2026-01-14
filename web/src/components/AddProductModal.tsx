@@ -900,7 +900,7 @@ export function AddProductModal({
                     {!isWalletConnected && (
                       <Button
                         type="button"
-                        onClick={() => connectWallet}
+                        onClick={() => connectWallet()}
                         className="mt-3 bg-amber-600 hover:bg-amber-700 text-white"
                         size="sm"
                       >
