@@ -33,21 +33,23 @@ export const resolveReport = async (
       return next(new CustomError(404, 'Report not found'));
     }
 
-    // Update the report status
+    // Update the report status and mark as verified
     const originalStatus = report.status;
     report.status = resolution;
+    report.isVerified = true;
     await complianceRepo.save(report);
 
     // Log the resolution action
     await AuditLogService.createLog({
       userId: user._id,
-      action: `Resolved compliance report: ${reportId}`,
+      action: `${originalStatus === resolution ? 'Approved' : 'Changed'} compliance report: ${reportId}`,
       actionType: 'COMPLIANCE_REPORT',
       platform: 'WEB',
       metadata: {
         reportId: report._id,
         originalStatus,
         newStatus: resolution,
+        action: originalStatus === resolution ? 'approved' : 'changed',
         notes,
       },
       ipAddress: req.ip,
@@ -56,11 +58,14 @@ export const resolveReport = async (
 
     res.status(200).json({
       success: true,
-      message: 'Report resolved successfully',
+      message: originalStatus === resolution 
+        ? 'Report approved successfully' 
+        : 'Report status changed successfully',
       data: {
         reportId: report._id,
         originalStatus,
         newStatus: resolution,
+        isVerified: true,
       },
     });
   } catch (error: any) {
