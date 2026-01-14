@@ -900,8 +900,8 @@ export function AddProductModal({
                     {!isWalletConnected && (
                       <Button
                         type="button"
-                        onClick={() => connectWallet}
-                        className="mt-3 app-bg-primary hover:app-bg-accent"
+                        onClick={() => connectWallet()}
+                        className="mt-3 bg-amber-600 hover:bg-amber-700 text-white"
                         size="sm"
                       >
                         <Wallet className="h-4 w-4 mr-2" />
