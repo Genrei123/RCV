@@ -147,37 +147,37 @@ export function LandingPage() {
                   <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full">
                     <div className="flex flex-col md:flex-row items-center justify-center h-full gap-8 md:gap-16">
                       {/* Text Content */}
-                      <div className="flex-1 text-center md:text-left pt-8 md:pt-0">
+                      <div className="flex-1 text-center md:text-left pt-8 md:pt-0 w-full px-4 sm:px-0 md:px-20 lg:px-24">
                         <span className="inline-block px-4 py-1.5 bg-white/20 backdrop-blur-sm rounded-full text-white text-sm font-medium mb-4">
                           {slide.subtitle}
                         </span>
-                        <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
+                        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight max-w-lg mx-auto md:mx-0">
                           {slide.title}
                         </h1>
-                        <p className="text-lg md:text-xl text-text /90 mb-8 text-white max-w-xl">
+                        <p className="text-base sm:text-lg md:text-xl text-text /90 mb-8 text-white max-w-sm sm:max-w-xl mx-auto md:mx-0">
                           {slide.description}
                         </p>
-                        <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
+                        <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start max-w-sm sm:max-w-none mx-auto md:mx-0">
                           <Button
                             onClick={() => navigate("/login")}
                             size="lg"
-                            className="app-bg-neutral hover:app-bg-muted-90 hover:text-white border-white text-text px-8 cursor-pointer"
+                            className="app-bg-neutral hover:app-bg-muted-90 hover:text-white border-white text-text px-8 cursor-pointer w-full sm:w-auto"
                           >
                             Get Started Free
                             <ArrowRight className="ml-2 h-5 w-5" />
                           </Button>
-                          <Button
+                            <Button
                             variant="outline"
                             size="lg"
-                            className="border app-border-neutral bg-transparent app-text-white cursor-pointer transition-colors"
+                            className="border app-border-neutral bg-transparent app-text-white cursor-pointer transition-colors w-full sm:w-auto overflow-hidden hidden sm:inline-flex"
                             onClick={() =>
                               document
-                                .getElementById("features")
-                                ?.scrollIntoView({ behavior: "smooth" })
+                              .getElementById("features")
+                              ?.scrollIntoView({ behavior: "smooth" })
                             }
-                          >
+                            >
                             Learn More
-                          </Button>
+                            </Button>
                         </div>
                       </div>
 
@@ -200,11 +200,11 @@ export function LandingPage() {
           </CarouselContent>
 
           {/* Navigation Arrows */}
-          <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 z-30 bg-white/10 hover:bg-(--app-white) backdrop-blur-md border border-white/20 hover:border-white/40 text-white h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-300" />
-          <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 z-30 bg-white/10 hover:bg-(--app-white) backdrop-blur-md border border-white/20 hover:border-white/40 text-white h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-300" />
+          <CarouselPrevious className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 z-30 bg-white/10 hover:bg-(--app-white) backdrop-blur-md border border-white/20 hover:border-white/40 text-white h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-300" />
+          <CarouselNext className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 z-30 bg-white/10 hover:bg-(--app-white) backdrop-blur-md border border-white/20 hover:border-white/40 text-white h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-300" />
 
           {/* Carousel Indicators */}
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex justify-center gap-2 z-20">
+          <div className="hidden md:flex absolute bottom-8 left-1/2 -translate-x-1/2 justify-center gap-2 z-20">
             {heroSlides.map((_, index) => (
               <button
                 key={index}
