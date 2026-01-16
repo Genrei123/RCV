@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  ChevronLeft,
-  ChevronRight,
   Shield,
   QrCode,
   Building2,
@@ -19,143 +17,61 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselPrevious,
+  CarouselNext,
+} from "@/components/ui/carousel";
 import { Footer } from "@/components/Footer";
 import { TransparencyTables } from "@/components/TransparencyTables";
+import landingData from "@/data/landinginfo.json";
 
-// Hero carousel slides
-const heroSlides = [
-  {
-    title: "Secure Product Verification",
-    subtitle: "Blockchain-Powered Authenticity",
-    description:
-      "Protect your products and consumers with our advanced blockchain verification system. Every product gets a unique, tamper-proof certificate.",
-    image: "/logo.svg",
-    gradient: "from-teal-600 to-emerald-700",
-  },
-  {
-    title: "Real-Time Compliance",
-    subtitle: "Stay Ahead of Regulations",
-    description:
-      "Monitor and manage regulatory compliance across your entire product portfolio. Get instant alerts and comprehensive reports.",
-    image: "/logo.svg",
-    gradient: "from-blue-600 to-indigo-700",
-  },
-  {
-    title: "Instant QR Scanning",
-    subtitle: "Verify in Seconds",
-    description:
-      "Consumers can instantly verify product authenticity by scanning QR codes. Build trust with transparent verification.",
-    image: "/logo.svg",
-    gradient: "from-purple-600 to-pink-700",
-  },
-];
+// Icon map for dynamic rendering
+const iconMap: Record<string, React.ComponentType<any>> = {
+  Shield,
+  QrCode,
+  Building2,
+  Package,
+  FileCheck,
+  BarChart3,
+  Lock,
+  Globe,
+  Smartphone,
+  Zap,
+};
 
-// Feature cards
-const features = [
-  {
-    icon: Shield,
-    title: "Blockchain Security",
-    description:
-      "Every certificate is stored on an immutable blockchain, ensuring tamper-proof verification and complete transparency.",
-    color: "bg-teal-500",
-  },
-  {
-    icon: QrCode,
-    title: "QR Code Verification",
-    description:
-      "Generate unique QR codes for each product that consumers can scan to instantly verify authenticity.",
-    color: "bg-blue-500",
-  },
-  {
-    icon: Building2,
-    title: "Company Management",
-    description:
-      "Register and manage companies, track their products, and maintain comprehensive compliance records.",
-    color: "bg-purple-500",
-  },
-  {
-    icon: Package,
-    title: "Product Tracking",
-    description:
-      "Track products from registration to distribution. Monitor lot numbers, expiration dates, and certifications.",
-    color: "bg-orange-500",
-  },
-  {
-    icon: FileCheck,
-    title: "Digital Certificates",
-    description:
-      "Generate professional PDF certificates with all product details and QR codes for offline verification.",
-    color: "bg-green-500",
-  },
-  {
-    icon: BarChart3,
-    title: "Analytics Dashboard",
-    description:
-      "Gain insights with powerful analytics. Track scans, monitor compliance rates, and identify trends.",
-    color: "bg-indigo-500",
-  },
-];
-
-// What we aim to do items
-const objectives = [
-  {
-    icon: Lock,
-    title: "Combat Counterfeiting",
-    description:
-      "Our blockchain-based system makes it virtually impossible for counterfeit products to pass verification, protecting both businesses and consumers.",
-  },
-  {
-    icon: Globe,
-    title: "Enable Transparency",
-    description:
-      "Create a transparent ecosystem where product information is accessible and verifiable by anyone, anywhere, at any time.",
-  },
-  {
-    icon: Smartphone,
-    title: "Simplify Verification",
-    description:
-      "Make product verification as easy as scanning a QR code. No special equipment needed - just a smartphone.",
-  },
-  {
-    icon: Zap,
-    title: "Streamline Compliance",
-    description:
-      "Help businesses stay compliant with regulatory requirements through automated tracking and instant reporting.",
-  },
-];
+const heroSlides = landingData.heroSlides;
+const features = landingData.features.map((feature: any) => ({
+  ...feature,
+  icon: iconMap[feature.icon],
+}));
+const objectives = landingData.objectives.map((objective: any) => ({
+  ...objective,
+  icon: iconMap[objective.icon],
+}));
 
 export function LandingPage() {
   const navigate = useNavigate();
+  const [api, setApi] = useState<any>(null);
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
 
-  // Auto-advance carousel
+  // Monitor carousel slides
   useEffect(() => {
-    if (!isAutoPlaying) return;
+    if (!api) return;
 
-    const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
-    }, 5000);
+    const updateSlide = () => {
+      setCurrentSlide(api.selectedScrollSnap());
+    };
 
-    return () => clearInterval(interval);
-  }, [isAutoPlaying]);
+    api.on("select", updateSlide);
+    updateSlide();
 
-  const nextSlide = () => {
-    setIsAutoPlaying(false);
-    setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
-  };
-
-  const prevSlide = () => {
-    setIsAutoPlaying(false);
-    setCurrentSlide(
-      (prev) => (prev - 1 + heroSlides.length) % heroSlides.length
-    );
-  };
-
-  const goToSlide = (index: number) => {
-    setIsAutoPlaying(false);
-    setCurrentSlide(index);
-  };
+    return () => {
+      api.off("select", updateSlide);
+    };
+  }, [api]);
 
   return (
     <div className="min-h-screen bg-white">
@@ -215,96 +131,84 @@ export function LandingPage() {
       </nav>
 
       {/* Hero Carousel */}
-      <section className="pt-16 relative overflow-hidden w-full">
-        <div className="relative h-100 md:h-175">
-          {heroSlides.map((slide, index) => (
-            <div
-              key={index}
-              className={`absolute inset-0 transition-all duration-700 ease-in-out ${
-                index === currentSlide
-                  ? "opacity-100 translate-x-0"
-                  : index < currentSlide
-                  ? "opacity-0 -translate-x-full"
-                  : "opacity-0 translate-x-full"
-              }`}
-            >
-              <div className={`h-full bg-linear-to-br ${slide.gradient}`}>
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full">
-                  <div className="flex flex-col md:flex-row items-center justify-center h-full gap-8 md:gap-16">
-                    {/* Text Content */}
-                    <div className="flex-1 text-center md:text-left pt-8 md:pt-0">
-                      <span className="inline-block px-4 py-1.5 bg-white/20 backdrop-blur-sm rounded-full text-white text-sm font-medium mb-4">
-                        {slide.subtitle}
-                      </span>
-                      <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
-                        {slide.title}
-                      </h1>
-                      <p className="text-lg md:text-xl text-text /90 mb-8 text-white max-w-xl">
-                        {slide.description}
-                      </p>
-                      <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
-                        <Button
-                          onClick={() => navigate("/login")}
-                          size="lg"
-                          className="app-bg-neutral hover:app-bg-muted-90 hover:text-white border-white text-text px-8 cursor-pointer"
-                        >
-                          Get Started Free
-                          <ArrowRight className="ml-2 h-5 w-5" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="lg"
-                          className="border app-border-neutral bg-transparent app-text-white cursor-pointer transition-colors"
-                          onClick={() =>
-                            document
-                              .getElementById("features")
-                              ?.scrollIntoView({ behavior: "smooth" })
-                          }
-                        >
-                          Learn More
-                        </Button>
+      <section className="pt-16 relative w-full">
+        <Carousel
+          setApi={setApi}
+          opts={{
+            align: "start",
+            loop: true,
+          }}
+          className="w-full relative"
+        >
+          <CarouselContent className="m-0">
+            {heroSlides.map((slide, index) => (
+              <CarouselItem key={index} className="p-0">
+                <div className={`h-100 md:h-175 bg-linear-to-br ${slide.gradient}`}>
+                  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full">
+                    <div className="flex flex-col md:flex-row items-center justify-center h-full gap-8 md:gap-16">
+                      {/* Text Content */}
+                      <div className="flex-1 text-center md:text-left pt-8 md:pt-0">
+                        <span className="inline-block px-4 py-1.5 bg-white/20 backdrop-blur-sm rounded-full text-white text-sm font-medium mb-4">
+                          {slide.subtitle}
+                        </span>
+                        <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
+                          {slide.title}
+                        </h1>
+                        <p className="text-lg md:text-xl text-text /90 mb-8 text-white max-w-xl">
+                          {slide.description}
+                        </p>
+                        <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
+                          <Button
+                            onClick={() => navigate("/login")}
+                            size="lg"
+                            className="app-bg-neutral hover:app-bg-muted-90 hover:text-white border-white text-text px-8 cursor-pointer"
+                          >
+                            Get Started Free
+                            <ArrowRight className="ml-2 h-5 w-5" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="lg"
+                            className="border app-border-neutral bg-transparent app-text-white cursor-pointer transition-colors"
+                            onClick={() =>
+                              document
+                                .getElementById("features")
+                                ?.scrollIntoView({ behavior: "smooth" })
+                            }
+                          >
+                            Learn More
+                          </Button>
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Image/Illustration */}
-                    <div className="hidden md:flex-1 justify-center  lg:flex">
-                      <div className="relative">
-                        <div className="absolute inset-0 bg-white/10 rounded-full blur-3xl scale-150" />
-                        <img
-                          src={slide.image}
-                          alt="RCV"
-                          className="relative w-48 h-48 md:w-64 md:h-64 lg:w-80 lg:h-80 object-contain drop-shadow-2xl"
-                        />
+                      {/* Image/Illustration */}
+                      <div className="hidden md:flex-1 justify-center  lg:flex">
+                        <div className="relative">
+                          <div className="absolute inset-0 bg-white/10 rounded-full blur-3xl scale-150" />
+                          <img
+                            src={slide.image}
+                            alt="RCV"
+                            className="relative w-48 h-48 md:w-64 md:h-64 lg:w-80 lg:h-80 object-contain drop-shadow-2xl"
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          ))}
+              </CarouselItem>
+            ))}
+          </CarouselContent>
 
-          {/* Carousel Controls */}
-          <button
-            onClick={prevSlide}
-            className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/20 backdrop-blur-sm text-text hover:bg-white/30 transition-colors z-10"
-            aria-label="Previous slide"
-          >
-            <ChevronLeft className="h-6 w-6" />
-          </button>
-          <button
-            onClick={nextSlide}
-            className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/20 backdrop-blur-sm text-text hover:bg-white/30 transition-colors z-10"
-            aria-label="Next slide"
-          >
-            <ChevronRight className="h-6 w-6" />
-          </button>
+          {/* Navigation Arrows */}
+          <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 z-30 bg-white/10 hover:bg-(--app-white) backdrop-blur-md border border-white/20 hover:border-white/40 text-white h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-300" />
+          <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 z-30 bg-white/10 hover:bg-(--app-white) backdrop-blur-md border border-white/20 hover:border-white/40 text-white h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-300" />
 
           {/* Carousel Indicators */}
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex justify-center gap-2 z-20">
             {heroSlides.map((_, index) => (
               <button
                 key={index}
-                onClick={() => goToSlide(index)}
+                onClick={() => api?.scrollTo(index)}
                 className={`w-3 h-3 rounded-full transition-all ${
                   index === currentSlide
                     ? "bg-white w-8"
@@ -314,7 +218,7 @@ export function LandingPage() {
               />
             ))}
           </div>
-        </div>
+        </Carousel>
       </section>
 
       {/* Features Section */}
