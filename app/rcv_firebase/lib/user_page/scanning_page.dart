@@ -19,6 +19,7 @@ import '../services/remote_config_service.dart';
 import '../widgets/feature_disabled_screen.dart';
 import '../utils/tab_history.dart';
 import '../pages/compliance_report_page.dart';
+import '../services/draft_service.dart';
 
 class QRScannerPage extends StatefulWidget {
   const QRScannerPage({super.key});
@@ -27,7 +28,8 @@ class QRScannerPage extends StatefulWidget {
   State<QRScannerPage> createState() => _QRScannerPageState();
 }
 
-class _QRScannerPageState extends State<QRScannerPage> {
+
+class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserver {
   MobileScannerController cameraController = MobileScannerController();
   String result = '';
   bool isFlashOn = false;
@@ -46,11 +48,30 @@ class _QRScannerPageState extends State<QRScannerPage> {
   String? _backImageUrl; // Firebase URL
   String? _ocrBlobText; // Store raw OCR text for compliance reports
   bool _isProcessingOCR = false; // Guard against duplicate processing
+  DateTime? _lastErrorTime; // Debounce errors to prevent spam
+  Map<String, dynamic>? _extractedInfo; // Store extracted info for re-display
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _requestCameraPermission();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Handle app lifecycle changes to fix black screen after timeout
+    if (!isOCRMode) {
+      if (state == AppLifecycleState.resumed) {
+        // Restart camera when app resumes
+        developer.log('📱 App resumed - restarting camera');
+        cameraController.start();
+      } else if (state == AppLifecycleState.paused) {
+        // Stop camera when app is paused to save resources
+        developer.log('📱 App paused - stopping camera');
+        cameraController.stop();
+      }
+    }
   }
 
   Future<void> _requestCameraPermission() async {
@@ -223,6 +244,33 @@ class _QRScannerPageState extends State<QRScannerPage> {
                               ),
                             ),
                           ],
+                          // View Scanned Details button - appears after OCR processing
+                          if (_extractedInfo != null && _ocrBlobText != null) ...[
+                            const SizedBox(height: 16),
+                            ElevatedButton.icon(
+                              onPressed: () => _showExtractedInfoModal(_extractedInfo!, _ocrBlobText!),
+                              icon: const Icon(Icons.visibility, size: 20),
+                              label: const Text(
+                                'View Scanned Details',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue.shade600,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 12,
+                                ),
+                                minimumSize: const Size(double.infinity, 48),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -363,6 +411,15 @@ class _QRScannerPageState extends State<QRScannerPage> {
 
   void _showErrorSnackBar(String message) {
     if (!mounted) return;
+    
+    // Debounce errors - don't show if we showed one less than 2 seconds ago
+    final now = DateTime.now();
+    if (_lastErrorTime != null && now.difference(_lastErrorTime!).inSeconds < 2) {
+      developer.log('⏳ Error debounced: $message');
+      return;
+    }
+    _lastErrorTime = now;
+    
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -1042,11 +1099,35 @@ class _QRScannerPageState extends State<QRScannerPage> {
 
   Future<void> _summarizeProduct(String ocrText) async {
     try {
-      // Show loading indicator
+      // Show loading indicator with descriptive text
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => const Center(child: CircularProgressIndicator()),
+        builder: (context) => Center(
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                CircularProgressIndicator(color: Color(0xFF005440)),
+                SizedBox(height: 16),
+                Text(
+                  'Generating AI Summary...',
+                  style: TextStyle(color: Color(0xFF005440), fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'This may take a moment',
+                  style: TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ),
       );
 
       final result = await _apiService.summarizeProduct(ocrText);
@@ -1257,6 +1338,15 @@ class _QRScannerPageState extends State<QRScannerPage> {
                         ),
                         const SizedBox(height: 12),
 
+                        // Brand Name
+                        _buildExtractedField(
+                          'Brand Name',
+                          extractedInfo['brandName'] ?? 'Not found',
+                          Icons.branding_watermark,
+                          Colors.indigo,
+                        ),
+                        const SizedBox(height: 12),
+
                         // LTO Number
                         _buildExtractedField(
                           'LTO Number',
@@ -1353,6 +1443,40 @@ class _QRScannerPageState extends State<QRScannerPage> {
                                     SizedBox(width: 8),
                                     Text(
                                       'Conduct Report',
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            // Set as Draft Button
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: () =>
+                                    _saveAsDraft(extractedInfo, ocrText),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.orange.shade600,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  elevation: 2,
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: const [
+                                    Icon(Icons.save_outlined, size: 20),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'Set as Draft',
                                       style: TextStyle(
                                         fontSize: 15,
                                         fontWeight: FontWeight.w600,
@@ -2028,6 +2152,70 @@ class _QRScannerPageState extends State<QRScannerPage> {
     );
   }
 
+  // Save scan as draft (without Firebase upload)
+  Future<void> _saveAsDraft(
+    Map<String, dynamic> extractedInfo,
+    String ocrText,
+  ) async {
+    try {
+      // Close the extracted info modal
+      Navigator.of(context).pop();
+
+      // Save draft with local image paths
+      final draftData = {
+        'scannedData': extractedInfo,
+        'productSearchResult': {'found': false, 'product': null},
+        'initialStatus': 'NON_COMPLIANT',
+        'localFrontPath': _frontImagePath,
+        'localBackPath': _backImagePath,
+        'ocrBlobText': _ocrBlobText ?? ocrText,
+        'savedAt': DateTime.now().toIso8601String(),
+      };
+
+      await DraftService.saveDraft(draftData);
+
+      developer.log('📝 Scan saved as draft');
+
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Saved to My Drafts'),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+
+      // Reset the scan state for next scan
+      setState(() {
+        _frontImagePath = null;
+        _backImagePath = null;
+        _frontImageUrl = null;
+        _backImageUrl = null;
+        _ocrBlobText = null;
+        _extractedInfo = null;
+      });
+    } catch (e) {
+      developer.log('Error saving draft: $e');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving draft: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   // New function to go directly to compliance report (skipping product search/comparison)
   Future<void> _conductReport(
     Map<String, dynamic> extractedInfo,
@@ -2055,20 +2243,24 @@ class _QRScannerPageState extends State<QRScannerPage> {
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (context) => const Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(color: Color(0xFF005440)),
-                SizedBox(height: 16),
-                Material(
-                  color: Colors.transparent,
-                  child: Text(
+          builder: (context) => Center(
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  CircularProgressIndicator(color: Color(0xFF005440)),
+                  SizedBox(height: 16),
+                  Text(
                     'Uploading images...',
-                    style: TextStyle(color: Colors.white, fontSize: 16),
+                    style: TextStyle(color: Color(0xFF005440), fontSize: 16, fontWeight: FontWeight.w600),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
@@ -2109,6 +2301,16 @@ class _QRScannerPageState extends State<QRScannerPage> {
         localBackPath: _backImagePath,
         ocrBlobText: _ocrBlobText,
       );
+
+      // Reset state for next scan after successful navigation
+      setState(() {
+        _frontImagePath = null;
+        _backImagePath = null;
+        _frontImageUrl = null;
+        _backImageUrl = null;
+        _ocrBlobText = null;
+        _extractedInfo = null;
+      });
     } catch (e) {
       developer.log('Error conducting report: $e');
 
@@ -2456,9 +2658,6 @@ class _QRScannerPageState extends State<QRScannerPage> {
       }
     });
 
-    // Add 1 second delay to ensure image is fully loaded before crop
-    await Future.delayed(const Duration(seconds: 1));
-
     // Navigate to crop page for visual adjustment (optional)
     if (!mounted) return;
     try {
@@ -2603,12 +2802,31 @@ class _QRScannerPageState extends State<QRScannerPage> {
         return;
       }
 
-      // Keep images as local files for now - upload only happens on report submission
-      developer.log('📁 Images ready for OCR processing (local files)');
-      developer.log('   Front: $frontImagePath');
-      developer.log('   Back: $backImagePath');
+      // Upload images to Firebase immediately after successful OCR
+      developer.log('📤 Uploading images to Firebase...');
+      try {
+        final scanId = DateTime.now().millisecondsSinceEpoch.toString();
+        final uploadResult = await FirebaseStorageService.uploadScanImages(
+          scanId: scanId,
+          frontImage: File(frontImagePath),
+          backImage: File(backImagePath),
+        );
+        
+        // Store the uploaded URLs
+        setState(() {
+          _frontImageUrl = uploadResult['frontUrl'];
+          _backImageUrl = uploadResult['backUrl'];
+        });
+        
+        developer.log('✅ Images uploaded successfully');
+        developer.log('   Front URL: ${_frontImageUrl}');
+        developer.log('   Back URL: ${_backImageUrl}');
+      } catch (uploadError) {
+        developer.log('⚠️ Image upload failed: $uploadError');
+        // Continue with OCR even if upload fails - we still have local paths
+      }
 
-      // Send to backend API for OCR processing (without uploading images)
+      // Send to backend API for OCR processing
       final apiService = ApiService();
       Map<String, dynamic> response;
 
@@ -2674,9 +2892,10 @@ class _QRScannerPageState extends State<QRScannerPage> {
       if (response['success'] == true && response['extractedInfo'] != null) {
         final extractedInfo = response['extractedInfo'];
 
-        // Store OCR blob text for compliance reports
+        // Store OCR blob text and extracted info for re-display
         setState(() {
           _ocrBlobText = combinedText;
+          _extractedInfo = extractedInfo;
         });
 
         if (response['found'] == true) {
@@ -2721,11 +2940,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
         result = combinedText;
       });
 
-      // Reset image paths for next scan
-      setState(() {
-        _frontImagePath = null;
-        _backImagePath = null;
-      });
+      // NOTE: Do NOT reset image paths here - user may still need them for Conduct Report
     } catch (e) {
       // Close loading dialog if open
       if (mounted) {
@@ -2763,6 +2978,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     cameraController.dispose();
     _textRecognizer.close();
     super.dispose();
