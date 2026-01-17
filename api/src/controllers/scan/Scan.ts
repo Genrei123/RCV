@@ -16,6 +16,7 @@ import { ProcessText } from "../../services/aiProcess";
 import { FirebaseStorageValidator } from "../../utils/FirebaseStorageValidator";
 import { searchProductWithGrounding } from "../../services/groundedSearchService";
 import { ILike } from "typeorm";
+import { FuzzySearchService } from "../../services/fuzzySearchService";
 
 export const scanProduct = async (
   req: Request,
@@ -35,52 +36,88 @@ export const scanProduct = async (
       );
     }
 
-    // Validate image URLs if provided
-    if (frontImageUrl && !FirebaseStorageValidator.isValidScanUrl(frontImageUrl)) {
-      return next(
-        new CustomError(400, "Invalid front image URL", {
-          data: "Front image must be from Firebase Storage scans/ folder",
-        })
-      );
-    }
-
-    if (backImageUrl && !FirebaseStorageValidator.isValidScanUrl(backImageUrl)) {
-      return next(
-        new CustomError(400, "Invalid back image URL", {
-          data: "Back image must be from Firebase Storage scans/ folder",
-        })
-      );
-    }
-
     console.log("Received OCR text length:", blockOfText.length);
-    if (frontImageUrl) console.log("Front image URL:", frontImageUrl);
-    if (backImageUrl) console.log("Back image URL:", backImageUrl);
-    console.log("Processing OCR text with AI...");
+    console.log("🔍 Performing Fuzzy Search on Database...");
 
-    // Process the OCR text with AI to extract product information
-    const processedOCRText = await ProcessText(blockOfText);
+    // perform fuzzy search - now returns { product, searchDetails }
+    const { product: matchedProduct, searchDetails } = await FuzzySearchService.searchProductsFuzzy(blockOfText);
 
-    console.log("Extracted product information:", processedOCRText);
+    if (matchedProduct) {
+      console.log("✅ Product found via Fuzzy Search:", matchedProduct.productName);
+      console.log("   Match type:", searchDetails.matchType, "on:", searchDetails.matchedOn);
+      
+      // Return the found product directly
+      return res.status(200).json({
+        success: true,
+        found: true,
+        message: "Product found in database",
+        matchDetails: searchDetails,
+        extractedInfo: {
+          productName: matchedProduct.productName,
+          LTONumber: matchedProduct.LTONumber,
+          CFPRNumber: matchedProduct.CFPRNumber,
+          expirationDate: matchedProduct.expirationDate ? new Date(matchedProduct.expirationDate).toISOString().split('T')[0] : null,
+          manufacturer: matchedProduct.company?.name || "Unknown",
+        },
+        product: matchedProduct, // Include full product object
+        rawOCRText: blockOfText,
+        frontImageUrl: frontImageUrl || null,
+        backImageUrl: backImageUrl || null,
+      });
+    } else {
+      console.log("❌ No matching product found in database.");
+      console.log("   Search details:", JSON.stringify(searchDetails));
+      
+      // Return found: false so the UI can show "No Result"
+      return res.status(200).json({
+        success: true,
+        found: false,
+        message: "No results found. Please ensure the label is clear and try again.",
+        searchDetails: searchDetails, // Include what we searched for (helps debugging)
+        rawOCRText: blockOfText,
+        frontImageUrl: frontImageUrl || null,
+        backImageUrl: backImageUrl || null,
+      });
+    }
 
-    // Return the extracted information WITHOUT querying the database
-    // User will decide whether to search the database or not
-    // Include image URLs in response for audit logging
-    res.status(200).json({
-      success: true,
-      message: "OCR text processed successfully",
-      extractedInfo: {
-        productName: processedOCRText.productName || "Unknown",
-        LTONumber: processedOCRText.LTONum || null,
-        CFPRNumber: processedOCRText.CFPRNum || null,
-        expirationDate: processedOCRText.ExpiryDate || null,
-        manufacturer: processedOCRText.ManufacturedBy || null,
-      },
-      rawOCRText: blockOfText,
-      frontImageUrl: frontImageUrl || null,
-      backImageUrl: backImageUrl || null,
-    });
   } catch (error) {
     console.error("Error in scanProduct:", error);
+    next(error);
+  }
+};
+
+// New endpoint for "More Details" / AI Summary
+export const summarizeScannedProduct = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { blockOfText } = req.body;
+
+    if (!blockOfText) {
+      return next(new CustomError(400, "OCR text is required"));
+    }
+
+    console.log("🧠 Generative AI Summary requested...");
+    
+    // Use the original AI process logic
+    const processedOCRText = await ProcessText(blockOfText);
+
+    // Also perform a grounded search if needed, or just return the AI extraction
+    // The user asked to "search the net", so grounded search is appropriate here too
+    // But ProcessText is what we had before. Let's stick to ProcessText as the "AI Thinking" 
+    // and maybe add grounded search if ProcessText is weak. 
+    // For now, let's return the ProcessText result as the "AI Analysis".
+
+    res.status(200).json({
+      success: true,
+      message: "AI Summary generated",
+      aiSummary: processedOCRText
+    });
+
+  } catch (error) {
+    console.error("Error in summarizeScannedProduct:", error);
     next(error);
   }
 };

@@ -111,6 +111,40 @@ class ApiService {
     }
   }
 
+  /// Summarize product using AI (ProcessText)
+  /// 
+  /// Calls the /scan/summarize endpoint to get AI-generated details
+  Future<Map<String, dynamic>> summarizeProduct(String ocrText) async {
+    try {
+      developer.log('Requesting AI summary for product...');
+      
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/mobile/scan/summarize'),
+            headers: await _getHeaders(),
+            body: jsonEncode({'blockOfText': ocrText}),
+          )
+          .timeout(const Duration(seconds: 60)); // Longer timeout for AI
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        return jsonData;
+      } else {
+        throw ApiException(
+          statusCode: response.statusCode,
+          message: 'Failed to generate summary',
+        );
+      }
+    } catch (e) {
+      developer.log('Error generating summary: $e');
+      throw ApiException(
+        statusCode: 0,
+        message: 'Network error during summary generation',
+        details: e.toString(),
+      );
+    }
+  }
+
   /// Search for product in database
   ///
   /// User can search by productName, LTONumber, or CFPRNumber

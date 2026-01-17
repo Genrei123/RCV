@@ -3,6 +3,9 @@ import 'package:rcv_firebase/themes/app_colors.dart';
 import 'package:rcv_firebase/services/api_service.dart';
 import 'package:location/location.dart';
 import 'dart:developer' as developer;
+import 'dart:io';
+import '../services/firebase_storage_service.dart';
+import '../services/draft_service.dart';
 
 class ComplianceReportPage extends StatefulWidget {
   final Map<String, dynamic> scannedData;
@@ -12,12 +15,23 @@ class ComplianceReportPage extends StatefulWidget {
   final String initialStatus; // 'COMPLIANT' or 'NON_COMPLIANT'
   final String? ocrBlobText; // Raw OCR text blob
 
+  final String? localFrontPath;
+  final String? localBackPath;
+  final String? draftId; 
+  final String? initialReason;
+  final String? initialNotes;
+
   const ComplianceReportPage({
     super.key,
     required this.scannedData,
     this.productSearchResult,
     this.frontImageUrl,
     this.backImageUrl,
+    this.localFrontPath,
+    this.localBackPath,
+    this.draftId,
+    this.initialReason,
+    this.initialNotes,
     required this.initialStatus,
     this.ocrBlobText,
   });
@@ -45,6 +59,10 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
   void initState() {
     super.initState();
     selectedStatus = widget.initialStatus;
+    selectedReason = widget.initialReason;
+    if (widget.initialNotes != null) {
+      notesController.text = widget.initialNotes!;
+    }
     
     // Debug logging to check received parameters
     developer.log('🔍 ComplianceReportPage initialized');
@@ -73,8 +91,9 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
       return;
     }
 
-    // Ensure images are always present
-    if (widget.frontImageUrl == null || widget.backImageUrl == null) {
+    // Ensure images are present (either URL or local path)
+    if (widget.frontImageUrl == null && widget.localFrontPath == null || 
+        widget.backImageUrl == null && widget.localBackPath == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Error: Scan images are missing. Please scan again.'),
@@ -89,6 +108,29 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
     });
 
     try {
+      // 1. Handle Deferred Upload if needed
+      String? finalFrontUrl = widget.frontImageUrl;
+      String? finalBackUrl = widget.backImageUrl;
+
+      if ((finalFrontUrl == null || finalBackUrl == null) && 
+          (widget.localFrontPath != null && widget.localBackPath != null)) {
+        
+        developer.log('🚀 Uploading deferred images...');
+        final scanId = 'scan_${DateTime.now().millisecondsSinceEpoch}';
+        final uploadResults = await FirebaseStorageService.uploadScanImages(
+          scanId: scanId,
+          frontImage: File(widget.localFrontPath!),
+          backImage: File(widget.localBackPath!),
+        );
+
+        if (uploadResults['frontUrl'] == null || uploadResults['backUrl'] == null) {
+          throw Exception('Failed to upload images');
+        }
+
+        finalFrontUrl = uploadResults['frontUrl'];
+        finalBackUrl = uploadResults['backUrl'];
+      }
+
       // Get current location
       Location location = Location();
       LocationData? locationData;
@@ -127,11 +169,16 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
         additionalNotes: notesController.text.trim().isNotEmpty
             ? notesController.text.trim()
             : null,
-        frontImageUrl: widget.frontImageUrl,
-        backImageUrl: widget.backImageUrl,
+        frontImageUrl: finalFrontUrl,
+        backImageUrl: finalBackUrl,
         location: locationJson,
         ocrBlobText: widget.ocrBlobText, // Pass OCR blob text to backend
       );
+
+      // If successful, delete draft if it exists
+      if (widget.draftId != null) {
+        await DraftService.deleteDraft(widget.draftId!);
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -160,6 +207,44 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
         setState(() {
           isSubmitting = false;
         });
+      }
+    }
+  }
+
+  Future<void> _saveDraft() async {
+    try {
+      final draft = {
+        'id': widget.draftId, // Preserve ID if updating existing draft
+        'scannedData': widget.scannedData,
+        'productSearchResult': widget.productSearchResult,
+        'frontImageUrl': widget.frontImageUrl,
+        'backImageUrl': widget.backImageUrl,
+        'localFrontPath': widget.localFrontPath,
+        'localBackPath': widget.localBackPath,
+        'initialStatus': selectedStatus,
+        'initialReason': selectedReason,
+        'initialNotes': notesController.text,
+        'ocrBlobText': widget.ocrBlobText,
+        'selectedReason': selectedReason,
+        'notes': notesController.text,
+      };
+
+      await DraftService.saveDraft(draft);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Report saved to drafts'),
+            backgroundColor: Colors.blue,
+          ),
+        );
+        Navigator.pop(context); // Close page after saving
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save draft: $e')),
+        );
       }
     }
   }
@@ -445,7 +530,8 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
                   const SizedBox(height: 16),
 
                   // Captured Product Images
-                  if (widget.frontImageUrl != null || widget.backImageUrl != null)
+                  if (widget.frontImageUrl != null || widget.backImageUrl != null || 
+                      widget.localFrontPath != null || widget.localBackPath != null)
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -479,7 +565,7 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
                           const SizedBox(height: 12),
                           Row(
                             children: [
-                              if (widget.frontImageUrl != null)
+                              if (widget.frontImageUrl != null || widget.localFrontPath != null)
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -495,28 +581,38 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
                                       const SizedBox(height: 6),
                                       ClipRRect(
                                         borderRadius: BorderRadius.circular(8),
-                                        child: Image.network(
-                                          widget.frontImageUrl!,
-                                          height: 150,
-                                          width: double.infinity,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (context, error, stackTrace) {
-                                            return Container(
+                                        child: widget.frontImageUrl != null 
+                                          ? Image.network(
+                                              widget.frontImageUrl!,
                                               height: 150,
-                                              color: Colors.grey[300],
-                                              child: const Center(
-                                                child: Icon(Icons.error),
-                                              ),
-                                            );
-                                          },
-                                        ),
+                                              width: double.infinity,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (context, error, stackTrace) {
+                                                return Container(
+                                                  height: 150,
+                                                  color: Colors.grey[300],
+                                                  child: const Center(
+                                                    child: Icon(Icons.error),
+                                                  ),
+                                                );
+                                              },
+                                            )
+                                          : (widget.localFrontPath != null 
+                                              ? Image.file(
+                                                  File(widget.localFrontPath!),
+                                                  height: 150,
+                                                  width: double.infinity,
+                                                  fit: BoxFit.cover,
+                                                )
+                                              : Container(height: 150, color: Colors.grey[200])),
                                       ),
                                     ],
                                   ),
                                 ),
-                              if (widget.frontImageUrl != null && widget.backImageUrl != null)
+                              if ((widget.frontImageUrl != null || widget.localFrontPath != null) && 
+                                  (widget.backImageUrl != null || widget.localBackPath != null))
                                 const SizedBox(width: 12),
-                              if (widget.backImageUrl != null)
+                              if (widget.backImageUrl != null || widget.localBackPath != null)
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -532,21 +628,30 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
                                       const SizedBox(height: 6),
                                       ClipRRect(
                                         borderRadius: BorderRadius.circular(8),
-                                        child: Image.network(
-                                          widget.backImageUrl!,
-                                          height: 150,
-                                          width: double.infinity,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (context, error, stackTrace) {
-                                            return Container(
+                                        child: widget.backImageUrl != null 
+                                          ? Image.network(
+                                              widget.backImageUrl!,
                                               height: 150,
-                                              color: Colors.grey[300],
-                                              child: const Center(
-                                                child: Icon(Icons.error),
-                                              ),
-                                            );
-                                          },
-                                        ),
+                                              width: double.infinity,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (context, error, stackTrace) {
+                                                return Container(
+                                                  height: 150,
+                                                  color: Colors.grey[300],
+                                                  child: const Center(
+                                                    child: Icon(Icons.error),
+                                                  ),
+                                                );
+                                              },
+                                            )
+                                          : (widget.localBackPath != null
+                                              ? Image.file(
+                                                  File(widget.localBackPath!),
+                                                  height: 150,
+                                                  width: double.infinity,
+                                                  fit: BoxFit.cover,
+                                                )
+                                              : Container(height: 150, color: Colors.grey[200])),
                                       ),
                                     ],
                                   ),
@@ -580,34 +685,58 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
                   ),
                 ],
               ),
-              child: ElevatedButton(
-                onPressed: isSubmitting ? null : _submitReport,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  disabledBackgroundColor: Colors.grey,
-                ),
-                child: isSubmitting
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      )
-                    : const Text(
-                        'Submit Report',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+              child: Column(
+                children: [
+                   // Save Draft Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: isSubmitting ? null : _saveDraft,
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: BorderSide(color: AppColors.primary),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
+                      child: const Text('Save as Draft'),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Submit Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: isSubmitting ? null : _submitReport,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        disabledBackgroundColor: Colors.grey,
+                      ),
+                      child: isSubmitting
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : const Text(
+                              'Submit Report',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
