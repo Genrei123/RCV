@@ -6,6 +6,7 @@ interface PaginationProps {
   onPageChange?: (page: number) => void;
   showingText?: string;
   showingPosition?: "left" | "right";
+  alwaysShowControls?: boolean;
 }
 
 function range(start: number, end: number) {
@@ -22,6 +23,7 @@ export function Pagination({
   onPageChange,
   showingText,
   showingPosition = "left",
+  alwaysShowControls = false,
 }: PaginationProps) {
   const startItem = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
   const endItem = Math.min(currentPage * itemsPerPage, totalItems);
@@ -64,7 +66,7 @@ export function Pagination({
           Page {currentPage} of {totalPages}
         </div>
         <div className="text-sm app-text-subtle">{showing}</div>
-        {totalPages > 1 && (
+        {(totalPages > 1 || alwaysShowControls) && (
           <nav
             className="inline-flex items-center space-x-2"
             aria-label="Pagination"
@@ -128,7 +130,7 @@ export function Pagination({
         {showingPosition === "left" && (
           <div className="text-sm app-text-subtle flex-shrink-0">{showing}</div>
         )}
-        {totalPages > 1 && (
+        {(totalPages > 1 || alwaysShowControls) && (
           <nav
             className="flex flex-wrap items-center gap-2"
             aria-label="Pagination"

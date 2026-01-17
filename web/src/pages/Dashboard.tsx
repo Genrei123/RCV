@@ -26,15 +26,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-  PaginationEllipsis,
-} from "@/components/ui/pagination";
+// removed unused UI pagination imports; using shared Pagination component instead
 import {
   Select,
   SelectContent,
@@ -72,6 +64,7 @@ import {
 } from "lucide-react";
 import ApprovalQueue from "@/components/ApprovalQueue";
 import MySubmissions from "@/components/MySubmissions";
+import { Pagination as SimplePagination } from '@/components/Pagination';
 
 export interface DashboardProps {
   success?: boolean;
@@ -586,7 +579,7 @@ export function Dashboard(props: DashboardProps) {
   // Server-driven pagination state
   const [loading, setLoading] = useState<boolean>(false);
   const [users, setUsers] = useState<User[]>([]);
-  const [pagination, setPagination] = useState<any | null>(null);
+  const [, setPagination] = useState<any | null>(null);
 
   // Helper to determine if parent passed a paginated payload
   const isPaginatedPayload = (
@@ -638,16 +631,9 @@ export function Dashboard(props: DashboardProps) {
     return 0;
   });
 
-  const totalItems = (() => {
-    if (pagination?.total_items != null) return pagination.total_items;
-    if (isPaginatedPayload(props.users))
-      return (
-        props.users.pagination?.total_items ?? props.users.data.length ?? 0
-      );
-    return usersArray.length ?? 0;
-  })();
-
-  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  // Use the client-side arrays for display totals so UI text matches rendered rows
+  const displayTotal = statusFilter === "all" ? usersArray.length ?? 0 : filteredUsers.length ?? 0;
+  const totalPages = Math.max(1, Math.ceil(displayTotal / pageSize));
 
   const paginatedDisplayData = sortedUsers;
 
@@ -890,100 +876,23 @@ export function Dashboard(props: DashboardProps) {
           />
         <div className="mt-4 flex items-center justify-between w-full">
           <div className="text-sm text-muted-foreground">
-            Showing {paginatedDisplayData.length} of {statusFilter === "all" ? totalItems : filteredUsers.length} users
+            Showing {paginatedDisplayData.length} of {displayTotal} users
             {statusFilter !== "all" && ` (filtered by ${statusFilter})`} • Page{" "}
             {currentPage} of {totalPages}
           </div>
 
-          <Pagination className="mx-0 w-auto">
-            <PaginationContent className="gap-1">
-              <PaginationItem>
-                <PaginationPrevious
-                  onClick={() => currentPage > 1 && fetchPage(currentPage - 1)}
-                  className={
-                    currentPage <= 1
-                      ? "pointer-events-none opacity-50"
-                      : "cursor-pointer"
-                  }
-                />
-              </PaginationItem>
-
-              {currentPage > 2 && (
-                <PaginationItem>
-                  <PaginationLink
-                    onClick={() => fetchPage(1)}
-                    className="cursor-pointer"
-                  >
-                    1
-                  </PaginationLink>
-                </PaginationItem>
-              )}
-
-              {currentPage > 3 && (
-                <PaginationItem>
-                  <PaginationEllipsis />
-                </PaginationItem>
-              )}
-
-              {currentPage > 1 && (
-                <PaginationItem>
-                  <PaginationLink
-                    onClick={() => fetchPage(currentPage - 1)}
-                    className="cursor-pointer"
-                  >
-                    {currentPage - 1}
-                  </PaginationLink>
-                </PaginationItem>
-              )}
-
-              <PaginationItem>
-                <PaginationLink isActive className="cursor-pointer">
-                  {currentPage}
-                </PaginationLink>
-              </PaginationItem>
-
-              {currentPage < totalPages && (
-                <PaginationItem>
-                  <PaginationLink
-                    onClick={() => fetchPage(currentPage + 1)}
-                    className="cursor-pointer"
-                  >
-                    {currentPage + 1}
-                  </PaginationLink>
-                </PaginationItem>
-              )}
-
-              {currentPage < totalPages - 2 && (
-                <PaginationItem>
-                  <PaginationEllipsis />
-                </PaginationItem>
-              )}
-
-              {currentPage < totalPages - 1 && (
-                <PaginationItem>
-                  <PaginationLink
-                    onClick={() => fetchPage(totalPages)}
-                    className="cursor-pointer"
-                  >
-                    {totalPages}
-                  </PaginationLink>
-                </PaginationItem>
-              )}
-
-              <PaginationItem>
-                <PaginationNext
-                  onClick={() =>
-                    currentPage < totalPages && fetchPage(currentPage + 1)
-                  }
-                  className={
-                    currentPage >= totalPages
-                      ? "pointer-events-none opacity-50"
-                      : "cursor-pointer"
-                  }
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
+          <div>
+            <SimplePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={displayTotal}
+              itemsPerPage={pageSize}
+              onPageChange={(p: number) => fetchPage(p)}
+              alwaysShowControls
+              showingPosition="right"
+              showingText={`Showing ${paginatedDisplayData.length} of ${displayTotal} users`}
+            />
+          </div>
         </div>
         </div>
         )}
