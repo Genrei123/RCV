@@ -236,7 +236,7 @@ export class FuzzySearchService {
           .leftJoinAndSelect("product.company", "company")
           .where("product.productName ILIKE :kw", { kw: `%${keyword}%` })
           .orWhere("product.brandName ILIKE :kw", { kw: `%${keyword}%` })
-          .orWhere("company.companyName ILIKE :kw", { kw: `%${keyword}%` })
+          .orWhere("company.name ILIKE :kw", { kw: `%${keyword}%` })
           .getOne();
         
         if (nameMatch) {
