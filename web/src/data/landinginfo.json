@@ -1,0 +1,85 @@
+{
+  "heroSlides": [
+    {
+      "title": "Secure Product Verification",
+      "subtitle": "Blockchain-Powered Authenticity",
+      "description": "Protect your products and consumers with our advanced blockchain verification system. Every product gets a unique, tamper-proof certificate.",
+      "image": "/logo.svg",
+      "gradient": "from-teal-600 to-emerald-700"
+    },
+    {
+      "title": "Real-Time Compliance",
+      "subtitle": "Stay Ahead of Regulations",
+      "description": "Monitor and manage regulatory compliance across your entire product portfolio. Get instant alerts and comprehensive reports.",
+      "image": "/logo.svg",
+      "gradient": "from-blue-600 to-indigo-700"
+    },
+    {
+      "title": "Instant QR Scanning",
+      "subtitle": "Verify in Seconds",
+      "description": "Consumers can instantly verify product authenticity by scanning QR codes. Build trust with transparent verification.",
+      "image": "/logo.svg",
+      "gradient": "from-purple-600 to-pink-700"
+    }
+  ],
+  "features": [
+    {
+      "icon": "Shield",
+      "title": "Blockchain Security",
+      "description": "Every certificate is stored on an immutable blockchain, ensuring tamper-proof verification and complete transparency.",
+      "color": "bg-teal-500"
+    },
+    {
+      "icon": "QrCode",
+      "title": "QR Code Verification",
+      "description": "Generate unique QR codes for each product that consumers can scan to instantly verify authenticity.",
+      "color": "bg-blue-500"
+    },
+    {
+      "icon": "Building2",
+      "title": "Company Management",
+      "description": "Register and manage companies, track their products, and maintain comprehensive compliance records.",
+      "color": "bg-purple-500"
+    },
+    {
+      "icon": "Package",
+      "title": "Product Tracking",
+      "description": "Track products from registration to distribution. Monitor lot numbers, expiration dates, and certifications.",
+      "color": "bg-orange-500"
+    },
+    {
+      "icon": "FileCheck",
+      "title": "Digital Certificates",
+      "description": "Generate professional PDF certificates with all product details and QR codes for offline verification.",
+      "color": "bg-green-500"
+    },
+    {
+      "icon": "BarChart3",
+      "title": "Analytics Dashboard",
+      "description": "Gain insights with powerful analytics. Track scans, monitor compliance rates, and identify trends.",
+      "color": "bg-indigo-500"
+    }
+  ],
+  "objectives": [
+    {
+      "icon": "Lock",
+      "title": "Combat Counterfeiting",
+      "description": "Our blockchain-based system makes it virtually impossible for counterfeit products to pass verification, protecting both businesses and consumers."
+    },
+    {
+      "icon": "Globe",
+      "title": "Enable Transparency",
+      "description": "Create a transparent ecosystem where product information is accessible and verifiable by anyone, anywhere, at any time."
+    },
+    {
+      "icon": "Smartphone",
+      "title": "Simplify Verification",
+      "description": "Make product verification as easy as scanning a QR code. No special equipment needed - just a smartphone."
+    },
+    {
+      "icon": "Zap",
+      "title": "Streamline Compliance",
+      "description": "Help businesses stay compliant with regulatory requirements through automated tracking and instant reporting."
+    }
+  ]
+}
