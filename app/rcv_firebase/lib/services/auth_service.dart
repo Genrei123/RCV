@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_constants.dart';
 
 /// Authentication Service using JWT Tokens
-/// 
+///
 /// This service handles authentication with the backend using JWT tokens
 /// stored in SharedPreferences and sent via Authorization headers.
 class AuthService {
@@ -96,40 +96,45 @@ class AuthService {
   }
 
   // Login user with JWT token
-  Future<Map<String, dynamic>> login(String email, String password, {bool rememberMe = false}) async {
+  Future<Map<String, dynamic>> login(
+    String email,
+    String password, {
+    bool rememberMe = false,
+  }) async {
     try {
       developer.log('Attempting mobile login for: $email');
 
       final uri = Uri.parse('$baseUrl/mobile/login');
-      final response = await http.post(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: json.encode({
-          'email': email,
-          'password': password,
-          'rememberMe': rememberMe,
-        }),
-      ).timeout(const Duration(seconds: 12));
+      final response = await http
+          .post(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            body: json.encode({
+              'email': email,
+              'password': password,
+              'rememberMe': rememberMe,
+            }),
+          )
+          .timeout(const Duration(seconds: 12));
 
       developer.log('Login status: ${response.statusCode}');
-      
+
       Map<String, dynamic>? responseData = _tryDecodeJson(response.body);
 
       if (response.statusCode == 200 &&
           (responseData?['success'] == true ||
               responseData?['token'] != null)) {
-        
         developer.log('✅ Login successful');
-        
+
         // Save the JWT token from response
         if (responseData?['token'] != null) {
           await _saveToken(responseData!['token']);
           developer.log('💾 JWT token saved');
         }
-        
+
         return {
           'success': true,
           'message': responseData?['message'] ?? 'Login successful',
@@ -137,12 +142,28 @@ class AuthService {
           'token': responseData?['token'],
         };
       } else if (response.statusCode == 403) {
-        // Account pending approval
-        return {
-          'success': false,
-          'approved': responseData?['approved'] ?? false,
-          'message': responseData?['message'] ?? 'Account pending approval',
-        };
+        // Account pending approval or app access disabled
+        final approved = responseData?['approved'];
+        final appAccess = responseData?['appAccess'];
+
+        if (approved == false) {
+          return {
+            'success': false,
+            'approved': false,
+            'message': responseData?['message'] ?? 'Account pending approval',
+          };
+        } else if (appAccess == false) {
+          return {
+            'success': false,
+            'appAccess': false,
+            'message': responseData?['message'] ?? 'Mobile access is disabled',
+          };
+        } else {
+          return {
+            'success': false,
+            'message': responseData?['message'] ?? 'Access denied',
+          };
+        }
       } else if (response.statusCode == 401) {
         // Invalid credentials
         return {'success': false, 'message': 'Invalid email or password'};
@@ -291,7 +312,7 @@ class AuthService {
   Future<void> logout() async {
     try {
       developer.log('🚪 Logging out user...');
-      
+
       // Clear local token
       await clearToken();
       developer.log('✅ User logged out successfully');
@@ -310,25 +331,24 @@ class AuthService {
         developer.log('❌ No token stored - user not logged in');
         return false;
       }
-      
+
       developer.log('🔍 Checking authentication with /mobile/me...');
-      
+
       // Verify with backend by calling /mobile/me endpoint
       final uri = Uri.parse('$baseUrl/mobile/me');
       final headers = await _getHeaders();
-      
+
       developer.log('📤 Request headers: $headers');
-      
-      final response = await http.get(
-        uri,
-        headers: headers,
-      ).timeout(const Duration(seconds: 5));
-      
+
+      final response = await http
+          .get(uri, headers: headers)
+          .timeout(const Duration(seconds: 5));
+
       developer.log('📥 Auth check response: ${response.statusCode}');
       if (response.statusCode != 200) {
         developer.log('❌ Auth check body: ${response.body}');
       }
-      
+
       return response.statusCode == 200;
     } catch (e) {
       developer.log('❌ Auth check error: $e');
@@ -340,11 +360,10 @@ class AuthService {
   Future<Map<String, dynamic>?> getCurrentUser() async {
     try {
       final uri = Uri.parse('$baseUrl/mobile/me');
-      final response = await http.get(
-        uri,
-        headers: await _getHeaders(),
-      ).timeout(const Duration(seconds: 10));
-      
+      final response = await http
+          .get(uri, headers: await _getHeaders())
+          .timeout(const Duration(seconds: 10));
+
       if (response.statusCode == 200) {
         return json.decode(response.body);
       }

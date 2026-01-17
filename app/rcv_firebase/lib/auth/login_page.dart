@@ -105,6 +105,14 @@ class _LoginPageState extends State<LoginPage> {
           hasEmailError = true;
           hasPasswordError = true;
         });
+      } else if (result['appAccess'] == false) {
+        // Mobile access disabled
+        setState(() {
+          emailError = 'Mobile access disabled';
+          passwordError = result['message'] ?? 'Contact administrator';
+          hasEmailError = true;
+          hasPasswordError = true;
+        });
       } else {
         // Invalid credentials or other error
         setState(() {
