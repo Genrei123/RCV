@@ -440,14 +440,15 @@ class KioskApp:
         os.makedirs(self.data_dir, exist_ok=True)
         
         # Performance optimization - cached display dimensions
-        self.display_width = 500   # Camera display width
-        self.display_height = 400  # Camera display height
+        self.display_width = 640   # Camera display width (matches container)
+        self.display_height = 480  # Camera display height (matches container)
         self.display_size_cached = False
         self.frame_skip_counter = 0
         self.frame_skip_rate = 2  # Process every Nth frame for display
         self.last_photo = None  # Cache last photo to avoid GC issues
         self.pdf_photos = []    # Cache for PDF pages (2 pages)
         self.logo_photo = None  # Cache for logo
+        self.camera_photo = None  # Persistent camera photo reference
         
         # Setup UI
         self.setup_ui()
@@ -544,25 +545,29 @@ class KioskApp:
         )
         camera_border.pack()
         
-        # Inner camera container
+        # Inner camera container - fixed size to prevent growing
         self.camera_container = tk.Frame(
             camera_border,
             bg=Colors.SURFACE,
-            width=560,
-            height=420
+            width=640,
+            height=480
         )
         self.camera_container.pack()
         self.camera_container.pack_propagate(False)
+        self.camera_container.grid_propagate(False)
         
-        # Camera label
+        # Camera label - fixed dimensions to prevent growing
         self.camera_label = tk.Label(
             self.camera_container,
             text="Initializing Camera...",
             font=("SF Pro Text", 16),
             bg=Colors.SURFACE,
-            fg=Colors.TEXT_SECONDARY
+            fg=Colors.TEXT_SECONDARY,
+            width=640,
+            height=480
         )
-        self.camera_label.pack(expand=True, fill=tk.BOTH)
+        self.camera_label.pack(expand=False, fill=tk.NONE)
+        self.camera_label.config(anchor=tk.CENTER)
         
         # Scanning indicator below camera
         self.scan_status_frame = tk.Frame(camera_outer, bg=Colors.BACKGROUND)
@@ -577,27 +582,60 @@ class KioskApp:
         )
         self.scan_indicator.pack()
         
-        # Footer with hints
-        footer = tk.Frame(self.scan_frame, bg=Colors.SURFACE, height=80)
+        # Footer with touch-friendly controls
+        footer = tk.Frame(self.scan_frame, bg=Colors.SURFACE, height=120)
         footer.pack(fill=tk.X, side=tk.BOTTOM)
         footer.pack_propagate(False)
         
-        hints_frame = tk.Frame(footer, bg=Colors.SURFACE)
-        hints_frame.pack(expand=True)
+        # Touch control panel
+        control_panel = tk.Frame(footer, bg=Colors.SURFACE)
+        control_panel.pack(expand=True, pady=10)
         
-        hints = [
-            "Scan Certificate QR Code",
-            "Scan Product Barcode",
-            "Results in seconds"
-        ]
-        for hint in hints:
-            tk.Label(
-                hints_frame,
-                text=hint,
-                font=("SF Pro Text", 14),
-                bg=Colors.SURFACE,
-                fg=Colors.TEXT_SECONDARY
-            ).pack(side=tk.LEFT, padx=40)
+        # Mute/Unmute button - LARGE for touch
+        self.mute_button = tk.Button(
+            control_panel,
+            text="🔊 SOUND ON" if not self.tts.is_muted else "🔇 SOUND OFF",
+            font=("SF Pro Text", 18, "bold"),
+            bg=Colors.PRIMARY,
+            fg=Colors.TEXT_WHITE,
+            activebackground=Colors.PRIMARY_LIGHT,
+            activeforeground=Colors.TEXT_WHITE,
+            relief=tk.RAISED,
+            bd=3,
+            padx=30,
+            pady=20,
+            command=self.toggle_sound
+        )
+        self.mute_button.pack(side=tk.LEFT, padx=20)
+        
+        # Exit button - LARGE for touch (hidden by default, shown on long press)
+        self.exit_button = tk.Button(
+            control_panel,
+            text="EXIT KIOSK",
+            font=("SF Pro Text", 18, "bold"),
+            bg=Colors.ERROR,
+            fg=Colors.TEXT_WHITE,
+            activebackground="#D32F2F",
+            activeforeground=Colors.TEXT_WHITE,
+            relief=tk.RAISED,
+            bd=3,
+            padx=30,
+            pady=20,
+            command=self.on_closing
+        )
+        # Bind long press to show exit button (3 second touch on mute button)
+        self.mute_button.bind('<Button-1>', self.start_exit_timer)
+        self.mute_button.bind('<ButtonRelease-1>', self.cancel_exit_timer)
+        self.exit_timer = None
+        
+        # Status hint
+        tk.Label(
+            control_panel,
+            text="Place QR/Barcode in view",
+            font=("SF Pro Text", 16),
+            bg=Colors.SURFACE,
+            fg=Colors.TEXT_SECONDARY
+        ).pack(side=tk.LEFT, padx=40)
     
     def _setup_loading_screen(self):
         """Setup the HUGE loading screen"""
@@ -651,56 +689,90 @@ class KioskApp:
         self.loading_detail_label.pack(pady=(50, 0))
     
     def _setup_result_screen(self):
-        """Setup the MASSIVE result screen with 2-page PDF support"""
-        # Header
-        self.result_header = tk.Frame(self.result_frame, bg=Colors.SUCCESS, height=120)
+        """Setup the result screen with responsive layout for small screens"""
+        # Header - responsive height
+        self.result_header = tk.Frame(self.result_frame, bg=Colors.SUCCESS, height=100)
         self.result_header.pack(fill=tk.X)
         self.result_header.pack_propagate(False)
         
         self.result_status_label = tk.Label(
             self.result_header,
             text="✓ VERIFIED",
-            font=("SF Pro Display", 48, "bold"),
+            font=("SF Pro Display", 36, "bold"),
             bg=Colors.SUCCESS,
             fg=Colors.TEXT_WHITE
         )
         self.result_status_label.pack(expand=True)
         
-        # Main content area - split into left (info) and right (PDF)
-        content = tk.Frame(self.result_frame, bg=Colors.BACKGROUND)
-        content.pack(fill=tk.BOTH, expand=True, padx=30, pady=20)
+        # Main content area - use canvas with scrollbar for small screens
+        content_container = tk.Frame(self.result_frame, bg=Colors.BACKGROUND)
+        content_container.pack(fill=tk.BOTH, expand=True)
         
-        # Left side - Information panel
-        self.result_info_frame = tk.Frame(content, bg=Colors.SURFACE, width=500)
-        self.result_info_frame.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 20))
-        self.result_info_frame.pack_propagate(False)
+        # Add scrollbar for small screens
+        scrollbar = tk.Scrollbar(content_container, orient=tk.VERTICAL)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         
-        # Right side - PDF display (2 pages side by side)
-        self.pdf_display_frame = tk.Frame(content, bg=Colors.SURFACE)
-        self.pdf_display_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+        self.result_canvas = tk.Canvas(
+            content_container,
+            bg=Colors.BACKGROUND,
+            yscrollcommand=scrollbar.set,
+            highlightthickness=0
+        )
+        self.result_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.config(command=self.result_canvas.yview)
         
-        # PDF pages container
+        # Content frame inside canvas
+        content = tk.Frame(self.result_canvas, bg=Colors.BACKGROUND)
+        self.result_canvas_window = self.result_canvas.create_window(
+            (0, 0), window=content, anchor=tk.NW
+        )
+        
+        # Bind canvas resize to update scroll region
+        content.bind('<Configure>', lambda e: self.result_canvas.configure(
+            scrollregion=self.result_canvas.bbox('all')
+        ))
+        
+        # Make canvas scrollable with touch
+        self.result_canvas.bind('<Button-1>', self.start_scroll)
+        self.result_canvas.bind('<B1-Motion>', self.do_scroll)
+        self.scroll_start_y = 0
+        
+        # Left side - Information panel (responsive width)
+        info_container = tk.Frame(content, bg=Colors.BACKGROUND)
+        info_container.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        self.result_info_frame = tk.Frame(info_container, bg=Colors.SURFACE)
+        self.result_info_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Right side - PDF display (responsive, stacked on small screens)
+        pdf_container = tk.Frame(content, bg=Colors.BACKGROUND)
+        pdf_container.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        self.pdf_display_frame = tk.Frame(pdf_container, bg=Colors.SURFACE)
+        self.pdf_display_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # PDF pages container - vertical stack for small screens
         self.pdf_pages_frame = tk.Frame(self.pdf_display_frame, bg=Colors.SURFACE)
-        self.pdf_pages_frame.pack(expand=True, fill=tk.BOTH, padx=10, pady=10)
+        self.pdf_pages_frame.pack(expand=True, fill=tk.BOTH, padx=5, pady=5)
         
-        # Two PDF page labels for 2-page display
+        # Two PDF page labels - stack vertically for better small screen support
         self.pdf_page1_label = tk.Label(
             self.pdf_pages_frame,
             text="Loading PDF Page 1...",
-            font=("SF Pro Text", 14),
+            font=("SF Pro Text", 12),
             bg=Colors.SURFACE,
             fg=Colors.TEXT_SECONDARY
         )
-        self.pdf_page1_label.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5))
+        self.pdf_page1_label.pack(side=tk.TOP, fill=tk.BOTH, expand=True, pady=(0, 3))
         
         self.pdf_page2_label = tk.Label(
             self.pdf_pages_frame,
             text="Loading PDF Page 2...",
-            font=("SF Pro Text", 14),
+            font=("SF Pro Text", 12),
             bg=Colors.SURFACE,
             fg=Colors.TEXT_SECONDARY
         )
-        self.pdf_page2_label.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(5, 0))
+        self.pdf_page2_label.pack(side=tk.TOP, fill=tk.BOTH, expand=True, pady=(3, 0))
         
         # Footer with timer
         self.result_footer = tk.Frame(self.result_frame, bg=Colors.PRIMARY, height=70)
@@ -825,6 +897,39 @@ class KioskApp:
                 x, y, x + cell * 0.8, y + cell * 0.8,
                 fill=color, outline=""
             )
+    
+    def start_scroll(self, event):
+        """Start touch scrolling on result canvas"""
+        self.scroll_start_y = event.y
+    
+    def do_scroll(self, event):
+        """Perform touch scrolling on result canvas"""
+        delta = self.scroll_start_y - event.y
+        self.result_canvas.yview_scroll(int(delta / 20), 'units')
+        self.scroll_start_y = event.y
+    
+    def toggle_sound(self):
+        """Toggle sound on/off - touch friendly"""
+        self.tts.toggle_mute()
+        button_text = "🔇 SOUND OFF" if self.tts.is_muted else "🔊 SOUND ON"
+        if hasattr(self, 'mute_button'):
+            self.mute_button.config(text=button_text)
+    
+    def start_exit_timer(self, event):
+        """Start timer for exit button reveal (long press)"""
+        self.exit_timer = self.root.after(3000, self.reveal_exit_button)
+    
+    def cancel_exit_timer(self, event):
+        """Cancel exit timer if button released early"""
+        if self.exit_timer:
+            self.root.after_cancel(self.exit_timer)
+            self.exit_timer = None
+    
+    def reveal_exit_button(self):
+        """Show exit button after long press"""
+        if hasattr(self, 'exit_button'):
+            self.exit_button.pack(side=tk.LEFT, padx=20)
+            self.root.after(5000, lambda: self.exit_button.pack_forget())  # Hide after 5 seconds
     
     def _hide_all_screens(self):
         """Hide all screen frames"""
@@ -2139,6 +2244,27 @@ class KioskApp:
         except Exception as e:
             print(f"Log error: {e}")
     
+    def toggle_sound(self):
+        """Toggle sound on/off - touch friendly"""
+        self.tts.toggle_mute()
+        button_text = "🔇 SOUND OFF" if self.tts.is_muted else "🔊 SOUND ON"
+        self.mute_button.config(text=button_text)
+    
+    def start_exit_timer(self, event):
+        """Start timer for exit button reveal (long press)"""
+        self.exit_timer = self.root.after(3000, self.reveal_exit_button)
+    
+    def cancel_exit_timer(self, event):
+        """Cancel exit timer if button released early"""
+        if self.exit_timer:
+            self.root.after_cancel(self.exit_timer)
+            self.exit_timer = None
+    
+    def reveal_exit_button(self):
+        """Show exit button after long press"""
+        self.exit_button.pack(side=tk.LEFT, padx=20)
+        self.root.after(5000, lambda: self.exit_button.pack_forget())  # Hide after 5 seconds
+    
     def on_closing(self):
         """Handle application closing"""
         self.is_running = False
@@ -2149,9 +2275,17 @@ class KioskApp:
             self.root.after_cancel(self.display_timer)
         if self.loading_animation_id:
             self.root.after_cancel(self.loading_animation_id)
+        if self.exit_timer:
+            self.root.after_cancel(self.exit_timer)
         
+        # Release camera resources
         if self.camera:
             self.camera.release()
+        
+        # Clear image references
+        self.camera_photo = None
+        self.pdf_photos = []
+        self.last_photo = None
         
         self.root.destroy()
 
