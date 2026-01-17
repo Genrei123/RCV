@@ -161,7 +161,8 @@ export class FuzzySearchService {
       warnings.push('Product is missing LTO number');
     }
 
-    // NEW VALIDATION LOGIC:
+    // NEW VALIDATION LOGIC - MORE LENIENT for product identification:
+    // We want to IDENTIFY the product, compliance checking happens separately
     // Priority: LTO/CFPR codes are MORE IMPORTANT than product names
     let confidence: 'high' | 'medium' | 'low';
     let valid: boolean;
@@ -176,22 +177,20 @@ export class FuzzySearchService {
       confidence = 'medium';
       valid = true;
       console.log(`   ✅ MEDIUM confidence: ${cfprFound ? 'CFPR' : 'LTO'} verified`);
-    } else if (!productHasCFPR && ltoFound) {
-      // ACCEPTABLE: Product has no CFPR but LTO matches
-      confidence = 'medium';
-      valid = true;
-      console.log('   ⚠️ MEDIUM confidence: LTO verified but product lacks CFPR registration');
     } else if (!productHasCFPR && !productHasLTO) {
-      // EDGE CASE: Product has neither code in database (match by name only)
+      // ACCEPT: Product has no codes in database (name match only)
+      // This is OK for identification, compliance check happens later
       confidence = 'low';
-      valid = true; // Accept but flag heavily
-      warnings.push('Product has NO registration codes in database');
-      console.log('   🚨 LOW confidence: Product has no LTO or CFPR codes');
+      valid = true;
+      warnings.push('Product identified by name only - no registration codes to verify');
+      console.log('   ⚠️ LOW confidence: Product identified by name (no codes to verify)');
     } else {
-      // REJECT: Has codes in DB but none match OCR
+      // ACCEPT ANYWAY: Product has codes but they're not in OCR
+      // This is OK - we identified the product, compliance check will catch missing codes
       confidence = 'low';
-      valid = false;
-      console.log('   ❌ REJECTED: Product codes do not match OCR');
+      valid = true;
+      warnings.push('Product identified but registration codes not found in OCR');
+      console.log('   ⚠️ LOW confidence: Product identified but codes not verified');
     }
     
     return { valid, missingFields, confidence, warnings };

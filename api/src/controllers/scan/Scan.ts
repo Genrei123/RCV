@@ -18,6 +18,47 @@ import { searchProductWithGrounding } from "../../services/groundedSearchService
 import { ILike } from "typeorm";
 import { FuzzySearchService } from "../../services/fuzzySearchService";
 
+/**
+ * Helper function to verify if required fields are present in OCR text
+ * This checks PACKAGING COMPLIANCE - not database records
+ */
+function verifyFieldInOCR(fieldValue: string | null | undefined, ocrText: string): boolean {
+  if (!fieldValue) return false;
+  
+  const upperOCR = ocrText.toUpperCase().replace(/[-\s]/g, '');
+  const cleanValue = fieldValue.toUpperCase().replace(/[-\s]/g, '');
+  
+  // Check multiple variants
+  const variants = [
+    fieldValue.toUpperCase(),
+    cleanValue,
+  ];
+  
+  return variants.some(variant => 
+    upperOCR.includes(variant) || 
+    ocrText.toUpperCase().includes(variant)
+  );
+}
+
+/**
+ * Extract expiration date from OCR text
+ */
+function extractExpirationFromOCR(ocrText: string): string | null {
+  const patterns = [
+    /EXP[:\s]*(\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/i,
+    /EXPIR[Y|ATION]*[:\s]*(\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/i,
+    /BEST\s+BEFORE[:\s]*(\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/i,
+    /USE\s+BY[:\s]*(\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/i,
+  ];
+  
+  for (const pattern of patterns) {
+    const match = ocrText.match(pattern);
+    if (match) return match[1];
+  }
+  
+  return null;
+}
+
 export const scanProduct = async (
   req: Request,
   res: Response,
@@ -37,55 +78,100 @@ export const scanProduct = async (
     }
 
     console.log("Received OCR text length:", blockOfText.length);
-    console.log("🔍 Performing Fuzzy Search on Database...");
+    console.log("🔍 Step 1: Identifying product from packaging...");
 
-    // perform fuzzy search - now returns { product, searchDetails, warnings }
-    const { product: matchedProduct, searchDetails, warnings } = await FuzzySearchService.searchProductsFuzzy(blockOfText);
+    // STEP 1: Identify the product (but don't use its database values yet)
+    const { product: identifiedProduct, searchDetails, warnings } = await FuzzySearchService.searchProductsFuzzy(blockOfText);
 
-    if (matchedProduct) {
-      console.log("✅ Product found via Fuzzy Search:", matchedProduct.productName);
+    if (identifiedProduct) {
+      console.log("✅ Product IDENTIFIED:", identifiedProduct.productName);
       console.log("   Match type:", searchDetails.matchType, "on:", searchDetails.matchedOn);
+      
+      console.log("\n🔍 Step 2: Verifying PACKAGING COMPLIANCE...");
+      console.log("   Checking what's actually printed on the packaging:");
+      
+      // STEP 2: Verify what's ACTUALLY on the packaging (compliance check)
+      const cfprOnPackaging = verifyFieldInOCR(identifiedProduct.CFPRNumber, blockOfText);
+      const ltoOnPackaging = verifyFieldInOCR(identifiedProduct.LTONumber, blockOfText);
+      const expirationOnPackaging = extractExpirationFromOCR(blockOfText);
+      
+      console.log(`   CFPR (${identifiedProduct.CFPRNumber}): ${cfprOnPackaging ? '✅ FOUND' : '❌ NOT FOUND'}`);
+      console.log(`   LTO (${identifiedProduct.LTONumber}): ${ltoOnPackaging ? '✅ FOUND' : '❌ NOT FOUND'}`);
+      console.log(`   Expiration Date: ${expirationOnPackaging ? '✅ FOUND (' + expirationOnPackaging + ')' : '❌ NOT FOUND'}`);
+      
+      // STEP 3: Build compliance violations list
+      const violations: string[] = [];
+      const complianceWarnings: string[] = [];
+      
+      // Critical violations (illegal)
+      if (!identifiedProduct.CFPRNumber) {
+        violations.push('CRITICAL: Product has NO CFPR in database (unregistered product)');
+      } else if (!cfprOnPackaging) {
+        violations.push('CRITICAL: CFPR number NOT printed on packaging (illegal)');
+      }
+      
+      if (!identifiedProduct.LTONumber) {
+        complianceWarnings.push('Product has NO LTO in database');
+      } else if (!ltoOnPackaging) {
+        violations.push('WARNING: LTO number NOT printed on packaging');
+      }
+      
+      if (!expirationOnPackaging) {
+        violations.push('WARNING: Expiration date NOT found on packaging');
+      }
+      
+      // Add database warnings
       if (warnings && warnings.length > 0) {
-        console.log("   ⚠️ WARNINGS:", warnings);
+        complianceWarnings.push(...warnings);
       }
       
-      // Prepare response with warnings for missing CFPR
-      const responseWarnings: string[] = [];
+      // STEP 4: Return COMPLIANCE REPORT (not full product info)
+      const isCompliant = violations.length === 0;
       
-      // Check if product is missing CFPR (potentially illegal)
-      if (!matchedProduct.CFPRNumber) {
-        responseWarnings.push('⚠️ CRITICAL: This product has NO CFPR registration number in our database. This may be an unregistered or illegal product.');
-      }
-      
-      // Check if product is missing LTO
-      if (!matchedProduct.LTONumber) {
-        responseWarnings.push('⚠️ This product has NO LTO number in our database.');
-      }
-      
-      // Add validation warnings
-      if (warnings && warnings.length > 0) {
-        responseWarnings.push(...warnings);
-      }
-      
-      // Return the found product with warnings
       return res.status(200).json({
         success: true,
         found: true,
-        message: responseWarnings.length > 0 
-          ? "Product found but has registration issues" 
-          : "Product found in database",
-        matchDetails: searchDetails,
-        warnings: responseWarnings.length > 0 ? responseWarnings : undefined,
-        extractedInfo: {
-          productName: matchedProduct.productName,
-          brandName: matchedProduct.brandName || null,
-          LTONumber: matchedProduct.LTONumber || 'NOT REGISTERED',
-          CFPRNumber: matchedProduct.CFPRNumber || 'NOT REGISTERED',
-          expirationDate: matchedProduct.expirationDate ? new Date(matchedProduct.expirationDate).toISOString().split('T')[0] : null,
-          manufacturer: matchedProduct.company?.name || "Unknown",
-          companyName: matchedProduct.company?.name || null,
+        productIdentified: true,
+        isCompliant: isCompliant,
+        message: isCompliant 
+          ? "Product identified - Packaging is compliant" 
+          : "Product identified - Packaging has violations",
+        
+        // Product identity (minimal info)
+        productInfo: {
+          productName: identifiedProduct.productName,
+          brandName: identifiedProduct.brandName || null,
+          manufacturer: identifiedProduct.company?.name || "Unknown",
         },
-        product: matchedProduct, // Include full product object
+        
+        // COMPLIANCE REPORT - what's on the packaging vs what should be
+        packagingCompliance: {
+          cfpr: {
+            required: identifiedProduct.CFPRNumber || null,
+            foundOnPackaging: cfprOnPackaging,
+            status: !identifiedProduct.CFPRNumber 
+              ? 'NOT_REGISTERED' 
+              : (cfprOnPackaging ? 'COMPLIANT' : 'VIOLATION'),
+          },
+          lto: {
+            required: identifiedProduct.LTONumber || null,
+            foundOnPackaging: ltoOnPackaging,
+            status: !identifiedProduct.LTONumber 
+              ? 'NOT_REGISTERED' 
+              : (ltoOnPackaging ? 'COMPLIANT' : 'VIOLATION'),
+          },
+          expirationDate: {
+            foundOnPackaging: expirationOnPackaging || null,
+            status: expirationOnPackaging ? 'COMPLIANT' : 'VIOLATION',
+          },
+        },
+        
+        // Violations and warnings
+        violations: violations.length > 0 ? violations : undefined,
+        warnings: complianceWarnings.length > 0 ? complianceWarnings : undefined,
+        
+        // Match details
+        matchDetails: searchDetails,
         rawOCRText: blockOfText,
         frontImageUrl: frontImageUrl || null,
         backImageUrl: backImageUrl || null,
