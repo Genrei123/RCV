@@ -493,7 +493,6 @@ class _MatchScoreBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final percentage = (score * 100).toStringAsFixed(1);
     final color = score >= 0.8
         ? Colors.green.shade600
         : score >= 0.6

@@ -39,24 +39,48 @@ export const scanProduct = async (
     console.log("Received OCR text length:", blockOfText.length);
     console.log("🔍 Performing Fuzzy Search on Database...");
 
-    // perform fuzzy search - now returns { product, searchDetails }
-    const { product: matchedProduct, searchDetails } = await FuzzySearchService.searchProductsFuzzy(blockOfText);
+    // perform fuzzy search - now returns { product, searchDetails, warnings }
+    const { product: matchedProduct, searchDetails, warnings } = await FuzzySearchService.searchProductsFuzzy(blockOfText);
 
     if (matchedProduct) {
       console.log("✅ Product found via Fuzzy Search:", matchedProduct.productName);
       console.log("   Match type:", searchDetails.matchType, "on:", searchDetails.matchedOn);
+      if (warnings && warnings.length > 0) {
+        console.log("   ⚠️ WARNINGS:", warnings);
+      }
       
-      // Return the found product directly
+      // Prepare response with warnings for missing CFPR
+      const responseWarnings: string[] = [];
+      
+      // Check if product is missing CFPR (potentially illegal)
+      if (!matchedProduct.CFPRNumber) {
+        responseWarnings.push('⚠️ CRITICAL: This product has NO CFPR registration number in our database. This may be an unregistered or illegal product.');
+      }
+      
+      // Check if product is missing LTO
+      if (!matchedProduct.LTONumber) {
+        responseWarnings.push('⚠️ This product has NO LTO number in our database.');
+      }
+      
+      // Add validation warnings
+      if (warnings && warnings.length > 0) {
+        responseWarnings.push(...warnings);
+      }
+      
+      // Return the found product with warnings
       return res.status(200).json({
         success: true,
         found: true,
-        message: "Product found in database",
+        message: responseWarnings.length > 0 
+          ? "Product found but has registration issues" 
+          : "Product found in database",
         matchDetails: searchDetails,
+        warnings: responseWarnings.length > 0 ? responseWarnings : undefined,
         extractedInfo: {
           productName: matchedProduct.productName,
           brandName: matchedProduct.brandName || null,
-          LTONumber: matchedProduct.LTONumber,
-          CFPRNumber: matchedProduct.CFPRNumber,
+          LTONumber: matchedProduct.LTONumber || 'NOT REGISTERED',
+          CFPRNumber: matchedProduct.CFPRNumber || 'NOT REGISTERED',
           expirationDate: matchedProduct.expirationDate ? new Date(matchedProduct.expirationDate).toISOString().split('T')[0] : null,
           manufacturer: matchedProduct.company?.name || "Unknown",
           companyName: matchedProduct.company?.name || null,

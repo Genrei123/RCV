@@ -48,13 +48,34 @@ export const searchProduct = async (
     if (products && products.length > 0) {
       console.log('✅ Product found in OUR database:', products.length, 'results');
 
+      // Check for missing registration numbers
+      const warnings: string[] = [];
+      const firstProduct = products[0];
+      
+      if (!firstProduct.CFPRNumber) {
+        warnings.push('⚠️ CRITICAL: This product has NO CFPR registration number. This may be an unregistered or illegal product.');
+      }
+      
+      if (!firstProduct.LTONumber) {
+        warnings.push('⚠️ This product has NO LTO number.');
+      }
+      
+      // If multiple products match, warn about it
+      if (products.length > 1) {
+        warnings.push(`⚠️ Multiple products found (${products.length} matches). LTO/CFPR numbers are more reliable identifiers than product names.`);
+      }
+
       return res.status(200).json({
         success: true,
         found: true,
-        message: 'Product found in database',
+        message: warnings.length > 0 
+          ? 'Product found but has registration issues' 
+          : 'Product found in database',
         source: 'internal_database',
-        product: products[0], // Return first match for compatibility
-        data: products[0],
+        warnings: warnings.length > 0 ? warnings : undefined,
+        product: firstProduct, // Return first match for compatibility
+        data: firstProduct,
+        allMatches: products.length > 1 ? products : undefined, // Include all matches if multiple
         totalMatches: products.length,
       });
     }
