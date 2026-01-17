@@ -256,7 +256,60 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, dynamic result) async {
+        if (didPop) return;
+        
+        // Check if there's any content written (status changed or notes added)
+        final hasChanges = selectedStatus != widget.initialStatus ||
+            notesController.text.trim().isNotEmpty ||
+            selectedReason != null;
+        
+        if (!hasChanges) {
+          // No changes, just pop
+          Navigator.of(context).pop();
+          return;
+        }
+        
+        // Show confirmation dialog
+        final shouldDiscard = await showDialog<bool>(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('Unsaved Report'),
+              content: const Text(
+                'You have unsaved changes. Do you want to save this report as a draft or discard it?',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(true), // Discard
+                  child: const Text(
+                    'Discard',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    Navigator.of(context).pop(false); // Don't discard
+                    // Save as draft
+                    await _saveAsDraft();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                  ),
+                  child: const Text('Save as Draft'),
+                ),
+              ],
+            );
+          },
+        );
+        
+        if (shouldDiscard == true && context.mounted) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         leading: IconButton(
@@ -797,7 +850,8 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
           ),
         ],
       ),
-    );
+    ), // Scaffold
+    ); // PopScope
   }
 
   Widget _buildSummaryRow(String label, String value) {
@@ -817,5 +871,52 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
         ],
       ),
     );
+  }
+
+  Future<void> _saveAsDraft() async {
+    try {
+      final draftData = {
+        'scannedData': widget.scannedData,
+        'productSearchResult': widget.productSearchResult ?? {'found': false, 'product': null},
+        'initialStatus': selectedStatus,
+        'initialReason': selectedReason,
+        'initialNotes': notesController.text,
+        'localFrontPath': widget.localFrontPath,
+        'localBackPath': widget.localBackPath,
+        'frontImageUrl': widget.frontImageUrl,
+        'backImageUrl': widget.backImageUrl,
+        'ocrBlobText': widget.ocrBlobText,
+        'savedAt': DateTime.now().toIso8601String(),
+      };
+
+      await DraftService.saveDraft(draftData);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Report saved as draft'),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      developer.log('Error saving draft: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving draft: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }
