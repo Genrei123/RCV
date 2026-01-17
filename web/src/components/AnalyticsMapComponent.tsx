@@ -2,9 +2,24 @@ import { useState, useEffect, useRef } from "react";
 import { BarChart3, RefreshCw, MapPin, Activity, Menu, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import analyticsService from "../services/analyticsService";
+import { apiClient } from "../services/axiosConfig";
 import type { APIResponse } from "../services/analyticsService";
-import sampleReportsData from "../../reports_sample.json";
+//import sampleReportsData from "../../reports_sample.json";
 import { ScatterplotLayer } from "@deck.gl/layers";
 import { HexagonLayer } from "@deck.gl/aggregation-layers";
 import { COORDINATE_SYSTEM } from "@deck.gl/core";
@@ -28,6 +43,10 @@ export function AnalyticsMapComponent() {
   const [show3DHeatmap, setShow3DHeatmap] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [selectedReport, setSelectedReport] = useState<any>(null);
+  const [resolutionStatus, setResolutionStatus] = useState<string>("COMPLIANT");
+  const [originalStatus, setOriginalStatus] = useState<string | null>(null);
+  const [changeStatus, setChangeStatus] = useState(false);
   const hamburgerRef = useRef<HTMLDivElement | null>(null);
   const drawerRef = useRef<HTMLDivElement | null>(null);
   const hamburgerOriginalParentRef = useRef<HTMLElement | null>(null);
@@ -48,6 +67,29 @@ export function AnalyticsMapComponent() {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResolveReport = async (reportId: string) => {
+    try {
+      // If not changing status, use original status
+      const finalStatus = changeStatus ? resolutionStatus : originalStatus;
+      
+      const response = await apiClient.post(`/analytics/reports/${reportId}/resolve`, {
+        resolution: finalStatus,
+      });
+
+      // Close dialog and refresh data
+      setSelectedReport(null);
+      setResolutionStatus("COMPLIANT");
+      setOriginalStatus(null);
+      setChangeStatus(false);
+      alert(response.data.message || 'Report processed successfully!');
+      // Optionally refresh the analysis
+      callDBSCANAPI();
+    } catch (err: any) {
+      const errorMsg = err?.response?.data?.message || err?.message || 'Failed to resolve report';
+      alert(errorMsg);
     }
   };
 
@@ -287,6 +329,27 @@ export function AnalyticsMapComponent() {
           },
         };
       },
+      onClick: async ({ object }: any) => {
+        if (object && object.reportId) {
+          // Fetch full report details to get current status
+          try {
+            const response = await apiClient.get(`/compliance/reports/${object.reportId}`);
+            const reportData = response.data.data;
+            setSelectedReport({ ...object, currentStatus: reportData.status });
+            setOriginalStatus(reportData.status);
+            setResolutionStatus(reportData.status); // Default to current status
+            setChangeStatus(false); // Reset checkbox
+          } catch (err) {
+            // Fallback if fetch fails
+            console.error('Failed to fetch report details:', err);
+            const fallbackStatus = object.status || 'NON_COMPLIANT';
+            setSelectedReport({ ...object, currentStatus: fallbackStatus });
+            setOriginalStatus(fallbackStatus);
+            setResolutionStatus(fallbackStatus);
+            setChangeStatus(false);
+          }
+        }
+      },
     });
     deckOverlayRef.current.setMap(googleMapRef.current);
     // Ensure deck.gl overlay does not block Google Maps interactions
@@ -354,8 +417,11 @@ export function AnalyticsMapComponent() {
 
         if (lat === null || lng === null) return; // skip invalid points
 
+        const reportId = (point as any)._id ?? (point as any).report?._id ?? null;
+
         clusterPoints.push({
           position: [lng, lat],
+          reportId: reportId,
           product:
             (point as any).product ??
             (point as any).report?.scannedData?.productName ??
@@ -370,7 +436,9 @@ export function AnalyticsMapComponent() {
             "Report"
           }</strong><br/>Cluster: ${cluster.cluster_id}<br/>Scanned by: ${
             (point as any).scannedBy ?? (point as any).report?.agentId ?? ""
-          }<br/>Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}`,
+          }<br/>Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}${
+            reportId ? `<br/>Report ID: ${reportId}` : ""
+          }`,
         });
       });
     });
@@ -391,8 +459,11 @@ export function AnalyticsMapComponent() {
         const lng = toNum(lngRaw);
         if (lat === null || lng === null) return;
 
+        const reportId = (point as any)._id ?? (point as any).report?._id ?? null;
+
         noisePoints.push({
           position: [lng, lat],
+          reportId: reportId,
           product:
             (point as any).product ??
             (point as any).report?.scannedData?.productName ??
@@ -405,7 +476,9 @@ export function AnalyticsMapComponent() {
             "Report"
           }</strong><br/>Noise Point<br/>Scanned by: ${
             (point as any).scannedBy ?? (point as any).report?.agentId ?? ""
-          }<br/>Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}`,
+          }<br/>Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}${
+            reportId ? `<br/>Report ID: ${reportId}` : ""
+          }`,
         });
       });
     }
@@ -519,7 +592,7 @@ export function AnalyticsMapComponent() {
             // Fallback to red if parsing fails
             return [255, 0, 0, 220];
           },
-          pickable: false,
+          pickable: true,
           radiusMinPixels: 8,
           radiusMaxPixels: 20,
           stroked: true,
@@ -538,7 +611,7 @@ export function AnalyticsMapComponent() {
           getPosition: (d: any) => d.position,
           getRadius: 120,
           getFillColor: [107, 114, 128, 220], // Gray for noise
-          pickable: false,
+          pickable: true,
           radiusMinPixels: 8,
           radiusMaxPixels: 20,
           stroked: true,
@@ -642,7 +715,6 @@ export function AnalyticsMapComponent() {
             <Card className="shadow-sm p-3 bg-white border border-gray-200">
               <div className="text-left">
                 <p className="text-xs text-gray-600 mb-2">
-                  {sampleReportsData.reports.length} reports available
                 </p>
                 <Button
                   onClick={callDBSCANAPI}
@@ -811,6 +883,152 @@ export function AnalyticsMapComponent() {
           </div>
         </div>
       </div>
+
+      {/* Report Details Dialog */}
+      <Dialog open={!!selectedReport} onOpenChange={() => setSelectedReport(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedReport?.product || "Compliance Report"}
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedReport && (
+            <div className="space-y-4">
+              {/* Report ID */}
+              {selectedReport.reportId && (
+                <div className="border-b pb-3">
+                  <p className="text-sm font-medium text-neutral-500 mb-1">
+                    Report ID
+                  </p>
+                  <p className="text-sm font-mono bg-gray-50 p-2 rounded">
+                    {selectedReport.reportId}
+                  </p>
+                </div>
+              )}
+
+              {/* Product Name */}
+              <div className="border-b pb-3">
+                <p className="text-sm font-medium text-neutral-500 mb-1">
+                  Product
+                </p>
+                <p className="text-base text-neutral-900">
+                  {selectedReport.product || "N/A"}
+                </p>
+              </div>
+
+              {/* Cluster Info */}
+              {selectedReport.clusterId !== undefined && (
+                <div className="border-b pb-3">
+                  <p className="text-sm font-medium text-neutral-500 mb-1">
+                    Cluster
+                  </p>
+                  <div className="flex items-center gap-2">
+                    {selectedReport.color && (
+                      <div
+                        className="w-4 h-4 rounded-full border border-gray-300"
+                        style={{ backgroundColor: selectedReport.color }}
+                      />
+                    )}
+                    <p className="text-base text-neutral-900">
+                      {selectedReport.clusterId === -1
+                        ? "Noise Point"
+                        : `Cluster ${selectedReport.clusterId}`}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Location */}
+              <div className="border-b pb-3">
+                <p className="text-sm font-medium text-neutral-500 mb-1">
+                  Location
+                </p>
+                <p className="text-sm font-mono text-neutral-900">
+                  Lat: {selectedReport.position[1].toFixed(6)}, Lng:{" "}
+                  {selectedReport.position[0].toFixed(6)}
+                </p>
+              </div>
+
+              {/* Current Status */}
+              {selectedReport.currentStatus && (
+                <div className="border-b pb-3">
+                  <p className="text-sm font-medium text-neutral-500 mb-1">
+                    Current Status
+                  </p>
+                  <p className="text-base text-neutral-900">
+                    {selectedReport.currentStatus === 'COMPLIANT' 
+                      ? 'Compliant'
+                      : selectedReport.currentStatus === 'NON_COMPLIANT'
+                      ? 'Non-Compliant'
+                      : 'Fraudulent'}
+                  </p>
+                </div>
+              )}
+
+              {/* Change Status Checkbox */}
+              <div className="border-b pb-3">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={changeStatus}
+                    onChange={(e) => setChangeStatus(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-300"
+                  />
+                  <span className="text-sm font-medium text-neutral-700">
+                    Change Status (Deny)
+                  </span>
+                </label>
+              </div>
+
+              {/* Status Dropdown (only shown if checkbox is checked) */}
+              {changeStatus && (
+                <div className="border-b pb-3">
+                  <p className="text-sm font-medium text-neutral-500 mb-1">
+                    New Status
+                  </p>
+                  <Select value={resolutionStatus} onValueChange={setResolutionStatus}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="COMPLIANT">Compliant</SelectItem>
+                      <SelectItem value="NON_COMPLIANT">Non-Compliant</SelectItem>
+                      <SelectItem value="FRAUDULENT">Fraudulent</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="flex gap-2 sm:gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (selectedReport) {
+                  window.open(
+                    `https://www.google.com/maps?q=${selectedReport.position[1]},${selectedReport.position[0]}`,
+                    "_blank"
+                  );
+                }
+              }}
+            >
+              <MapPin className="h-4 w-4 mr-2" />
+              View on Map
+            </Button>
+            <Button
+              onClick={() => {
+                if (selectedReport?.reportId) {
+                  handleResolveReport(selectedReport.reportId);
+                }
+              }}
+            >
+              Approve
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
