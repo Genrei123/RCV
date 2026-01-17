@@ -16,8 +16,7 @@ class ApiService {
   // For Android Emulator use: 'http://10.0.2.2:3000/api/v1'
   // For iOS Simulator use: 'http://localhost:3000/api/v1'
   // For Physical Device use: 'http://YOUR_COMPUTER_IP:3000/api/v1'
-  static const String baseUrl =
-      'http://192.168.1.6:3000/api/v1';
+  static const String baseUrl = 'https://rcv-production-cbd6.up.railway.app/api/v1';
   // Update nalang tong link kung ano yung deployed na backend
 
   // Get authorization headers
@@ -107,6 +106,40 @@ class ApiService {
       throw ApiException(
         statusCode: 0,
         message: 'An unexpected error occurred',
+        details: e.toString(),
+      );
+    }
+  }
+
+  /// Summarize product using AI (ProcessText)
+  /// 
+  /// Calls the /scan/summarize endpoint to get AI-generated details
+  Future<Map<String, dynamic>> summarizeProduct(String ocrText) async {
+    try {
+      developer.log('Requesting AI summary for product...');
+      
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/mobile/scan/summarize'),
+            headers: await _getHeaders(),
+            body: jsonEncode({'blockOfText': ocrText}),
+          )
+          .timeout(const Duration(seconds: 60)); // Longer timeout for AI
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        return jsonData;
+      } else {
+        throw ApiException(
+          statusCode: response.statusCode,
+          message: 'Failed to generate summary',
+        );
+      }
+    } catch (e) {
+      developer.log('Error generating summary: $e');
+      throw ApiException(
+        statusCode: 0,
+        message: 'Network error during summary generation',
         details: e.toString(),
       );
     }

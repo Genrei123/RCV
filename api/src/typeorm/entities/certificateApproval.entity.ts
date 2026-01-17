@@ -69,9 +69,6 @@ export class CertificateApproval {
   @Column({ nullable: true })
   firstApproverWallet?: string;
 
-  @Column({ nullable: true })
-  firstApprovalDate?: Date;
-
   @Column({ type: 'text', nullable: true })
   firstApprovalSignature?: string;
 

@@ -19,7 +19,8 @@ import {
   scanProduct, 
   searchScannedProduct, 
   getScans, 
-  getScansByID 
+  getScansByID,
+  summarizeScannedProduct
 } from '../../controllers/scan/Scan';
 
 // Import audit log controllers
@@ -57,6 +58,7 @@ MobileRouter.post('/change-password', verifyMobileUser, changePassword);
 // All scan operations require authentication
 // ============================================
 MobileRouter.post('/scan', verifyMobileUser, scanProduct);
+MobileRouter.post('/scan/summarize', verifyMobileUser, summarizeScannedProduct);
 MobileRouter.post('/scan/search', verifyMobileUser, searchScannedProduct);
 MobileRouter.get('/scan/history', verifyMobileUser, getScans);
 MobileRouter.get('/scan/history/:id', verifyMobileUser, getScansByID);

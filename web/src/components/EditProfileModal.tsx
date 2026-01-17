@@ -2,7 +2,6 @@ import {
   X,
   User,
   Mail,
-  Phone,
   MapPin,
   Calendar,
   Hash,
@@ -24,9 +23,8 @@ interface PhilippineCity {
 import {
   validatePhilippinePhoneNumber,
   formatPhoneNumberForDatabase,
-  extractPhoneNumberDigits,
-  formatPhoneNumberForDisplay,
 } from "@/utils/phoneValidation";
+import { PhoneNumberInput } from "@/components/PhoneNumberInput";
 
 interface EditProfileModalProps {
   isOpen: boolean;
@@ -461,51 +459,18 @@ export function EditProfileModal({
                   )}
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">
-                    Phone Number
-                  </label>
-                  <div className="flex gap-0 rounded-lg border border-neutral-300 overflow-hidden bg-white">
-                    {/* Country Code Prefix with Icon */}
-                    <div className="flex items-center gap-2 bg-neutral-50 px-4 border-r border-neutral-300 pr-3 pointer-events-none">
-                      <Phone className="text-neutral-500 w-5 h-5" />
-                      <span className="text-neutral-700 whitespace-nowrap">
-                        +63
-                      </span>
-                    </div>
-                    {/* Phone Input */}
-                    <div className="flex-1 relative">
-                      {(() => {
-                        const plainDigits = formData.phoneNumber
-                          ? extractPhoneNumberDigits(formData.phoneNumber)
-                          : "";
-                        const displayValue =
-                          formatPhoneNumberForDisplay(plainDigits);
-                        return (
-                          <Input
-                            type="tel"
-                            placeholder="999-999-9999"
-                            className={`border-0 h-9.5 w-full px-3 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:ring-offset-0 transition-all ${
-                              errors.phoneNumber ? "bg-red-50" : ""
-                            }`}
-                            value={displayValue}
-                            onChange={(e) => {
-                              // Remove dashes and only allow digits, limit to 10 characters
-                              const value = e.target.value
-                                .replace(/\D/g, "")
-                                .slice(0, 10);
-                              handleChange("phoneNumber", value);
-                            }}
-                            maxLength={12}
-                          />
-                        );
-                      })()}
-                    </div>
-                  </div>
-                  {errors.phoneNumber && (
-                    <p className="text-xs text-red-500">{errors.phoneNumber}</p>
-                  )}
-                </div>
+                <PhoneNumberInput
+                  value={formData.phoneNumber || ""}
+                  onChange={(value) => handleChange("phoneNumber", value)}
+                  onBlur={() => {
+                    // Validation happens in handleChange
+                  }}
+                  error={errors.phoneNumber}
+                  disabled={loading}
+                  label="Phone Number"
+                  required={false}
+                  placeholder="9991113333"
+                />
 
                 <div className="space-y-2 md:col-span-2">
                   <label className="text-sm font-medium text-gray-700">
@@ -607,7 +572,7 @@ export function EditProfileModal({
 
             {/* Warning Note */}
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex gap-3">
-              <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
               <div className="flex-1">
                 <p className="text-sm font-medium text-amber-900 mb-1">
                   Important Note

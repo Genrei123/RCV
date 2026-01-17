@@ -66,6 +66,33 @@ export function UserDetailModal({
     }
   }, [user?._id, user?.webAccess, user?.appAccess, user?.walletAddress, user?.walletAuthorized]);
 
+  // Disable background scroll when modal is open (match AddAgentModal behavior)
+  useEffect(() => {
+    if (isOpen) {
+      const html = document.documentElement;
+      const body = document.body;
+      const previousHtmlOverflow = html.style.overflow;
+      const previousBodyOverflow = body.style.overflow;
+      const previousBodyPosition = body.style.position;
+      const scrollY = window.scrollY;
+
+      html.style.overflow = "hidden";
+      body.style.overflow = "hidden";
+      body.style.position = "fixed";
+      body.style.width = "100%";
+      body.style.top = `-${scrollY}px`;
+
+      return () => {
+        html.style.overflow = previousHtmlOverflow;
+        body.style.overflow = previousBodyOverflow;
+        body.style.position = previousBodyPosition;
+        body.style.width = "";
+        body.style.top = "";
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [isOpen]);
+
   if (!isOpen || !user) return null;
 
   // Check if user is rejected - rejected users have no access and cannot be modified
@@ -219,7 +246,7 @@ export function UserDetailModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-hidden">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
@@ -680,7 +707,7 @@ export function UserDetailModal({
                       onClick={handleUpdateWallet}
                       disabled={walletLoading || isRejected || !walletAddress}
                       size="sm"
-                      className="bg-purple-600 hover:bg-purple-700"
+                      className="app-bg-primary hover:app-bg-accent"
                     >
                       {walletLoading ? (
                         <>

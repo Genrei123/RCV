@@ -14,6 +14,7 @@ export const ComplianceReportValidation = z.object({
   _id: z.string().uuid().optional(),
   agentId: z.string().uuid(),
   status: z.nativeEnum(ComplianceStatus),
+  isVerified: z.boolean().optional(),
   scannedData: z.record(z.string(), z.any()),
   productSearchResult: z.record(z.string(), z.any()).optional().nullable(),
   nonComplianceReason: z.nativeEnum(NonComplianceReason).optional().nullable(),
@@ -47,6 +48,10 @@ export class ComplianceReport {
     default: ComplianceStatus.COMPLIANT,
   })
   status!: ComplianceStatus;
+
+  // Whether the report has been verified/resolved by admin
+  @Column({ type: 'boolean', default: false })
+  isVerified!: boolean;
 
   // Store the OCR scanned data
   @Column({ type: 'json' })

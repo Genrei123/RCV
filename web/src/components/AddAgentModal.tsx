@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { AdminInviteService } from "@/services/adminInviteService";
 import { toast } from "react-toastify";
+import { PhoneNumberInput } from "@/components/PhoneNumberInput";
 
 interface AddAgentModalProps {
   open: boolean;
@@ -34,6 +35,7 @@ export function AddAgentModal({ open, onOpenChange, onSuccess }: AddAgentModalPr
   const [formData, setFormData] = useState({
     email: "",
     badgeId: "",
+    phoneNumber: "",
     personalMessage: "",
     webAccess: false,
     appAccess: true,
@@ -110,7 +112,7 @@ export function AddAgentModal({ open, onOpenChange, onSuccess }: AddAgentModalPr
       if (response.success) {
         toast.success(`Invitation sent to ${formData.email}`);
         // Reset form
-        setFormData({ email: "", badgeId: "", personalMessage: "", webAccess: false, appAccess: true });
+        setFormData({ email: "", badgeId: "", phoneNumber: "", personalMessage: "", webAccess: false, appAccess: true });
         setErrors({});
         onOpenChange(false);
         onSuccess?.();
@@ -128,7 +130,7 @@ export function AddAgentModal({ open, onOpenChange, onSuccess }: AddAgentModalPr
 
   const handleClose = () => {
     if (!loading) {
-      setFormData({ email: "", badgeId: "", personalMessage: "", webAccess: false, appAccess: true });
+      setFormData({ email: "", badgeId: "", phoneNumber: "", personalMessage: "", webAccess: false, appAccess: true });
       setErrors({});
       onOpenChange(false);
     }
@@ -201,7 +203,22 @@ export function AddAgentModal({ open, onOpenChange, onSuccess }: AddAgentModalPr
             The agent must enter this exact badge ID to verify their identity during registration.
           </p>
 
-          {/* Personal Message Field (Optional) */}
+          {/* Phone Number Field */}
+          <PhoneNumberInput
+            value={formData.phoneNumber}
+            onChange={(value) => {
+              setFormData({ ...formData, phoneNumber: value });
+              if (errors.phoneNumber) setErrors({ ...errors, phoneNumber: "" });
+            }}
+            error={errors.phoneNumber}
+            disabled={loading}
+            label="Phone Number"
+            required={false}
+            placeholder="9991113333"
+          />
+          <p className="text-xs text-gray-500 -mt-2">
+            Optional: Include the agent's phone number for verification purposes.
+          </p>
           <div className="space-y-2">
             <Label htmlFor="personalMessage" className="flex items-center gap-1">
               Personal Message <span className="text-gray-400">(Optional)</span>

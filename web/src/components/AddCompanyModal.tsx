@@ -34,6 +34,7 @@ import { AuthService } from "@/services/authService";
 import type { CompanyDocument } from "@/typeorm/entities/company.entity";
 import { toast } from "react-toastify";
 import { useMetaMask } from "@/contexts/MetaMaskContext";
+import { PhoneNumberInput } from "@/components/PhoneNumberInput";
 
 // Declare google maps types
 declare global {
@@ -630,7 +631,7 @@ export function AddCompanyModal({
           <div className="p-6 space-y-6">
             {/* MetaMask Connection Warning */}
             {(!isWalletConnected || !isWalletAuthorized) && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <div className="bg-amber-50 border border-[color-mix(in_srgb,var(--app-secondary)_40%,transparent)] rounded-lg p-4">
                 <div className="flex items-start gap-3">
                   <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
                   <div className="flex-1">
@@ -648,7 +649,7 @@ export function AddCompanyModal({
                       <Button
                         type="button"
                         onClick={() => connectWallet()}
-                        className="mt-3 bg-amber-600 hover:bg-amber-700 text-white"
+                        className="mt-3 app-bg-primary hover:app-bg-accent"
                         size="sm"
                       >
                         <Wallet className="h-4 w-4 mr-2" />
@@ -786,20 +787,15 @@ export function AddCompanyModal({
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Phone */}
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      id="phone"
-                      name="phone"
-                      value={formData.phone || ""}
-                      onChange={handleChange}
-                      placeholder="+63 XXX XXX XXXX"
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
+                <PhoneNumberInput
+                  value={formData.phone || ""}
+                  onChange={(value) => setFormData({ ...formData, phone: value })}
+                  error={errors.phone}
+                  disabled={loading}
+                  label="Phone Number"
+                  required={false}
+                  placeholder="9991113333"
+                />
 
                 {/* Email */}
                 <div className="space-y-2">
@@ -954,7 +950,7 @@ export function AddCompanyModal({
                       accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                       onChange={handleFileSelect}
                     />
-                    <div className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                    <div className="flex items-center gap-2 px-4 py-2 app-bg-primary text-white rounded-md hover:app-bg-accent transition-colors">
                       <Upload className="h-4 w-4" />
                       Upload Document
                     </div>

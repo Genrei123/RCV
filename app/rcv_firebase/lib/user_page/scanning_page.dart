@@ -37,6 +37,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
   final TextRecognizer _textRecognizer = TextRecognizer();
   final OcrService _ocrService = OcrService();
   final bool _useTesseract = true; // Switch engine; default to Tesseract
+  final ApiService _apiService = ApiService();
 
   // For dual image OCR
   String? _frontImagePath;
@@ -44,6 +45,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
   String? _frontImageUrl; // Firebase URL
   String? _backImageUrl; // Firebase URL
   String? _ocrBlobText; // Store raw OCR text for compliance reports
+  bool _isProcessingOCR = false; // Guard against duplicate processing
 
   @override
   void initState() {
@@ -944,6 +946,234 @@ class _QRScannerPageState extends State<QRScannerPage> {
     );
   }
 
+  void _showNoResultModal(String ocrText) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.search_off,
+                    size: 48,
+                    color: Colors.orange.shade700,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'No Results Found',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'We couldn\'t find a matching product in our database based on the scanned text.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.black54,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF005440),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Scan Again',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      _showOCRModal(ocrText);
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF005440),
+                      side: const BorderSide(color: Color(0xFF005440)),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('View Scanned Text'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _summarizeProduct(String ocrText) async {
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      final result = await _apiService.summarizeProduct(ocrText);
+      
+      // Close loading indicator
+      if (mounted) Navigator.of(context).pop();
+
+      if (mounted && result['success'] == true) {
+        final aiSummary = result['aiSummary'];
+        _showSummaryModal(aiSummary);
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop(); // Close loading
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to generate summary: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showSummaryModal(Map<String, dynamic> aiSummary) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.8,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.blue.shade700, Colors.blue.shade900],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.auto_awesome, color: Colors.white),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'AI Product Summary',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                ),
+                // Content
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildExtractedField(
+                          'Product Name',
+                          aiSummary['productName'] ?? 'N/A',
+                          Icons.inventory_2,
+                          Colors.blue,
+                        ),
+                        const SizedBox(height: 12),
+                        _buildExtractedField(
+                          'LTO Number',
+                          aiSummary['LTONum'] ?? 'N/A',
+                          Icons.badge,
+                          Colors.orange,
+                        ),
+                        const SizedBox(height: 12),
+                        _buildExtractedField(
+                          'CFPR Number',
+                          aiSummary['CFPRNum'] ?? 'N/A',
+                          Icons.assignment,
+                          Colors.teal,
+                        ),
+                        const SizedBox(height: 12),
+                        _buildExtractedField(
+                          'Manufacturer',
+                          aiSummary['ManufacturedBy'] ?? 'N/A',
+                          Icons.factory,
+                          Colors.purple,
+                        ),
+                        const SizedBox(height: 12),
+                         _buildExtractedField(
+                          'Expiry Date',
+                          aiSummary['ExpiryDate'] ?? 'N/A',
+                          Icons.event_busy,
+                          Colors.red,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   void _showExtractedInfoModal(
     Map<String, dynamic> extractedInfo,
     String ocrText,
@@ -1123,6 +1353,39 @@ class _QRScannerPageState extends State<QRScannerPage> {
                                     SizedBox(width: 8),
                                     Text(
                                       'Conduct Report',
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            // More Details Button (AI Summary)
+                             SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: () => _summarizeProduct(ocrText),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blue.shade600,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  elevation: 2,
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: const [
+                                    Icon(Icons.auto_awesome, size: 20),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'More Details (AI)',
                                       style: TextStyle(
                                         fontSize: 15,
                                         fontWeight: FontWeight.w600,
@@ -1771,12 +2034,12 @@ class _QRScannerPageState extends State<QRScannerPage> {
     String ocrText,
   ) async {
     try {
-      // Validate Firebase URLs are available before proceeding
-      if (_frontImageUrl == null || _backImageUrl == null) {
+      // Validate Images are available before proceeding (local paths)
+      if (_frontImagePath == null || _backImagePath == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Error: Images not uploaded. Please scan again.'),
+              content: Text('Error: Images not captured. Please scan again.'),
               backgroundColor: Colors.red,
             ),
           );
@@ -1787,13 +2050,13 @@ class _QRScannerPageState extends State<QRScannerPage> {
       // Close the extracted info modal
       Navigator.of(context).pop();
 
-      // Navigate directly to compliance report page with Firebase URLs
+      // Navigate directly to compliance report page with Local Paths (deferred upload)
       await _navigateToComplianceReport(
         extractedInfo,
         {'found': false, 'product': null},
         'NON_COMPLIANT',
-        frontImageUrl: _frontImageUrl,
-        backImageUrl: _backImageUrl,
+        localFrontPath: _frontImagePath,
+        localBackPath: _backImagePath,
         ocrBlobText: _ocrBlobText,
       );
     } catch (e) {
@@ -1819,6 +2082,8 @@ class _QRScannerPageState extends State<QRScannerPage> {
     String status, {
     String? frontImageUrl,
     String? backImageUrl,
+    String? localFrontPath,
+    String? localBackPath,
     String? ocrBlobText,
   }) async {
     try {
@@ -1830,6 +2095,9 @@ class _QRScannerPageState extends State<QRScannerPage> {
             initialStatus: status,
             frontImageUrl: frontImageUrl,
             backImageUrl: backImageUrl,
+             // Pass local paths for deferred upload
+            localFrontPath: localFrontPath,
+            localBackPath: localBackPath,
             ocrBlobText: ocrBlobText,
           ),
         ),
@@ -2143,175 +2411,9 @@ class _QRScannerPageState extends State<QRScannerPage> {
       );
     } catch (_) {}
 
-    // If both images are captured, upload to Firebase then perform OCR
+    // If both images are captured, proceed directly to OCR (upload deferred)
     if (_frontImagePath != null && _backImagePath != null) {
-      try {
-        // Show uploading dialog
-        if (mounted) {
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (context) => Dialog(
-              backgroundColor: Colors.transparent,
-              insetPadding: const EdgeInsets.symmetric(
-                horizontal: 40,
-                vertical: 24,
-              ),
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.25),
-                      blurRadius: 12,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Header with icon
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: const Color(
-                              0xFF005440,
-                            ).withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const SizedBox(
-                            width: 28,
-                            height: 28,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 3,
-                              valueColor: AlwaysStoppedAnimation(
-                                Color(0xFF005440),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        const Expanded(
-                          child: Text(
-                            'Uploading images',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF005440),
-                            ),
-                          ),
-                        ),
-                        // Optional minimal cancel icon (keeps barrierDismissible false)
-                        IconButton(
-                          icon: Icon(Icons.close, color: Colors.grey[600]),
-                          tooltip: 'Cancel upload',
-                          onPressed: () {
-                            // Close dialog and reset captured images so caller can handle cancellation
-                            Navigator.of(context).pop();
-                            if (mounted) {
-                              setState(() {
-                                _frontImagePath = null;
-                                _backImagePath = null;
-                                _frontImageUrl = null;
-                                _backImageUrl = null;
-                              });
-                            }
-                          },
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Message
-                    const Text(
-                      'Uploading images to Firebase. This may take a few seconds.',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.black87,
-                        height: 1.35,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Indeterminate progress bar with subtle styling
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: LinearProgressIndicator(
-                        minHeight: 8,
-                        backgroundColor: Colors.grey.shade200,
-                        valueColor: const AlwaysStoppedAnimation(
-                          Color(0xFF00A47D),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-
-                    // Small helper note
-                    Text(
-                      'Please keep the app open until upload completes.',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }
-
-        // Upload both images to Firebase
-        final scanId = 'scan_${DateTime.now().millisecondsSinceEpoch}';
-        final uploadResults = await FirebaseStorageService.uploadScanImages(
-          scanId: scanId,
-          frontImage: File(_frontImagePath!),
-          backImage: File(_backImagePath!),
-        );
-
-        // Close upload dialog
-        if (mounted) Navigator.pop(context);
-
-        // Check if upload succeeded
-        if (uploadResults['frontUrl'] == null ||
-            uploadResults['backUrl'] == null) {
-          throw Exception('Failed to upload images to Firebase');
-        }
-
-        // Save Firebase URLs
-        setState(() {
-          _frontImageUrl = uploadResults['frontUrl'];
-          _backImageUrl = uploadResults['backUrl'];
-        });
-
-        // Now perform OCR
-        await _performDualOCR(_frontImagePath!, _backImagePath!);
-      } catch (e) {
-        // Close dialogs if open
-        if (mounted) {
-          Navigator.of(context).popUntil((route) => route.isFirst);
-        }
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to upload images: $e'),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 3),
-            ),
-          );
-        }
-
-        // Reset state on failure
-        setState(() {
-          _frontImagePath = null;
-          _backImagePath = null;
-          _frontImageUrl = null;
-          _backImageUrl = null;
-        });
-      }
+      await _performDualOCR(_frontImagePath!, _backImagePath!);
     }
   }
 
@@ -2319,7 +2421,22 @@ class _QRScannerPageState extends State<QRScannerPage> {
     String frontImagePath,
     String backImagePath,
   ) async {
+    // Guard against duplicate/rapid calls
+    if (_isProcessingOCR) {
+      developer.log('⚠️ OCR already in progress, ignoring duplicate call');
+      return;
+    }
+    
+    _isProcessingOCR = true;
+    bool dialogOpen = false;
+    
     try {
+      // Clear previous scan data to prevent stale state/infinite loading loop
+      setState(() {
+        _ocrBlobText = null;
+        // Do NOT clear image paths here as we need them for processing
+      });
+
       // Show loading indicator
       if (!mounted) return;
       showDialog(
@@ -2327,6 +2444,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
         barrierDismissible: false,
         builder: (context) => const Center(child: CircularProgressIndicator()),
       );
+      dialogOpen = true;
 
       String frontText = '';
       String backText = '';
@@ -2503,21 +2621,27 @@ class _QRScannerPageState extends State<QRScannerPage> {
           _ocrBlobText = combinedText;
         });
 
-        // Log OCR scan to audit trail (images will be uploaded on report submission)
-        AuditLogService.logScanProduct(
-          scanData: {
-            'scannedText': combinedText.substring(
-              0,
-              combinedText.length > 500 ? 500 : combinedText.length,
-            ),
-            'scanType': 'OCR',
-            'extractionSuccess': true,
-            'extractedInfo': extractedInfo,
-          },
-        );
+        if (response['found'] == true) {
+             // Log OCR scan to audit trail (images will be uploaded on report submission)
+            AuditLogService.logScanProduct(
+              scanData: {
+                'scannedText': combinedText.substring(
+                  0,
+                  combinedText.length > 500 ? 500 : combinedText.length,
+                ),
+                'scanType': 'OCR',
+                'extractionSuccess': true,
+                'extractedInfo': extractedInfo,
+              },
+            );
 
-        // Show extracted information to user with "Search Product" button
-        _showExtractedInfoModal(extractedInfo, combinedText);
+            // Show extracted information to user with "Search Product" button
+            _showExtractedInfoModal(extractedInfo, combinedText);
+        } else {
+             // Product not found in DB
+             _showNoResultModal(combinedText);
+        }
+
       } else {
         // Log failed OCR scan
         AuditLogService.logScanProduct(
@@ -2573,6 +2697,9 @@ class _QRScannerPageState extends State<QRScannerPage> {
         _frontImagePath = null;
         _backImagePath = null;
       });
+    } finally {
+      // Always reset the processing flag to allow future scans
+      _isProcessingOCR = false;
     }
   }
 

@@ -10,6 +10,8 @@ import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_constants.dart';
 import '../utils/tab_history.dart';
+import '../services/draft_service.dart';
+import 'compliance_report_page.dart';
 
 class UserProfilePage extends StatefulWidget {
   const UserProfilePage({super.key});
@@ -96,18 +98,139 @@ class _UserProfilePageState extends State<UserProfilePage> {
     }
   }
 
-  Future<void> _navigateToEditProfile() async {
-    if (_userData == null) return;
+  Future<void> _showDrafts() async {
+    final drafts = await DraftService.getDrafts();
+    
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.3,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (context, scrollController) => Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'My Drafts',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+            if (drafts.isEmpty)
+              const Expanded(
+                child: Center(
+                  child: Text(
+                    'No saved drafts',
+                    style: TextStyle(color: Colors.grey, fontSize: 16),
+                  ),
+                ),
+              )
+            else
+              Expanded(
+                child: ListView.builder(
+                  controller: scrollController,
+                  itemCount: drafts.length,
+                  itemBuilder: (context, index) {
+                    final draft = drafts[index];
+                    final date = DateTime.parse(draft['savedAt']);
+                    final productName = draft['scannedData']?['productName'] ?? 'Unknown Product';
+                    
+                    return Dismissible(
+                      key: Key(draft['id']),
+                      direction: DismissDirection.endToStart,
+                      background: Container(
+                        color: Colors.red,
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.only(right: 20),
+                        child: const Icon(Icons.delete, color: Colors.white),
+                      ),
+                      confirmDismiss: (direction) async {
+                        return await showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Delete Draft'),
+                            content: const Text('Are you sure you want to delete this draft?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                      onDismissed: (direction) async {
+                        await DraftService.deleteDraft(draft['id']);
+                        // Helper to refresh list? No simple way without state, 
+                        // but next open will be fresh.
+                      },
+                      child: ListTile(
+                        leading: const CircleAvatar(
+                          backgroundColor: AppColors.primary,
+                          child: Icon(Icons.description, color: Colors.white),
+                        ),
+                        title: Text(productName),
+                        subtitle: Text('Last saved: ${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute}'),
+                        onTap: () async {
+                          Navigator.pop(context); // Close sheet
+                          await _openDraft(draft);
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openDraft(Map<String, dynamic> draft) async {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => EditProfilePage(userData: _userData!),
+        builder: (context) => ComplianceReportPage(
+          scannedData: draft['scannedData'],
+          productSearchResult: draft['productSearchResult'],
+          initialStatus: draft['initialStatus'] ?? 'COMPLIANT',
+          frontImageUrl: draft['frontImageUrl'],
+          backImageUrl: draft['backImageUrl'],
+          localFrontPath: draft['localFrontPath'],
+          localBackPath: draft['localBackPath'],
+          draftId: draft['id'],
+          initialReason: draft['initialReason'] ?? draft['selectedReason'],
+          initialNotes: draft['initialNotes'] ?? draft['notes'],
+          ocrBlobText: draft['ocrBlobText'],
+        ),
       ),
     );
-    if (result == true) {
-      await _loadUserProfile();
-      await _loadLocalAvatar();
-    }
+    
+    // If result is true (submitted), show success
   }
 
   String _getRoleDisplayName(String? role) {
@@ -354,8 +477,9 @@ class _UserProfilePageState extends State<UserProfilePage> {
                             child: SizedBox(
                               width: double.infinity,
                               height: 44,
-                              child: ElevatedButton(
-                                onPressed: _navigateToEditProfile,
+                              child: ElevatedButton.icon(
+                                onPressed: _showDrafts,
+                                icon: const Icon(Icons.folder_open),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.white,
                                   foregroundColor: AppColors.primary,
@@ -363,8 +487,8 @@ class _UserProfilePageState extends State<UserProfilePage> {
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                 ),
-                                child: const Text(
-                                  'Edit profile',
+                                label: const Text(
+                                  'My Drafts',
                                   style: TextStyle(fontWeight: FontWeight.w600),
                                 ),
                               ),
