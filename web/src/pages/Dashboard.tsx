@@ -26,15 +26,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-  PaginationEllipsis,
-} from "@/components/ui/pagination";
+// removed unused UI pagination imports; using shared Pagination component instead
 import {
   Select,
   SelectContent,
@@ -72,6 +64,7 @@ import {
 } from "lucide-react";
 import ApprovalQueue from "@/components/ApprovalQueue";
 import MySubmissions from "@/components/MySubmissions";
+import { Pagination as SimplePagination } from '@/components/Pagination';
 
 export interface DashboardProps {
   success?: boolean;
@@ -586,7 +579,7 @@ export function Dashboard(props: DashboardProps) {
   // Server-driven pagination state
   const [loading, setLoading] = useState<boolean>(false);
   const [users, setUsers] = useState<User[]>([]);
-  const [pagination, setPagination] = useState<any | null>(null);
+  const [, setPagination] = useState<any | null>(null);
 
   // Helper to determine if parent passed a paginated payload
   const isPaginatedPayload = (
@@ -894,7 +887,7 @@ export function Dashboard(props: DashboardProps) {
               totalPages={totalPages}
               totalItems={displayTotal}
               itemsPerPage={pageSize}
-              onPageChange={(p) => fetchPage(p)}
+              onPageChange={(p: number) => fetchPage(p)}
               alwaysShowControls
               showingPosition="right"
               showingText={`Showing ${paginatedDisplayData.length} of ${displayTotal} users`}
