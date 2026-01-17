@@ -140,6 +140,7 @@ export const mobileSignIn = async (req: Request, res: Response, next: NextFuncti
         "password",
         "role",
         "approved",
+        "appAccess",
         "firstName",
         "middleName",
         "lastName",
@@ -181,6 +182,17 @@ export const mobileSignIn = async (req: Request, res: Response, next: NextFuncti
         message:
           "Your account is pending approval. Please wait for an administrator to approve your account.",
         approved: false,
+        email: user.email,
+      });
+    }
+
+    // Check if user has mobile/app access
+    if (!user.appAccess) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "Mobile access is disabled for your account. Please contact an administrator.",
+        appAccess: false,
         email: user.email,
       });
     }

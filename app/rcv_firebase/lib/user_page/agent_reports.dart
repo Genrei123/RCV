@@ -3,6 +3,7 @@ import 'package:rcv_firebase/themes/app_fonts.dart';
 import '../widgets/navigation_bar.dart';
 import '../widgets/title_logo_header_app_bar.dart';
 import '../services/api_service.dart';
+import '../pages/report_detail_page.dart';
 
 // Simple in-memory Report model (can be moved to models folder later)
 class ReportItem {
@@ -14,6 +15,7 @@ class ReportItem {
   final ReportCategory category;
   final String? productName;
   final String? brandName;
+  final Map<String, dynamic> rawData; // Store the full report data
 
   ReportItem({
     required this.id,
@@ -24,6 +26,7 @@ class ReportItem {
     required this.category,
     this.productName,
     this.brandName,
+    required this.rawData,
   });
 
   factory ReportItem.fromJson(Map<String, dynamic> json) {
@@ -32,7 +35,8 @@ class ReportItem {
     final backendStatus = json['status']?.toString().toUpperCase();
     if (backendStatus == 'COMPLIANT') {
       reportStatus = ReportStatus.closed;
-    } else if (backendStatus == 'NON_COMPLIANT' || backendStatus == 'FRAUDULENT') {
+    } else if (backendStatus == 'NON_COMPLIANT' ||
+        backendStatus == 'FRAUDULENT') {
       reportStatus = ReportStatus.open;
     } else {
       reportStatus = ReportStatus.inReview;
@@ -42,17 +46,20 @@ class ReportItem {
     ReportCategory category;
     if (backendStatus == 'COMPLIANT') {
       category = ReportCategory.verified;
-    } else if (backendStatus == 'NON_COMPLIANT' || backendStatus == 'FRAUDULENT') {
+    } else if (backendStatus == 'NON_COMPLIANT' ||
+        backendStatus == 'FRAUDULENT') {
       category = ReportCategory.notVerified;
     } else {
       category = ReportCategory.inReview;
     }
 
     // Build title and description
-    final productName = json['scannedData']?['productName'] ?? 'Unknown Product';
+    final productName =
+        json['scannedData']?['productName'] ?? 'Unknown Product';
     final brandName = json['scannedData']?['brandName'] ?? 'Unknown Brand';
     final title = '$productName - $brandName';
-    final description = json['nonComplianceReason'] ?? 'Compliance report submitted';
+    final description =
+        json['nonComplianceReason'] ?? 'Compliance report submitted';
 
     return ReportItem(
       id: json['_id'] ?? '',
@@ -63,6 +70,7 @@ class ReportItem {
       category: category,
       productName: productName,
       brandName: brandName,
+      rawData: json, // Store the complete report data
     );
   }
 }
@@ -123,11 +131,14 @@ class _UserReportsPageState extends State<UserReportsPage> {
     });
 
     try {
-      final result = await _apiService.getComplianceReports(page: 1, limit: 100);
-      
+      final result = await _apiService.getComplianceReports(
+        page: 1,
+        limit: 100,
+      );
+
       if (result['success'] == true) {
         final List<dynamic> data = result['data'] ?? [];
-        
+
         setState(() {
           _reports = data.map((json) => ReportItem.fromJson(json)).toList();
           _loading = false;
@@ -198,24 +209,18 @@ class _UserReportsPageState extends State<UserReportsPage> {
                           report: r,
                           relativeTime: _relativeTime(r.createdAt),
                           onTap: () {
-                            showDialog(
-                              context: context,
-                              builder: (ctx) => AlertDialog(
-                              title: Text(r.title),
-                              content: Text(r.description),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(ctx),
-                                  child: const Text('Close'),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      );
-                    },
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    ReportDetailPage(reportData: r.rawData),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
                   ),
-                ),
           ),
         ],
       ),
@@ -236,7 +241,13 @@ class _UserReportsPageState extends State<UserReportsPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.inbox, size: 64, color: _error != null ? Colors.red.shade400 : Colors.grey.shade400),
+                Icon(
+                  Icons.inbox,
+                  size: 64,
+                  color: _error != null
+                      ? Colors.red.shade400
+                      : Colors.grey.shade400,
+                ),
                 const SizedBox(height: 16),
                 Text(
                   _error != null ? 'Error Loading Reports' : 'No reports yet',
@@ -313,13 +324,18 @@ class _UserReportsPageState extends State<UserReportsPage> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(iconData, size: 18, color: chipColor),
-                      const SizedBox(width: 6),
-                      Text(
-                        labelText,
-                        style: AppFonts.labelStyle.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: chipColor,
+                      Icon(iconData, size: 16, color: chipColor),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          labelText,
+                          style: AppFonts.labelStyle.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: chipColor,
+                            fontSize: 12,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                         ),
                       ),
                     ],

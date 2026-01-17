@@ -17,7 +17,7 @@ class ComplianceReportPage extends StatefulWidget {
 
   final String? localFrontPath;
   final String? localBackPath;
-  final String? draftId; 
+  final String? draftId;
   final String? initialReason;
   final String? initialNotes;
 
@@ -63,13 +63,17 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
     if (widget.initialNotes != null) {
       notesController.text = widget.initialNotes!;
     }
-    
+
     // Debug logging to check received parameters
     developer.log('🔍 ComplianceReportPage initialized');
-    developer.log('Front Image URL received: ${widget.frontImageUrl ?? "NULL"}');
+    developer.log(
+      'Front Image URL received: ${widget.frontImageUrl ?? "NULL"}',
+    );
     developer.log('Back Image URL received: ${widget.backImageUrl ?? "NULL"}');
-    developer.log('OCR Blob Text received: ${widget.ocrBlobText != null ? "${widget.ocrBlobText!.length} chars" : "NULL"}');
-    
+    developer.log(
+      'OCR Blob Text received: ${widget.ocrBlobText != null ? "${widget.ocrBlobText!.length} chars" : "NULL"}',
+    );
+
     // Don't prepopulate notes - let agent write their own observations
     // OCR text is automatically saved in backend
   }
@@ -92,7 +96,7 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
     }
 
     // Ensure images are present (either URL or local path)
-    if (widget.frontImageUrl == null && widget.localFrontPath == null || 
+    if (widget.frontImageUrl == null && widget.localFrontPath == null ||
         widget.backImageUrl == null && widget.localBackPath == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -112,9 +116,8 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
       String? finalFrontUrl = widget.frontImageUrl;
       String? finalBackUrl = widget.backImageUrl;
 
-      if ((finalFrontUrl == null || finalBackUrl == null) && 
+      if ((finalFrontUrl == null || finalBackUrl == null) &&
           (widget.localFrontPath != null && widget.localBackPath != null)) {
-        
         developer.log('🚀 Uploading deferred images...');
         final scanId = 'scan_${DateTime.now().millisecondsSinceEpoch}';
         final uploadResults = await FirebaseStorageService.uploadScanImages(
@@ -123,7 +126,8 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
           backImage: File(widget.localBackPath!),
         );
 
-        if (uploadResults['frontUrl'] == null || uploadResults['backUrl'] == null) {
+        if (uploadResults['frontUrl'] == null ||
+            uploadResults['backUrl'] == null) {
           throw Exception('Failed to upload images');
         }
 
@@ -155,7 +159,8 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
         locationJson = {
           'latitude': locationData.latitude,
           'longitude': locationData.longitude,
-          'address': 'Retrieved from device', // Can be enhanced with reverse geocoding
+          'address':
+              'Retrieved from device', // Can be enhanced with reverse geocoding
         };
       }
 
@@ -242,9 +247,9 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save draft: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to save draft: $e')));
       }
     }
   }
@@ -455,10 +460,7 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
                         const SizedBox(height: 4),
                         const Text(
                           'Optional - Add your observations or comments (OCR text is saved automatically)',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey,
-                          ),
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
                         ),
                         const SizedBox(height: 12),
                         TextField(
@@ -509,7 +511,8 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
                         const SizedBox(height: 12),
                         _buildSummaryRow(
                           'Product',
-                          widget.scannedData['productName']?.toString() ?? 'N/A',
+                          widget.scannedData['productName']?.toString() ??
+                              'N/A',
                         ),
                         _buildSummaryRow(
                           'Brand',
@@ -525,15 +528,18 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
                         ),
                         _buildSummaryRow(
                           'Manufacturer',
-                          widget.scannedData['manufacturer']?.toString() ?? 'N/A',
+                          widget.scannedData['manufacturer']?.toString() ??
+                              'N/A',
                         ),
                         _buildSummaryRow(
                           'Expiry Date',
-                          widget.scannedData['expirationDate']?.toString() ?? 'N/A',
+                          widget.scannedData['expirationDate']?.toString() ??
+                              'N/A',
                         ),
                         _buildSummaryRow(
                           'Company',
-                          widget.scannedData['companyName']?.toString() ?? 'N/A',
+                          widget.scannedData['companyName']?.toString() ??
+                              'N/A',
                         ),
                       ],
                     ),
@@ -542,8 +548,10 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
                   const SizedBox(height: 16),
 
                   // Captured Product Images
-                  if (widget.frontImageUrl != null || widget.backImageUrl != null || 
-                      widget.localFrontPath != null || widget.localBackPath != null)
+                  if (widget.frontImageUrl != null ||
+                      widget.backImageUrl != null ||
+                      widget.localFrontPath != null ||
+                      widget.localBackPath != null)
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -562,7 +570,11 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
                         children: [
                           const Row(
                             children: [
-                              Icon(Icons.camera_alt, color: AppColors.primary, size: 20),
+                              Icon(
+                                Icons.camera_alt,
+                                color: AppColors.primary,
+                                size: 20,
+                              ),
                               SizedBox(width: 8),
                               Text(
                                 'Captured Product',
@@ -577,10 +589,12 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
                           const SizedBox(height: 12),
                           Row(
                             children: [
-                              if (widget.frontImageUrl != null || widget.localFrontPath != null)
+                              if (widget.frontImageUrl != null ||
+                                  widget.localFrontPath != null)
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       const Text(
                                         'Front',
@@ -593,41 +607,57 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
                                       const SizedBox(height: 6),
                                       ClipRRect(
                                         borderRadius: BorderRadius.circular(8),
-                                        child: widget.frontImageUrl != null 
-                                          ? Image.network(
-                                              widget.frontImageUrl!,
-                                              height: 150,
-                                              width: double.infinity,
-                                              fit: BoxFit.cover,
-                                              errorBuilder: (context, error, stackTrace) {
-                                                return Container(
-                                                  height: 150,
-                                                  color: Colors.grey[300],
-                                                  child: const Center(
-                                                    child: Icon(Icons.error),
-                                                  ),
-                                                );
-                                              },
-                                            )
-                                          : (widget.localFrontPath != null 
-                                              ? Image.file(
-                                                  File(widget.localFrontPath!),
-                                                  height: 150,
-                                                  width: double.infinity,
-                                                  fit: BoxFit.cover,
-                                                )
-                                              : Container(height: 150, color: Colors.grey[200])),
+                                        child: widget.frontImageUrl != null
+                                            ? Image.network(
+                                                widget.frontImageUrl!,
+                                                height: 150,
+                                                width: double.infinity,
+                                                fit: BoxFit.cover,
+                                                errorBuilder:
+                                                    (
+                                                      context,
+                                                      error,
+                                                      stackTrace,
+                                                    ) {
+                                                      return Container(
+                                                        height: 150,
+                                                        color: Colors.grey[300],
+                                                        child: const Center(
+                                                          child: Icon(
+                                                            Icons.error,
+                                                          ),
+                                                        ),
+                                                      );
+                                                    },
+                                              )
+                                            : (widget.localFrontPath != null
+                                                  ? Image.file(
+                                                      File(
+                                                        widget.localFrontPath!,
+                                                      ),
+                                                      height: 150,
+                                                      width: double.infinity,
+                                                      fit: BoxFit.cover,
+                                                    )
+                                                  : Container(
+                                                      height: 150,
+                                                      color: Colors.grey[200],
+                                                    )),
                                       ),
                                     ],
                                   ),
                                 ),
-                              if ((widget.frontImageUrl != null || widget.localFrontPath != null) && 
-                                  (widget.backImageUrl != null || widget.localBackPath != null))
+                              if ((widget.frontImageUrl != null ||
+                                      widget.localFrontPath != null) &&
+                                  (widget.backImageUrl != null ||
+                                      widget.localBackPath != null))
                                 const SizedBox(width: 12),
-                              if (widget.backImageUrl != null || widget.localBackPath != null)
+                              if (widget.backImageUrl != null ||
+                                  widget.localBackPath != null)
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       const Text(
                                         'Back',
@@ -640,30 +670,42 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
                                       const SizedBox(height: 6),
                                       ClipRRect(
                                         borderRadius: BorderRadius.circular(8),
-                                        child: widget.backImageUrl != null 
-                                          ? Image.network(
-                                              widget.backImageUrl!,
-                                              height: 150,
-                                              width: double.infinity,
-                                              fit: BoxFit.cover,
-                                              errorBuilder: (context, error, stackTrace) {
-                                                return Container(
-                                                  height: 150,
-                                                  color: Colors.grey[300],
-                                                  child: const Center(
-                                                    child: Icon(Icons.error),
-                                                  ),
-                                                );
-                                              },
-                                            )
-                                          : (widget.localBackPath != null
-                                              ? Image.file(
-                                                  File(widget.localBackPath!),
-                                                  height: 150,
-                                                  width: double.infinity,
-                                                  fit: BoxFit.cover,
-                                                )
-                                              : Container(height: 150, color: Colors.grey[200])),
+                                        child: widget.backImageUrl != null
+                                            ? Image.network(
+                                                widget.backImageUrl!,
+                                                height: 150,
+                                                width: double.infinity,
+                                                fit: BoxFit.cover,
+                                                errorBuilder:
+                                                    (
+                                                      context,
+                                                      error,
+                                                      stackTrace,
+                                                    ) {
+                                                      return Container(
+                                                        height: 150,
+                                                        color: Colors.grey[300],
+                                                        child: const Center(
+                                                          child: Icon(
+                                                            Icons.error,
+                                                          ),
+                                                        ),
+                                                      );
+                                                    },
+                                              )
+                                            : (widget.localBackPath != null
+                                                  ? Image.file(
+                                                      File(
+                                                        widget.localBackPath!,
+                                                      ),
+                                                      height: 150,
+                                                      width: double.infinity,
+                                                      fit: BoxFit.cover,
+                                                    )
+                                                  : Container(
+                                                      height: 150,
+                                                      color: Colors.grey[200],
+                                                    )),
                                       ),
                                     ],
                                   ),
@@ -699,7 +741,7 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
               ),
               child: Column(
                 children: [
-                   // Save Draft Button
+                  // Save Draft Button
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton(
@@ -735,8 +777,9 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
                               width: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
                               ),
                             )
                           : const Text(
@@ -764,21 +807,13 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 80,
+            width: 110,
             child: Text(
               '$label:',
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             ),
           ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(fontSize: 13),
-            ),
-          ),
+          Expanded(child: Text(value, style: const TextStyle(fontSize: 13))),
         ],
       ),
     );
