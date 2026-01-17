@@ -2050,17 +2050,72 @@ class _QRScannerPageState extends State<QRScannerPage> {
       // Close the extracted info modal
       Navigator.of(context).pop();
 
-      // Navigate directly to compliance report page with Local Paths (deferred upload)
+      // Show loading dialog while uploading images
+      if (mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(color: Color(0xFF005440)),
+                SizedBox(height: 16),
+                Material(
+                  color: Colors.transparent,
+                  child: Text(
+                    'Uploading images...',
+                    style: TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+
+      // Upload images to Firebase before conducting report
+      String? uploadedFrontUrl;
+      String? uploadedBackUrl;
+      
+      try {
+        final scanId = DateTime.now().millisecondsSinceEpoch.toString();
+        final uploadResult = await FirebaseStorageService.uploadScanImages(
+          scanId: scanId,
+          frontImage: File(_frontImagePath!),
+          backImage: File(_backImagePath!),
+        );
+        
+        uploadedFrontUrl = uploadResult['frontUrl'];
+        uploadedBackUrl = uploadResult['backUrl'];
+        
+        developer.log('📤 Images uploaded - Front: $uploadedFrontUrl, Back: $uploadedBackUrl');
+      } catch (uploadError) {
+        developer.log('⚠️ Image upload failed: $uploadError');
+        // Continue with local paths if upload fails
+      }
+
+      // Close loading dialog
+      if (mounted) Navigator.of(context).pop();
+
+      // Navigate to compliance report page with Firebase URLs (or local paths as fallback)
       await _navigateToComplianceReport(
         extractedInfo,
         {'found': false, 'product': null},
         'NON_COMPLIANT',
+        frontImageUrl: uploadedFrontUrl,
+        backImageUrl: uploadedBackUrl,
         localFrontPath: _frontImagePath,
         localBackPath: _backImagePath,
         ocrBlobText: _ocrBlobText,
       );
     } catch (e) {
       developer.log('Error conducting report: $e');
+
+      // Close any open dialogs
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
 
       // Show error message
       if (mounted) {
@@ -2400,6 +2455,9 @@ class _QRScannerPageState extends State<QRScannerPage> {
         _backImagePath = image.path;
       }
     });
+
+    // Add 1 second delay to ensure image is fully loaded before crop
+    await Future.delayed(const Duration(seconds: 1));
 
     // Navigate to crop page for visual adjustment (optional)
     if (!mounted) return;
