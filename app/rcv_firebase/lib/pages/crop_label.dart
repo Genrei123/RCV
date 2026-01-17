@@ -252,7 +252,9 @@ class _CropLabelPageState extends State<CropLabelPage> {
                                 label: const Text('Cancel'),
                               ),
                               FilledButton(
-                                onPressed: _isCropping ? null : _onConfirmCrop,
+                                onPressed: (_isCropping || _isBuildingPreview || _imageBytes == null)
+                                    ? null
+                                    : _onConfirmCrop,
                                 child: _isCropping
                                     ? Row(
                                         mainAxisSize: MainAxisSize.min,

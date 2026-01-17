@@ -509,19 +509,31 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
                         const SizedBox(height: 12),
                         _buildSummaryRow(
                           'Product',
-                          widget.scannedData['productName'] ?? 'N/A',
+                          widget.scannedData['productName']?.toString() ?? 'N/A',
                         ),
                         _buildSummaryRow(
                           'Brand',
-                          widget.scannedData['brandName'] ?? 'N/A',
+                          widget.scannedData['brandName']?.toString() ?? 'N/A',
                         ),
                         _buildSummaryRow(
                           'LTO',
-                          widget.scannedData['LTONumber'] ?? 'N/A',
+                          widget.scannedData['LTONumber']?.toString() ?? 'N/A',
                         ),
                         _buildSummaryRow(
                           'CFPR',
-                          widget.scannedData['CFPRNumber'] ?? 'N/A',
+                          widget.scannedData['CFPRNumber']?.toString() ?? 'N/A',
+                        ),
+                        _buildSummaryRow(
+                          'Manufacturer',
+                          widget.scannedData['manufacturer']?.toString() ?? 'N/A',
+                        ),
+                        _buildSummaryRow(
+                          'Expiry Date',
+                          widget.scannedData['expirationDate']?.toString() ?? 'N/A',
+                        ),
+                        _buildSummaryRow(
+                          'Company',
+                          widget.scannedData['companyName']?.toString() ?? 'N/A',
                         ),
                       ],
                     ),

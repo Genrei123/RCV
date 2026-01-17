@@ -152,11 +152,13 @@ class _UserProfilePageState extends State<UserProfilePage> {
                   itemCount: drafts.length,
                   itemBuilder: (context, index) {
                     final draft = drafts[index];
-                    final date = DateTime.parse(draft['savedAt']);
-                    final productName = draft['scannedData']?['productName'] ?? 'Unknown Product';
+                    final savedAtStr = draft['savedAt']?.toString();
+                    final date = savedAtStr != null ? DateTime.tryParse(savedAtStr) : null;
+                    final productName = draft['scannedData']?['productName']?.toString() ?? 'Unknown Product';
+                    final draftId = draft['id']?.toString() ?? 'draft_$index';
                     
                     return Dismissible(
-                      key: Key(draft['id']),
+                      key: Key(draftId),
                       direction: DismissDirection.endToStart,
                       background: Container(
                         color: Colors.red,
@@ -194,7 +196,9 @@ class _UserProfilePageState extends State<UserProfilePage> {
                           child: Icon(Icons.description, color: Colors.white),
                         ),
                         title: Text(productName),
-                        subtitle: Text('Last saved: ${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute}'),
+                        subtitle: Text(date != null 
+                            ? 'Last saved: ${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}'
+                            : 'Date unknown'),
                         onTap: () async {
                           Navigator.pop(context); // Close sheet
                           await _openDraft(draft);
@@ -215,17 +219,17 @@ class _UserProfilePageState extends State<UserProfilePage> {
       context,
       MaterialPageRoute(
         builder: (context) => ComplianceReportPage(
-          scannedData: draft['scannedData'],
-          productSearchResult: draft['productSearchResult'],
-          initialStatus: draft['initialStatus'] ?? 'COMPLIANT',
-          frontImageUrl: draft['frontImageUrl'],
-          backImageUrl: draft['backImageUrl'],
-          localFrontPath: draft['localFrontPath'],
-          localBackPath: draft['localBackPath'],
-          draftId: draft['id'],
-          initialReason: draft['initialReason'] ?? draft['selectedReason'],
-          initialNotes: draft['initialNotes'] ?? draft['notes'],
-          ocrBlobText: draft['ocrBlobText'],
+          scannedData: draft['scannedData'] ?? {},
+          productSearchResult: draft['productSearchResult'] ?? {'found': false},
+          initialStatus: draft['initialStatus']?.toString() ?? 'COMPLIANT',
+          frontImageUrl: draft['frontImageUrl']?.toString(),
+          backImageUrl: draft['backImageUrl']?.toString(),
+          localFrontPath: draft['localFrontPath']?.toString(),
+          localBackPath: draft['localBackPath']?.toString(),
+          draftId: draft['id']?.toString(),
+          initialReason: draft['initialReason']?.toString() ?? draft['selectedReason']?.toString(),
+          initialNotes: draft['initialNotes']?.toString() ?? draft['notes']?.toString(),
+          ocrBlobText: draft['ocrBlobText']?.toString(),
         ),
       ),
     );

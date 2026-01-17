@@ -54,10 +54,12 @@ export const scanProduct = async (
         matchDetails: searchDetails,
         extractedInfo: {
           productName: matchedProduct.productName,
+          brandName: matchedProduct.brandName || null,
           LTONumber: matchedProduct.LTONumber,
           CFPRNumber: matchedProduct.CFPRNumber,
           expirationDate: matchedProduct.expirationDate ? new Date(matchedProduct.expirationDate).toISOString().split('T')[0] : null,
           manufacturer: matchedProduct.company?.name || "Unknown",
+          companyName: matchedProduct.company?.name || null,
         },
         product: matchedProduct, // Include full product object
         rawOCRText: blockOfText,
