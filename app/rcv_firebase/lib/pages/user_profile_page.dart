@@ -5,7 +5,6 @@ import '../services/user_profile_service.dart';
 import '../services/auth_service.dart';
 import '../services/audit_log_service.dart';
 import '../widgets/navigation_bar.dart';
-import 'edit_profile_page.dart';
 import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_constants.dart';
@@ -215,7 +214,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
   }
 
   Future<void> _openDraft(Map<String, dynamic> draft) async {
-    final result = await Navigator.push(
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => ComplianceReportPage(

@@ -91,14 +91,26 @@ export class FuzzySearchService {
 
   /**
    * Validates that the matched product's critical codes are present in the OCR text
-   * This prevents returning a product when required information is missing from the scanned label
+   * NEW: Accepts products even if CFPR is missing (flags as warning)
+   * Prioritizes LTO/CFPR verification over product name matches
    */
-  private static validateMatchAgainstOCR(product: Product, ocrText: string): { valid: boolean; missingFields: string[] } {
+  private static validateMatchAgainstOCR(product: Product, ocrText: string): { 
+    valid: boolean; 
+    missingFields: string[]; 
+    confidence: 'high' | 'medium' | 'low';
+    warnings: string[];
+  } {
     const missingFields: string[] = [];
+    const warnings: string[] = [];
     const upperText = ocrText.toUpperCase();
+    let cfprFound = false;
+    let ltoFound = false;
+    let productHasCFPR = false;
+    let productHasLTO = false;
     
-    // Check if CFPR from product is in OCR text (required field)
+    // Check if product HAS CFPR in database
     if (product.CFPRNumber) {
+      productHasCFPR = true;
       const cfprClean = product.CFPRNumber.replace(/[-\s]/g, '').toUpperCase();
       const cfprVariants = [
         product.CFPRNumber.toUpperCase(),
@@ -107,7 +119,7 @@ export class FuzzySearchService {
         cfprClean.replace(/^CFPR/, 'CFPR-'),
       ];
       
-      const cfprFound = cfprVariants.some(variant => 
+      cfprFound = cfprVariants.some(variant => 
         upperText.includes(variant) || 
         upperText.replace(/[-\s]/g, '').includes(variant)
       );
@@ -115,21 +127,25 @@ export class FuzzySearchService {
       if (!cfprFound) {
         console.log(`   ⚠️ CFPR ${product.CFPRNumber} NOT found in OCR text`);
         missingFields.push('CFPRNumber');
+      } else {
+        console.log(`   ✅ CFPR ${product.CFPRNumber} FOUND in OCR text`);
       }
     } else {
-      // Product has no CFPR - this is unusual, flag it
-      console.log("   ⚠️ Product has no CFPR number in database");
+      // CRITICAL: Product has NO CFPR in database - this is ILLEGAL
+      console.log("   🚨 WARNING: Product has NO CFPR number in database (potentially illegal product)");
+      warnings.push('Product is missing CFPR registration number - may be unregistered/illegal');
     }
 
-    // Check if LTO from product is in OCR text (optional but helpful)
+    // Check if product HAS LTO in database
     if (product.LTONumber) {
+      productHasLTO = true;
       const ltoClean = product.LTONumber.replace(/[-\s]/g, '').toUpperCase();
       const ltoVariants = [
         product.LTONumber.toUpperCase(),
         ltoClean,
       ];
       
-      const ltoFound = ltoVariants.some(variant => 
+      ltoFound = ltoVariants.some(variant => 
         upperText.includes(variant) || 
         upperText.replace(/[-\s]/g, '').includes(variant)
       );
@@ -137,23 +153,62 @@ export class FuzzySearchService {
       if (!ltoFound) {
         console.log(`   ⚠️ LTO ${product.LTONumber} NOT found in OCR text`);
         missingFields.push('LTONumber');
+      } else {
+        console.log(`   ✅ LTO ${product.LTONumber} FOUND in OCR text`);
       }
+    } else {
+      console.log("   ⚠️ Product has NO LTO number in database");
+      warnings.push('Product is missing LTO number');
     }
 
-    // Product is only valid if CFPR is found (or product has no CFPR)
-    // Having missing LTO is okay, but missing CFPR is a deal breaker
-    const valid = !missingFields.includes('CFPRNumber');
+    // NEW VALIDATION LOGIC:
+    // Priority: LTO/CFPR codes are MORE IMPORTANT than product names
+    let confidence: 'high' | 'medium' | 'low';
+    let valid: boolean;
     
-    return { valid, missingFields };
+    if (cfprFound && ltoFound) {
+      // BEST CASE: Both codes found and match
+      confidence = 'high';
+      valid = true;
+      console.log('   ✅ HIGH confidence: Both CFPR and LTO verified');
+    } else if (cfprFound || ltoFound) {
+      // GOOD CASE: At least one code verified
+      confidence = 'medium';
+      valid = true;
+      console.log(`   ✅ MEDIUM confidence: ${cfprFound ? 'CFPR' : 'LTO'} verified`);
+    } else if (!productHasCFPR && ltoFound) {
+      // ACCEPTABLE: Product has no CFPR but LTO matches
+      confidence = 'medium';
+      valid = true;
+      console.log('   ⚠️ MEDIUM confidence: LTO verified but product lacks CFPR registration');
+    } else if (!productHasCFPR && !productHasLTO) {
+      // EDGE CASE: Product has neither code in database (match by name only)
+      confidence = 'low';
+      valid = true; // Accept but flag heavily
+      warnings.push('Product has NO registration codes in database');
+      console.log('   🚨 LOW confidence: Product has no LTO or CFPR codes');
+    } else {
+      // REJECT: Has codes in DB but none match OCR
+      confidence = 'low';
+      valid = false;
+      console.log('   ❌ REJECTED: Product codes do not match OCR');
+    }
+    
+    return { valid, missingFields, confidence, warnings };
   }
 
   /**
    * Performs a comprehensive fuzzy search against the Product database using OCR text
    * Searches: LTONumber, CFPRNumber, productName, brandName, company name
    * 
-   * IMPORTANT: Will only return a product if critical fields (CFPR) are found in OCR text
+   * PRIORITY: LTO/CFPR codes are MORE IMPORTANT than product names
+   * ACCEPTS: Products without CFPR (flags as warning)
    */
-  static async searchProductsFuzzy(ocrText: string): Promise<{ product: Product | null; searchDetails: any }> {
+  static async searchProductsFuzzy(ocrText: string): Promise<{ 
+    product: Product | null; 
+    searchDetails: any;
+    warnings?: string[];
+  }> {
     const cleanedText = this.cleanText(ocrText);
     const potentialCodes = this.extractPotentialCodes(ocrText);
     const keywords = this.extractKeywords(ocrText);
@@ -177,8 +232,19 @@ export class FuzzySearchService {
         .getOne();
       
       if (cfprMatch) {
-        console.log("✅ Found direct CFPR match:", cfprMatch.productName);
-        return { product: cfprMatch, searchDetails: { matchType: 'cfpr', matchedOn: extractedCFPR } };
+        // Validate match - either CFPR or LTO must be in OCR
+        const validation = this.validateMatchAgainstOCR(cfprMatch, ocrText);
+        
+        if (validation.valid) {
+          console.log(`✅ Found direct CFPR match (${validation.confidence} confidence):`, cfprMatch.productName);
+          return { 
+            product: cfprMatch, 
+            searchDetails: { matchType: 'cfpr', matchedOn: extractedCFPR, confidence: validation.confidence },
+            warnings: validation.warnings
+          };
+        } else {
+          console.log("❌ CFPR match rejected - insufficient verification:", validation.missingFields);
+        }
       }
     }
 
@@ -191,14 +257,18 @@ export class FuzzySearchService {
         .getOne();
       
       if (ltoMatch) {
-        // Validate that this match's CFPR is also in the OCR text
+        // Validate match - either CFPR or LTO must be in OCR
         const validation = this.validateMatchAgainstOCR(ltoMatch, ocrText);
         
         if (validation.valid) {
-          console.log("✅ Found LTO match (validated):", ltoMatch.productName);
-          return { product: ltoMatch, searchDetails: { matchType: 'lto', matchedOn: extractedLTO } };
+          console.log(`✅ Found LTO match (${validation.confidence} confidence):`, ltoMatch.productName);
+          return { 
+            product: ltoMatch, 
+            searchDetails: { matchType: 'LTO', matchedOn: extractedLTO, confidence: validation.confidence },
+            warnings: validation.warnings
+          };
         } else {
-          console.log("❌ LTO match rejected - CFPR not found in OCR:", validation.missingFields);
+          console.log("❌ LTO match rejected - insufficient verification:", validation.missingFields);
         }
       }
     }
@@ -213,22 +283,28 @@ export class FuzzySearchService {
           .getOne();
         
         if (directMatch) {
-          // Validate match - CFPR must be in OCR
+          // Validate match - either CFPR or LTO must be in OCR
           const validation = this.validateMatchAgainstOCR(directMatch, ocrText);
           
           if (validation.valid) {
-            console.log("✅ Found direct code match (validated):", directMatch.productName);
-            return { product: directMatch, searchDetails: { matchType: 'code', matchedOn: code } };
+            console.log(`✅ Found direct code match (${validation.confidence} confidence):`, directMatch.productName);
+            return { 
+              product: directMatch, 
+              searchDetails: { matchType: 'code', matchedOn: code, confidence: validation.confidence },
+              warnings: validation.warnings
+            };
           } else {
-            console.log("❌ Code match rejected - critical fields missing:", validation.missingFields);
+            console.log("❌ Code match rejected - insufficient verification:", validation.missingFields);
           }
         }
       }
     }
 
     // STRATEGY 4: Search by product name or brand name using keywords
-    // Only use this if we found some identifying codes in OCR
+    // ONLY use this if we found some identifying codes in OCR (lower priority than code matches)
+    // This is a fallback when exact code matches fail
     if (keywords.length > 0 && (extractedCFPR || extractedLTO)) {
+      console.log("⚠️ Falling back to keyword search (lower priority than code matches)");
       for (const keyword of keywords) {
         if (keyword.length < 5) continue; // Skip short words
         
@@ -240,14 +316,19 @@ export class FuzzySearchService {
           .getOne();
         
         if (nameMatch) {
-          // Validate match - CFPR must be in OCR
+          // Validate match - either CFPR or LTO must be in OCR
           const validation = this.validateMatchAgainstOCR(nameMatch, ocrText);
           
           if (validation.valid) {
-            console.log("✅ Found keyword match (validated):", nameMatch.productName, "via keyword:", keyword);
-            return { product: nameMatch, searchDetails: { matchType: 'keyword', matchedOn: keyword } };
+            console.log(`✅ Found keyword match (${validation.confidence} confidence):`, nameMatch.productName, "via keyword:", keyword);
+            validation.warnings.push('Match based on product name - LTO/CFPR codes have higher priority');
+            return { 
+              product: nameMatch, 
+              searchDetails: { matchType: 'keyword', matchedOn: keyword, confidence: validation.confidence },
+              warnings: validation.warnings
+            };
           } else {
-            console.log("❌ Keyword match rejected - critical fields missing:", validation.missingFields);
+            console.log("❌ Keyword match rejected - insufficient verification:", validation.missingFields);
             // Continue searching - maybe another keyword will find a better match
           }
         }

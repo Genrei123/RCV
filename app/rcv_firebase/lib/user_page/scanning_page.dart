@@ -2685,7 +2685,6 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
     }
     
     _isProcessingOCR = true;
-    bool dialogOpen = false;
     
     try {
       // Clear previous scan data to prevent stale state/infinite loading loop
@@ -2819,8 +2818,8 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
         });
         
         developer.log('✅ Images uploaded successfully');
-        developer.log('   Front URL: ${_frontImageUrl}');
-        developer.log('   Back URL: ${_backImageUrl}');
+        developer.log('   Front URL: $_frontImageUrl');
+        developer.log('   Back URL: $_backImageUrl');
       } catch (uploadError) {
         developer.log('⚠️ Image upload failed: $uploadError');
         // Continue with OCR even if upload fails - we still have local paths
