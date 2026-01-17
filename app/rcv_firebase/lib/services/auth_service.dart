@@ -24,7 +24,7 @@ class AuthService {
   }
 
   /// Get stored JWT token
-  static Future<String?> _getToken() async {
+  static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_tokenKey);
   }
@@ -43,7 +43,7 @@ class AuthService {
       'Accept': 'application/json',
     };
 
-    final token = await _getToken();
+    final token = await getToken();
     if (token != null) {
       headers['Authorization'] = 'Bearer $token';
       developer.log('📤 Sending Authorization header with token');
@@ -313,20 +313,25 @@ class AuthService {
     try {
       developer.log('🚪 Logging out user...');
 
-      // Clear local token
-      await clearToken();
+      // Clear all cached data
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear(); // Clear all SharedPreferences data
+
+      developer.log('🗑️ All cache cleared');
       developer.log('✅ User logged out successfully');
     } catch (e) {
       developer.log('❌ Error during logout: $e');
-      // Still clear local token even if there's an error
-      await clearToken();
+      // Still try to clear token even if there's an error
+      try {
+        await clearToken();
+      } catch (_) {}
     }
   }
 
   // Check if user is authenticated (has valid JWT token)
   Future<bool> isLoggedIn() async {
     try {
-      final token = await _getToken();
+      final token = await getToken();
       if (token == null || token.isEmpty) {
         developer.log('❌ No token stored - user not logged in');
         return false;
@@ -376,6 +381,6 @@ class AuthService {
 
   // Get current user token
   Future<String?> getCurrentToken() async {
-    return await _getToken();
+    return await getToken();
   }
 }
