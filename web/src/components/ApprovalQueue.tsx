@@ -33,6 +33,7 @@ import {
   CertificateApprovalService,
   type CertificateApproval,
 } from '@/services/approvalService';
+import { Pagination as SimplePagination } from '@/components/Pagination';
 import { useMetaMask } from '@/contexts/MetaMaskContext';
 import { AuthService } from '@/services/authService';
 
@@ -43,6 +44,8 @@ interface ApprovalQueueProps {
 const ApprovalQueue: React.FC<ApprovalQueueProps> = ({ isAdmin = false }) => {
   const [pendingApprovals, setPendingApprovals] = useState<CertificateApproval[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const pageSize = 6;
   const [selectedApproval, setSelectedApproval] = useState<CertificateApproval | null>(null);
   const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
@@ -248,132 +251,152 @@ const ApprovalQueue: React.FC<ApprovalQueueProps> = ({ isAdmin = false }) => {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {pendingApprovals.map((approval) => (
-            <Card key={approval._id} className="flex flex-col">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <CardTitle className="text-lg">{approval.entityName}</CardTitle>
-                  {getStatusBadge(approval.status)}
+          {pendingApprovals
+            .slice((currentPage - 1) * pageSize, currentPage * pageSize)
+            .map((approval) => (
+          <Card key={approval._id} className="flex flex-col">
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between">
+                <CardTitle className="text-lg">{approval.entityName}</CardTitle>
+                {getStatusBadge(approval.status)}
+              </div>
+              <CardDescription className="flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                {approval.entityType === 'product' ? 'Product Certificate' : 'Company Certificate'}
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="flex-grow space-y-3">
+              <div className="text-sm space-y-2">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <User className="w-4 h-4" />
+                  <span>Submitted by: {approval.submitterName || 'Unknown'}</span>
                 </div>
-                <CardDescription className="flex items-center gap-2">
-                  <FileText className="w-4 h-4" />
-                  {approval.entityType === 'product' ? 'Product Certificate' : 'Company Certificate'}
-                </CardDescription>
-              </CardHeader>
 
-              <CardContent className="flex-grow space-y-3">
-                <div className="text-sm space-y-2">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <User className="w-4 h-4" />
-                    <span>Submitted by: {approval.submitterName || 'Unknown'}</span>
-                  </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Shield className="w-4 h-4" />
+                  <span>
+                    {CertificateApprovalService.getApprovalProgressText(approval)}
+                  </span>
+                </div>
 
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Shield className="w-4 h-4" />
+                {/* Show entity creation status */}
+                {approval.pendingEntityData && !approval.entityCreated && (
+                  <div className="flex items-center gap-2 text-amber-600 bg-amber-50 p-2 rounded text-xs">
+                    <Clock className="w-3 h-3" />
                     <span>
-                      {CertificateApprovalService.getApprovalProgressText(approval)}
+                      {approval.entityType === 'product' ? 'Product' : 'Company'} will be created after full approval
                     </span>
                   </div>
-
-                  {/* Show entity creation status */}
-                  {approval.pendingEntityData && !approval.entityCreated && (
-                    <div className="flex items-center gap-2 text-amber-600 bg-amber-50 p-2 rounded text-xs">
-                      <Clock className="w-3 h-3" />
-                      <span>
-                        {approval.entityType === 'product' ? 'Product' : 'Company'} will be created after full approval
-                      </span>
-                    </div>
-                  )}
-                  
-                  {approval.entityCreated && (
-                    <div className="flex items-center gap-2 text-green-600 bg-green-50 p-2 rounded text-xs">
-                      <CheckCircle className="w-3 h-3" />
-                      <span>
-                        {approval.entityType === 'product' ? 'Product' : 'Company'} has been created
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Show approvers list */}
-                  {approval.approvers && approval.approvers.length > 0 && (
-                    <div className="text-xs text-muted-foreground mt-2 p-2 bg-muted rounded space-y-1">
-                      <span className="font-medium">Approvers:</span>
-                      {approval.approvers.map((approver, index) => (
-                        <div key={index} className="ml-2 flex items-center gap-1">
-                          {index + 1}. {approver.approverName}
-                          {approver.signature === 'submission-auto-approval' ? (
-                            <span className="text-blue-600 text-xs">(auto: submitted)</span>
-                          ) : (
-                            <span> - {CertificateApprovalService.formatDate(approver.approvalDate)}</span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Fallback to legacy first approver if no approvers array */}
-                  {(!approval.approvers || approval.approvers.length === 0) && approval.firstApproverName && (
-                    <div className="text-xs text-muted-foreground mt-2 p-2 bg-muted rounded">
-                      <span className="font-medium">First Approver:</span> {approval.firstApproverName}
-                      <br />
-                      <span className="text-xs">
-                        {CertificateApprovalService.formatDate(approval.firstApprovalDate)}
-                      </span>
-                    </div>
-                  )}
-
-                  <div className="text-xs mt-2">
-                    <span className="font-medium">PDF Hash:</span>
-                    <code className="ml-1 p-1 bg-muted rounded text-xs break-all">
-                      {approval.pdfHash.substring(0, 20)}...
-                    </code>
-                  </div>
-
-                  {/* Show submission version if resubmitted */}
-                  {approval.submissionVersion && approval.submissionVersion > 1 && (
-                    <div className="text-xs mt-1 text-orange-600">
-                      Resubmission #{approval.submissionVersion}
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-
-              <CardFooter className="flex gap-2 pt-4 border-t">
-                {canUserApprove(approval) ? (
-                  <>
-                    <Button
-                      className="flex-1"
-                      onClick={() => openApprovalDialog(approval, 'approve')}
-                    >
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      Approve
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      className="flex-1"
-                      onClick={() => openApprovalDialog(approval, 'reject')}
-                    >
-                      <XCircle className="w-4 h-4 mr-2" />
-                      Reject
-                    </Button>
-                  </>
-                ) : (
-                  <div className="flex-1 text-center text-sm text-muted-foreground">
-                    {/* Check if user already approved (including auto-approval on submission) */}
-                    {approval.approvers?.some(a => a.approverId === currentUser?._id && a.signature === 'submission-auto-approval')
-                      ? '✓ Your submission counts as approval'
-                      : approval.approvers?.some(a => a.approverId === currentUser?._id) || approval.firstApproverId === currentUser?._id
-                      ? '✓ Already approved by you'
-                      : approval.submittedBy === currentUser?._id
-                      ? 'You submitted this (not an admin)'
-                      : 'Cannot approve'}
+                )}
+                
+                {approval.entityCreated && (
+                  <div className="flex items-center gap-2 text-green-600 bg-green-50 p-2 rounded text-xs">
+                    <CheckCircle className="w-3 h-3" />
+                    <span>
+                      {approval.entityType === 'product' ? 'Product' : 'Company'} has been created
+                    </span>
                   </div>
                 )}
-              </CardFooter>
-            </Card>
-          ))}
+
+                {/* Show approvers list */}
+                {approval.approvers && approval.approvers.length > 0 && (
+                  <div className="text-xs text-muted-foreground mt-2 p-2 bg-muted rounded space-y-1">
+                    <span className="font-medium">Approvers:</span>
+                    {approval.approvers.map((approver, index) => (
+                      <div key={index} className="ml-2 flex items-center gap-1">
+                        {index + 1}. {approver.approverName}
+                        {approver.signature === 'submission-auto-approval' ? (
+                          <span className="text-blue-600 text-xs">(auto: submitted)</span>
+                        ) : (
+                          <span> - {CertificateApprovalService.formatDate(approver.approvalDate)}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Fallback to legacy first approver if no approvers array */}
+                {(!approval.approvers || approval.approvers.length === 0) && approval.firstApproverName && (
+                  <div className="text-xs text-muted-foreground mt-2 p-2 bg-muted rounded">
+                    <span className="font-medium">First Approver:</span> {approval.firstApproverName}
+                    <br />
+                    <span className="text-xs">
+                      {CertificateApprovalService.formatDate(approval.firstApprovalDate)}
+                    </span>
+                  </div>
+                )}
+
+                <div className="text-xs mt-2">
+                  <span className="font-medium">PDF Hash:</span>
+                  <code className="ml-1 p-1 bg-muted rounded text-xs break-all">
+                    {approval.pdfHash.substring(0, 20)}...
+                  </code>
+                </div>
+
+                {/* Show submission version if resubmitted */}
+                {approval.submissionVersion && approval.submissionVersion > 1 && (
+                  <div className="text-xs mt-1 text-orange-600">
+                    Resubmission #{approval.submissionVersion}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+
+            <CardFooter className="flex gap-2 pt-4 border-t">
+              {canUserApprove(approval) ? (
+                <>
+                  <Button
+                    className="flex-1"
+                    onClick={() => openApprovalDialog(approval, 'approve')}
+                  >
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Approve
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    className="flex-1"
+                    onClick={() => openApprovalDialog(approval, 'reject')}
+                  >
+                    <XCircle className="w-4 h-4 mr-2" />
+                    Reject
+                  </Button>
+                </>
+              ) : (
+                <div className="flex-1 text-center text-sm text-muted-foreground">
+                  {/* Check if user already approved (including auto-approval on submission) */}
+                  {approval.approvers?.some(a => a.approverId === currentUser?._id && a.signature === 'submission-auto-approval')
+                    ? '✓ Your submission counts as approval'
+                    : approval.approvers?.some(a => a.approverId === currentUser?._id) || approval.firstApproverId === currentUser?._id
+                    ? '✓ Already approved by you'
+                    : approval.submittedBy === currentUser?._id
+                    ? 'You submitted this (not an admin)'
+                    : 'Cannot approve'}
+                </div>
+              )}
+            </CardFooter>
+          </Card>
+        ))}
         </div>
       )}
+
+      <div className="mt-4 flex items-center justify-between">
+        <div className="text-sm text-muted-foreground">
+          {`Showing ${pendingApprovals.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}-${Math.min(currentPage * pageSize, pendingApprovals.length)} of ${pendingApprovals.length} results`}
+        </div>
+
+        <div>
+          <SimplePagination
+            currentPage={currentPage}
+            totalPages={Math.max(1, Math.ceil(pendingApprovals.length / pageSize))}
+            totalItems={pendingApprovals.length}
+            itemsPerPage={pageSize}
+            onPageChange={(p) => setCurrentPage(p)}
+            alwaysShowControls
+            showingPosition="right"
+          />
+        </div>
+      </div>
 
       {/* Approval/Rejection Dialog */}
       <Dialog open={!!selectedApproval && !!actionType} onOpenChange={() => closeDialog()}>

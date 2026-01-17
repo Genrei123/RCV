@@ -72,6 +72,7 @@ import {
 } from "lucide-react";
 import ApprovalQueue from "@/components/ApprovalQueue";
 import MySubmissions from "@/components/MySubmissions";
+import { Pagination as SimplePagination } from "@/components/Pagination";
 
 export interface DashboardProps {
   success?: boolean;
@@ -107,6 +108,8 @@ export function Dashboard(props: DashboardProps) {
   const [viewMode, setViewMode] = useState<"users" | "rejected" | "invites" | "approvals" | "my-submissions">("users");
   const [invites, setInvites] = useState<AdminInvite[]>([]);
   const [invitesLoading, setInvitesLoading] = useState<boolean>(false);
+  const [rejectedPage, setRejectedPage] = useState<number>(1);
+  const [invitesPage, setInvitesPage] = useState<number>(1);
 
   // Edit invite modal state
   const [editInviteModalOpen, setEditInviteModalOpen] = useState(false);
@@ -647,7 +650,9 @@ export function Dashboard(props: DashboardProps) {
     return usersArray.length ?? 0;
   })();
 
-  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  // For visible counts use the client-side arrays (ensure UI shows consistent totals)
+  const displayTotal = statusFilter === "all" ? usersArray.length ?? 0 : filteredUsers.length ?? 0;
+  const totalPages = Math.max(1, Math.ceil(displayTotal / pageSize));
 
   const paginatedDisplayData = sortedUsers;
 
@@ -890,100 +895,23 @@ export function Dashboard(props: DashboardProps) {
           />
         <div className="mt-4 flex items-center justify-between w-full">
           <div className="text-sm text-muted-foreground">
-            Showing {paginatedDisplayData.length} of {statusFilter === "all" ? totalItems : filteredUsers.length} users
+            Showing {paginatedDisplayData.length} of {displayTotal} users
             {statusFilter !== "all" && ` (filtered by ${statusFilter})`} • Page{" "}
             {currentPage} of {totalPages}
           </div>
 
-          <Pagination className="mx-0 w-auto">
-            <PaginationContent className="gap-1">
-              <PaginationItem>
-                <PaginationPrevious
-                  onClick={() => currentPage > 1 && fetchPage(currentPage - 1)}
-                  className={
-                    currentPage <= 1
-                      ? "pointer-events-none opacity-50"
-                      : "cursor-pointer"
-                  }
-                />
-              </PaginationItem>
-
-              {currentPage > 2 && (
-                <PaginationItem>
-                  <PaginationLink
-                    onClick={() => fetchPage(1)}
-                    className="cursor-pointer"
-                  >
-                    1
-                  </PaginationLink>
-                </PaginationItem>
-              )}
-
-              {currentPage > 3 && (
-                <PaginationItem>
-                  <PaginationEllipsis />
-                </PaginationItem>
-              )}
-
-              {currentPage > 1 && (
-                <PaginationItem>
-                  <PaginationLink
-                    onClick={() => fetchPage(currentPage - 1)}
-                    className="cursor-pointer"
-                  >
-                    {currentPage - 1}
-                  </PaginationLink>
-                </PaginationItem>
-              )}
-
-              <PaginationItem>
-                <PaginationLink isActive className="cursor-pointer">
-                  {currentPage}
-                </PaginationLink>
-              </PaginationItem>
-
-              {currentPage < totalPages && (
-                <PaginationItem>
-                  <PaginationLink
-                    onClick={() => fetchPage(currentPage + 1)}
-                    className="cursor-pointer"
-                  >
-                    {currentPage + 1}
-                  </PaginationLink>
-                </PaginationItem>
-              )}
-
-              {currentPage < totalPages - 2 && (
-                <PaginationItem>
-                  <PaginationEllipsis />
-                </PaginationItem>
-              )}
-
-              {currentPage < totalPages - 1 && (
-                <PaginationItem>
-                  <PaginationLink
-                    onClick={() => fetchPage(totalPages)}
-                    className="cursor-pointer"
-                  >
-                    {totalPages}
-                  </PaginationLink>
-                </PaginationItem>
-              )}
-
-              <PaginationItem>
-                <PaginationNext
-                  onClick={() =>
-                    currentPage < totalPages && fetchPage(currentPage + 1)
-                  }
-                  className={
-                    currentPage >= totalPages
-                      ? "pointer-events-none opacity-50"
-                      : "cursor-pointer"
-                  }
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
+          <div>
+            <SimplePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={displayTotal}
+              itemsPerPage={pageSize}
+              onPageChange={(p) => fetchPage(p)}
+              alwaysShowControls
+              showingPosition="right"
+              showingText={`Showing ${paginatedDisplayData.length} of ${displayTotal} users`}
+            />
+          </div>
         </div>
         </div>
         )}
@@ -991,70 +919,121 @@ export function Dashboard(props: DashboardProps) {
         {/* Rejected Users Table (Admin only) */}
         {viewMode === "rejected" && isAdmin() && (
           <div className="w-full">
-            <DataTable
-              title="Rejected Users"
-              columns={columns}
-              data={usersArray.filter(u => u.status === "Rejected")}
-              searchPlaceholder="Search rejected users..."
-              onSearch={(query) => onSearch(query)}
-              loading={loading}
-              emptyStateTitle="No Rejected Users"
-              emptyStateDescription="There are no rejected user accounts at this time."
-              customControls={
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fetchPage(currentPage)}
-                    disabled={loading}
-                  >
-                    <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                    Refresh
-                  </Button>
-                </div>
-              }
-            />
-            <div className="mt-4 text-sm text-muted-foreground">
-              Showing {usersArray.filter(u => u.status === "Rejected").length} rejected users
-            </div>
+            {(() => {
+              const rejectedUsers = usersArray.filter((u) => u.status === "Rejected");
+              const rejectedTotal = rejectedUsers.length;
+              const rejectedTotalPages = Math.max(1, Math.ceil(rejectedTotal / pageSize));
+              const rejectedSlice = rejectedUsers.slice((rejectedPage - 1) * pageSize, rejectedPage * pageSize);
+
+              return (
+                <>
+                  <DataTable
+                    title="Rejected Users"
+                    columns={columns}
+                    data={rejectedSlice}
+                    searchPlaceholder="Search rejected users..."
+                    onSearch={(query) => onSearch(query)}
+                    loading={loading}
+                    emptyStateTitle="No Rejected Users"
+                    emptyStateDescription="There are no rejected user accounts at this time."
+                    customControls={
+                      <div className="flex items-center gap-2 w-full sm:w-auto">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => fetchPage(currentPage)}
+                          disabled={loading}
+                        >
+                          <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                          Refresh
+                        </Button>
+                      </div>
+                    }
+                  />
+
+                  <div className="mt-4 flex items-center justify-between">
+                    <div className="text-sm text-muted-foreground">
+                      Showing {rejectedTotal} rejected users
+                    </div>
+
+                    <div className="ml-4">
+                      <SimplePagination
+                        currentPage={rejectedPage}
+                        totalPages={rejectedTotalPages}
+                        totalItems={rejectedTotal}
+                        itemsPerPage={pageSize}
+                        onPageChange={(p) => setRejectedPage(p)}
+                        alwaysShowControls
+                        showingPosition="right"
+                      />
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         )}
 
         {/* Invites Table (Admin only) */}
         {viewMode === "invites" && isAdmin() && (
           <div className="w-full">
-            <DataTable
-              title="Agent Invitations"
-              columns={inviteColumns}
-              data={invites}
-              searchPlaceholder="Search invites..."
-              onSearch={() => {}}
-              loading={invitesLoading}
-              emptyStateTitle="No Invites Found"
-              emptyStateDescription="No agent invitations have been sent yet."
-              customControls={
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <Button
-                    onClick={() => setIsInviteModalOpen(true)}
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    <UserPlus className="w-4 h-4 mr-2" />
-                    Invite Agent
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={fetchInvites}
-                    disabled={invitesLoading}
-                  >
-                    Refresh
-                  </Button>
-                </div>
-              }
-            />
-            <div className="mt-4 text-sm text-muted-foreground">
-              Showing {invites.length} invitations
-            </div>
+            {(() => {
+              const invitesTotal = invites.length;
+              const invitesTotalPages = Math.max(1, Math.ceil(invitesTotal / pageSize));
+              const invitesSlice = invites.slice((invitesPage - 1) * pageSize, invitesPage * pageSize);
+
+              return (
+                <>
+                  <DataTable
+                    title="Agent Invitations"
+                    columns={inviteColumns}
+                    data={invitesSlice}
+                    searchPlaceholder="Search invites..."
+                    onSearch={() => {}}
+                    loading={invitesLoading}
+                    emptyStateTitle="No Invites Found"
+                    emptyStateDescription="No agent invitations have been sent yet."
+                    customControls={
+                      <div className="flex items-center gap-2 w-full sm:w-auto">
+                        <Button
+                          onClick={() => setIsInviteModalOpen(true)}
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          <UserPlus className="w-4 h-4 mr-2" />
+                          Invite Agent
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={fetchInvites}
+                          disabled={invitesLoading}
+                        >
+                          Refresh
+                        </Button>
+                      </div>
+                    }
+                  />
+
+                  <div className="mt-4 flex items-center justify-between">
+                    <div className="text-sm text-muted-foreground">
+                      Showing {invitesTotal} invitations
+                    </div>
+
+                    <div className="ml-4">
+                      <SimplePagination
+                        currentPage={invitesPage}
+                        totalPages={invitesTotalPages}
+                        totalItems={invitesTotal}
+                        itemsPerPage={pageSize}
+                        onPageChange={(p) => setInvitesPage(p)}
+                        alwaysShowControls
+                        showingPosition="right"
+                      />
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         )}
 

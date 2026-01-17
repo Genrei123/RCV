@@ -39,6 +39,7 @@ import {
   CertificateApprovalService,
   type CertificateApproval,
 } from '@/services/approvalService';
+import { Pagination as SimplePagination } from '@/components/Pagination';
 
 interface MySubmissionsProps {}
 
@@ -46,6 +47,8 @@ const MySubmissions: React.FC<MySubmissionsProps> = () => {
   const [submissions, setSubmissions] = useState<CertificateApproval[]>([]);
   const [rejectedSubmissions, setRejectedSubmissions] = useState<CertificateApproval[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const pageSize = 6;
   const [selectedApproval, setSelectedApproval] = useState<CertificateApproval | null>(null);
   const [showResubmitDialog, setShowResubmitDialog] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -75,6 +78,11 @@ const MySubmissions: React.FC<MySubmissionsProps> = () => {
   useEffect(() => {
     fetchSubmissions();
   }, []);
+
+  useEffect(() => {
+    // reset page when switching tabs
+    setCurrentPage(1);
+  }, [activeTab]);
 
   const handleResubmit = async () => {
     if (!selectedApproval) return;
@@ -257,6 +265,12 @@ const MySubmissions: React.FC<MySubmissionsProps> = () => {
   const pendingSubmissions = submissions.filter(s => s.status === 'pending');
   const approvedSubmissions = submissions.filter(s => s.status === 'approved');
 
+  // compute current page slices for each tab so the "Showing" text is consistent
+  const submissionsPage = submissions.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const pendingPage = pendingSubmissions.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const approvedPage = approvedSubmissions.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const rejectedPage = rejectedSubmissions.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -310,9 +324,27 @@ const MySubmissions: React.FC<MySubmissionsProps> = () => {
             </Card>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {submissions.map((approval) => renderApprovalCard(approval))}
+              {submissionsPage.map((approval) => renderApprovalCard(approval))}
             </div>
           )}
+
+          <div className="mt-4 flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">
+              {`Showing ${submissionsPage.length} of ${submissions.length} results`}
+            </div>
+            <div>
+              <SimplePagination
+                currentPage={currentPage}
+                totalPages={Math.max(1, Math.ceil(submissions.length / pageSize))}
+                totalItems={submissions.length}
+                showingText={`Showing ${submissionsPage.length} - ${submissions.length} results`}
+                itemsPerPage={pageSize}
+                onPageChange={(p) => setCurrentPage(p)}
+                alwaysShowControls
+                showingPosition="right"
+              />
+            </div>
+          </div>
         </TabsContent>
 
         <TabsContent value="pending" className="mt-4">
@@ -328,9 +360,27 @@ const MySubmissions: React.FC<MySubmissionsProps> = () => {
             </Card>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {pendingSubmissions.map((approval) => renderApprovalCard(approval))}
+              {pendingPage.map((approval) => renderApprovalCard(approval))}
             </div>
           )}
+
+          <div className="mt-4 flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">
+              {`Showing ${pendingPage.length} of ${pendingSubmissions.length} results`}
+            </div>
+            <div>
+              <SimplePagination
+                currentPage={currentPage}
+                totalPages={Math.max(1, Math.ceil(pendingSubmissions.length / pageSize))}
+                totalItems={pendingSubmissions.length}
+                showingText={`Showing ${pendingPage.length} of ${pendingSubmissions.length} results`}
+                itemsPerPage={pageSize}
+                onPageChange={(p) => setCurrentPage(p)}
+                alwaysShowControls
+                showingPosition="right"
+              />
+            </div>
+          </div>
         </TabsContent>
 
         <TabsContent value="approved" className="mt-4">
@@ -346,9 +396,27 @@ const MySubmissions: React.FC<MySubmissionsProps> = () => {
             </Card>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {approvedSubmissions.map((approval) => renderApprovalCard(approval))}
+              {approvedPage.map((approval) => renderApprovalCard(approval))}
             </div>
           )}
+
+          <div className="mt-4 flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">
+              {`Showing ${approvedPage.length} of ${approvedSubmissions.length} results`}
+            </div>
+            <div>
+              <SimplePagination
+                currentPage={currentPage}
+                totalPages={Math.max(1, Math.ceil(approvedSubmissions.length / pageSize))}
+                totalItems={approvedSubmissions.length}
+                showingText={`Showing ${approvedPage.length} of ${approvedSubmissions.length} results`}
+                itemsPerPage={pageSize}
+                onPageChange={(p) => setCurrentPage(p)}
+                alwaysShowControls
+                showingPosition="right"
+              />
+            </div>
+          </div>
         </TabsContent>
 
         <TabsContent value="rejected" className="mt-4">
@@ -364,9 +432,27 @@ const MySubmissions: React.FC<MySubmissionsProps> = () => {
             </Card>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {rejectedSubmissions.map((approval) => renderApprovalCard(approval, true))}
+              {rejectedPage.map((approval) => renderApprovalCard(approval, true))}
             </div>
           )}
+
+          <div className="mt-4 flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">
+              {`Showing ${rejectedPage.length} of ${rejectedSubmissions.length} results`}
+            </div>
+            <div>
+              <SimplePagination
+                currentPage={currentPage}
+                totalPages={Math.max(1, Math.ceil(rejectedSubmissions.length / pageSize))}
+                totalItems={rejectedSubmissions.length}
+                showingText={`Showing ${rejectedPage.length} of ${rejectedSubmissions.length} results`}
+                itemsPerPage={pageSize}
+                onPageChange={(p) => setCurrentPage(p)}
+                alwaysShowControls
+                showingPosition="right"
+              />
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
 
