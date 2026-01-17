@@ -72,6 +72,9 @@ export class CertificateApproval {
   @Column({ type: 'text', nullable: true })
   firstApprovalSignature?: string;
 
+  @Column({ nullable: true })
+  firstApprovalDate?: Date;
+
   // Second approver (e.g., Admin/Director)
   @Column({ nullable: true })
   secondApproverId?: string;
