@@ -382,11 +382,11 @@ export function MapComponent({
       {/* Search panel: absolute positioning normally, fixed when in fullscreen */}
       <div 
         ref={searchContainerRef}
-        className={`${isFullscreen ? 'fixed' : 'absolute'} top-16 sm:top-20 left-3 sm:left-4 z-[9999] w-[calc(100vw-2rem)] sm:w-80 md:w-96 max-w-[28rem]`}
+        className={`${isFullscreen ? 'fixed' : 'absolute'} top-[120px] sm:top-[110px] lg:top-16 xl:top-20 left-0 sm:left-3 lg:left-4 right-0 sm:right-auto z-[40] w-full sm:w-80 md:w-96 sm:max-w-[28rem]`}
         style={{ pointerEvents: 'auto' }}
       >
-        <Card className="bg-white rounded-lg border-0 shadow-xl ">
-          <div className="relative p-2">
+        <Card className="bg-white rounded-none sm:rounded-lg border-0 shadow-xl m-0 sm:m-0">
+          <div className="relative p-2 sm:p-2">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
               placeholder="Search inspectors..."
@@ -481,7 +481,7 @@ export function MapComponent({
       {/* Inspector count container: absolute positioning normally, fixed when in fullscreen */}
       <div 
         ref={inspectorCountRef}
-        className={`${isFullscreen ? 'fixed' : 'absolute'} top-4 sm:top-6 left-1/2 -translate-x-1/2 z-[9999]`}
+        className={`${isFullscreen ? 'fixed' : 'absolute'} top-[56px] lg:top-4 xl:top-6 left-3 sm:left-1/2 sm:-translate-x-1/2 z-[41]`}
         style={{ pointerEvents: 'auto' }}
       >
         <Card className="bg-white shadow-lg px-4 py-2">

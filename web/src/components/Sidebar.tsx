@@ -339,7 +339,7 @@ export function Sidebar({
 
       {/* mobile/tablet drawer: visible below lg, use visible & closeDrawer */}
       <div
-        className={`fixed inset-0 z-40 lg:hidden transition-opacity ${
+        className={`fixed inset-0 z-[60] lg:hidden transition-opacity ${
           visible
             ? "opacity-100 pointer-events-auto"
             : "opacity-0 pointer-events-none"
