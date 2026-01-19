@@ -27,8 +27,9 @@ export function Maps() {
           .map((user) => {
             console.log("Mapping user:", user);
             return {
-              id: user._id,
+              id: user.id,
               name: user.fullName,
+              email: user.email,
               role: user.role,
               status:
                 user.status === "Active"

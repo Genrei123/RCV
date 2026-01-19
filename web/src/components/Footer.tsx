@@ -11,7 +11,7 @@ export function Footer() {
             <div className="flex flex-col items-center md:items-start">
               <div className="w-12 h-12 mb-3">
                 <img
-                  src="logo.svg"
+                  src="/logo.svg"
                   alt="RCV System logo"
                   draggable="false"
                   className="w-full h-full object-contain rounded-lg"
