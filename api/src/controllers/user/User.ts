@@ -89,14 +89,15 @@ export const getUserById = async (
   res: Response,
   next: NextFunction
 ) => {
-  const idResult = IdSchema.safeParse(req.params.id);
-  if (!idResult.success) {
+  // Accept both UUID (MySQL users) and Firebase UID
+  const userId = req.params.id;
+  if (!userId || userId.trim() === '') {
     return res.status(400).json({ success: false, message: "Invalid User ID" });
   }
 
   try {
-    const user = await UserRepo.findOne({
-      where: { _id: req.params.id },
+    let user = await UserRepo.findOne({
+      where: { _id: userId },
       select: [
         "_id",
         "email",
@@ -121,17 +122,59 @@ export const getUserById = async (
         "selfieWithIdUrl",
         "walletAddress",
         "walletAuthorized",
+        "firebaseUid",
         "createdAt",
         "updatedAt",
       ],
     });
+    
+    // If not found by _id, try to find by firebaseUid (for Firestore user IDs)
     if (!user) {
+      console.log(`[getUserById] User not found by _id: ${userId}, trying firebaseUid`);
+      user = await UserRepo.findOne({
+        where: { firebaseUid: userId },
+        select: [
+          "_id",
+          "email",
+          "role",
+          "approved",
+          "status",
+          "rejectionReason",
+          "firstName",
+          "middleName",
+          "lastName",
+          "extName",
+          "fullName",
+          "phoneNumber",
+          "dateOfBirth",
+          "location",
+          "currentLocation",
+          "badgeId",
+          "avatarUrl",
+          "webAccess",
+          "appAccess",
+          "idDocumentUrl",
+          "selfieWithIdUrl",
+          "walletAddress",
+          "walletAuthorized",
+          "firebaseUid",
+          "createdAt",
+          "updatedAt",
+        ],
+      });
+    }
+    
+    if (!user) {
+      console.log(`[getUserById] User not found by _id or firebaseUid: ${userId}`);
       return res
         .status(404)
         .json({ success: false, message: "User not found" });
     }
+    
+    console.log(`[getUserById] Found user: ${user._id}`);
     return res.status(200).json({ success: true, user });
   } catch (error) {
+    console.error("[getUserById] Error:", error);
     next(error);
     return CustomError.security(500, "Server Error");
   }
@@ -733,5 +776,169 @@ export const archiveUserAccount = async (
     });
   } catch (error) {
     return next(CustomError.security(500, "Server Error"));
+  }
+};
+/**
+ * Sync a Firebase user to MySQL database
+ * Matches by email and links Firebase UID to existing user
+ */
+export const syncUserFromFirebase = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { firebaseUid } = req.params;
+    
+    console.log(`[syncUserFromFirebase] Starting sync for Firebase UID: ${firebaseUid}`);
+
+    if (!firebaseUid) {
+      return res.status(400).json({
+        success: false,
+        message: "Firebase UID is required"
+      });
+    }
+
+    // Check if user already exists by Firebase UID
+    let user = await UserRepo.findOne({
+      where: { firebaseUid }
+    });
+
+    if (user) {
+      console.log(`[syncUserFromFirebase] User already linked: ${user._id}`);
+      return res.status(200).json({
+        success: true,
+        message: "User already synced",
+        user: {
+          _id: user._id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          fullName: user.fullName,
+          role: user.role,
+        }
+      });
+    }
+
+    // Try to get Firebase user data
+    let firebaseUser: any = null;
+    let firestoreData: any = {};
+
+    // Try Firebase Auth first
+    try {
+      firebaseUser = await admin.auth().getUser(firebaseUid);
+      console.log(`[syncUserFromFirebase] Found Firebase Auth user: ${firebaseUser.email}`);
+    } catch (authError: any) {
+      console.warn(`[syncUserFromFirebase] Firebase Auth lookup failed (${authError.message}), checking Firestore...`);
+    }
+
+    // Try Firestore data (as fallback or complement)
+    try {
+      const firestoreDoc = await admin.firestore().collection('users').doc(firebaseUid).get();
+      firestoreData = firestoreDoc.data() || {};
+      if (Object.keys(firestoreData).length > 0) {
+        console.log(`[syncUserFromFirebase] Firestore data loaded for UID: ${firebaseUid}`);
+      }
+    } catch (firestoreError: any) {
+      console.warn(`[syncUserFromFirebase] Firestore lookup failed: ${firestoreError.message}`);
+    }
+
+    // Must have at least Firestore data or Firebase user
+    if (!firebaseUser && Object.keys(firestoreData).length === 0) {
+      console.error(`[syncUserFromFirebase] No user found in Firebase Auth or Firestore for UID: ${firebaseUid}`);
+      return res.status(404).json({
+        success: false,
+        message: `User not found in Firebase or Firestore`
+      });
+    }
+
+    // Extract email - this is the universal identifier
+    const email = firebaseUser?.email || firestoreData.email;
+    
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Firebase user has no email address"
+      });
+    }
+
+    console.log(`[syncUserFromFirebase] Looking for user by email: ${email}`);
+
+    // Try to find existing user by email
+    const existingUser = await UserRepo.findOne({
+      where: { email }
+    });
+
+    if (existingUser) {
+      // Link Firebase UID to existing user
+      console.log(`[syncUserFromFirebase] Found existing user: ${existingUser._id}, linking Firebase UID...`);
+      existingUser.firebaseUid = firebaseUid;
+      const linkedUser = await UserRepo.save(existingUser);
+
+      return res.status(200).json({
+        success: true,
+        message: "Firebase UID linked to existing user",
+        user: {
+          _id: linkedUser._id,
+          email: linkedUser.email,
+          firstName: linkedUser.firstName,
+          lastName: linkedUser.lastName,
+          middleName: linkedUser.middleName,
+          fullName: linkedUser.fullName,
+          role: linkedUser.role,
+          phoneNumber: linkedUser.phoneNumber,
+          location: linkedUser.location,
+          badgeId: linkedUser.badgeId,
+          dateOfBirth: linkedUser.dateOfBirth,
+          avatarUrl: linkedUser.avatarUrl,
+        }
+      });
+    }
+
+    // No existing user found - create new one
+    console.log(`[syncUserFromFirebase] No existing user found, creating new user...`);
+
+    const newUser = UserRepo.create({
+      firebaseUid,
+      email,
+      firstName: firestoreData.firstName || firebaseUser.displayName?.split(' ')[0] || 'Firebase',
+      lastName: firestoreData.lastName || firebaseUser.displayName?.split(' ').slice(1).join(' ') || 'User',
+      middleName: firestoreData.middleName || '',
+      fullName: firestoreData.fullName || firebaseUser.displayName || '',
+      phoneNumber: firebaseUser.phoneNumber || firestoreData.phoneNumber || '',
+      location: firestoreData.location || '',
+      badgeId: firestoreData.badgeId || '',
+      role: firestoreData.role || 'USER',
+      status: firestoreData.status || 'Active',
+      approved: firestoreData.approved ?? false,
+      emailVerified: firebaseUser.emailVerified || false,
+      password: 'firebase-synced',
+    });
+
+    const savedUser = await UserRepo.save(newUser);
+    console.log(`[syncUserFromFirebase] New user created: ${savedUser._id}`);
+
+    return res.status(201).json({
+      success: true,
+      message: "User created from Firebase",
+      user: {
+        _id: savedUser._id,
+        email: savedUser.email,
+        firstName: savedUser.firstName,
+        lastName: savedUser.lastName,
+        middleName: savedUser.middleName,
+        fullName: savedUser.fullName,
+        role: savedUser.role,
+        phoneNumber: savedUser.phoneNumber,
+        location: savedUser.location,
+        badgeId: savedUser.badgeId,
+        dateOfBirth: savedUser.dateOfBirth,
+        avatarUrl: savedUser.avatarUrl,
+      }
+    });
+
+  } catch (error) {
+    console.error('[syncUserFromFirebase] Error:', error);
+    return next(CustomError.security(500, "Sync failed"));
   }
 };

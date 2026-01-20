@@ -1371,6 +1371,26 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
     ],
   ),
 )),
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text('• ', style: TextStyle(fontSize: 16)),
+                                      Expanded(
+                                        child: Text(
+                                          v.toString(),
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: Colors.red.shade900,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )),
+                              ],
+                            ),
+                          ),
                           const SizedBox(height: 16),
                         ],
                         
@@ -1419,6 +1439,28 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
     ],
   ),
 )),
+                                ...warnings.map((w) => Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text('• ', style: TextStyle(fontSize: 16)),
+                                      Expanded(
+                                        child: Text(
+                                          w.toString(),
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: Colors.orange.shade900,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
                         ],
                         
                         Text(

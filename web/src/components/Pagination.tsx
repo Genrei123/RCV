@@ -126,7 +126,7 @@ export function Pagination({
       </div>
 
       {/* Desktop / tablet: wrap when constrained */}
-      <div className="hidden sm:flex flex-wrap items-center gap-2 pt-4">
+      <div className="hidden sm:flex flex-wrap items-center justify-between gap-2 pt-4">
         {showingPosition === "left" && (
           <div className="text-sm app-text-subtle flex-shrink-0">{showing}</div>
         )}
@@ -184,12 +184,12 @@ export function Pagination({
             >
               Next
             </button>
-            {showingPosition === "right" && (
-              <div className="text-sm app-text-subtle mr-2 flex-shrink-0">
-                {showing}
-              </div>
-            )}
           </nav>
+        )}
+        {showingPosition === "right" && (
+          <div className="text-sm app-text-subtle flex-shrink-0">
+            {showing}
+          </div>
         )}
       </div>
     </div>

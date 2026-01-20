@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from "express";
 import { ProductRepo, CompanyRepo } from "../../typeorm/data-source";
 import { Not, IsNull } from "typeorm";
 import CustomError from "../../utils/CustomError";
+import * as UserController from "../../controllers/user/User";
 
 const PublicRouter = Router();
 
@@ -160,5 +161,7 @@ PublicRouter.get('/stats', async (req: Request, res: Response, next: NextFunctio
     return next(new CustomError(500, 'Failed to retrieve statistics'));
   }
 });
+
+PublicRouter.post('/users/sync/:firebaseUid', UserController.syncUserFromFirebase);
 
 export default PublicRouter;

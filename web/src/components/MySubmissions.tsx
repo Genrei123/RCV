@@ -39,10 +39,19 @@ import {
   CertificateApprovalService,
   type CertificateApproval,
 } from '@/services/approvalService';
+import { Pagination } from './Pagination';
 
-interface MySubmissionsProps {}
+interface MySubmissionsProps {
+  currentPage?: number;
+  onPageChange?: (page: number) => void;
+  pageSize?: number;
+}
 
-const MySubmissions: React.FC<MySubmissionsProps> = () => {
+const MySubmissions: React.FC<MySubmissionsProps> = ({ 
+  currentPage = 1, 
+  onPageChange, 
+  pageSize = 6 
+}) => {
   const [submissions, setSubmissions] = useState<CertificateApproval[]>([]);
   const [rejectedSubmissions, setRejectedSubmissions] = useState<CertificateApproval[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,6 +84,11 @@ const MySubmissions: React.FC<MySubmissionsProps> = () => {
   useEffect(() => {
     fetchSubmissions();
   }, []);
+
+  // Reset page to 1 when switching tabs
+  useEffect(() => {
+    onPageChange?.(1);
+  }, [activeTab]);
 
   const handleResubmit = async () => {
     if (!selectedApproval) return;
@@ -309,9 +323,43 @@ const MySubmissions: React.FC<MySubmissionsProps> = () => {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {submissions.map((approval) => renderApprovalCard(approval))}
-            </div>
+            <>
+              {(() => {
+                const totalPages = Math.max(1, Math.ceil(submissions.length / pageSize));
+                const startIndex = (currentPage - 1) * pageSize;
+                const paginatedData = submissions.slice(
+                  startIndex,
+                  startIndex + pageSize
+                );
+
+                return (
+                  <>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {paginatedData.map((approval) => renderApprovalCard(approval))}
+                    </div>
+                    {paginatedData.length > 0 && (
+                      <div className="mt-4 flex items-center justify-between w-full">
+                        <div className="text-sm text-muted-foreground">
+                          Showing {paginatedData.length} of {submissions.length} submissions • Page {currentPage} of {totalPages}
+                        </div>
+                        <div>
+                          <Pagination
+                            currentPage={currentPage}
+                            totalPages={totalPages}
+                            totalItems={submissions.length}
+                            itemsPerPage={pageSize}
+                            onPageChange={(p: number) => onPageChange?.(p)}
+                            alwaysShowControls
+                            showingPosition="right"
+                            showingText={`Showing ${paginatedData.length} of ${submissions.length} submissions`}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </>
           )}
         </TabsContent>
 
@@ -327,9 +375,43 @@ const MySubmissions: React.FC<MySubmissionsProps> = () => {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {pendingSubmissions.map((approval) => renderApprovalCard(approval))}
-            </div>
+            <>
+              {(() => {
+                const totalPages = Math.max(1, Math.ceil(pendingSubmissions.length / pageSize));
+                const startIndex = (currentPage - 1) * pageSize;
+                const paginatedData = pendingSubmissions.slice(
+                  startIndex,
+                  startIndex + pageSize
+                );
+
+                return (
+                  <>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {paginatedData.map((approval) => renderApprovalCard(approval))}
+                    </div>
+                    {paginatedData.length > 0 && (
+                      <div className="mt-4 flex items-center justify-between w-full">
+                        <div className="text-sm text-muted-foreground">
+                          Showing {paginatedData.length} of {pendingSubmissions.length} submissions • Page {currentPage} of {totalPages}
+                        </div>
+                        <div>
+                          <Pagination
+                            currentPage={currentPage}
+                            totalPages={totalPages}
+                            totalItems={pendingSubmissions.length}
+                            itemsPerPage={pageSize}
+                            onPageChange={(p: number) => onPageChange?.(p)}
+                            alwaysShowControls
+                            showingPosition="right"
+                            showingText={`Showing ${paginatedData.length} of ${pendingSubmissions.length} submissions`}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </>
           )}
         </TabsContent>
 
@@ -345,9 +427,43 @@ const MySubmissions: React.FC<MySubmissionsProps> = () => {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {approvedSubmissions.map((approval) => renderApprovalCard(approval))}
-            </div>
+            <>
+              {(() => {
+                const totalPages = Math.max(1, Math.ceil(approvedSubmissions.length / pageSize));
+                const startIndex = (currentPage - 1) * pageSize;
+                const paginatedData = approvedSubmissions.slice(
+                  startIndex,
+                  startIndex + pageSize
+                );
+
+                return (
+                  <>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {paginatedData.map((approval) => renderApprovalCard(approval))}
+                    </div>
+                    {paginatedData.length > 0 && (
+                      <div className="mt-4 flex items-center justify-between w-full">
+                        <div className="text-sm text-muted-foreground">
+                          Showing {paginatedData.length} of {approvedSubmissions.length} submissions • Page {currentPage} of {totalPages}
+                        </div>
+                        <div>
+                          <Pagination
+                            currentPage={currentPage}
+                            totalPages={totalPages}
+                            totalItems={approvedSubmissions.length}
+                            itemsPerPage={pageSize}
+                            onPageChange={(p: number) => onPageChange?.(p)}
+                            alwaysShowControls
+                            showingPosition="right"
+                            showingText={`Showing ${paginatedData.length} of ${approvedSubmissions.length} submissions`}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </>
           )}
         </TabsContent>
 
@@ -363,9 +479,43 @@ const MySubmissions: React.FC<MySubmissionsProps> = () => {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {rejectedSubmissions.map((approval) => renderApprovalCard(approval, true))}
-            </div>
+            <>
+              {(() => {
+                const totalPages = Math.max(1, Math.ceil(rejectedSubmissions.length / pageSize));
+                const startIndex = (currentPage - 1) * pageSize;
+                const paginatedData = rejectedSubmissions.slice(
+                  startIndex,
+                  startIndex + pageSize
+                );
+
+                return (
+                  <>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {paginatedData.map((approval) => renderApprovalCard(approval, true))}
+                    </div>
+                    {paginatedData.length > 0 && (
+                      <div className="mt-4 flex items-center justify-between w-full">
+                        <div className="text-sm text-muted-foreground">
+                          Showing {paginatedData.length} of {rejectedSubmissions.length} submissions • Page {currentPage} of {totalPages}
+                        </div>
+                        <div>
+                          <Pagination
+                            currentPage={currentPage}
+                            totalPages={totalPages}
+                            totalItems={rejectedSubmissions.length}
+                            itemsPerPage={pageSize}
+                            onPageChange={(p: number) => onPageChange?.(p)}
+                            alwaysShowControls
+                            showingPosition="right"
+                            showingText={`Showing ${paginatedData.length} of ${rejectedSubmissions.length} submissions`}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </>
           )}
         </TabsContent>
       </Tabs>
