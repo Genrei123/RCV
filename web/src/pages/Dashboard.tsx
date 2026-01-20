@@ -757,14 +757,66 @@ export function Dashboard(props: DashboardProps) {
           </Card>
         </div>
 
-        {/* View Toggle */}
-        <div className="flex items-center gap-2 mb-4 overflow-x-auto">
-          <div className="flex border rounded-lg flex-wrap">
+        {/* View Toggle - Dropdown on mobile, button group on desktop */}
+        <div className="w-full mb-4">
+          {/* Mobile: Dropdown */}
+          <div className="sm:hidden">
+            <Select
+              value={viewMode}
+              onValueChange={(value) => setViewMode(value as typeof viewMode)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue>
+                  <div className="flex items-center gap-2">
+                    {viewMode === "users" && <><Users className="h-4 w-4" /> Users</>}
+                    {viewMode === "rejected" && <><XCircle className="h-4 w-4" /> Rejected</>}
+                    {viewMode === "invites" && <><Mail className="h-4 w-4" /> Invites</>}
+                    {viewMode === "approvals" && <><Shield className="h-4 w-4" /> Approvals</>}
+                    {viewMode === "my-submissions" && <><FileCheck className="h-4 w-4" /> My Submissions</>}
+                  </div>
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="users">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4" /> Users
+                  </div>
+                </SelectItem>
+                {isAdmin() && (
+                  <>
+                    <SelectItem value="rejected">
+                      <div className="flex items-center gap-2">
+                        <XCircle className="h-4 w-4" /> Rejected
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="invites">
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4" /> Invites
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="approvals">
+                      <div className="flex items-center gap-2">
+                        <Shield className="h-4 w-4" /> Approvals
+                      </div>
+                    </SelectItem>
+                  </>
+                )}
+                <SelectItem value="my-submissions">
+                  <div className="flex items-center gap-2">
+                    <FileCheck className="h-4 w-4" /> My Submissions
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Desktop: Button group */}
+          <div className="hidden sm:flex border rounded-lg w-full">
             <Button
               variant={viewMode === "users" ? "default" : "ghost"}
               size="sm"
               onClick={() => setViewMode("users")}
-              className="rounded-r-none cursor-pointer"
+              className="rounded-r-none cursor-pointer flex-1"
             >
               <Users className="h-4 w-4 mr-2" />
               Users
@@ -775,7 +827,7 @@ export function Dashboard(props: DashboardProps) {
                   variant={viewMode === "rejected" ? "default" : "ghost"}
                   size="sm"
                   onClick={() => setViewMode("rejected")}
-                  className="rounded-none border-l cursor-pointer"
+                  className="rounded-none border-l cursor-pointer flex-1"
                 >
                   <XCircle className="h-4 w-4 mr-2" />
                   Rejected
@@ -784,7 +836,7 @@ export function Dashboard(props: DashboardProps) {
                   variant={viewMode === "invites" ? "default" : "ghost"}
                   size="sm"
                   onClick={() => setViewMode("invites")}
-                  className="rounded-none border-l cursor-pointer"
+                  className="rounded-none border-l cursor-pointer flex-1"
                 >
                   <Mail className="h-4 w-4 mr-2" />
                   Invites
@@ -793,7 +845,7 @@ export function Dashboard(props: DashboardProps) {
                   variant={viewMode === "approvals" ? "default" : "ghost"}
                   size="sm"
                   onClick={() => setViewMode("approvals")}
-                  className="rounded-none border-l cursor-pointer"
+                  className="rounded-none border-l cursor-pointer flex-1"
                 >
                   <Shield className="h-4 w-4 mr-2" />
                   Approvals
@@ -804,7 +856,7 @@ export function Dashboard(props: DashboardProps) {
               variant={viewMode === "my-submissions" ? "default" : "ghost"}
               size="sm"
               onClick={() => setViewMode("my-submissions")}
-              className="rounded-l-none border-l cursor-pointer"
+              className="rounded-l-none border-l cursor-pointer flex-1"
             >
               <FileCheck className="h-4 w-4 mr-2" />
               My Submissions
