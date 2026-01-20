@@ -30,27 +30,24 @@ class ReportItem {
   });
 
   factory ReportItem.fromJson(Map<String, dynamic> json) {
-    // Map backend status to UI status
-    ReportStatus reportStatus;
-    final backendStatus = json['status']?.toString().toUpperCase();
-    if (backendStatus == 'COMPLIANT') {
-      reportStatus = ReportStatus.closed;
-    } else if (backendStatus == 'NON_COMPLIANT' ||
-        backendStatus == 'FRAUDULENT') {
-      reportStatus = ReportStatus.open;
-    } else {
-      reportStatus = ReportStatus.inReview;
-    }
-
-    // Map backend status to category
+    final isVerified = json['isVerified'];
     ReportCategory category;
-    if (backendStatus == 'COMPLIANT') {
+    if (isVerified == true) {
       category = ReportCategory.verified;
-    } else if (backendStatus == 'NON_COMPLIANT' ||
-        backendStatus == 'FRAUDULENT') {
+    } else if (isVerified == false) {
       category = ReportCategory.notVerified;
     } else {
       category = ReportCategory.inReview;
+    }
+
+    // Map category to UI status
+    ReportStatus reportStatus;
+    if (category == ReportCategory.verified) {
+      reportStatus = ReportStatus.closed;
+    } else if (category == ReportCategory.notVerified) {
+      reportStatus = ReportStatus.open;
+    } else {
+      reportStatus = ReportStatus.inReview;
     }
 
     // Build title and description

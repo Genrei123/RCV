@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   LayoutDashboard,
   Package,
@@ -31,29 +31,49 @@ interface CurrentUser {
 }
 
 // Inline logo component (hexagon + inner circle) — used in desktop header (and can be reused elsewhere)
-const LogoIcon = ({ className = "w-8 h-8 app-bg-primary" }: { className?: string }) => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    className={className}
-    aria-hidden
-  >
-    <defs>
-      <linearGradient id="rcvGrad" x1="0" x2="1" y1="0" y2="1">
-        <stop offset="0%" stopColor="#005440" />
-        <stop offset="100%" stopColor="#00B087" />
-      </linearGradient>
-    </defs>
-    <polygon
-      points="12,2 20,7 20,17 12,22 4,17 4,7"
-      fill="url(#rcvGrad)"
-      stroke="#0b3b2f"
-      strokeWidth="0.5"
-    />
-    <circle cx="12" cy="12" r="3.1" fill="white" />
-  </svg>
-);
+import { useId } from "react";
+
+type LogoIconProps = {
+  className?: string;
+};
+
+// Inline logo component (hexagon + inner circle)
+const LogoIcon = ({
+  className = "w-8 h-8 app-bg-primary",
+}: LogoIconProps) => {
+  const gradId = useId();
+
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      width="24"
+      height="24"
+      role="img"
+      aria-label="RCV Logo"
+      
+    >
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#005440" />
+          <stop offset="100%" stopColor="#00B087" />
+        </linearGradient>
+      </defs>
+
+      <polygon
+        points="12,2 20,7 20,17 12,22 4,17 4,7"
+        fill={`url(#${gradId})`}
+        stroke="#005440"
+        strokeWidth={0.5}
+      />
+
+      <circle cx={12} cy={12} r={3.1} fill="#ffffff" />
+    </svg>
+  );
+};
+
+
 
 export function Sidebar({
   open = false,
@@ -71,6 +91,31 @@ export function Sidebar({
   const visible = open;
   const closeDrawer = () => onClose?.();
   const { isConnected, walletAddress, isAuthorized, isMetaMaskInstalled, connect, disconnect, switchAccount } = useMetaMask();
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+  const mobileProfileMenuRef = useRef<HTMLDivElement>(null);
+  
+  // Close profile menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      
+      const isOutsideDesktop = !profileMenuRef.current || !profileMenuRef.current.contains(target);
+      const isOutsideMobile = !mobileProfileMenuRef.current || !mobileProfileMenuRef.current.contains(target);
+      
+      // Close if click is outside both containers
+      if (isOutsideDesktop && isOutsideMobile) {
+        setShowProfileMenu(false);
+      }
+    };
+
+    if (showProfileMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showProfileMenu]);
 
   useEffect(() => {
     fetchCurrentUser();
@@ -195,13 +240,13 @@ export function Sidebar({
         </div>
 
         {/* User Profile Section (click to open profile menu) */}
-        <div className="p-6 border-b border-neutral-200 relative cursor-pointer">
+        <div className="p-6 border-b border-neutral-200 relative cursor-pointer" ref={profileMenuRef}>
           <button
             type="button"
             onClick={() => setShowProfileMenu((s) => !s)}
             className="w-full flex items-center gap-3 text-left focus:outline-none cursor-pointer"
           >
-            <div className="w-10 h-10 rounded-full overflow-hidden bg-neutral-300 flex items-center justify-center flex-shrink-0 cursor-pointer">
+            <div className="w-10 h-10 rounded-full overflow-hidden bg-neutral-300 flex items-center justify-center shrink-0 cursor-pointer">
               {avatarUrl ? (
                 <img
                   src={avatarUrl}
@@ -227,6 +272,7 @@ export function Sidebar({
               }`}
             />
           </button>
+          
 
           {/* Profile dropdown (desktop) */}
           {showProfileMenu && (
@@ -254,7 +300,7 @@ export function Sidebar({
             </div>
           )}
         </div>
-
+      
         {/* Navigation Menu */}
         <nav className="flex-1 p-4">
           <div className="space-y-1">
@@ -339,7 +385,7 @@ export function Sidebar({
 
       {/* mobile/tablet drawer: visible below lg, use visible & closeDrawer */}
       <div
-        className={`fixed inset-0 z-40 lg:hidden transition-opacity ${
+        className={`fixed inset-0 z-[1100] lg:hidden transition-opacity ${
           visible
             ? "opacity-100 pointer-events-auto"
             : "opacity-0 pointer-events-none"
@@ -367,6 +413,7 @@ export function Sidebar({
               <span className="text-base font-medium text-neutral-800">RCV</span>
               <span className="text-xs text-neutral-400">v.01</span>
             </div>
+            
             <button
               onClick={closeDrawer}
               className="p-1 text-neutral-400 hover:text-neutral-600"
@@ -379,7 +426,7 @@ export function Sidebar({
           </div>
 
           {/* User Profile Section (Mobile) - Moved to top */}
-          <div className="px-6 py-4 border-b border-neutral-200">
+          <div className="px-6 py-4 border-b border-neutral-200" ref={mobileProfileMenuRef}>
             <button
               type="button"
               onClick={() => setShowProfileMenu((s) => !s)}
