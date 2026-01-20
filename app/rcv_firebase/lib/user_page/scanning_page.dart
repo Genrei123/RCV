@@ -1401,24 +1401,28 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
                                   ],
                                 ),
                                 const SizedBox(height: 8),
-...warnings.map((w) => Padding(
-  padding: const EdgeInsets.only(top: 4),
-  child: Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      const Text('• ', style: TextStyle(fontSize: 16)),
-      Expanded(
-        child: Text(
-          w.toString(),
-          style: TextStyle(
-            fontSize: 13,
-            color: Colors.orange.shade900,
-          ),
-        ),
-      ),
-    ],
-  ),
-)),
+                                ...warnings.map((w) => Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text('• ', style: TextStyle(fontSize: 16)),
+                                      Expanded(
+                                        child: Text(
+                                          w.toString(),
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: Colors.orange.shade900,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
                         ],
                         
                         Text(
@@ -3241,6 +3245,7 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
     super.dispose();
   }
 
+  @override
   @override
   Widget build(BuildContext context) {
     // Check if scanning feature is disabled
