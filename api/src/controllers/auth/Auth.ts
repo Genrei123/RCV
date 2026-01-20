@@ -165,7 +165,14 @@ export const mobileSignIn = async (req: Request, res: Response, next: NextFuncti
     }
 
     // Verify the password
+    console.log('🔐 Login attempt for:', email);
+    console.log('🔐 Password provided:', password ? 'YES' : 'NO');
+    console.log('🔐 Stored password hash exists:', user.password ? 'YES' : 'NO');
+    console.log('🔐 Stored password hash prefix:', user.password ? user.password.substring(0, 10) + '...' : 'NULL');
+    
     const isPasswordValid = bcryptjs.compareSync(password, user.password);
+    console.log('🔐 Password valid:', isPasswordValid);
+    
     if (!isPasswordValid) {
       const error = new CustomError(401, "Invalid email or password", {
         success: false,
