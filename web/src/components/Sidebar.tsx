@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   LayoutDashboard,
   Package,
@@ -91,6 +91,31 @@ export function Sidebar({
   const visible = open;
   const closeDrawer = () => onClose?.();
   const { isConnected, walletAddress, isAuthorized, isMetaMaskInstalled, connect, disconnect, switchAccount } = useMetaMask();
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+  const mobileProfileMenuRef = useRef<HTMLDivElement>(null);
+  
+  // Close profile menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      
+      const isOutsideDesktop = !profileMenuRef.current || !profileMenuRef.current.contains(target);
+      const isOutsideMobile = !mobileProfileMenuRef.current || !mobileProfileMenuRef.current.contains(target);
+      
+      // Close if click is outside both containers
+      if (isOutsideDesktop && isOutsideMobile) {
+        setShowProfileMenu(false);
+      }
+    };
+
+    if (showProfileMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showProfileMenu]);
 
   useEffect(() => {
     fetchCurrentUser();
@@ -215,13 +240,13 @@ export function Sidebar({
         </div>
 
         {/* User Profile Section (click to open profile menu) */}
-        <div className="p-6 border-b border-neutral-200 relative cursor-pointer">
+        <div className="p-6 border-b border-neutral-200 relative cursor-pointer" ref={profileMenuRef}>
           <button
             type="button"
             onClick={() => setShowProfileMenu((s) => !s)}
             className="w-full flex items-center gap-3 text-left focus:outline-none cursor-pointer"
           >
-            <div className="w-10 h-10 rounded-full overflow-hidden bg-neutral-300 flex items-center justify-center flex-shrink-0 cursor-pointer">
+            <div className="w-10 h-10 rounded-full overflow-hidden bg-neutral-300 flex items-center justify-center shrink-0 cursor-pointer">
               {avatarUrl ? (
                 <img
                   src={avatarUrl}
@@ -247,6 +272,7 @@ export function Sidebar({
               }`}
             />
           </button>
+          
 
           {/* Profile dropdown (desktop) */}
           {showProfileMenu && (
@@ -274,7 +300,7 @@ export function Sidebar({
             </div>
           )}
         </div>
-
+      
         {/* Navigation Menu */}
         <nav className="flex-1 p-4">
           <div className="space-y-1">
@@ -400,7 +426,7 @@ export function Sidebar({
           </div>
 
           {/* User Profile Section (Mobile) - Moved to top */}
-          <div className="px-6 py-4 border-b border-neutral-200">
+          <div className="px-6 py-4 border-b border-neutral-200" ref={mobileProfileMenuRef}>
             <button
               type="button"
               onClick={() => setShowProfileMenu((s) => !s)}
