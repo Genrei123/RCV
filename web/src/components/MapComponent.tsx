@@ -62,6 +62,8 @@ export function MapComponent({
   const inspectorCountRef = useRef<HTMLDivElement>(null);
   const originalSearchParentRef = useRef<HTMLElement | null>(null);
   const originalCountParentRef = useRef<HTMLElement | null>(null);
+  const [elementsMovedDown, setElementsMovedDown] = useState(false);
+  const elementsMovedDownRef = useRef(false);
 
   // Load Google Maps script
   useEffect(() => {
@@ -128,6 +130,27 @@ export function MapComponent({
       styles: mapStyles,
     });
     infoWindowRef.current = new window.google.maps.InfoWindow();
+
+    // Move elements down initially to avoid blocking Google watermark OK button
+    setElementsMovedDown(true);
+    elementsMovedDownRef.current = true;
+
+    // Listen for clicks on the map (including watermark OK button)
+    const handleMapClick = () => {
+      // Restore elements to original position when map is clicked
+      if (elementsMovedDownRef.current) {
+        setElementsMovedDown(false);
+        elementsMovedDownRef.current = false;
+      }
+    };
+
+    googleMapRef.current.addListener('click', handleMapClick);
+
+    return () => {
+      if (googleMapRef.current) {
+        window.google.maps.event.clearListeners(googleMapRef.current, 'click');
+      }
+    };
   }, [mapLoaded, inspectors]);
 
   // Render markers for filtered inspectors
@@ -302,6 +325,43 @@ export function MapComponent({
     };
   }, []);
 
+  // Update ref when state changes
+  useEffect(() => {
+    elementsMovedDownRef.current = elementsMovedDown;
+  }, [elementsMovedDown]);
+
+  // Detect clicks anywhere (including watermark OK button) to restore element positions
+  useEffect(() => {
+    if (!elementsMovedDown) return;
+
+    const handleDocumentClick = (e: MouseEvent) => {
+      // Check if click is on or near the map area (where watermark OK button might be)
+      const target = e.target as HTMLElement;
+      
+      // Check if click is on Google Maps watermark/controls
+      const isGoogleElement = target.closest('[class*="gm-"]') || 
+                             target.closest('[id*="google"]') ||
+                             target.textContent?.includes('OK') ||
+                             target.textContent?.includes('For development');
+      
+      // Check if click is in the lower portion of the viewport (where watermark typically appears)
+      const isLowerArea = e.clientY > window.innerHeight * 0.6;
+      
+      if (isGoogleElement || isLowerArea) {
+        // Restore elements to original position
+        setElementsMovedDown(false);
+        elementsMovedDownRef.current = false;
+      }
+    };
+
+    // Use capture phase to catch events before they're stopped
+    document.addEventListener('click', handleDocumentClick, true);
+    
+    return () => {
+      document.removeEventListener('click', handleDocumentClick, true);
+    };
+  }, [elementsMovedDown]);
+
   // Build suggestions from API results first, then local lists
   useEffect(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -382,11 +442,11 @@ export function MapComponent({
       {/* Search panel: absolute positioning normally, fixed when in fullscreen */}
       <div 
         ref={searchContainerRef}
-        className={`${isFullscreen ? 'fixed' : 'absolute'} top-16 sm:top-20 left-3 sm:left-4 z-[9999] w-[calc(100vw-2rem)] sm:w-80 md:w-96 max-w-[28rem]`}
+        className={`${isFullscreen ? 'fixed' : 'absolute'} ${elementsMovedDown ? 'top-[280px] sm:top-[260px]' : 'top-[120px] sm:top-[110px]'} lg:top-16 xl:top-20 left-0 sm:left-3 lg:left-4 right-0 sm:right-auto z-[50] w-full sm:w-80 md:w-96 sm:max-w-[28rem] ${elementsMovedDown ? 'transition-all duration-300' : 'transition-none'}`}
         style={{ pointerEvents: 'auto' }}
       >
-        <Card className="bg-white rounded-lg border-0 shadow-xl ">
-          <div className="relative p-2">
+        <Card className="bg-white rounded-none sm:rounded-lg border-0 shadow-xl m-0 sm:m-0" style={{ pointerEvents: 'auto' }}>
+          <div className="relative p-2 sm:p-2">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
               placeholder="Search inspectors..."
@@ -481,10 +541,13 @@ export function MapComponent({
       {/* Inspector count container: absolute positioning normally, fixed when in fullscreen */}
       <div 
         ref={inspectorCountRef}
-        className={`${isFullscreen ? 'fixed' : 'absolute'} top-4 sm:top-6 left-1/2 -translate-x-1/2 z-[9999]`}
-        style={{ pointerEvents: 'auto' }}
+        className={`${isFullscreen ? 'fixed' : 'absolute'} ${elementsMovedDown ? 'top-[220px]' : 'top-[56px]'} lg:top-4 xl:top-6 left-3 sm:left-1/2 sm:-translate-x-1/2 z-[51] ${elementsMovedDown ? 'transition-all duration-300' : ''}`}
+        style={{ 
+          pointerEvents: 'auto',
+          transition: elementsMovedDown ? 'top 0.3s ease-in-out' : 'none'
+        }}
       >
-        <Card className="bg-white shadow-lg px-4 py-2">
+        <Card className="bg-white shadow-lg px-4 py-2" style={{ pointerEvents: 'auto' }}>
           <div className="flex items-center gap-2">
             <MapPin className="h-4 w-4 app-text-primary" />
             <span className="text-sm font-semibold">

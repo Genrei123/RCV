@@ -1259,6 +1259,10 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
     Map<String, dynamic> extractedInfo,
     String ocrText,
   ) {
+    final isCompliant = extractedInfo['isCompliant'] ?? true;
+    final violations = extractedInfo['violations'] as List<dynamic>? ?? [];
+    final warnings = extractedInfo['warnings'] as List<dynamic>? ?? [];
+    
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -1268,7 +1272,8 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
           ),
           child: Container(
             constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.75,
+              maxHeight: MediaQuery.of(context).size.height * 0.85,
+              maxWidth: MediaQuery.of(context).size.width * 0.95,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1280,7 +1285,9 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [Color(0xFF00A47D), Color(0xFF005440)],
+                      colors: isCompliant 
+                        ? [Color(0xFF00A47D), Color(0xFF005440)]
+                        : [Colors.orange.shade600, Colors.red.shade600],
                     ),
                     borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(20),
@@ -1289,16 +1296,16 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
                   ),
                   child: Row(
                     children: [
-                      const Icon(
-                        Icons.info_outline,
+                      Icon(
+                        isCompliant ? Icons.check_circle_outline : Icons.warning_amber_rounded,
                         color: Colors.white,
                         size: 28,
                       ),
                       const SizedBox(width: 12),
-                      const Expanded(
+                      Expanded(
                         child: Text(
-                          'Extracted Information',
-                          style: TextStyle(
+                          isCompliant ? 'Product Compliant' : 'Compliance Violations',
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -1312,16 +1319,120 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
                     ],
                   ),
                 ),
-                // Content
-                Flexible(
+                // Content - Scrollable
+                Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Please review the extracted information and proceed to report:',
-                          style: TextStyle(
+                        // Violations Section
+                        if (violations.isNotEmpty) ...[
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.red.shade300, width: 2),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(Icons.error_outline, color: Colors.red.shade700, size: 20),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'VIOLATIONS FOUND',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.red.shade900,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                ...violations.map((v) => Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text('• ', style: TextStyle(fontSize: 16)),
+                                      Expanded(
+                                        child: Text(
+                                          v.toString(),
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: Colors.red.shade900,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                        
+                        // Warnings Section
+                        if (warnings.isNotEmpty) ...[
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.orange.shade300),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(Icons.warning_amber, color: Colors.orange.shade700, size: 20),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'WARNINGS',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.orange.shade900,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                ...warnings.map((w) => Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text('• ', style: TextStyle(fontSize: 16)),
+                                      Expanded(
+                                        child: Text(
+                                          w.toString(),
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: Colors.orange.shade900,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                        
+                        Text(
+                          isCompliant 
+                            ? 'Packaging information verified:'
+                            : 'Information found on packaging:',
+                          style: const TextStyle(
                             fontSize: 14,
                             color: Colors.black54,
                             fontWeight: FontWeight.w500,
@@ -1347,30 +1458,42 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
                         ),
                         const SizedBox(height: 12),
 
-                        // LTO Number
+                        // Company
                         _buildExtractedField(
+                          'Company',
+                          extractedInfo['company'] ?? 'Not found',
+                          Icons.business,
+                          Colors.deepPurple,
+                        ),
+                        const SizedBox(height: 12),
+
+                        // LTO Number
+                        _buildComplianceField(
                           'LTO Number',
                           extractedInfo['LTONumber'] ?? 'Not found',
                           Icons.badge,
-                          Colors.orange,
+                          extractedInfo['LTONumber']?.toString().contains('NOT FOUND') == true ? Colors.red : Colors.orange,
+                          extractedInfo['LTONumber']?.toString().contains('NOT FOUND') == true,
                         ),
                         const SizedBox(height: 12),
 
                         // CFPR Number
-                        _buildExtractedField(
+                        _buildComplianceField(
                           'CFPR Number',
                           extractedInfo['CFPRNumber'] ?? 'Not found',
                           Icons.assignment,
-                          Colors.teal,
+                          extractedInfo['CFPRNumber']?.toString().contains('NOT FOUND') == true ? Colors.red : Colors.teal,
+                          extractedInfo['CFPRNumber']?.toString().contains('NOT FOUND') == true,
                         ),
                         const SizedBox(height: 12),
 
                         // Expiration Date
-                        _buildExtractedField(
+                        _buildComplianceField(
                           'Expiration Date',
                           extractedInfo['expirationDate'] ?? 'Not found',
                           Icons.event_busy,
-                          Colors.red,
+                          extractedInfo['expirationDate']?.toString().contains('NOT FOUND') == true ? Colors.red : Colors.green,
+                          extractedInfo['expirationDate']?.toString().contains('NOT FOUND') == true,
                         ),
                         const SizedBox(height: 12),
 
@@ -1402,7 +1525,7 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  'Review the extracted info, then search for the product in our database.',
+                                  'Review the compliance information above. Use "More Details (AI)" for guidance on what to look for on the product packaging.',
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: Colors.blue.shade900,
@@ -1505,7 +1628,7 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
                                 ),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
-                                  children: const [
+                                  children: [
                                     Icon(Icons.auto_awesome, size: 20),
                                     SizedBox(width: 8),
                                     Text(
@@ -1543,7 +1666,7 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
                                 ),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
-                                  children: const [
+                                  children: [
                                     Icon(Icons.article_outlined, size: 20),
                                     SizedBox(width: 8),
                                     Text(
@@ -2152,6 +2275,99 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
     );
   }
 
+  // Compliance field with violation indicator
+  Widget _buildComplianceField(
+    String label,
+    String value,
+    IconData icon,
+    MaterialColor color,
+    bool isViolation,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isViolation ? Colors.red.shade300 : Colors.grey[300]!,
+          width: isViolation ? 2 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: isViolation 
+              ? Colors.red.withValues(alpha: 0.1)
+              : Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: isViolation ? Colors.red.shade50 : color[50],
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              isViolation ? Icons.error_outline : icon, 
+              color: isViolation ? Colors.red.shade700 : color[700], 
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    if (isViolation) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade100,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          'MISSING',
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red.shade900,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: isViolation ? Colors.red.shade900 : Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // Save scan as draft (without Firebase upload)
   Future<void> _saveAsDraft(
     Map<String, dynamic> extractedInfo,
@@ -2700,7 +2916,6 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
         barrierDismissible: false,
         builder: (context) => const Center(child: CircularProgressIndicator()),
       );
-      dialogOpen = true;
 
       String frontText = '';
       String backText = '';
@@ -2887,8 +3102,58 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
       // Close loading dialog
       if (mounted) Navigator.pop(context);
 
-      // Check if extraction was successful
-      if (response['success'] == true && response['extractedInfo'] != null) {
+      // Check if extraction was successful - NEW structure with packagingCompliance
+      if (response['success'] == true && response['productIdentified'] == true) {
+        // NEW: Build extractedInfo from new compliance structure
+        final productInfo = response['productInfo'] ?? {};
+        final packagingCompliance = response['packagingCompliance'] ?? {};
+        final violations = response['violations'] as List<dynamic>?;
+        final warnings = response['warnings'] as List<dynamic>?;
+        
+        // Build extractedInfo for display (showing what's ON packaging)
+        final extractedInfo = {
+          'productName': productInfo['productName'] ?? 'Not found',
+          'brandName': productInfo['brandName'] ?? 'Not found',
+          'manufacturer': productInfo['manufacturer'] ?? productInfo['company'] ?? productInfo['companyName'] ?? 'Not found',
+          'company': productInfo['company'] ?? productInfo['companyName'] ?? productInfo['manufacturer'] ?? 'Not found',
+          // Show what's actually on packaging (compliance check)
+          'LTONumber': packagingCompliance['lto']?['foundOnPackaging'] == true
+              ? (packagingCompliance['lto']?['required'] ?? 'NOT FOUND ON PACKAGING')
+              : 'NOT FOUND ON PACKAGING',
+          'CFPRNumber': packagingCompliance['cfpr']?['foundOnPackaging'] == true
+              ? (packagingCompliance['cfpr']?['required'] ?? 'NOT FOUND ON PACKAGING')
+              : 'NOT FOUND ON PACKAGING',
+          'expirationDate': packagingCompliance['expirationDate']?['foundOnPackaging'] ?? 'NOT FOUND ON PACKAGING',
+          // Add compliance info
+          'isCompliant': response['isCompliant'] ?? false,
+          'violations': violations ?? [],
+          'warnings': warnings ?? [],
+        };
+
+        // Store OCR blob text and extracted info for re-display
+        setState(() {
+          _ocrBlobText = combinedText;
+          _extractedInfo = extractedInfo;
+        });
+
+        // Log OCR scan to audit trail (images will be uploaded on report submission)
+        AuditLogService.logScanProduct(
+          scanData: {
+            'scannedText': combinedText.substring(
+              0,
+              combinedText.length > 500 ? 500 : combinedText.length,
+            ),
+            'scanType': 'OCR',
+            'extractionSuccess': true,
+            'extractedInfo': extractedInfo,
+            'isCompliant': extractedInfo['isCompliant'],
+          },
+        );
+
+        // Show extracted information to user with compliance violations
+        _showExtractedInfoModal(extractedInfo, combinedText);
+      } else if (response['success'] == true && response['extractedInfo'] != null) {
+        // OLD format compatibility (keep for backward compatibility)
         final extractedInfo = response['extractedInfo'];
 
         // Store OCR blob text and extracted info for re-display

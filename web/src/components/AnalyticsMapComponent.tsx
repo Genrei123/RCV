@@ -691,28 +691,29 @@ export function AnalyticsMapComponent() {
       {/* Right-side Drawer */}
       <div
         ref={drawerRef}
-        className={`fixed top-0 right-0 h-full w-80 z-30 transform transition-transform duration-300 ${
+        className={`fixed top-[56px] lg:top-0 right-0 left-0 sm:left-auto h-[calc(100vh-56px)] lg:h-full w-full sm:w-80 z-50 transform transition-transform duration-300 ${
           drawerOpen ? "translate-x-0" : "translate-x-full"
         }`}
         style={{ pointerEvents: "auto" }}
       >
-        <div className="h-full w-full bg-white border-l border-gray-200 shadow-xl flex flex-col">
-          <div className="flex items-center justify-between p-3 border-b">
-            <div className="flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-blue-600" />
-              <span className="text-sm font-semibold">DBSCAN Analytics</span>
+        <div className="h-full w-full bg-white border-l-0 sm:border-l border-gray-200 shadow-xl sm:shadow-xl flex flex-col">
+          <div className="flex items-center justify-between p-2 sm:p-3 border-b gap-2 min-w-0">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <BarChart3 className="h-4 w-4 text-blue-600 flex-shrink-0" />
+              <span className="text-sm font-semibold truncate">DBSCAN Analytics</span>
             </div>
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setDrawerOpen(false)}
+              className="flex-shrink-0"
             >
               <X className="h-4 w-4" />
             </Button>
           </div>
 
-          <div className="p-3 space-y-3 overflow-y-auto">
-            <Card className="shadow-sm p-3 bg-white border border-gray-200">
+          <div className="p-2 sm:p-3 space-y-3 overflow-y-auto">
+            <Card className="shadow-sm p-2 sm:p-3 bg-white border border-gray-200">
               <div className="text-left">
                 <p className="text-xs text-gray-600 mb-2">
                 </p>
@@ -747,32 +748,32 @@ export function AnalyticsMapComponent() {
             </Card>
 
             {error && (
-              <Card className="p-3 border-red-200 bg-red-50">
+              <Card className="p-2 sm:p-3 border-red-200 bg-red-50">
                 <div className="text-red-600">
                   <h3 className="font-semibold mb-1 text-sm">Error</h3>
-                  <p className="text-xs">{error}</p>
+                  <p className="text-xs break-words">{error}</p>
                 </div>
               </Card>
             )}
 
             {apiResponse?.results && (
-              <Card className="shadow-sm p-3 bg-white border border-gray-200">
+              <Card className="shadow-sm p-2 sm:p-3 bg-white border border-gray-200">
                 <div className="text-sm text-gray-600">
-                  <p className="font-semibold mb-2 flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-blue-600" />
-                    DBSCAN Parameters
+                  <p className="font-semibold mb-2 flex items-center gap-2 min-w-0">
+                    <MapPin className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                    <span className="break-words">DBSCAN Parameters</span>
                   </p>
                   <div className="space-y-1 text-xs">
-                    <p>
+                    <p className="break-words">
                       <span className="font-medium">EPS:</span>{" "}
                       {apiResponse?.results?.clustering_params?.eps_km ?? 0} km
                     </p>
-                    <p>
+                    <p className="break-words">
                       <span className="font-medium">Min Samples:</span>{" "}
                       {apiResponse?.results?.clustering_params?.min_samples ??
                         0}
                     </p>
-                    <p>
+                    <p className="break-words">
                       <span className="font-medium">Processing Time:</span>{" "}
                       {apiResponse?.metadata?.processing_time
                         ? new Date(
@@ -786,11 +787,11 @@ export function AnalyticsMapComponent() {
             )}
 
             {apiResponse?.results && (
-              <Card className="shadow-sm p-3 bg-white border border-gray-200">
+              <Card className="shadow-sm p-2 sm:p-3 bg-white border border-gray-200">
                 <div className="text-sm">
                   <p className="font-medium mb-2 flex items-center gap-2">
-                    <Activity className="h-4 w-4 text-green-600" />
-                    Cluster Visualization
+                    <Activity className="h-4 w-4 text-green-600 flex-shrink-0" />
+                    <span className="break-words">Cluster Visualization</span>
                   </p>
                   <div className="space-y-2 text-xs">
                     {apiResponse?.results?.clusters?.map((cluster, index) => {
@@ -801,13 +802,13 @@ export function AnalyticsMapComponent() {
                       return (
                         <div
                           key={cluster.cluster_id}
-                          className="flex items-center gap-2"
+                          className="flex items-center gap-2 min-w-0"
                         >
                           <div
-                            className="w-3 h-3 rounded-full border border-white"
+                            className="w-3 h-3 rounded-full border border-white flex-shrink-0"
                             style={{ backgroundColor: color }}
                           ></div>
-                          <span>
+                          <span className="break-words">
                             Cluster {cluster.cluster_id} ({cluster.size}{" "}
                             reports)
                           </span>
@@ -816,21 +817,21 @@ export function AnalyticsMapComponent() {
                     })}
                     {(apiResponse?.results?.summary?.n_noise_points ?? 0) >
                       0 && (
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full border border-white bg-gray-500"></div>
-                        <span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-3 h-3 rounded-full border border-white bg-gray-500 flex-shrink-0"></div>
+                        <span className="break-words">
                           Noise Points (
                           {apiResponse?.results?.summary?.n_noise_points})
                         </span>
                       </div>
                     )}
                     <div className="pt-2 border-t text-xs text-gray-500">
-                      <p>
+                      <p className="break-words">
                         Total:{" "}
                         {apiResponse?.results?.summary?.total_points ?? 0}{" "}
                         reports
                       </p>
-                      <p>
+                      <p className="break-words">
                         EPS Radius:{" "}
                         {apiResponse?.results?.clustering_params?.eps_km ?? 0}{" "}
                         km
@@ -842,35 +843,35 @@ export function AnalyticsMapComponent() {
             )}
 
             {apiResponse?.results && (
-              <Card className="shadow-sm p-3 bg-white border border-gray-200">
-                <div className="flex items-center gap-2 mb-2">
-                  <Activity className="h-4 w-4 text-teal-600" />
-                  <span className="text-sm font-semibold">
+              <Card className="shadow-sm p-2 sm:p-3 bg-white border border-gray-200">
+                <div className="flex items-center gap-2 mb-2 min-w-0">
+                  <Activity className="h-4 w-4 text-teal-600 flex-shrink-0" />
+                  <span className="text-sm font-semibold break-words">
                     Clustering Results
                   </span>
                 </div>
                 <div className="space-y-2 text-xs">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Total Points:</span>
-                    <span className="font-medium">
+                  <div className="flex justify-between items-center gap-2 min-w-0">
+                    <span className="text-gray-600 break-words">Total Points:</span>
+                    <span className="font-medium flex-shrink-0">
                       {apiResponse?.results?.summary?.total_points ?? 0}
                     </span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Clusters:</span>
-                    <span className="font-medium text-blue-600">
+                  <div className="flex justify-between items-center gap-2 min-w-0">
+                    <span className="text-gray-600 break-words">Clusters:</span>
+                    <span className="font-medium text-blue-600 flex-shrink-0">
                       {apiResponse?.results?.summary?.n_clusters ?? 0}
                     </span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Noise Points:</span>
-                    <span className="font-medium text-gray-600">
+                  <div className="flex justify-between items-center gap-2 min-w-0">
+                    <span className="text-gray-600 break-words">Noise Points:</span>
+                    <span className="font-medium text-gray-600 flex-shrink-0">
                       {apiResponse?.results?.summary?.n_noise_points ?? 0}
                     </span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Noise %:</span>
-                    <span className="font-medium text-orange-600">
+                  <div className="flex justify-between items-center gap-2 min-w-0">
+                    <span className="text-gray-600 break-words">Noise %:</span>
+                    <span className="font-medium text-orange-600 flex-shrink-0">
                       {(
                         apiResponse?.results?.summary?.noise_percentage ?? 0
                       ).toFixed(1)}

@@ -136,4 +136,16 @@ export class UserPageService {
       throw error;
     }
   }
+
+  static async syncUserFromFirebase(firebaseUid: string): Promise<UserProfile> {
+    try {
+      console.log(`[UserPageService] Syncing Firebase user: ${firebaseUid}`);
+      const response = await apiClient.post<any>(`/public/users/sync/${firebaseUid}`);
+      console.log(`[UserPageService] Sync response:`, response.data);
+      return response.data.user;
+    } catch (error: any) {
+      console.error(`[UserPageService] Sync error:`, error?.response?.data);
+      throw error;
+    }
+  }
 }

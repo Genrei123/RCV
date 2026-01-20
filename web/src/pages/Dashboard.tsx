@@ -101,6 +101,11 @@ export function Dashboard(props: DashboardProps) {
   const [invites, setInvites] = useState<AdminInvite[]>([]);
   const [invitesLoading, setInvitesLoading] = useState<boolean>(false);
 
+  // Pagination state for different tabs
+  const [rejectedCurrentPage, setRejectedCurrentPage] = useState<number>(1);
+  const [invitesCurrentPage, setInvitesCurrentPage] = useState<number>(1);
+  const [submissionsCurrentPage, setSubmissionsCurrentPage] = useState<number>(1);
+
   // Edit invite modal state
   const [editInviteModalOpen, setEditInviteModalOpen] = useState(false);
   const [selectedInvite, setSelectedInvite] = useState<AdminInvite | null>(null);
@@ -757,14 +762,66 @@ export function Dashboard(props: DashboardProps) {
           </Card>
         </div>
 
-        {/* View Toggle */}
-        <div className="flex items-center gap-2 mb-4 overflow-x-auto">
-          <div className="flex border rounded-lg flex-wrap">
+        {/* View Toggle - Dropdown on mobile, button group on desktop */}
+        <div className="w-full mb-4">
+          {/* Mobile: Dropdown */}
+          <div className="sm:hidden">
+            <Select
+              value={viewMode}
+              onValueChange={(value) => setViewMode(value as typeof viewMode)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue>
+                  <div className="flex items-center gap-2">
+                    {viewMode === "users" && <><Users className="h-4 w-4" /> Users</>}
+                    {viewMode === "rejected" && <><XCircle className="h-4 w-4" /> Rejected</>}
+                    {viewMode === "invites" && <><Mail className="h-4 w-4" /> Invites</>}
+                    {viewMode === "approvals" && <><Shield className="h-4 w-4" /> Approvals</>}
+                    {viewMode === "my-submissions" && <><FileCheck className="h-4 w-4" /> My Submissions</>}
+                  </div>
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="users">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4" /> Users
+                  </div>
+                </SelectItem>
+                {isAdmin() && (
+                  <>
+                    <SelectItem value="rejected">
+                      <div className="flex items-center gap-2">
+                        <XCircle className="h-4 w-4" /> Rejected
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="invites">
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4" /> Invites
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="approvals">
+                      <div className="flex items-center gap-2">
+                        <Shield className="h-4 w-4" /> Approvals
+                      </div>
+                    </SelectItem>
+                  </>
+                )}
+                <SelectItem value="my-submissions">
+                  <div className="flex items-center gap-2">
+                    <FileCheck className="h-4 w-4" /> My Submissions
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Desktop: Button group */}
+          <div className="hidden sm:flex border rounded-lg w-full">
             <Button
               variant={viewMode === "users" ? "default" : "ghost"}
               size="sm"
               onClick={() => setViewMode("users")}
-              className="rounded-r-none cursor-pointer"
+              className="rounded-r-none cursor-pointer flex-1"
             >
               <Users className="h-4 w-4 mr-2" />
               Users
@@ -775,7 +832,7 @@ export function Dashboard(props: DashboardProps) {
                   variant={viewMode === "rejected" ? "default" : "ghost"}
                   size="sm"
                   onClick={() => setViewMode("rejected")}
-                  className="rounded-none border-l cursor-pointer"
+                  className="rounded-none border-l cursor-pointer flex-1"
                 >
                   <XCircle className="h-4 w-4 mr-2" />
                   Rejected
@@ -784,7 +841,7 @@ export function Dashboard(props: DashboardProps) {
                   variant={viewMode === "invites" ? "default" : "ghost"}
                   size="sm"
                   onClick={() => setViewMode("invites")}
-                  className="rounded-none border-l cursor-pointer"
+                  className="rounded-none border-l cursor-pointer flex-1"
                 >
                   <Mail className="h-4 w-4 mr-2" />
                   Invites
@@ -793,7 +850,7 @@ export function Dashboard(props: DashboardProps) {
                   variant={viewMode === "approvals" ? "default" : "ghost"}
                   size="sm"
                   onClick={() => setViewMode("approvals")}
-                  className="rounded-none border-l cursor-pointer"
+                  className="rounded-none border-l cursor-pointer flex-1"
                 >
                   <Shield className="h-4 w-4 mr-2" />
                   Approvals
@@ -804,7 +861,7 @@ export function Dashboard(props: DashboardProps) {
               variant={viewMode === "my-submissions" ? "default" : "ghost"}
               size="sm"
               onClick={() => setViewMode("my-submissions")}
-              className="rounded-l-none border-l cursor-pointer"
+              className="rounded-l-none border-l cursor-pointer flex-1"
             >
               <FileCheck className="h-4 w-4 mr-2" />
               My Submissions
@@ -900,70 +957,131 @@ export function Dashboard(props: DashboardProps) {
         {/* Rejected Users Table (Admin only) */}
         {viewMode === "rejected" && isAdmin() && (
           <div className="w-full">
-            <DataTable
-              title="Rejected Users"
-              columns={columns}
-              data={usersArray.filter(u => u.status === "Rejected")}
-              searchPlaceholder="Search rejected users..."
-              onSearch={(query) => onSearch(query)}
-              loading={loading}
-              emptyStateTitle="No Rejected Users"
-              emptyStateDescription="There are no rejected user accounts at this time."
-              customControls={
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fetchPage(currentPage)}
-                    disabled={loading}
-                  >
-                    <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                    Refresh
-                  </Button>
-                </div>
-              }
-            />
-            <div className="mt-4 text-sm text-muted-foreground">
-              Showing {usersArray.filter(u => u.status === "Rejected").length} rejected users
-            </div>
+            {/* Calculate rejected users pagination */}
+            {(() => {
+              const rejectedUsers = usersArray.filter(u => u.status === "Rejected");
+              const rejectedTotalPages = Math.max(1, Math.ceil(rejectedUsers.length / pageSize));
+              const rejectedStartIndex = (rejectedCurrentPage - 1) * pageSize;
+              const rejectedPaginatedData = rejectedUsers.slice(
+                rejectedStartIndex,
+                rejectedStartIndex + pageSize
+              );
+
+              return (
+                <>
+                  <DataTable
+                    title="Rejected Users"
+                    columns={columns}
+                    data={rejectedPaginatedData}
+                    searchPlaceholder="Search rejected users..."
+                    onSearch={(query) => onSearch(query)}
+                    loading={loading}
+                    emptyStateTitle="No Rejected Users"
+                    emptyStateDescription="There are no rejected user accounts at this time."
+                    customControls={
+                      <div className="flex items-center gap-2 w-full sm:w-auto">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => fetchPage(currentPage)}
+                          disabled={loading}
+                        >
+                          <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                          Refresh
+                        </Button>
+                      </div>
+                    }
+                  />
+                  <div className="mt-4 flex items-center justify-between w-full">
+                    <div className="text-sm text-muted-foreground">
+                      Showing {rejectedPaginatedData.length} of {rejectedUsers.length} rejected users • Page{" "}
+                      {rejectedCurrentPage} of {rejectedTotalPages}
+                    </div>
+
+                    <div>
+                      <SimplePagination
+                        currentPage={rejectedCurrentPage}
+                        totalPages={rejectedTotalPages}
+                        totalItems={rejectedUsers.length}
+                        itemsPerPage={pageSize}
+                        onPageChange={(p: number) => setRejectedCurrentPage(p)}
+                        alwaysShowControls
+                        showingPosition="right"
+                        showingText={`Showing ${rejectedPaginatedData.length} of ${rejectedUsers.length} users`}
+                      />
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         )}
 
         {/* Invites Table (Admin only) */}
         {viewMode === "invites" && isAdmin() && (
           <div className="w-full">
-            <DataTable
-              title="Agent Invitations"
-              columns={inviteColumns}
-              data={invites}
-              searchPlaceholder="Search invites..."
-              onSearch={() => {}}
-              loading={invitesLoading}
-              emptyStateTitle="No Invites Found"
-              emptyStateDescription="No agent invitations have been sent yet."
-              customControls={
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <Button
-                    onClick={() => setIsInviteModalOpen(true)}
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    <UserPlus className="w-4 h-4 mr-2" />
-                    Invite Agent
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={fetchInvites}
-                    disabled={invitesLoading}
-                  >
-                    Refresh
-                  </Button>
-                </div>
-              }
-            />
-            <div className="mt-4 text-sm text-muted-foreground">
-              Showing {invites.length} invitations
-            </div>
+            {/* Calculate invites pagination */}
+            {(() => {
+              const invitesTotalPages = Math.max(1, Math.ceil(invites.length / pageSize));
+              const invitesStartIndex = (invitesCurrentPage - 1) * pageSize;
+              const invitesPaginatedData = invites.slice(
+                invitesStartIndex,
+                invitesStartIndex + pageSize
+              );
+
+              return (
+                <>
+                  <DataTable
+                    title="Agent Invitations"
+                    columns={inviteColumns}
+                    data={invitesPaginatedData}
+                    searchPlaceholder="Search invites..."
+                    onSearch={() => {}}
+                    loading={invitesLoading}
+                    emptyStateTitle="No Invites Found"
+                    emptyStateDescription="No agent invitations have been sent yet."
+                    customControls={
+                      <div className="flex items-center gap-2 w-full sm:w-auto">
+                        <Button
+                          onClick={() => setIsInviteModalOpen(true)}
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          <UserPlus className="w-4 h-4 mr-2" />
+                          Invite Agent
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={fetchInvites}
+                          disabled={invitesLoading}
+                        >
+                          Refresh
+                        </Button>
+                      </div>
+                    }
+                  />
+                  <div className="mt-4 flex items-center justify-between w-full">
+                    <div className="text-sm text-muted-foreground">
+                      Showing {invitesPaginatedData.length} of {invites.length} invitations • Page{" "}
+                      {invitesCurrentPage} of {invitesTotalPages}
+                    </div>
+
+                    <div>
+                      <SimplePagination
+                        currentPage={invitesCurrentPage}
+                        totalPages={invitesTotalPages}
+                        totalItems={invites.length}
+                        itemsPerPage={pageSize}
+                        onPageChange={(p: number) => setInvitesCurrentPage(p)}
+                        alwaysShowControls
+                        showingPosition="right"
+                        showingText={`Showing ${invitesPaginatedData.length} of ${invites.length} invitations`}
+                      />
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         )}
 
@@ -977,7 +1095,11 @@ export function Dashboard(props: DashboardProps) {
         {/* My Submissions (All users) */}
         {viewMode === "my-submissions" && (
           <div className="w-full">
-            <MySubmissions />
+            <MySubmissions 
+              currentPage={submissionsCurrentPage}
+              onPageChange={(p: number) => setSubmissionsCurrentPage(p)}
+              pageSize={pageSize}
+            />
           </div>
         )}
       </PageContainer>
