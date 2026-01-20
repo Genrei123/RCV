@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { UserPageService, type UserProfile } from "@/services/userPageService";
 import { AuditLogService, type AuditLog } from "@/services/auditLogService";
-import { toast } from "react-toastify";
 import { DataTable, type Column } from "@/components/DataTable";
 import { Pagination } from "@/components/Pagination";
 import { Button } from "@/components/ui/button";
@@ -51,56 +50,94 @@ export function UserProfileView() {
       const name: string = hint.name || hint.fullName || "";
       const parts = name.trim().split(/\s+/);
       const prefill: any = {
-        firstName: parts[0] || undefined,
+        firestoreId: hint.id || hint._id,
+        firstName: parts[0] || "Unknown",
         middleName: parts.length > 2 ? parts.slice(1, -1).join(" ") : undefined,
-        lastName: parts.length > 1 ? parts[parts.length - 1] : undefined,
+        lastName: parts.length > 1 ? parts[parts.length - 1] : "User",
         role: hint.role,
         badgeId: hint.badgeId,
         location: hint.location?.address || undefined,
+        email: hint.email || "N/A",
       };
       setUser(prefill);
-      setLoading(false); // show prefilled immediately; fetch will update
     }
-    fetchUser();
-    fetchUserAuditLogs();
+        const loadData = async () => {
+      try {
+        const loadedUser = await fetchUser();
+        if (loadedUser?._id) {
+          console.log(`[UserProfileView] User has MySQL ID: ${loadedUser._id}, fetching audit logs...`);
+          await fetchUserAuditLogs(loadedUser._id);
+        } else {
+          console.log("[UserProfileView] No MySQL user ID available, skipping audit logs");
+          setFullAuditLogs([]);
+        }
+      } catch (e) {
+        console.error("[UserProfileView] Error loading data:", e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  const fetchUser = async () => {
-    setLoading(true);
+  const fetchUser = async (): Promise<UserProfile | null> => {
     try {
-      const resp = await UserPageService.getUserById(id!);
-      if (resp.profile) {
-        const p = { ...resp.profile } as any;
-        // Fallbacks for differing API field names
-        if (!p.email && p.email_address) p.email = p.email_address;
-        if (!p.location && p.address) p.location = p.address;
-        if (!p.phoneNumber && (p.phone || p.phone_number))
-          p.phoneNumber = p.phone || p.phone_number;
-        // Derive names from fullName if individual parts missing
-        const hasNames = p.firstName || p.lastName || p.middleName;
-        if (!hasNames && p.fullName) {
-          const parts = String(p.fullName).trim().split(/\s+/);
-          if (parts.length) p.firstName = parts[0];
-          if (parts.length > 2) p.middleName = parts.slice(1, -1).join(" ");
-          if (parts.length > 1) p.lastName = parts[parts.length - 1];
+      if (!id) return null;
+      
+      console.log(`[UserProfileView] Fetching user with ID: ${id}`);
+      
+      try {
+        const resp = await UserPageService.getUserById(id);
+        if (resp.profile) {
+          const p = { ...resp.profile } as any;
+          // Fallbacks for differing API field names
+          if (!p.email && p.email_address) p.email = p.email_address;
+          if (!p.location && p.address) p.location = p.address;
+          if (!p.phoneNumber && (p.phone || p.phone_number))
+            p.phoneNumber = p.phone || p.phone_number;
+          // Derive names from fullName if individual parts missing
+          const hasNames = p.firstName || p.lastName || p.middleName;
+          if (!hasNames && p.fullName) {
+            const parts = String(p.fullName).trim().split(/\s+/);
+            if (parts.length) p.firstName = parts[0];
+            if (parts.length > 2) p.middleName = parts.slice(1, -1).join(" ");
+            if (parts.length > 1) p.lastName = parts[parts.length - 1];
+          }
+          setUser(p);
+          console.log("[UserProfileView] User loaded from MySQL successfully");
+          return p;
         }
-        setUser(p);
-      } else {
-        toast.error("User not found");
+      } catch (fetchError: any) {
+        // User not found in MySQL - try to sync first
+        console.log(`[UserProfileView] User not found in MySQL, attempting to sync Firebase user...`);
+        
+        try {
+          // Call sync endpoint to create/link user from Firebase
+          const syncResult = await UserPageService.syncUserFromFirebase(id);
+          console.log(`[UserProfileView] Sync successful, got user:`, syncResult);
+          setUser(syncResult);
+          return syncResult;
+        } catch (syncError: any) {
+          console.error(`[UserProfileView] Sync failed:`, syncError);
+          console.log("[UserProfileView] Will continue with prefilled Firestore data");
+          // Continue with prefilled data
+        }
       }
+      return null;
     } catch (e) {
-      console.error(e);
-      toast.error("Failed to load user profile");
-    } finally {
-      setLoading(false);
+      console.error("[UserProfileView] Unexpected error in fetchUser:", e);
+      return null;
     }
   };
 
-  const fetchUserAuditLogs = async () => {
+  const fetchUserAuditLogs = async (userId: string) => {
     setLogsLoading(true);
     try {
-      // Pull all logs then filter by userId. (If backend adds endpoint, swap here.)
+      console.log(`[UserProfileView] Fetching audit logs for user ID: ${userId}`);
+      
+      // Pull all logs then filter by userId
       const first = await AuditLogService.getAllLogs(
         1,
         logsPagination.per_page
@@ -114,7 +151,11 @@ export function UserProfileView() {
         );
         all = all.concat(resp.data || []);
       }
-      const filtered = all.filter((l) => l.userId === id);
+      
+      console.log(`[UserProfileView] Total logs fetched: ${all.length}, filtering for user: ${userId}`);
+      const filtered = all.filter((l) => l.userId === userId);
+      
+      console.log(`[UserProfileView] Found ${filtered.length} audit logs for user`);
       setFullAuditLogs(filtered);
       setLogsPagination({
         current_page: 1,
@@ -124,8 +165,8 @@ export function UserProfileView() {
         total_items: filtered.length,
       });
     } catch (e: any) {
-      console.error(e);
-      toast.error("Failed to load user activities");
+      console.error("[UserProfileView] Error fetching audit logs:", e);
+      setFullAuditLogs([]);
     } finally {
       setLogsLoading(false);
     }
