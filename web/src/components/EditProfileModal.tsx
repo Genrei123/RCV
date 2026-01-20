@@ -54,7 +54,6 @@ export function EditProfileModal({
   const [citiesLoading, setCitiesLoading] = useState(true);
   const [showCityDropdown, setShowCityDropdown] = useState(false);
   const [citySearchTerm, setCitySearchTerm] = useState("");
-  const [isEditingLocation, setIsEditingLocation] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -145,53 +144,6 @@ export function EditProfileModal({
   }, [isOpen, showCityDropdown]);
 
   if (!isOpen || !user) return null;
-
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.firstName?.trim()) {
-      newErrors.firstName = "First name is required";
-    }
-    if (!formData.lastName?.trim()) {
-      newErrors.lastName = "Last name is required";
-    }
-    if (!formData.email?.trim()) {
-      newErrors.email = "Email is required";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Invalid email format";
-    }
-    if (formData.phoneNumber && formData.phoneNumber.length > 0) {
-      const phoneValidation = validatePhilippinePhoneNumber(
-        formData.phoneNumber
-      );
-      if (!phoneValidation.isValid) {
-        newErrors.phoneNumber = phoneValidation.error || "Invalid phone number";
-      }
-    }
-    
-    if (!formData.location?.trim()) {
-      newErrors.location = "Location is required";
-    }
-    
-    // Check if user is at least 18 years old
-    if (formData.dateOfBirth) {
-      const birthDate = new Date(formData.dateOfBirth);
-      const today = new Date();
-      let age = today.getFullYear() - birthDate.getFullYear();
-      const monthDiff = today.getMonth() - birthDate.getMonth();
-      
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-        age--;
-      }
-      
-      if (age < 18) {
-        newErrors.dateOfBirth = "You must be at least 18 years old";
-      }
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
 
   // Avatar handlers
   const openFilePicker = () => fileInputRef.current?.click();
@@ -580,14 +532,12 @@ export function EditProfileModal({
                         setCitySearchTerm(value);
                         // Clear formData.location when user is typing (not a selected city yet)
                         setFormData(prev => ({ ...prev, location: "" }));
-                        setIsEditingLocation(true);
                         if (value) {
                           setShowCityDropdown(true);
                         }
                       }}
                       onFocus={() => {
                         setShowCityDropdown(true);
-                        setIsEditingLocation(true);
                       }}
                       onBlur={() => {
                         // Only close dropdown if a city was already selected
@@ -619,7 +569,6 @@ export function EditProfileModal({
                                 const cityValue = `${city.name}, ${city.adminName1}`;
                                 handleChange("location", cityValue);
                                 setCitySearchTerm(cityValue);
-                                setIsEditingLocation(false);
                                 setShowCityDropdown(false);
                               }}
                               className="w-full text-left px-3 py-2 hover:bg-teal-500/10 hover:text-teal-600 transition-colors text-sm"
