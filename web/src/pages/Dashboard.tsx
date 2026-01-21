@@ -84,7 +84,7 @@ export interface DashboardProps {
 
 export function Dashboard(props: DashboardProps) {
   const [, setSearch] = useState<string>("");
-  const [sortKey, setSortKey] = useState<"lastName" | "email" | "status">(
+  const [sortKey, setSortKey] = useState<"lastName" | "email" | "statusActive" | "statusPending">(
     "lastName"
   );
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -627,9 +627,18 @@ export function Dashboard(props: DashboardProps) {
     } else if (sortKey === "email") {
       av = (a.email || "").toLowerCase();
       bv = (b.email || "").toLowerCase();
-    } else if (sortKey === "status") {
-      av = (a.status || "").toLowerCase();
-      bv = (b.status || "").toLowerCase();
+    } else if (sortKey === "statusActive") {
+      // Active first: Active < Pending (so Active comes first)
+      const statusOrder: Record<string, number> = { Active: 0, Pending: 1, Archived: 2 };
+      const aStatus = a.status || "";
+      const bStatus = b.status || "";
+      return (statusOrder[aStatus] ?? 3) - (statusOrder[bStatus] ?? 3);
+    } else if (sortKey === "statusPending") {
+      // Pending first: Pending < Active (so Pending comes first)
+      const statusOrder: Record<string, number> = { Pending: 0, Active: 1, Archived: 2 };
+      const aStatus = a.status || "";
+      const bStatus = b.status || "";
+      return (statusOrder[aStatus] ?? 3) - (statusOrder[bStatus] ?? 3);
     }
     if (av < bv) return -1;
     if (av > bv) return 1;
@@ -913,7 +922,7 @@ export function Dashboard(props: DashboardProps) {
                 <Select
                   value={sortKey}
                   onValueChange={(value) =>
-                    setSortKey(value as "lastName" | "email" | "status")
+                    setSortKey(value as "lastName" | "email" | "statusActive" | "statusPending")
                   }
                 >
                   <SelectTrigger className="w-full sm:w-[150px]">
@@ -924,7 +933,8 @@ export function Dashboard(props: DashboardProps) {
                       <SelectLabel>Sort Options</SelectLabel>
                       <SelectItem value="lastName">Name (A→Z)</SelectItem>
                       <SelectItem value="email">Email (A→Z)</SelectItem>
-                      <SelectItem value="status">Status</SelectItem>
+                      <SelectItem value="statusActive">Status (Active ↑)</SelectItem>
+                      <SelectItem value="statusPending">Status (Pending ↑)</SelectItem>                      
                     </SelectGroup>
                   </SelectContent>
                 </Select>

@@ -184,11 +184,11 @@ export function DataTable({
           </CardTitle>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
             {showSearch && (
-              <div className="relative group rounded-md border border-gray-300 focus-within:border-black transition-colors">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-black transition-colors" />
+              <div className="relative group rounded-md border-2 border-gray-200 focus-within:border-gray-400 focus-within:shadow-md transition-all">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 group-focus-within:text-gray-700 transition-colors" />
                 <Input
                   placeholder={searchPlaceholder}
-                  className="pl-10 w-full sm:w-64 border-0 bg-white text-gray-800 placeholder:text-gray-400 focus:text-black focus:placeholder:text-gray-500"
+                  className="pl-10 w-full sm:w-64 border-0 bg-white text-gray-800 placeholder:text-gray-500 focus:text-black focus:placeholder:text-gray-600"
                   value={searchQuery}
                   onChange={(e) => handleSearch(e.target.value)}
                 />
