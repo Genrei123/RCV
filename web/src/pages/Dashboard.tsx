@@ -584,7 +584,7 @@ export function Dashboard(props: DashboardProps) {
   // Server-driven pagination state
   const [loading, setLoading] = useState<boolean>(false);
   const [users, setUsers] = useState<User[]>([]);
-  const [, setPagination] = useState<any | null>(null);
+  const [pagination, setPagination] = useState<any | null>(null);
 
   // Helper to determine if parent passed a paginated payload
   const isPaginatedPayload = (
@@ -612,8 +612,7 @@ export function Dashboard(props: DashboardProps) {
 
   // Filter users by status - exclude rejected users from main list (they have their own tab)
   const filteredUsers = usersArray.filter((user) => {
-    // Always exclude rejected users from the main users list
-    if (user.status === "Rejected") return false;
+    // Don't filter out rejected users - display all users
     if (statusFilter === "all") return true;
     return user.status === statusFilter;
   });
@@ -646,10 +645,16 @@ export function Dashboard(props: DashboardProps) {
   });
 
   // Use the client-side arrays for display totals so UI text matches rendered rows
-  const displayTotal = statusFilter === "all" ? usersArray.length ?? 0 : filteredUsers.length ?? 0;
+  // Use server pagination total if available, otherwise fallback to filtered array
+  const displayTotal = pagination?.total_items ?? filteredUsers.length;
   const totalPages = Math.max(1, Math.ceil(displayTotal / pageSize));
 
-  const paginatedDisplayData = sortedUsers;
+  // When using server pagination (pagination state exists), use data as-is from server
+  // Otherwise, apply client-side pagination to sorted data
+  const paginatedDisplayData = pagination ? sortedUsers : sortedUsers.slice(
+    (currentPage - 1) * pageSize,
+    (currentPage - 1) * pageSize + pageSize
+  );
 
   // Fetch a page from server
   const fetchPage = async (page: number) => {
@@ -956,8 +961,7 @@ export function Dashboard(props: DashboardProps) {
               itemsPerPage={pageSize}
               onPageChange={(p: number) => fetchPage(p)}
               alwaysShowControls
-              showingPosition="right"
-              showingText={`Showing ${paginatedDisplayData.length} of ${displayTotal} users`}
+              showingText={null}
             />
           </div>
         </div>
@@ -1016,8 +1020,7 @@ export function Dashboard(props: DashboardProps) {
                         itemsPerPage={pageSize}
                         onPageChange={(p: number) => setRejectedCurrentPage(p)}
                         alwaysShowControls
-                        showingPosition="right"
-                        showingText={`Showing ${rejectedPaginatedData.length} of ${rejectedUsers.length} users`}
+                        showingText={null}
                       />
                     </div>
                   </div>
@@ -1084,8 +1087,7 @@ export function Dashboard(props: DashboardProps) {
                         itemsPerPage={pageSize}
                         onPageChange={(p: number) => setInvitesCurrentPage(p)}
                         alwaysShowControls
-                        showingPosition="right"
-                        showingText={`Showing ${invitesPaginatedData.length} of ${invites.length} invitations`}
+                        showingText={null}
                       />
                     </div>
                   </div>
