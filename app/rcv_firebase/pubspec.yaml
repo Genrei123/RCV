@@ -57,7 +57,6 @@ dependencies:
   fl_chart: ^1.1.1
   provider: ^6.1.5+1
   google_fonts: ^6.3.1
-  footer:
   location: ^8.0.1
   shared_preferences: ^2.5.3
   cloud_firestore: ^4.17.5
