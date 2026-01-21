@@ -2,6 +2,7 @@ import {
   X,
   User,
   Mail,
+  Phone,
   MapPin,
   Calendar,
   Hash,
@@ -62,7 +63,7 @@ export function EditProfileModal({
         middleName: user.middleName || "",
         lastName: (user.lastName || "").replace(/[0-9]/g, ""),
         email: user.email || "",
-        phoneNumber: user.phoneNumber || "",
+        phoneNumber: (user.phoneNumber || "").replace(/^\+63\s?/, ""),
         location: user.location || "",
         dateOfBirth: user.dateOfBirth || "",
         badgeId: user.badgeId || "",
@@ -487,9 +488,9 @@ export function EditProfileModal({
                     <Input
                       type="email"
                       value={formData.email || ""}
-                      onChange={(e) => handleChange("email", e.target.value)}
+                      readOnly
                       placeholder="Enter email address"
-                      className={`pl-10 ${
+                      className={`pl-10 cursor-not-allowed ${
                         errors.email ? "border-red-500" : ""
                       }`}
                     />
@@ -499,18 +500,28 @@ export function EditProfileModal({
                   )}
                 </div>
 
-                <PhoneNumberInput
-                  value={formData.phoneNumber || ""}
-                  onChange={(value) => handleChange("phoneNumber", value)}
-                  onBlur={() => {
-                    // Validation happens in handleChange
-                  }}
-                  error={errors.phoneNumber}
-                  disabled={loading}
-                  label="Phone Number"
-                  required={false}
-                  placeholder="9991113333"
-                />
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    Phone Number <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-gray-400">
+                      +63
+                    </span>
+                    <Input
+                      type="tel"
+                      value={formData.phoneNumber || ""}
+                      onChange={(e) => handleChange("phoneNumber", e.target.value)}
+                      placeholder="9991113333"
+                      className={`pl-10 ${
+                        errors.phoneNumber ? "border-red-500" : ""
+                      }`}
+                    />
+                  </div>
+                  {errors.phoneNumber && (
+                    <p className="text-xs text-red-500">{errors.phoneNumber}</p>
+                  )}
+                </div>
 
                 <div className="space-y-2 md:col-span-2">
                   <label className="text-sm font-medium text-gray-700">
@@ -610,8 +621,9 @@ export function EditProfileModal({
                     <Input
                       value={formData.badgeId || ""}
                       onChange={(e) => handleChange("badgeId", e.target.value)}
+                      readOnly
                       placeholder="Enter badge ID"
-                      className={`pl-10 ${
+                      className={`pl-10 cursor-not-allowed ${
                         errors.badgeId ? "border-red-500" : ""
                       }`}
                     />
@@ -620,20 +632,6 @@ export function EditProfileModal({
                     <p className="text-xs text-red-500">{errors.badgeId}</p>
                   )}
                 </div>
-              </div>
-            </div>
-
-            {/* Warning Note */}
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex gap-3">
-              <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-amber-900 mb-1">
-                  Important Note
-                </p>
-                <p className="text-sm text-amber-800">
-                  Some fields like email and badge ID may require admin approval
-                  before changes take effect.
-                </p>
               </div>
             </div>
           </div>

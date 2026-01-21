@@ -933,8 +933,8 @@ export function Dashboard(props: DashboardProps) {
                       <SelectLabel>Sort Options</SelectLabel>
                       <SelectItem value="lastName">Name (A→Z)</SelectItem>
                       <SelectItem value="email">Email (A→Z)</SelectItem>
-                      <SelectItem value="statusActive">Status (Active ↑)</SelectItem>
-                      <SelectItem value="statusPending">Status (Pending ↑)</SelectItem>                      
+                      <SelectItem value="statusActive">Status (Active-↑)</SelectItem>
+                      <SelectItem value="statusPending">Status (Pending-↑)</SelectItem>                      
                     </SelectGroup>
                   </SelectContent>
                 </Select>
