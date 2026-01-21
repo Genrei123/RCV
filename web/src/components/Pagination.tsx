@@ -4,8 +4,8 @@ interface PaginationProps {
   totalItems: number;
   itemsPerPage: number;
   onPageChange?: (page: number) => void;
-  showingText?: string;
-  showingPosition?: "left" | "right";
+  showingText?: string | null;
+  showingPosition?: "left" | "right" | "none";
   alwaysShowControls?: boolean;
 }
 
@@ -56,7 +56,7 @@ export function Pagination({
   const onNext = () => onPageChange?.(Math.min(totalPages, currentPage + 1));
 
   const showing =
-    showingText || `Showing ${startItem}-${endItem} of ${totalItems} results`;
+    showingText === null ? null : (showingText || `Showing ${startItem}-${endItem} of ${totalItems} results`);
 
   return (
     <div className="w-full">
@@ -127,7 +127,7 @@ export function Pagination({
 
       {/* Desktop / tablet: wrap when constrained */}
       <div className="hidden sm:flex flex-wrap items-center justify-between gap-2 pt-4">
-        {showingPosition === "left" && (
+        {showingPosition === "left" && showing && (
           <div className="text-sm app-text-subtle flex-shrink-0">{showing}</div>
         )}
         {(totalPages > 1 || alwaysShowControls) && (
@@ -186,7 +186,7 @@ export function Pagination({
             </button>
           </nav>
         )}
-        {showingPosition === "right" && (
+        {showingPosition === "right" && showing && (
           <div className="text-sm app-text-subtle flex-shrink-0">
             {showing}
           </div>
