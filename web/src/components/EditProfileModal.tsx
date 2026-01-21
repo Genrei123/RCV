@@ -2,11 +2,9 @@ import {
   X,
   User,
   Mail,
-  Phone,
   MapPin,
   Calendar,
   Hash,
-  AlertTriangle,
   Camera,
   ChevronDown,
 } from "lucide-react";
@@ -26,8 +24,6 @@ import {
   validatePhilippinePhoneNumber,
   formatPhoneNumberForDatabase,
 } from "@/utils/phoneValidation";
-import { PhoneNumberInput } from "@/components/PhoneNumberInput";
-
 interface EditProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
