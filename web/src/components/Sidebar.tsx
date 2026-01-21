@@ -31,49 +31,32 @@ interface CurrentUser {
 }
 
 // Inline logo component (hexagon + inner circle) — used in desktop header (and can be reused elsewhere)
-import { useId } from "react";
+const LogoIcon = ({ className = "w-8 h-8 app-bg-primary" }: { className?: string }) => (
+  <svg
+  viewBox="0 0 24 24"
+  xmlns="http://www.w3.org/2000/svg"
+  className={className}
+  aria-hidden="true"
+  data-gradient-start="#005440"
+  data-gradient-end="#00B087"
+>
+  <defs>
+    <linearGradient id="rcvGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stopColor="#005440" />
+      <stop offset="100%" stopColor="#00B087" />
+    </linearGradient>
+  </defs>
 
-type LogoIconProps = {
-  className?: string;
-};
+  <polygon
+    points="12,2 20,7 20,17 12,22 4,17 4,7"
+    fill="url(#rcvGrad)"
+    stroke="#005440"
+    strokeWidth={0.5}
+  />
 
-// Inline logo component (hexagon + inner circle)
-const LogoIcon = ({
-  className = "w-8 h-8 app-bg-primary",
-}: LogoIconProps) => {
-  const gradId = useId();
-
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-      width="24"
-      height="24"
-      role="img"
-      aria-label="RCV Logo"
-      
-    >
-      <defs>
-        <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#005440" />
-          <stop offset="100%" stopColor="#00B087" />
-        </linearGradient>
-      </defs>
-
-      <polygon
-        points="12,2 20,7 20,17 12,22 4,17 4,7"
-        fill={`url(#${gradId})`}
-        stroke="#005440"
-        strokeWidth={0.5}
-      />
-
-      <circle cx={12} cy={12} r={3.1} fill="#ffffff" />
-    </svg>
-  );
-};
-
-
+  <circle cx={12} cy={12} r={3.1} fill="white" />
+</svg>
+);
 
 export function Sidebar({
   open = false,
