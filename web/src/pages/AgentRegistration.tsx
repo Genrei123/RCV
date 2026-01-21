@@ -255,8 +255,8 @@ export function AgentRegistration() {
 
   const getPasswordStrength = (password: string): PasswordStrength => {
     let score = 0;
-    if (password.length >= 8) score++;
-    if (password.length >= 12) score++;
+    if (password.length >= 14) score++;
+    if (password.length >= 16) score++;
     if (/[a-z]/.test(password)) score++;
     if (/[A-Z]/.test(password)) score++;
     if (/[0-9]/.test(password)) score++;
@@ -277,11 +277,9 @@ export function AgentRegistration() {
 
     if (!formData.password) {
       newErrors.password = "Password is required";
-    } else if (
-      !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(formData.password)
-    ) {
+    } else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{14,}$/.test(formData.password)) {
       newErrors.password =
-        "Password must be at least 8 characters with uppercase, lowercase, and number";
+        "Password must be at least 14 characters with uppercase, lowercase, number, and may contain special characters";
     }
 
     if (formData.password !== formData.confirmPassword) {
@@ -304,6 +302,21 @@ export function AgentRegistration() {
     if (!formData.location.trim()) newErrors.location = "Location is required";
     if (!formData.dateOfBirth)
       newErrors.dateOfBirth = "Date of birth is required";
+    else {
+      // Check if user is at least 18 years old
+      const birthDate = new Date(formData.dateOfBirth);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      
+      if (age < 18) {
+        newErrors.dateOfBirth = "You must be at least 18 years old to register";
+      }
+    }
     if (!idDocument) newErrors.idDocument = "ID document is required";
     if (!selfieWithId) newErrors.selfieWithId = "Selfie with ID is required";
 
@@ -635,9 +648,11 @@ export function AgentRegistration() {
                       errors.firstName ? "border-red-500" : ""
                     }`}
                     value={formData.firstName}
-                    onChange={(e) =>
-                      setFormData({ ...formData, firstName: e.target.value })
-                    }
+                    onChange={(e) => {
+                      // Remove any numeric characters
+                      const value = e.target.value.replace(/[0-9]/g, "");
+                      setFormData({ ...formData, firstName: value });
+                    }}
                     disabled={loading}
                   />
                   {errors.firstName && (
@@ -674,9 +689,11 @@ export function AgentRegistration() {
                       errors.lastName ? "border-red-500" : ""
                     }`}
                     value={formData.lastName}
-                    onChange={(e) =>
-                      setFormData({ ...formData, lastName: e.target.value })
-                    }
+                    onChange={(e) => {
+                      // Remove any numeric characters
+                      const value = e.target.value.replace(/[0-9]/g, "");
+                      setFormData({ ...formData, lastName: value });
+                    }}
                     disabled={loading}
                   />
                   {errors.lastName && (
@@ -806,13 +823,22 @@ export function AgentRegistration() {
                         className={`pl-10 pr-8 h-11 ${
                           errors.location ? "border-red-500" : ""
                         }`}
-                        value={formData.location || citySearchTerm}
+                        value={citySearchTerm || formData.location}
                         onChange={(e) => {
-                          setCitySearchTerm(e.target.value);
-                          setFormData({ ...formData, location: "" });
-                          setShowCityDropdown(true);
+                          const value = e.target.value;
+                          setCitySearchTerm(value);
+                          if (value !== formData.location) {
+                            setFormData({ ...formData, location: "" });
+                          }
+                          if (value) {
+                            setShowCityDropdown(true);
+                          }
                         }}
-                        onFocus={() => setShowCityDropdown(true)}
+                        onFocus={() => {
+                          if (citySearchTerm || !formData.location) {
+                            setShowCityDropdown(true);
+                          }
+                        }}
                         disabled={loading || citiesLoading}
                       />
                       <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -826,8 +852,11 @@ export function AgentRegistration() {
                             className="w-full px-4 py-2 text-left hover:bg-gray-100 flex flex-col"
                             onClick={() => {
                               setFormData({ ...formData, location: city.name });
-                              setCitySearchTerm("");
+                              setCitySearchTerm(city.name);
                               setShowCityDropdown(false);
+                              if (errors.location) {
+                                setErrors({ ...errors, location: "" });
+                              }
                             }}
                           >
                             <span className="font-medium">{city.name}</span>
@@ -856,7 +885,24 @@ export function AgentRegistration() {
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="password">Password *</Label>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Label htmlFor="password">Password *</Label>
+                    <div className="group relative">
+                      <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 text-xs font-semibold flex items-center justify-center cursor-help">
+                        i
+                      </div>
+                      <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block bg-gray-900 text-white text-xs rounded p-2 w-48 z-10">
+                        <p className="font-semibold mb-1">Password requirements:</p>
+                        <ul className="space-y-1">
+                          <li>• At least 14 characters</li>
+                          <li>• At least one uppercase letter (A-Z)</li>
+                          <li>• At least one lowercase letter (a-z)</li>
+                          <li>• At least one number (0-9)</li>
+                          <li>• Special characters allowed (!@#$%^&*)</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
                   <div className="relative mt-1">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                     <Input
@@ -989,17 +1035,34 @@ export function AgentRegistration() {
                   <button
                     type="button"
                     onClick={() => idDocumentRef.current?.click()}
-                    className={`mt-1 w-full h-40 border-2 border-dashed rounded-lg flex flex-col items-center justify-center hover:bg-gray-50 transition-colors ${
+                    className={`mt-1 w-full h-40 border-2 border-dashed rounded-lg flex flex-col items-center justify-center hover:bg-gray-50 transition-colors relative ${
                       errors.idDocument ? "border-red-500" : "border-gray-300"
                     }`}
                     disabled={loading}
                   >
                     {idDocumentPreview ? (
-                      <img
-                        src={idDocumentPreview}
-                        alt="ID Document"
-                        className="max-h-36 max-w-full object-contain rounded"
-                      />
+                      <>
+                        <img
+                          src={idDocumentPreview}
+                          alt="ID Document"
+                          className="max-h-36 max-w-full object-contain rounded"
+                        />
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIdDocument(null);
+                            setIdDocumentPreview("");
+                            if (idDocumentRef.current) {
+                              idDocumentRef.current.value = "";
+                            }
+                          }}
+                          className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center"
+                          title="Delete photo"
+                        >
+                          ×
+                        </button>
+                      </>
                     ) : (
                       <>
                         <Upload className="w-8 h-8 text-gray-400 mb-2" />
@@ -1032,17 +1095,34 @@ export function AgentRegistration() {
                   <button
                     type="button"
                     onClick={() => selfieRef.current?.click()}
-                    className={`mt-1 w-full h-40 border-2 border-dashed rounded-lg flex flex-col items-center justify-center hover:bg-gray-50 transition-colors ${
+                    className={`mt-1 w-full h-40 border-2 border-dashed rounded-lg flex flex-col items-center justify-center hover:bg-gray-50 transition-colors relative ${
                       errors.selfieWithId ? "border-red-500" : "border-gray-300"
                     }`}
                     disabled={loading}
                   >
                     {selfieWithIdPreview ? (
-                      <img
-                        src={selfieWithIdPreview}
-                        alt="Selfie with ID"
-                        className="max-h-36 max-w-full object-contain rounded"
-                      />
+                      <>
+                        <img
+                          src={selfieWithIdPreview}
+                          alt="Selfie with ID"
+                          className="max-h-36 max-w-full object-contain rounded"
+                        />
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelfieWithId(null);
+                            setSelfieWithIdPreview("");
+                            if (selfieRef.current) {
+                              selfieRef.current.value = "";
+                            }
+                          }}
+                          className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center"
+                          title="Delete photo"
+                        >
+                          ×
+                        </button>
+                      </>
                     ) : (
                       <>
                         <Camera className="w-8 h-8 text-gray-400 mb-2" />
