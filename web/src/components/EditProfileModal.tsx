@@ -15,6 +15,7 @@ import { useState, useEffect, useRef } from "react";
 import type { ProfileUser } from "@/pages/Profile";
 import { AvatarCropDialog } from "@/components/AvatarCropDialog";
 import { FirebaseStorageService } from "@/services/firebaseStorageService";
+import { toast } from "react-toastify";
 
 interface PhilippineCity {
   name: string;
@@ -57,9 +58,9 @@ export function EditProfileModal({
   useEffect(() => {
     if (user) {
       setFormData({
-        firstName: user.firstName || "",
+        firstName: (user.firstName || "").replace(/[0-9]/g, ""),
         middleName: user.middleName || "",
-        lastName: user.lastName || "",
+        lastName: (user.lastName || "").replace(/[0-9]/g, ""),
         email: user.email || "",
         phoneNumber: user.phoneNumber || "",
         location: user.location || "",
@@ -67,6 +68,7 @@ export function EditProfileModal({
         badgeId: user.badgeId || "",
         avatar: user.avatar || undefined,
       });
+      setCitySearchTerm(user.location || "");
       // prefer local override for preview if exists
       try {
         const saved = localStorage.getItem("profile_avatar_data");
@@ -143,33 +145,6 @@ export function EditProfileModal({
 
   if (!isOpen || !user) return null;
 
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.firstName?.trim()) {
-      newErrors.firstName = "First name is required";
-    }
-    if (!formData.lastName?.trim()) {
-      newErrors.lastName = "Last name is required";
-    }
-    if (!formData.email?.trim()) {
-      newErrors.email = "Email is required";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Invalid email format";
-    }
-    if (formData.phoneNumber && formData.phoneNumber.length > 0) {
-      const phoneValidation = validatePhilippinePhoneNumber(
-        formData.phoneNumber
-      );
-      if (!phoneValidation.isValid) {
-        newErrors.phoneNumber = phoneValidation.error || "Invalid phone number";
-      }
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
   // Avatar handlers
   const openFilePicker = () => fileInputRef.current?.click();
 
@@ -245,7 +220,62 @@ export function EditProfileModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm()) {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.firstName?.trim()) {
+      newErrors.firstName = "First name is required";
+    }
+    if (!formData.lastName?.trim()) {
+      newErrors.lastName = "Last name is required";
+    }
+    if (!formData.email?.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = "Invalid email format";
+    }
+    
+    if (!formData.phoneNumber?.trim()) {
+      newErrors.phoneNumber = "Phone number is required";
+    } else if (formData.phoneNumber && formData.phoneNumber.length > 0) {
+      const phoneValidation = validatePhilippinePhoneNumber(
+        formData.phoneNumber
+      );
+      if (!phoneValidation.isValid) {
+        newErrors.phoneNumber = phoneValidation.error || "Invalid phone number";
+      }
+    }
+    
+    if (!formData.badgeId?.trim()) {
+      newErrors.badgeId = "Badge ID is required";
+    }
+    
+    if (!formData.location?.trim()) {
+      newErrors.location = "Location is required";
+    }
+    
+    // Check date of birth is required and user is at least 18 years old
+    if (!formData.dateOfBirth) {
+      newErrors.dateOfBirth = "Date of birth is required";
+    } else {
+      const birthDate = new Date(formData.dateOfBirth);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      
+      if (age < 18) {
+        newErrors.dateOfBirth = "You must be at least 18 years old";
+      }
+    }
+
+    // If there are errors, show them and don't proceed
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      const firstError = Object.values(newErrors)[0];
+      toast.error(firstError);
       return;
     }
 
@@ -268,6 +298,11 @@ export function EditProfileModal({
   };
 
   const handleChange = (field: keyof ProfileUser, value: string) => {
+    // Filter out numbers from firstName and lastName
+    if (field === "firstName" || field === "lastName") {
+      value = value.replace(/[0-9]/g, "");
+    }
+    
     setFormData((prev) => ({ ...prev, [field]: value }));
     // Clear error for this field when user starts typing
     if (errors[field]) {
@@ -425,9 +460,14 @@ export function EditProfileModal({
                       onChange={(e) =>
                         handleChange("dateOfBirth", e.target.value)
                       }
-                      className="pl-10"
+                      className={`pl-10 ${
+                        errors.dateOfBirth ? "border-red-500" : ""
+                      }`}
                     />
                   </div>
+                  {errors.dateOfBirth && (
+                    <p className="text-xs text-red-500">{errors.dateOfBirth}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -483,21 +523,27 @@ export function EditProfileModal({
                       placeholder={
                         citiesLoading ? "Loading cities..." : "Search city..."
                       }
-                      className="pl-10 pr-10 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
-                      value={
-                        showCityDropdown
-                          ? citySearchTerm
-                          : formData.location || ""
-                      }
+                      className={`pl-10 pr-10 flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer ${
+                        errors.location ? "border-red-500" : "border-input"
+                      }`}
+                      value={citySearchTerm}
                       onChange={(e) => {
-                        setCitySearchTerm(e.target.value);
-                        setShowCityDropdown(true);
+                        const value = e.target.value;
+                        setCitySearchTerm(value);
+                        // Clear formData.location when user is typing (not a selected city yet)
+                        setFormData(prev => ({ ...prev, location: "" }));
+                        if (value) {
+                          setShowCityDropdown(true);
+                        }
                       }}
                       onFocus={() => {
                         setShowCityDropdown(true);
                       }}
                       onBlur={() => {
-                        setShowCityDropdown(false);
+                        // Only close dropdown if a city was already selected
+                        setTimeout(() => {
+                          setShowCityDropdown(false);
+                        }, 100);
                       }}
                       disabled={citiesLoading}
                     />
@@ -518,13 +564,12 @@ export function EditProfileModal({
                             <button
                               key={index}
                               type="button"
-                              onMouseDown={() => {
-                                handleChange(
-                                  "location",
-                                  `${city.name}, ${city.adminName1}`
-                                );
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                const cityValue = `${city.name}, ${city.adminName1}`;
+                                handleChange("location", cityValue);
+                                setCitySearchTerm(cityValue);
                                 setShowCityDropdown(false);
-                                setCitySearchTerm("");
                               }}
                               className="w-full text-left px-3 py-2 hover:bg-teal-500/10 hover:text-teal-600 transition-colors text-sm"
                             >
@@ -543,6 +588,9 @@ export function EditProfileModal({
                       </div>
                     )}
                   </div>
+                  {errors.location && (
+                    <p className="text-xs text-red-500">{errors.location}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -563,9 +611,14 @@ export function EditProfileModal({
                       value={formData.badgeId || ""}
                       onChange={(e) => handleChange("badgeId", e.target.value)}
                       placeholder="Enter badge ID"
-                      className="pl-10"
+                      className={`pl-10 ${
+                        errors.badgeId ? "border-red-500" : ""
+                      }`}
                     />
                   </div>
+                  {errors.badgeId && (
+                    <p className="text-xs text-red-500">{errors.badgeId}</p>
+                  )}
                 </div>
               </div>
             </div>
