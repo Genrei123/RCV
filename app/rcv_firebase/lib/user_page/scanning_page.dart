@@ -1371,6 +1371,9 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
     ],
   ),
 )),
+                              ],
+                            ),
+                          ),
                           const SizedBox(height: 16),
                         ],
                         
@@ -1419,6 +1422,9 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
     ],
   ),
 )),
+                              ],
+                            ),
+                          ),
                         ],
                         
                         Text(
