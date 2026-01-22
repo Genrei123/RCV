@@ -676,7 +676,7 @@ export function AnalyticsMapComponent() {
       {/* Hamburger Button */}
       <div
         ref={hamburgerRef}
-        className="absolute top-20 right-3 z-20 pointer-events-auto"
+        className="absolute top-15 right-2 z-20 pointer-events-auto"
         style={{ pointerEvents: "auto" }}
       >
         <Button
@@ -684,14 +684,14 @@ export function AnalyticsMapComponent() {
           className="rounded-full shadow-md"
           onClick={() => setDrawerOpen(true)}
         >
-          <Menu className="h-4 w-4" />
+          <Menu className="h-4 w-10" />
         </Button>
       </div>
 
       {/* Right-side Drawer */}
       <div
         ref={drawerRef}
-        className={`fixed top-[56px] lg:top-0 right-0 left-0 sm:left-auto h-[calc(100vh-56px)] lg:h-full w-full sm:w-80 z-50 transform transition-transform duration-300 ${
+        className={`fixed top-[56px] lg:top-0 right-0 left-0 sm:left-auto h-[calc(100vh-56px)] lg:h-full w-full sm:w-80 z-50 transform transition-transform duration-300 mr-2 sm:mr-0 ${
           drawerOpen ? "translate-x-0" : "translate-x-full"
         }`}
         style={{ pointerEvents: "auto" }}

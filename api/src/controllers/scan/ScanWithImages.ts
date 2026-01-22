@@ -41,7 +41,7 @@ export const scanProductWithImages = async (
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
-    const { ocrText, frontImageUrl, backImageUrl } = req.body;
+    const { ocrText, frontImageUrl, backImageUrl, packageType } = req.body;
 
     // Type validation
     if (!ocrText || typeof ocrText !== "string" || ocrText.trim().length === 0) {
@@ -60,6 +60,20 @@ export const scanProductWithImages = async (
       return res
         .status(400)
         .json({ success: false, message: "Back image URL must be a string" });
+    }
+
+    // Validate packageType if provided
+    if (packageType !== undefined && typeof packageType !== "string") {
+      return res
+        .status(400)
+        .json({ success: false, message: "Package type must be a string" });
+    }
+
+    const validPackageTypes = ['CANNED_PRODUCT', 'SACK_PRODUCT', 'PACK_PRODUCT', 'BOX_PRODUCT', 'QR_SCAN'];
+    if (packageType && !validPackageTypes.includes(packageType)) {
+      return res
+        .status(400)
+        .json({ success: false, message: `Invalid package type. Must be one of: ${validPackageTypes.join(', ')}` });
     }
 
     // Security validation - validate scan image URLs
@@ -90,6 +104,7 @@ export const scanProductWithImages = async (
       scanHistory.ocrText = ocrText.substring(0, 5000); // Truncate if too long
       scanHistory.frontImageUrl = frontImageUrl;
       scanHistory.backImageUrl = backImageUrl;
+      scanHistory.packageType = packageType;
       scanHistory.extractedInfo = { error: "AI processing failed" };
       await ScanHistoryRepo.save(scanHistory);
 
@@ -106,6 +121,7 @@ export const scanProductWithImages = async (
     scanHistory.ocrText = ocrText.substring(0, 5000); // Truncate if too long
     scanHistory.frontImageUrl = frontImageUrl;
     scanHistory.backImageUrl = backImageUrl;
+    scanHistory.packageType = packageType;
     scanHistory.extractedInfo = extractedInfo;
     
     const saved = await ScanHistoryRepo.save(scanHistory);
@@ -167,6 +183,7 @@ export const getScanHistory = async (
         ocrText: scan.ocrText,
         frontImageUrl: scan.frontImageUrl,
         backImageUrl: scan.backImageUrl,
+        packageType: scan.packageType,
         extractedInfo: scan.extractedInfo,
         createdAt: scan.createdAt,
       })),

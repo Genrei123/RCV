@@ -214,7 +214,7 @@ export function AuthPage() {
             <div className="inline-block p-6 bg-white rounded-2xl shadow-lg">
               <div className="w-24 h-24 bg-gradient-to-br from-primary to-[#00B087] rounded-xl flex items-center justify-center">
                 <img
-                  src="/logo.svg"
+                  src="logo.svg"
                   alt="RCV Logo"
                   className="w-16 h-16 object-contain"
                   draggable="false"

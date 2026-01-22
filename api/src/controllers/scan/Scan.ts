@@ -66,7 +66,7 @@ export const scanProduct = async (
 ) => {
   try {
     // Extract OCR text and image URLs from request body
-    const { blockOfText, frontImageUrl, backImageUrl } = req.body;
+    const { blockOfText, frontImageUrl, backImageUrl, packageType } = req.body;
 
     // Validate input
     if (!blockOfText) {
@@ -78,6 +78,7 @@ export const scanProduct = async (
     }
 
     console.log("Received OCR text length:", blockOfText.length);
+    console.log("Package Type:", packageType || "Not specified");
     console.log("🔍 Step 1: Identifying product from packaging...");
 
     // STEP 1: Identify the product (but don't use its database values yet)
@@ -173,6 +174,7 @@ export const scanProduct = async (
         // Match details
         matchDetails: searchDetails,
         rawOCRText: blockOfText,
+        packageType: packageType || null,
         frontImageUrl: frontImageUrl || null,
         backImageUrl: backImageUrl || null,
       });
@@ -187,6 +189,7 @@ export const scanProduct = async (
         message: "No results found. Please ensure the label is clear and try again.",
         searchDetails: searchDetails, // Include what we searched for (helps debugging)
         rawOCRText: blockOfText,
+        packageType: packageType || null,
         frontImageUrl: frontImageUrl || null,
         backImageUrl: backImageUrl || null,
       });

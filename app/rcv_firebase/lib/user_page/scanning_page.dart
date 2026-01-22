@@ -8,8 +8,10 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import '../services/ocr_service.dart';
 import '../services/firebase_storage_service.dart';
+import '../services/image_preprocessing_service.dart';
 // import '../widgets/gradient_header_app_bar.dart';
 import '../widgets/title_logo_header_app_bar.dart';
 import '../widgets/navigation_bar.dart';
@@ -20,16 +22,23 @@ import '../widgets/feature_disabled_screen.dart';
 import '../utils/tab_history.dart';
 import '../pages/compliance_report_page.dart';
 import '../services/draft_service.dart';
+import 'scanning_category_page.dart';
+import '../pages/can_rotation_capture_page.dart';
+import '../pages/box_capture_page.dart';
+import '../pages/sack_capture_page.dart';
+import '../pages/pack_capture_page.dart';
 
 class QRScannerPage extends StatefulWidget {
-  const QRScannerPage({super.key});
+  final ScanningCategory? category;
+
+  const QRScannerPage({super.key, this.category});
 
   @override
   State<QRScannerPage> createState() => _QRScannerPageState();
 }
 
-
-class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserver {
+class _QRScannerPageState extends State<QRScannerPage>
+    with WidgetsBindingObserver {
   MobileScannerController cameraController = MobileScannerController();
   String result = '';
   bool isFlashOn = false;
@@ -40,6 +49,9 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
   final OcrService _ocrService = OcrService();
   final bool _useTesseract = true; // Switch engine; default to Tesseract
   final ApiService _apiService = ApiService();
+
+  // Scanning category
+  ScanningCategory? _selectedCategory;
 
   // For dual image OCR
   String? _frontImagePath;
@@ -55,6 +67,15 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _selectedCategory = widget.category;
+
+    // Set OCR mode for product categories, QR mode for qrScan
+    if (_selectedCategory == ScanningCategory.qrScan) {
+      isOCRMode = false;
+    } else if (_selectedCategory != null) {
+      isOCRMode = true;
+    }
+
     _requestCameraPermission();
   }
 
@@ -90,6 +111,383 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
   Widget _buildQrView(BuildContext context) {
     // If in OCR mode, show OCR interface instead of QR scanner
     if (isOCRMode) {
+      // For canned products, show rotating can capture UI
+      if (_selectedCategory == ScanningCategory.cannedProduct) {
+        return Container(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [const Color(0xFF005440), const Color(0xFF00796B)],
+            ),
+          ),
+          child: SafeArea(
+            child: Column(
+              children: [
+                // Header section
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 20,
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(Icons.cameraswitch, size: 64, color: Colors.white),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Rotating Can Capture',
+                        style: TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: const Text(
+                          'Capture all sides of the can\nby rotating it 360 degrees',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.amber,
+                            fontWeight: FontWeight.w500,
+                            height: 1.5,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Main content - centered
+                Expanded(
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: ElevatedButton.icon(
+                        onPressed: () => _openCanRotationCapture(),
+                        icon: const Icon(Icons.cameraswitch, size: 32),
+                        label: const Text(
+                          'Start Can Capture',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF005440),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 40,
+                            vertical: 24,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 40),
+              ],
+            ),
+          ),
+        );
+      }
+
+      // For box products, show 6-side box capture UI
+      if (_selectedCategory == ScanningCategory.boxProduct) {
+        return Container(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [const Color(0xFF005440), const Color(0xFF00796B)],
+            ),
+          ),
+          child: SafeArea(
+            child: Column(
+              children: [
+                // Header section
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 20,
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(Icons.card_giftcard, size: 64, color: Colors.white),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Box 6-Side Capture',
+                        style: TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: const Text(
+                          'Capture all 6 sides of the box\nfor complete product information',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.amber,
+                            fontWeight: FontWeight.w500,
+                            height: 1.5,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Main content - centered
+                Expanded(
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: ElevatedButton.icon(
+                        onPressed: () => _openBoxCapture(),
+                        icon: const Icon(Icons.card_giftcard, size: 32),
+                        label: const Text(
+                          'Start Box Capture',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF005440),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 40,
+                            vertical: 24,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 40),
+              ],
+            ),
+          ),
+        );
+      }
+
+      // For sack products, show sack capture UI
+      if (_selectedCategory == ScanningCategory.sackProduct) {
+        return Container(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [const Color(0xFF005440), const Color(0xFF00796B)],
+            ),
+          ),
+          child: SafeArea(
+            child: Column(
+              children: [
+                // Header section
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 20,
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(Icons.shopping_bag, size: 64, color: Colors.white),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Sack Product Capture',
+                        style: TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: const Text(
+                          'Capture front and back images\nof the sack for product scanning',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.amber,
+                            fontWeight: FontWeight.w500,
+                            height: 1.5,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Main content - centered
+                Expanded(
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: ElevatedButton.icon(
+                        onPressed: () => _openSackCapture(),
+                        icon: const Icon(Icons.shopping_bag, size: 32),
+                        label: const Text(
+                          'Start Sack Capture',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF005440),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 40,
+                            vertical: 24,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 40),
+              ],
+            ),
+          ),
+        );
+      }
+
+      // For pack products, show pack capture UI
+      if (_selectedCategory == ScanningCategory.packProduct) {
+        return Container(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [const Color(0xFF005440), const Color(0xFF00796B)],
+            ),
+          ),
+          child: SafeArea(
+            child: Column(
+              children: [
+                // Header section
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 20,
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(Icons.inventory_2, size: 64, color: Colors.white),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Pack Product Capture',
+                        style: TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: const Text(
+                          'Capture front and back images\nof the pack for product scanning',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.amber,
+                            fontWeight: FontWeight.w500,
+                            height: 1.5,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Main content - centered
+                Expanded(
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: ElevatedButton.icon(
+                        onPressed: () => _openPackCapture(),
+                        icon: const Icon(Icons.inventory_2, size: 32),
+                        label: const Text(
+                          'Start Pack Capture',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF005440),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 40,
+                            vertical: 24,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 40),
+              ],
+            ),
+          ),
+        );
+      }
+
+      // For other products, show traditional front/back UI
       return Container(
         width: double.infinity,
         height: double.infinity,
@@ -245,10 +643,14 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
                             ),
                           ],
                           // View Scanned Details button - appears after OCR processing
-                          if (_extractedInfo != null && _ocrBlobText != null) ...[
+                          if (_extractedInfo != null &&
+                              _ocrBlobText != null) ...[
                             const SizedBox(height: 16),
                             ElevatedButton.icon(
-                              onPressed: () => _showExtractedInfoModal(_extractedInfo!, _ocrBlobText!),
+                              onPressed: () => _showExtractedInfoModal(
+                                _extractedInfo!,
+                                _ocrBlobText!,
+                              ),
                               icon: const Icon(Icons.visibility, size: 20),
                               label: const Text(
                                 'View Scanned Details',
@@ -411,15 +813,16 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
 
   void _showErrorSnackBar(String message) {
     if (!mounted) return;
-    
+
     // Debounce errors - don't show if we showed one less than 2 seconds ago
     final now = DateTime.now();
-    if (_lastErrorTime != null && now.difference(_lastErrorTime!).inSeconds < 2) {
+    if (_lastErrorTime != null &&
+        now.difference(_lastErrorTime!).inSeconds < 2) {
       developer.log('⏳ Error debounced: $message');
       return;
     }
     _lastErrorTime = now;
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -432,6 +835,10 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
   void _showQRCodeModal(String qrData) {
     final certificateId = _extractCertificateId(qrData);
     final isCertificate = certificateId != null;
+
+    // Stop camera when modal opens
+    cameraController.stop();
+    developer.log('📹 Camera stopped - QR result modal opened');
 
     showDialog(
       context: context,
@@ -654,6 +1061,10 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
         );
       },
     ).then((_) {
+      // Restart camera when modal is closed
+      cameraController.start();
+      developer.log('📹 Camera restarted - QR result modal closed');
+
       // Reset result when modal is closed to allow re-scanning the same QR code
       if (mounted) {
         setState(() {
@@ -1117,7 +1528,11 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
                 SizedBox(height: 16),
                 Text(
                   'Generating AI Summary...',
-                  style: TextStyle(color: Color(0xFF005440), fontSize: 16, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    color: Color(0xFF005440),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 SizedBox(height: 8),
                 Text(
@@ -1131,7 +1546,7 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
       );
 
       final result = await _apiService.summarizeProduct(ocrText);
-      
+
       // Close loading indicator
       if (mounted) Navigator.of(context).pop();
 
@@ -1237,7 +1652,7 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
                           Colors.purple,
                         ),
                         const SizedBox(height: 12),
-                         _buildExtractedField(
+                        _buildExtractedField(
                           'Expiry Date',
                           aiSummary['ExpiryDate'] ?? 'N/A',
                           Icons.event_busy,
@@ -1262,7 +1677,7 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
     final isCompliant = extractedInfo['isCompliant'] ?? true;
     final violations = extractedInfo['violations'] as List<dynamic>? ?? [];
     final warnings = extractedInfo['warnings'] as List<dynamic>? ?? [];
-    
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -1285,9 +1700,9 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: isCompliant 
-                        ? [Color(0xFF00A47D), Color(0xFF005440)]
-                        : [Colors.orange.shade600, Colors.red.shade600],
+                      colors: isCompliant
+                          ? [Color(0xFF00A47D), Color(0xFF005440)]
+                          : [Colors.orange.shade600, Colors.red.shade600],
                     ),
                     borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(20),
@@ -1297,14 +1712,18 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
                   child: Row(
                     children: [
                       Icon(
-                        isCompliant ? Icons.check_circle_outline : Icons.warning_amber_rounded,
+                        isCompliant
+                            ? Icons.check_circle_outline
+                            : Icons.warning_amber_rounded,
                         color: Colors.white,
                         size: 28,
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          isCompliant ? 'Product Compliant' : 'Compliance Violations',
+                          isCompliant
+                              ? 'Product Compliant'
+                              : 'Compliance Violations',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 20,
@@ -1333,14 +1752,21 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
                             decoration: BoxDecoration(
                               color: Colors.red.shade50,
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.red.shade300, width: 2),
+                              border: Border.all(
+                                color: Colors.red.shade300,
+                                width: 2,
+                              ),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
                                   children: [
-                                    Icon(Icons.error_outline, color: Colors.red.shade700, size: 20),
+                                    Icon(
+                                      Icons.error_outline,
+                                      color: Colors.red.shade700,
+                                      size: 20,
+                                    ),
                                     const SizedBox(width: 8),
                                     Text(
                                       'VIOLATIONS FOUND',
@@ -1353,30 +1779,36 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
                                   ],
                                 ),
                                 const SizedBox(height: 8),
-                                ...violations.map((v) => Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const Text('• ', style: TextStyle(fontSize: 16)),
-                                      Expanded(
-                                        child: Text(
-                                          v.toString(),
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            color: Colors.red.shade900,
+                                ...violations.map(
+                                  (v) => Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          '• ',
+                                          style: TextStyle(fontSize: 16),
+                                        ),
+                                        Expanded(
+                                          child: Text(
+                                            v.toString(),
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color: Colors.red.shade900,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
-                                )),
+                                ),
                               ],
                             ),
                           ),
                           const SizedBox(height: 16),
                         ],
-                        
+
                         // Warnings Section
                         if (warnings.isNotEmpty) ...[
                           Container(
@@ -1391,7 +1823,11 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
                               children: [
                                 Row(
                                   children: [
-                                    Icon(Icons.warning_amber, color: Colors.orange.shade700, size: 20),
+                                    Icon(
+                                      Icons.warning_amber,
+                                      color: Colors.orange.shade700,
+                                      size: 20,
+                                    ),
                                     const SizedBox(width: 8),
                                     Text(
                                       'WARNINGS',
@@ -1404,34 +1840,96 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
                                   ],
                                 ),
                                 const SizedBox(height: 8),
-                                ...warnings.map((w) => Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const Text('• ', style: TextStyle(fontSize: 16)),
-                                      Expanded(
-                                        child: Text(
-                                          w.toString(),
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            color: Colors.orange.shade900,
+                                ...warnings.map(
+                                  (w) => Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          '• ',
+                                          style: TextStyle(fontSize: 16),
+                                        ),
+                                        Expanded(
+                                          child: Text(
+                                            w.toString(),
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color: Colors.orange.shade900,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
-                                )),
+                                ),
                               ],
                             ),
                           ),
                           const SizedBox(height: 16),
                         ],
-                        
+
+                        // Display category if available
+                        if (_selectedCategory != null &&
+                            _selectedCategory != ScanningCategory.qrScan) ...[
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  const Color(0xFF005440).withValues(alpha: 0.1),
+                                  const Color(0xFF005440).withValues(alpha: 0.5),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: const Color(0xFF005440).withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  _getCategoryIcon(_selectedCategory!),
+                                  color: const Color(0xFF005440),
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'Packaging Type',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.black45,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        _getCategoryLabel(_selectedCategory!),
+                                        style: const TextStyle(
+                                          fontSize: 15,
+                                          color: Color(0xFF005440),
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+
                         Text(
-                          isCompliant 
-                            ? 'Packaging information verified:'
-                            : 'Information found on packaging:',
+                          isCompliant
+                              ? 'Packaging information verified:'
+                              : 'Information found on packaging:',
                           style: const TextStyle(
                             fontSize: 14,
                             color: Colors.black54,
@@ -1472,8 +1970,16 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
                           'LTO Number',
                           extractedInfo['LTONumber'] ?? 'Not found',
                           Icons.badge,
-                          extractedInfo['LTONumber']?.toString().contains('NOT FOUND') == true ? Colors.red : Colors.orange,
-                          extractedInfo['LTONumber']?.toString().contains('NOT FOUND') == true,
+                          extractedInfo['LTONumber']?.toString().contains(
+                                    'NOT FOUND',
+                                  ) ==
+                                  true
+                              ? Colors.red
+                              : Colors.orange,
+                          extractedInfo['LTONumber']?.toString().contains(
+                                'NOT FOUND',
+                              ) ==
+                              true,
                         ),
                         const SizedBox(height: 12),
 
@@ -1482,8 +1988,16 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
                           'CFPR Number',
                           extractedInfo['CFPRNumber'] ?? 'Not found',
                           Icons.assignment,
-                          extractedInfo['CFPRNumber']?.toString().contains('NOT FOUND') == true ? Colors.red : Colors.teal,
-                          extractedInfo['CFPRNumber']?.toString().contains('NOT FOUND') == true,
+                          extractedInfo['CFPRNumber']?.toString().contains(
+                                    'NOT FOUND',
+                                  ) ==
+                                  true
+                              ? Colors.red
+                              : Colors.teal,
+                          extractedInfo['CFPRNumber']?.toString().contains(
+                                'NOT FOUND',
+                              ) ==
+                              true,
                         ),
                         const SizedBox(height: 12),
 
@@ -1492,8 +2006,16 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
                           'Expiration Date',
                           extractedInfo['expirationDate'] ?? 'Not found',
                           Icons.event_busy,
-                          extractedInfo['expirationDate']?.toString().contains('NOT FOUND') == true ? Colors.red : Colors.green,
-                          extractedInfo['expirationDate']?.toString().contains('NOT FOUND') == true,
+                          extractedInfo['expirationDate']?.toString().contains(
+                                    'NOT FOUND',
+                                  ) ==
+                                  true
+                              ? Colors.red
+                              : Colors.green,
+                          extractedInfo['expirationDate']?.toString().contains(
+                                'NOT FOUND',
+                              ) ==
+                              true,
                         ),
                         const SizedBox(height: 12),
 
@@ -1611,7 +2133,7 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
                             ),
                             const SizedBox(height: 12),
                             // More Details Button (AI Summary)
-                             SizedBox(
+                            SizedBox(
                               width: double.infinity,
                               child: ElevatedButton(
                                 onPressed: () => _summarizeProduct(ocrText),
@@ -2294,9 +2816,9 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
         ),
         boxShadow: [
           BoxShadow(
-            color: isViolation 
-              ? Colors.red.withValues(alpha: 0.1)
-              : Colors.black.withValues(alpha: 0.03),
+            color: isViolation
+                ? Colors.red.withValues(alpha: 0.1)
+                : Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -2311,8 +2833,8 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
-              isViolation ? Icons.error_outline : icon, 
-              color: isViolation ? Colors.red.shade700 : color[700], 
+              isViolation ? Icons.error_outline : icon,
+              color: isViolation ? Colors.red.shade700 : color[700],
               size: 20,
             ),
           ),
@@ -2334,7 +2856,10 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
                     if (isViolation) ...[
                       const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.red.shade100,
                           borderRadius: BorderRadius.circular(4),
@@ -2366,6 +2891,38 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
         ],
       ),
     );
+  }
+
+  // Get category icon
+  IconData _getCategoryIcon(ScanningCategory category) {
+    switch (category) {
+      case ScanningCategory.cannedProduct:
+        return Icons.shopping_bag;
+      case ScanningCategory.sackProduct:
+        return LucideIcons.package;
+      case ScanningCategory.packProduct:
+        return Icons.inventory_2;
+      case ScanningCategory.boxProduct:
+        return Icons.card_giftcard;
+      case ScanningCategory.qrScan:
+        return Icons.qr_code_scanner;
+    }
+  }
+
+  // Get category label
+  String _getCategoryLabel(ScanningCategory category) {
+    switch (category) {
+      case ScanningCategory.cannedProduct:
+        return 'Canned Product';
+      case ScanningCategory.sackProduct:
+        return 'Sack Product';
+      case ScanningCategory.packProduct:
+        return 'Pack Product';
+      case ScanningCategory.boxProduct:
+        return 'Box Product';
+      case ScanningCategory.qrScan:
+        return 'QR Scan';
+    }
   }
 
   // Save scan as draft (without Firebase upload)
@@ -2473,7 +3030,11 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
                   SizedBox(height: 16),
                   Text(
                     'Uploading images...',
-                    style: TextStyle(color: Color(0xFF005440), fontSize: 16, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      color: Color(0xFF005440),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ],
               ),
@@ -2485,7 +3046,7 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
       // Upload images to Firebase before conducting report
       String? uploadedFrontUrl;
       String? uploadedBackUrl;
-      
+
       try {
         final scanId = DateTime.now().millisecondsSinceEpoch.toString();
         final uploadResult = await FirebaseStorageService.uploadScanImages(
@@ -2493,11 +3054,13 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
           frontImage: File(_frontImagePath!),
           backImage: File(_backImagePath!),
         );
-        
+
         uploadedFrontUrl = uploadResult['frontUrl'];
         uploadedBackUrl = uploadResult['backUrl'];
-        
-        developer.log('📤 Images uploaded - Front: $uploadedFrontUrl, Back: $uploadedBackUrl');
+
+        developer.log(
+          '📤 Images uploaded - Front: $uploadedFrontUrl, Back: $uploadedBackUrl',
+        );
       } catch (uploadError) {
         developer.log('⚠️ Image upload failed: $uploadError');
         // Continue with local paths if upload fails
@@ -2568,7 +3131,7 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
             initialStatus: status,
             frontImageUrl: frontImageUrl,
             backImageUrl: backImageUrl,
-             // Pass local paths for deferred upload
+            // Pass local paths for deferred upload
             localFrontPath: localFrontPath,
             localBackPath: localBackPath,
             ocrBlobText: ocrBlobText,
@@ -2861,6 +3424,132 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
     });
   }
 
+  Future<void> _openCanRotationCapture() async {
+    final result = await Navigator.push<Map<dynamic, String?>>(
+      context,
+      MaterialPageRoute(builder: (context) => const CanRotationCapturePage()),
+    );
+
+    if (result == null) return;
+
+    // Process the captured images from can rotation
+    // For now, use front and right as front/back for OCR processing
+    final front = result[CanSide.front];
+    final back = result[CanSide.back]; // Use back side as back image
+
+    if (front != null && back != null) {
+      setState(() {
+        _frontImagePath = front;
+        _backImagePath = back;
+      });
+
+      // Start OCR processing with all 4 images
+      await _performDualOCR(front, back);
+    }
+  }
+
+  Future<void> _openBoxCapture() async {
+    final result = await Navigator.push<Map<dynamic, String?>>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => BoxCapturePage(
+          onComplete: () {},
+          onImagesSelected: (images) {
+            // Store the box images
+            setState(() {
+              _frontImagePath = images[BoxSide.front];
+              _backImagePath = images[BoxSide.back];
+            });
+          },
+        ),
+      ),
+    );
+
+    if (result == null) return;
+
+    // Process the captured images from box capture
+    final front = result[BoxSide.front];
+    final back = result[BoxSide.back]; // Use back side as back image
+
+    if (front != null && back != null) {
+      setState(() {
+        _frontImagePath = front;
+        _backImagePath = back;
+      });
+
+      // Start OCR processing with front and back images
+      await _performDualOCR(front, back);
+    }
+  }
+
+  Future<void> _openSackCapture() async {
+    final result = await Navigator.push<Map<dynamic, String?>>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SackCapturePage(
+          onComplete: () {},
+          onImagesSelected: (images) {
+            // Store the sack images
+            setState(() {
+              _frontImagePath = images[SackSide.front];
+              _backImagePath = images[SackSide.back];
+            });
+          },
+        ),
+      ),
+    );
+
+    if (result == null) return;
+
+    // Process the captured images from sack capture
+    final front = result[SackSide.front];
+    final back = result[SackSide.back];
+
+    if (front != null && back != null) {
+      setState(() {
+        _frontImagePath = front;
+        _backImagePath = back;
+      });
+
+      // Start OCR processing with front and back images
+      await _performDualOCR(front, back);
+    }
+  }
+
+  Future<void> _openPackCapture() async {
+    final result = await Navigator.push<Map<dynamic, String?>>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PackCapturePage(
+          onComplete: () {},
+          onImagesSelected: (images) {
+            // Store the pack images
+            setState(() {
+              _frontImagePath = images[PackSide.front];
+              _backImagePath = images[PackSide.back];
+            });
+          },
+        ),
+      ),
+    );
+
+    if (result == null) return;
+
+    // Process the captured images from pack capture
+    final front = result[PackSide.front];
+    final back = result[PackSide.back];
+
+    if (front != null && back != null) {
+      setState(() {
+        _frontImagePath = front;
+        _backImagePath = back;
+      });
+
+      // Start OCR processing with front and back images
+      await _performDualOCR(front, back);
+    }
+  }
+
   Future<void> _takePictureForOCR(bool isFront) async {
     final XFile? image = await _picker.pickImage(source: ImageSource.camera);
     if (image == null) return;
@@ -2899,9 +3588,9 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
       developer.log('⚠️ OCR already in progress, ignoring duplicate call');
       return;
     }
-    
+
     _isProcessingOCR = true;
-    
+
     try {
       // Clear previous scan data to prevent stale state/infinite loading loop
       setState(() {
@@ -2922,20 +3611,33 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
 
       if (_useTesseract) {
         // Tesseract path using OcrService with smart auto-detection
-        final File frontFile = File(frontImagePath);
-        final File backFile = File(backImagePath);
+        // Note: Keep original file references for fallback, but use grayscale paths for OCR
 
-        // Use smart OCR with automatic language detection
+        // Convert images to grayscale for better OCR extraction
+        developer.log('🖼️ Converting images to grayscale for OCR processing...');
+        String grayscaleFrontPath = frontImagePath;
+        String grayscaleBackPath = backImagePath;
+        
+        try {
+          grayscaleFrontPath = await ImagePreprocessingService.convertToGrayscale(frontImagePath);
+          grayscaleBackPath = await ImagePreprocessingService.convertToGrayscale(backImagePath);
+          developer.log('✅ Images converted to grayscale');
+        } catch (e) {
+          developer.log('⚠️ Grayscale conversion failed, using original images: $e');
+          // Continue with original images if grayscale conversion fails
+        }
+
+        // Use smart OCR with automatic language detection on grayscale images
         developer.log('🔍 Processing front image with auto-detection...');
         final ocrFront = await _ocrService.smartOcr(
-          frontFile,
+          File(grayscaleFrontPath),
           dpi: 300,
           saveResult: false,
         );
 
         developer.log('🔍 Processing back image with auto-detection...');
         final ocrBack = await _ocrService.smartOcr(
-          backFile,
+          File(grayscaleBackPath),
           dpi: 300,
           saveResult: false,
         );
@@ -3040,12 +3742,61 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
         return;
       }
 
+      // Upload images to Firebase immediately after successful OCR
+      developer.log('📤 Uploading images to Firebase...');
+      try {
+        final scanId = DateTime.now().millisecondsSinceEpoch.toString();
+        final uploadResult = await FirebaseStorageService.uploadScanImages(
+          scanId: scanId,
+          frontImage: File(frontImagePath),
+          backImage: File(backImagePath),
+        );
+
+        // Store the uploaded URLs
+        setState(() {
+          _frontImageUrl = uploadResult['frontUrl'];
+          _backImageUrl = uploadResult['backUrl'];
+        });
+
+        developer.log('✅ Images uploaded successfully');
+        developer.log('   Front URL: $_frontImageUrl');
+        developer.log('   Back URL: $_backImageUrl');
+      } catch (uploadError) {
+        developer.log('⚠️ Image upload failed: $uploadError');
+        // Continue with OCR even if upload fails - we still have local paths
+      }
+
       // Send to backend API for OCR processing
       final apiService = ApiService();
       Map<String, dynamic> response;
 
       try {
-        response = await apiService.scanProduct(combinedText);
+        // Convert category to API format
+        String? packageTypeString;
+        if (_selectedCategory != null) {
+          switch (_selectedCategory!) {
+            case ScanningCategory.cannedProduct:
+              packageTypeString = 'CANNED_PRODUCT';
+              break;
+            case ScanningCategory.sackProduct:
+              packageTypeString = 'SACK_PRODUCT';
+              break;
+            case ScanningCategory.packProduct:
+              packageTypeString = 'PACK_PRODUCT';
+              break;
+            case ScanningCategory.boxProduct:
+              packageTypeString = 'BOX_PRODUCT';
+              break;
+            case ScanningCategory.qrScan:
+              packageTypeString = 'QR_SCAN';
+              break;
+          }
+        }
+
+        response = await apiService.scanProduct(
+          combinedText,
+          packageType: packageTypeString,
+        );
       } on ApiException catch (apiError) {
         // Close loading dialog
         if (mounted) Navigator.pop(context);
@@ -3103,27 +3854,40 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
       if (mounted) Navigator.pop(context);
 
       // Check if extraction was successful - NEW structure with packagingCompliance
-      if (response['success'] == true && response['productIdentified'] == true) {
+      if (response['success'] == true &&
+          response['productIdentified'] == true) {
         // NEW: Build extractedInfo from new compliance structure
         final productInfo = response['productInfo'] ?? {};
         final packagingCompliance = response['packagingCompliance'] ?? {};
         final violations = response['violations'] as List<dynamic>?;
         final warnings = response['warnings'] as List<dynamic>?;
-        
+
         // Build extractedInfo for display (showing what's ON packaging)
         final extractedInfo = {
           'productName': productInfo['productName'] ?? 'Not found',
           'brandName': productInfo['brandName'] ?? 'Not found',
-          'manufacturer': productInfo['manufacturer'] ?? productInfo['company'] ?? productInfo['companyName'] ?? 'Not found',
-          'company': productInfo['company'] ?? productInfo['companyName'] ?? productInfo['manufacturer'] ?? 'Not found',
+          'manufacturer':
+              productInfo['manufacturer'] ??
+              productInfo['company'] ??
+              productInfo['companyName'] ??
+              'Not found',
+          'company':
+              productInfo['company'] ??
+              productInfo['companyName'] ??
+              productInfo['manufacturer'] ??
+              'Not found',
           // Show what's actually on packaging (compliance check)
           'LTONumber': packagingCompliance['lto']?['foundOnPackaging'] == true
-              ? (packagingCompliance['lto']?['required'] ?? 'NOT FOUND ON PACKAGING')
+              ? (packagingCompliance['lto']?['required'] ??
+                    'NOT FOUND ON PACKAGING')
               : 'NOT FOUND ON PACKAGING',
           'CFPRNumber': packagingCompliance['cfpr']?['foundOnPackaging'] == true
-              ? (packagingCompliance['cfpr']?['required'] ?? 'NOT FOUND ON PACKAGING')
+              ? (packagingCompliance['cfpr']?['required'] ??
+                    'NOT FOUND ON PACKAGING')
               : 'NOT FOUND ON PACKAGING',
-          'expirationDate': packagingCompliance['expirationDate']?['foundOnPackaging'] ?? 'NOT FOUND ON PACKAGING',
+          'expirationDate':
+              packagingCompliance['expirationDate']?['foundOnPackaging'] ??
+              'NOT FOUND ON PACKAGING',
           // Add compliance info
           'isCompliant': response['isCompliant'] ?? false,
           'violations': violations ?? [],
@@ -3152,7 +3916,8 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
 
         // Show extracted information to user with compliance violations
         _showExtractedInfoModal(extractedInfo, combinedText);
-      } else if (response['success'] == true && response['extractedInfo'] != null) {
+      } else if (response['success'] == true &&
+          response['extractedInfo'] != null) {
         // OLD format compatibility (keep for backward compatibility)
         final extractedInfo = response['extractedInfo'];
 
@@ -3163,26 +3928,25 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
         });
 
         if (response['found'] == true) {
-             // Log OCR scan to audit trail (images will be uploaded on report submission)
-            AuditLogService.logScanProduct(
-              scanData: {
-                'scannedText': combinedText.substring(
-                  0,
-                  combinedText.length > 500 ? 500 : combinedText.length,
-                ),
-                'scanType': 'OCR',
-                'extractionSuccess': true,
-                'extractedInfo': extractedInfo,
-              },
-            );
+          // Log OCR scan to audit trail (images will be uploaded on report submission)
+          AuditLogService.logScanProduct(
+            scanData: {
+              'scannedText': combinedText.substring(
+                0,
+                combinedText.length > 500 ? 500 : combinedText.length,
+              ),
+              'scanType': 'OCR',
+              'extractionSuccess': true,
+              'extractedInfo': extractedInfo,
+            },
+          );
 
-            // Show extracted information to user with "Search Product" button
-            _showExtractedInfoModal(extractedInfo, combinedText);
+          // Show extracted information to user with "Search Product" button
+          _showExtractedInfoModal(extractedInfo, combinedText);
         } else {
-             // Product not found in DB
-             _showNoResultModal(combinedText);
+          // Product not found in DB
+          _showNoResultModal(combinedText);
         }
-
       } else {
         // Log failed OCR scan
         AuditLogService.logScanProduct(
@@ -3302,8 +4066,10 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
         }
       },
       child: Scaffold(
-        appBar: const TitleLogoHeaderAppBar(
-          title: 'Scanning Page',
+        appBar: TitleLogoHeaderAppBar(
+          title: _selectedCategory == ScanningCategory.qrScan
+              ? 'QR Scanner'
+              : 'OCR Scanner',
           showBackButton: false,
         ),
         body: Column(
@@ -3348,9 +4114,13 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
                     onPressed: _toggleFlash,
                     tooltip: 'Toggle Flash',
                   ),
-                  ElevatedButton.icon(
-                    onPressed: () async {
-                      // Show confirmation if user has captured images in OCR mode
+                  Row(
+                    children: [
+                      // Only show OCR mode toggle if no category was selected (backward compatibility)
+                      if (_selectedCategory == null)
+                        ElevatedButton.icon(
+                          onPressed: () async {
+                            // Show confirmation if user has captured images in OCR mode
                       if (isOCRMode && (_frontImagePath != null || _backImagePath != null)) {
                         final shouldDiscard = await showDialog<bool>(
                           context: context,
@@ -3379,30 +4149,53 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
                       }
                       
                       setState(() {
-                        isOCRMode = !isOCRMode;
-                      });
-                    },
-                    icon: Icon(
-                      Icons.text_fields,
-                      color: isOCRMode ? Colors.white : const Color(0xFF005440),
-                    ),
-                    label: Text(isOCRMode ? 'Exit OCR' : 'OCR Mode'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isOCRMode
-                          ? const Color(0xFF005440)
-                          : Colors.white,
-                      foregroundColor: isOCRMode
-                          ? Colors.white
-                          : const Color(0xFF005440),
-                      side: BorderSide(color: const Color(0xFF005440)),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 12,
+                              isOCRMode = !isOCRMode;
+                            });
+                          },
+                          icon: Icon(
+                            Icons.text_fields,
+                            color: isOCRMode
+                                ? Colors.white
+                                : const Color(0xFF005440),
+                          ),
+                          label: Text(isOCRMode ? 'Exit OCR' : 'OCR Mode'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isOCRMode
+                                ? const Color(0xFF005440)
+                                : Colors.white,
+                            foregroundColor: isOCRMode
+                                ? Colors.white
+                                : const Color(0xFF005440),
+                            side: BorderSide(color: const Color(0xFF005440)),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      if (_selectedCategory == null) const SizedBox(width: 8),
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                        icon: const Icon(Icons.arrow_back, size: 18),
+                        label: const Text('Back to Category'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF005440),
+                          side: const BorderSide(color: Color(0xFF005440)),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
                       ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
+                    ],
                   ),
                 ],
               ),
