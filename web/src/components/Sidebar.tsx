@@ -233,7 +233,12 @@ export function Sidebar({
           <div className="flex items-center gap-2 ">
             {/* Figma-style logo */}
             <div className="flex items-center justify-center">
-              <LogoIcon className="w-8 h-8" />
+                <img
+                  src="/logo_inv.svg"
+                  alt="RCV System logo"
+                  draggable="false"
+                  className="w-8 h-8 object-contain rounded-lg"
+                />
             </div>
             <span className="text-xl font-semibold app-text-primary">RCV</span>
             <span className="text-xs text-neutral-400">v.01</span>
@@ -434,7 +439,12 @@ export function Sidebar({
           {/* Drawer header: logo + title + close button */}
           <div className="flex items-center justify-between px-6 py-5 border-b border-neutral-200">
             <div className="flex items-center gap-2">
-              <LogoIcon className="w-7 h-7" />
+              <img
+                src="/logo_inv.svg"
+                alt="RCV System logo"
+                draggable="false"
+                className="w-7 h-7 object-contain rounded-lg"
+              />
               <span className="text-base font-medium text-neutral-800">RCV</span>
               <span className="text-xs text-neutral-400">v.01</span>
             </div>
