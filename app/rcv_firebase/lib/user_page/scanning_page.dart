@@ -4060,8 +4060,10 @@ class _QRScannerPageState extends State<QRScannerPage>
         
         final prev = TabHistory.instance.popAndGetPrevious();
         if (prev != null && prev >= 0 && prev < AppBottomNavBar.routes.length) {
+          // ignore: use_build_context_synchronously
           Navigator.pushReplacementNamed(context, AppBottomNavBar.routes[prev]);
         } else {
+          // ignore: use_build_context_synchronously
           Navigator.maybePop(context);
         }
       },
