@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { useLocation } from "react-router-dom";
 import { RemoteConfigService } from "../services/remoteConfig";
-import { Settings, Save } from "lucide-react";
+import { Settings, Save, Copy, Check } from "lucide-react";
 import { toast } from "react-toastify";
 
 interface RemoteConfigParameter {
@@ -21,6 +21,7 @@ export function RemoteConfig() {
     >([]);
     const [loading, setLoading] = useState(true);
     const [publishing, setPublishing] = useState(false);
+    const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
     const location = useLocation();
 
@@ -145,50 +146,49 @@ export function RemoteConfig() {
                     </p>
                 </div>
 
-                <div className="bg-white rounded-lg shadow-sm border border-neutral-200">
-                    <div className="p-6 border-b border-neutral-200">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <h2 className="text-lg font-semibold text-neutral-900">
-                                    App Features ({draftParameters.length})
-                                </h2>
-                                <p className="text-sm text-neutral-500 mt-1">
-                                    Toggle features on or off for the mobile application
-                                </p>
-                            </div>
-
-                            <div className="flex items-center gap-3">
-                                {hasChanges && (
-                                    <button
-                                        onClick={handlePublish}
-                                        disabled={publishing}
-                                        className="flex items-center gap-2 px-4 py-2 app-bg-primary text-white rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                                    >
-                                        {publishing ? (
-                                            <div className="animate-spin h-4 w-4 border-4 border-white border-t-transparent rounded-full"></div>
-                                        ) : (
-                                            <Save className="h-4 w-4" />
-                                        )}
-                                        {publishing ? "Saving..." : "Save Changes"}
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                    {draftParameters.length === 0 ? (
-                        <div className="p-12 text-center">
-                            <Settings className="h-12 w-12 text-neutral-400 mx-auto mb-4" />
-                            <h3 className="text-lg font-medium text-neutral-900 mb-2">
-                                No Settings Found
-                            </h3>
-                            <p className="text-neutral-600">
-                                No mobile app settings are currently configured.
+                <div className="mb-6">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h2 className="text-lg font-semibold text-neutral-900">
+                                App Features ({draftParameters.length})
+                            </h2>
+                            <p className="text-sm text-neutral-500 mt-1">
+                                Toggle features on or off for the mobile application
                             </p>
                         </div>
-                    ) : (
-                        <div className="divide-y divide-neutral-200">
-                            {draftParameters.map((param) => {
+
+                        <div className="flex items-center gap-3">
+                            {hasChanges && (
+                                <button
+                                    onClick={handlePublish}
+                                    disabled={publishing}
+                                    className="flex items-center gap-2 px-4 py-2 app-bg-primary text-white rounded-lg hover:bg-opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                                >
+                                    {publishing ? (
+                                        <div className="animate-spin h-4 w-4 border-4 border-white border-t-transparent rounded-full"></div>
+                                    ) : (
+                                        <Save className="h-4 w-4" />
+                                    )}
+                                    {publishing ? "Saving..." : "Save Changes"}
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {draftParameters.length === 0 ? (
+                    <div className="bg-white rounded-lg shadow-sm border border-neutral-200 p-12 text-center">
+                        <Settings className="h-12 w-12 text-neutral-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-neutral-900 mb-2">
+                            No Settings Found
+                        </h3>
+                        <p className="text-neutral-600">
+                            No mobile app settings are currently configured.
+                        </p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {draftParameters.map((param) => {
                                 const isChanged =
                                     publishedParameters.find((p) => p.key === param.key)
                                         ?.value !== param.value;
@@ -245,15 +245,15 @@ export function RemoteConfig() {
                                 return (
                                     <div
                                         key={param.key}
-                                        className={`p-6 ${
+                                        className={`bg-white rounded-lg shadow-sm border transition-colors ${
                                             isChanged
-                                                ? "app-bg-secondary-soft"
-                                                : ""
+                                                ? "border-yellow-300 app-bg-secondary-soft"
+                                                : "border-neutral-200"
                                         }`}
                                     >
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-3 mb-2">
+                                        <div className="p-5">
+                                            <div className="mb-3">
+                                                <div className="flex items-center gap-2 mb-2">
                                                     <h3 className="font-semibold text-neutral-900">
                                                         {getFeatureName(param.key)}
                                                     </h3>
@@ -264,35 +264,26 @@ export function RemoteConfig() {
                                                     )}
                                                 </div>
 
-                                                <p className="text-neutral-600 text-sm mb-3">
+                                                <p className="text-neutral-600 text-sm">
                                                     {getFeatureDescription(param.key)}
                                                 </p>
-
-                                                <div className="flex items-center gap-3">
-                                                    <span className="text-sm text-neutral-500">
-                                                        Status:{" "}
-                                                        <span
-                                                            className={
-                                                                param.type === "boolean" &&
-                                                                typeof param.value === "boolean"
-                                                                    ? param.value
-                                                                        ? "app-text-error font-medium"
-                                                                        : "app-text-success font-medium"
-                                                                    : "text-neutral-600 font-medium"
-                                                            }
-                                                        >
-                                                            {param.type === "boolean" &&
-                                                            typeof param.value === "boolean"
-                                                                ? param.value
-                                                                    ? "Disabled"
-                                                                    : "Enabled"
-                                                                : String(param.value)}
-                                                        </span>
-                                                    </span>
-                                                </div>
                                             </div>
 
-                                            <div className="flex items-center">
+                                            <div className="mb-4">
+                                                <span className="text-xs text-neutral-500 block mb-2">
+                                                    Status
+                                                </span>
+                                                <p className="text-neutral-600 text-xs break-words">
+                                                    {param.type === "boolean" &&
+                                                    typeof param.value === "boolean"
+                                                        ? param.value
+                                                            ? "Disabled"
+                                                            : "Enabled"
+                                                        : String(param.value)}
+                                                </p>
+                                            </div>
+
+                                            <div className="flex justify-end">
                                                 {param.type === "boolean" &&
                                                 typeof param.value === "boolean" ? (
                                                     <button
@@ -323,19 +314,39 @@ export function RemoteConfig() {
                                                     </button>
                                                 ) : (
                                                     (param.type === "string" || param.type === "number") ? (
-                                                        <input
-                                                            type={param.type === "number" ? "number" : "text"}
-                                                            value={param.value !== null && param.value !== undefined ? String(param.value) : ""}
-                                                            onChange={(e) =>
-                                                                handleValueChange(
-                                                                    param.key,
-                                                                    param.type === "number"
-                                                                        ? (e.target.value === "" ? "" : Number(e.target.value))
-                                                                        : e.target.value
-                                                                )
-                                                            }
-                                                            className="px-3 py-2 border border-neutral-200 rounded-md text-sm w-64"
-                                                        />
+                                                        <div className="w-full flex gap-2">
+                                                            <input
+                                                                type={param.type === "number" ? "number" : "text"}
+                                                                value={param.value !== null && param.value !== undefined ? String(param.value) : ""}
+                                                                onChange={(e) =>
+                                                                    handleValueChange(
+                                                                        param.key,
+                                                                        param.type === "number"
+                                                                            ? (e.target.value === "" ? "" : Number(e.target.value))
+                                                                            : e.target.value
+                                                                    )
+                                                                }
+                                                                className="flex-1 px-3 py-2 border border-neutral-200 rounded-md text-sm break-words overflow-hidden"
+                                                            />
+                                                            <button
+                                                                onClick={() => {
+                                                                    navigator.clipboard.writeText(String(param.value));
+                                                                    setCopiedKey(param.key);
+                                                                    toast.success("Copied to clipboard!");
+                                                                }}
+                                                                className="px-3 py-2 border border-neutral-200 rounded-md hover:bg-neutral-100 transition-colors flex items-center justify-center"
+                                                                title="Copy to clipboard"
+                                                                style={{
+                                                                    display: param.key === "app_update_url" ? "flex" : "none"
+                                                                }}
+                                                            >
+                                                                {copiedKey === param.key ? (
+                                                                    <Check className="h-4 w-4 text-green-600" />
+                                                                ) : (
+                                                                    <Copy className="h-4 w-4 text-neutral-600" />
+                                                                )}
+                                                            </button>
+                                                        </div>
                                                     ) : (
                                                         <span className="text-sm text-neutral-500">N/A</span>
                                                     )
@@ -347,7 +358,6 @@ export function RemoteConfig() {
                             })}
                         </div>
                     )}
-                </div>
             </div>
         </div>
     );

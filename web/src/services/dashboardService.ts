@@ -64,9 +64,9 @@ export class DashboardService {
       // const kioskURL = baseURL.replace('/api/v1', '');
       
       const [usersResponse, productsResponse, companiesResponse] = await Promise.all([
-        apiClient.get<DashboardApiResponse>("/user/users?limit=1"),
-        apiClient.get<{ success: boolean; data: any[]; pagination?: any }>("/product/products?limit=1"),
-        apiClient.get<{ success: boolean; data: any[]; pagination?: any }>("/company/companies?limit=1"),
+        apiClient.get<DashboardApiResponse>("/user/users?limit=10"),
+        apiClient.get<{ success: boolean; data: any[]; pagination?: any }>("/product/products?limit=10"),
+        apiClient.get<{ success: boolean; data: any[]; pagination?: any }>("/company/companies?limit=10"),
         // fetch(`${kioskURL}/kiosk/health`).then(res => res.json()).catch(() => ({ isOnline: false, lastPoll: null, pollCount: 0 })),
       ]);
 

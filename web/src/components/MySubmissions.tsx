@@ -350,8 +350,7 @@ const MySubmissions: React.FC<MySubmissionsProps> = ({
                             itemsPerPage={pageSize}
                             onPageChange={(p: number) => onPageChange?.(p)}
                             alwaysShowControls
-                            showingPosition="right"
-                            showingText={`Showing ${paginatedData.length} of ${submissions.length} submissions`}
+                            showingText={null}
                           />
                         </div>
                       </div>
@@ -402,8 +401,7 @@ const MySubmissions: React.FC<MySubmissionsProps> = ({
                             itemsPerPage={pageSize}
                             onPageChange={(p: number) => onPageChange?.(p)}
                             alwaysShowControls
-                            showingPosition="right"
-                            showingText={`Showing ${paginatedData.length} of ${pendingSubmissions.length} submissions`}
+                            showingText={null}
                           />
                         </div>
                       </div>
@@ -454,8 +452,7 @@ const MySubmissions: React.FC<MySubmissionsProps> = ({
                             itemsPerPage={pageSize}
                             onPageChange={(p: number) => onPageChange?.(p)}
                             alwaysShowControls
-                            showingPosition="right"
-                            showingText={`Showing ${paginatedData.length} of ${approvedSubmissions.length} submissions`}
+                            showingText={null}
                           />
                         </div>
                       </div>
@@ -506,8 +503,7 @@ const MySubmissions: React.FC<MySubmissionsProps> = ({
                             itemsPerPage={pageSize}
                             onPageChange={(p: number) => onPageChange?.(p)}
                             alwaysShowControls
-                            showingPosition="right"
-                            showingText={`Showing ${paginatedData.length} of ${rejectedSubmissions.length} submissions`}
+                            showingText={null}
                           />
                         </div>
                       </div>
