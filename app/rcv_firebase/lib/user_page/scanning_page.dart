@@ -2984,6 +2984,30 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
         backText = backRecognizedText.text;
       }
 
+      // Upload images to Firebase immediately after OCR extraction
+      developer.log('📤 Uploading images to Firebase...');
+      try {
+        final scanId = DateTime.now().millisecondsSinceEpoch.toString();
+        final uploadResult = await FirebaseStorageService.uploadScanImages(
+          scanId: scanId,
+          frontImage: File(frontImagePath),
+          backImage: File(backImagePath),
+        );
+        
+        // Store the uploaded URLs
+        setState(() {
+          _frontImageUrl = uploadResult['frontUrl'];
+          _backImageUrl = uploadResult['backUrl'];
+        });
+        
+        developer.log('✅ Images uploaded successfully');
+        developer.log('   Front URL: $_frontImageUrl');
+        developer.log('   Back URL: $_backImageUrl');
+      } catch (uploadError) {
+        developer.log('⚠️ Image upload failed: $uploadError');
+        // Continue with OCR even if upload fails - we still have local paths
+      }
+
       // Combine both texts with clear labels
       String combinedText =
           '--- FRONT OF LABEL ---\n\n$frontText\n\n--- BACK OF LABEL ---\n\n$backText';
@@ -3014,30 +3038,6 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
           _backImagePath = null;
         });
         return;
-      }
-
-      // Upload images to Firebase immediately after successful OCR
-      developer.log('📤 Uploading images to Firebase...');
-      try {
-        final scanId = DateTime.now().millisecondsSinceEpoch.toString();
-        final uploadResult = await FirebaseStorageService.uploadScanImages(
-          scanId: scanId,
-          frontImage: File(frontImagePath),
-          backImage: File(backImagePath),
-        );
-        
-        // Store the uploaded URLs
-        setState(() {
-          _frontImageUrl = uploadResult['frontUrl'];
-          _backImageUrl = uploadResult['backUrl'];
-        });
-        
-        developer.log('✅ Images uploaded successfully');
-        developer.log('   Front URL: $_frontImageUrl');
-        developer.log('   Back URL: $_backImageUrl');
-      } catch (uploadError) {
-        developer.log('⚠️ Image upload failed: $uploadError');
-        // Continue with OCR even if upload fails - we still have local paths
       }
 
       // Send to backend API for OCR processing
@@ -3263,8 +3263,37 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
 
     return PopScope(
       canPop: false,
-      onPopInvokedWithResult: (didPop, result) {
+      onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
+        
+        // Show confirmation if user has captured images in OCR mode
+        if (isOCRMode && (_frontImagePath != null || _backImagePath != null)) {
+          final shouldDiscard = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Discard Images?'),
+              content: const Text(
+                'Are you sure you want to discard? This will still save your captured images for future reference.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.red,
+                  ),
+                  child: const Text('Discard'),
+                ),
+              ],
+            ),
+          );
+          
+          if (shouldDiscard != true) return;
+        }
+        
         final prev = TabHistory.instance.popAndGetPrevious();
         if (prev != null && prev >= 0 && prev < AppBottomNavBar.routes.length) {
           Navigator.pushReplacementNamed(context, AppBottomNavBar.routes[prev]);
@@ -3320,7 +3349,35 @@ class _QRScannerPageState extends State<QRScannerPage> with WidgetsBindingObserv
                     tooltip: 'Toggle Flash',
                   ),
                   ElevatedButton.icon(
-                    onPressed: () {
+                    onPressed: () async {
+                      // Show confirmation if user has captured images in OCR mode
+                      if (isOCRMode && (_frontImagePath != null || _backImagePath != null)) {
+                        final shouldDiscard = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Discard Images?'),
+                            content: const Text(
+                              'Are you sure you want to discard? This will still save your captured images for future reference.',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(context).pop(false),
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.of(context).pop(true),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.red,
+                                ),
+                                child: const Text('Discard'),
+                              ),
+                            ],
+                          ),
+                        );
+                        
+                        if (shouldDiscard != true) return;
+                      }
+                      
                       setState(() {
                         isOCRMode = !isOCRMode;
                       });
