@@ -14,6 +14,13 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { 
   Shield, 
   FileCheck, 
   Building2, 
@@ -34,6 +41,9 @@ import {
   Globe,
   FileDown,
   Database,
+  Users,
+  XCircle,
+  Mail,
 } from "lucide-react";
 import { toast } from "react-toastify";
 import { generateBlockchainCertificatePDF } from "@/utils/generateBlockchainCertificatePDF";
@@ -286,24 +296,89 @@ export function Blockchain() {
       }
     >
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex">
-          <TabsTrigger value="overview" className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" />
-            <span className="hidden sm:inline">Overview</span>
-          </TabsTrigger>
-          <TabsTrigger value="certificates" className="flex items-center gap-2">
-            <List className="h-4 w-4" />
-            <span className="hidden sm:inline">Certificates</span>
-          </TabsTrigger>
-          <TabsTrigger value="sepolia" className="flex items-center gap-2">
-            <Globe className="h-4 w-4" />
-            <span className="hidden sm:inline">Sepolia</span>
-          </TabsTrigger>
-          <TabsTrigger value="verify" className="flex items-center gap-2">
-            <Shield className="h-4 w-4" />
-            <span className="hidden sm:inline">Verify</span>
-          </TabsTrigger>
-        </TabsList>
+        {/* View Toggle - Dropdown on mobile, button group on desktop */}
+        <div className="w-full mb-4">
+          {/* Mobile: Dropdown */}
+          <div className="sm:hidden">
+            <Select
+              value={activeTab}
+              onValueChange={(value) => setActiveTab(value as typeof activeTab)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue>
+                  <div className="flex items-center gap-2">
+                    {activeTab === "overview" && <><BarChart3 className="h-4 w-4" /> Overview</>}
+                    {activeTab === "certificates" && <><List className="h-4 w-4" /> Certificates</>}
+                    {activeTab === "sepolia" && <><Globe className="h-4 w-4" /> Sepolia</>}
+                    {activeTab === "verify" && <><Shield className="h-4 w-4" /> Verify</>}
+                  </div>
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="overview">
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4" /> Overview
+                  </div>
+                </SelectItem>
+                <SelectItem value="certificates">
+                  <div className="flex items-center gap-2">
+                    <List className="h-4 w-4" /> Certificates
+                  </div>
+                </SelectItem>
+                <SelectItem value="sepolia">
+                  <div className="flex items-center gap-2">
+                    <Globe className="h-4 w-4" /> Sepolia
+                  </div>
+                </SelectItem>
+                <SelectItem value="verify">
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-4 w-4" /> Verify
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Desktop: Button group */}
+          <div className="hidden sm:flex border rounded-lg w-full">
+            <Button
+              variant={activeTab === "overview" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setActiveTab("overview")}
+              className="rounded-r-none cursor-pointer flex-1"
+            >
+              <BarChart3 className="h-4 w-4 mr-2" />
+              Overview
+            </Button>
+            <Button
+              variant={activeTab === "certificates" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setActiveTab("certificates")}
+              className="rounded-none border-l cursor-pointer flex-1"
+            >
+              <List className="h-4 w-4 mr-2" />
+              Certificates
+            </Button>
+            <Button
+              variant={activeTab === "sepolia" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setActiveTab("sepolia")}
+              className="rounded-none border-l cursor-pointer flex-1"
+            >
+              <Globe className="h-4 w-4 mr-2" />
+              Sepolia
+            </Button>
+            <Button
+              variant={activeTab === "verify" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setActiveTab("verify")}
+              className="rounded-l-none border-l cursor-pointer flex-1"
+            >
+              <Shield className="h-4 w-4 mr-2" />
+              Verify
+            </Button>
+          </div>
+        </div>
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
