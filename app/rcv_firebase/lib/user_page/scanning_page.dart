@@ -4114,61 +4114,79 @@ class _QRScannerPageState extends State<QRScannerPage>
                     onPressed: _toggleFlash,
                     tooltip: 'Toggle Flash',
                   ),
-                  Row(
-                    children: [
-                      // Only show OCR mode toggle if no category was selected (backward compatibility)
-                      if (_selectedCategory == null)
-                        ElevatedButton.icon(
-                          onPressed: () async {
-                            // Show confirmation if user has captured images in OCR mode
-                      if (isOCRMode && (_frontImagePath != null || _backImagePath != null)) {
-                        final shouldDiscard = await showDialog<bool>(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: const Text('Discard Images?'),
-                            content: const Text(
-                              'Are you sure you want to discard? This will still save your captured images for future reference.',
+                    // Resolved version combining both branches
+                    Row(
+                      children: [
+                        // Only show OCR mode toggle if no category was selected (backward compatibility)
+                        if (_selectedCategory == null)
+                          ElevatedButton.icon(
+                            onPressed: () async {
+                              // Show confirmation if user has captured images in OCR mode
+                              if (isOCRMode && (_frontImagePath != null || _backImagePath != null)) {
+                                final shouldDiscard = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: const Text('Discard Images?'),
+                                    content: const Text(
+                                      'Are you sure you want to discard? This will still save your captured images for future reference.',
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.of(context).pop(false),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () => Navigator.of(context).pop(true),
+                                        style: TextButton.styleFrom(
+                                          foregroundColor: Colors.red,
+                                        ),
+                                        child: const Text('Discard'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                
+                                if (shouldDiscard != true) return;
+                              }
+                              
+                              setState(() {
+                                isOCRMode = !isOCRMode;
+                              });
+                            },
+                            icon: Icon(
+                              Icons.text_fields,
+                              color: isOCRMode ? Colors.white : const Color(0xFF005440),
                             ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.of(context).pop(false),
-                                child: const Text('Cancel'),
+                            label: Text(isOCRMode ? 'Exit OCR' : 'OCR Mode'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: isOCRMode
+                                  ? const Color(0xFF005440)
+                                  : Colors.white,
+                              foregroundColor: isOCRMode
+                                  ? Colors.white
+                                  : const Color(0xFF005440),
+                              side: BorderSide(color: const Color(0xFF005440)),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 12,
                               ),
-                              TextButton(
-                                onPressed: () => Navigator.of(context).pop(true),
-                                style: TextButton.styleFrom(
-                                  foregroundColor: Colors.red,
-                                ),
-                                child: const Text('Discard'),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                            ],
+                            ),
                           ),
-                        );
-                        
-                        if (shouldDiscard != true) return;
-                      }
-                      
-                      setState(() {
-                              isOCRMode = !isOCRMode;
-                            });
+                        if (_selectedCategory == null) const SizedBox(width: 8),
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.pop(context);
                           },
-                          icon: Icon(
-                            Icons.text_fields,
-                            color: isOCRMode
-                                ? Colors.white
-                                : const Color(0xFF005440),
-                          ),
-                          label: Text(isOCRMode ? 'Exit OCR' : 'OCR Mode'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: isOCRMode
-                                ? const Color(0xFF005440)
-                                : Colors.white,
-                            foregroundColor: isOCRMode
-                                ? Colors.white
-                                : const Color(0xFF005440),
-                            side: BorderSide(color: const Color(0xFF005440)),
+                          icon: const Icon(Icons.arrow_back, size: 18),
+                          label: const Text('Back to Category'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF005440),
+                            side: const BorderSide(color: Color(0xFF005440)),
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
+                              horizontal: 16,
                               vertical: 12,
                             ),
                             shape: RoundedRectangleBorder(
@@ -4176,33 +4194,13 @@ class _QRScannerPageState extends State<QRScannerPage>
                             ),
                           ),
                         ),
-                      if (_selectedCategory == null) const SizedBox(width: 8),
-                      OutlinedButton.icon(
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
-                        icon: const Icon(Icons.arrow_back, size: 18),
-                        label: const Text('Back to Category'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF005440),
-                          side: const BorderSide(color: Color(0xFF005440)),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-            // Result display removed - now using modals instead
-          ],
-        ),
+            ],
+          ),
         bottomNavigationBar: AppBottomNavBar(
           selectedIndex: 2,
           role: NavBarRole.user, // Simplified to always use user role
