@@ -224,7 +224,51 @@ class _CropLabelPageState extends State<CropLabelPage> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                        
+                          // Grayscale toggle
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              children: [
+                                Checkbox(
+                                  value: _applyGrayscale,
+                                  onChanged: (_isCropping || _isBuildingPreview)
+                                      ? null
+                                      : (value) {
+                                          if (value != null) {
+                                            setState(() => _applyGrayscale = value);
+                                            _rebuildPreview();
+                                          }
+                                        },
+                                ),
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: (_isCropping || _isBuildingPreview)
+                                        ? null
+                                        : () {
+                                            setState(
+                                              () => _applyGrayscale = !_applyGrayscale,
+                                            );
+                                            _rebuildPreview();
+                                          },
+                                    child: const Text(
+                                      'Apply Grayscale (Better OCR)',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                           const SizedBox(height: 8),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
