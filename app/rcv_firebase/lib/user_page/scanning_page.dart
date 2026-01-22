@@ -1869,13 +1869,13 @@ class _QRScannerPageState extends State<QRScannerPage>
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 colors: [
-                                  const Color(0xFF005440).withOpacity(0.1),
-                                  const Color(0xFF005440).withOpacity(0.05),
+                                  const Color(0xFF005440).withValues(alpha: 0.1),
+                                  const Color(0xFF005440).withValues(alpha: 0.5),
                                 ],
                               ),
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
-                                color: const Color(0xFF005440).withOpacity(0.3),
+                                color: const Color(0xFF005440).withValues(alpha: 0.3),
                               ),
                             ),
                             child: Row(
