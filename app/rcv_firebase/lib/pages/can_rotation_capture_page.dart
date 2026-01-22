@@ -84,8 +84,8 @@ class _CanRotationCapturePageState extends State<CanRotationCapturePage>
       child: Container(
         decoration: BoxDecoration(
           color: isCaptured
-              ? AppColors.success.withOpacity(0.2)
-              : AppColors.primary.withOpacity(0.1),
+              ? AppColors.success.withValues(alpha: 0.2)
+              : AppColors.primary.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isCaptured ? AppColors.success : AppColors.primary,
@@ -172,10 +172,10 @@ class _CanRotationCapturePageState extends State<CanRotationCapturePage>
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: AppColors.primary.withOpacity(0.3),
+                      color: AppColors.primary.withValues(alpha: 0.3),
                     ),
                   ),
                   child: Column(
@@ -214,7 +214,7 @@ class _CanRotationCapturePageState extends State<CanRotationCapturePage>
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
@@ -234,7 +234,7 @@ class _CanRotationCapturePageState extends State<CanRotationCapturePage>
                           child: LinearProgressIndicator(
                             value: currentStep / 4,
                             minHeight: 6,
-                            backgroundColor: AppColors.primary.withOpacity(0.2),
+                            backgroundColor: AppColors.primary.withValues(alpha: 0.2),
                             valueColor: AlwaysStoppedAnimation<Color>(
                               _allCaptured
                                   ? AppColors.success
@@ -299,7 +299,7 @@ class _CanRotationCapturePageState extends State<CanRotationCapturePage>
                       label: Text('Capture remaining ${4 - currentStep} sides'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.primary,
-                        disabledForegroundColor: AppColors.primary.withOpacity(
+                        disabledForegroundColor: AppColors.primary.withValues(alpha:
                           0.6,
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 16),

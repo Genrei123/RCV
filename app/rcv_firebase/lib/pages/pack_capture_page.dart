@@ -11,10 +11,10 @@ class PackCapturePage extends StatefulWidget {
   final Function(Map<PackSide, String?>) onImagesSelected;
 
   const PackCapturePage({
-    Key? key,
+    super.key,
     required this.onComplete,
     required this.onImagesSelected,
-  }) : super(key: key);
+  });
 
   @override
   State<PackCapturePage> createState() => _PackCapturePageState();
@@ -40,6 +40,7 @@ class _PackCapturePageState extends State<PackCapturePage> {
         });
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Error capturing image: $e')));
@@ -156,10 +157,10 @@ class _PackCapturePageState extends State<PackCapturePage> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: AppColors.primary.withOpacity(0.3),
+                      color: AppColors.primary.withValues(alpha: 0.3),
                     ),
                   ),
                   child: Column(
@@ -194,7 +195,7 @@ class _PackCapturePageState extends State<PackCapturePage> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
@@ -214,7 +215,7 @@ class _PackCapturePageState extends State<PackCapturePage> {
                           child: LinearProgressIndicator(
                             value: capturedCount / 2,
                             minHeight: 6,
-                            backgroundColor: AppColors.primary.withOpacity(0.2),
+                            backgroundColor: AppColors.primary.withValues(alpha: 0.2),
                             valueColor: AlwaysStoppedAnimation<Color>(
                               allCaptured
                                   ? AppColors.success
@@ -287,7 +288,7 @@ class _PackCapturePageState extends State<PackCapturePage> {
                       ),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.primary,
-                        disabledForegroundColor: AppColors.primary.withOpacity(
+                        disabledForegroundColor: AppColors.primary.withValues(alpha:
                           0.6,
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 16),

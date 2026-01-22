@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 class QRScannerPage extends StatefulWidget {
-  const QRScannerPage({Key? key}) : super(key: key);
+  const QRScannerPage({super.key});
 
   @override
   State<QRScannerPage> createState() => _QRScannerPageState();
@@ -206,7 +206,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
+                      color: Colors.black.withValues(alpha: 0.2),
                       blurRadius: 8,
                       offset: const Offset(0, -2),
                     ),

@@ -11,10 +11,10 @@ class BoxCapturePage extends StatefulWidget {
   final Function(Map<BoxSide, String?>) onImagesSelected;
 
   const BoxCapturePage({
-    Key? key,
+    super.key,
     required this.onComplete,
     required this.onImagesSelected,
-  }) : super(key: key);
+  });
 
   @override
   State<BoxCapturePage> createState() => _BoxCapturePageState();
@@ -44,6 +44,7 @@ class _BoxCapturePageState extends State<BoxCapturePage> {
         });
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Error capturing image: $e')));
@@ -75,8 +76,8 @@ class _BoxCapturePageState extends State<BoxCapturePage> {
       child: Container(
         decoration: BoxDecoration(
           color: isCaptureed
-              ? AppColors.success.withOpacity(0.2)
-              : AppColors.primary.withOpacity(0.1),
+              ? AppColors.success.withValues(alpha: 0.2)
+              : AppColors.primary.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isCaptureed ? AppColors.success : AppColors.primary,
@@ -168,10 +169,10 @@ class _BoxCapturePageState extends State<BoxCapturePage> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: AppColors.primary.withOpacity(0.3),
+                      color: AppColors.primary.withValues(alpha: 0.3),
                     ),
                   ),
                   child: Column(
@@ -206,7 +207,7 @@ class _BoxCapturePageState extends State<BoxCapturePage> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
@@ -226,7 +227,7 @@ class _BoxCapturePageState extends State<BoxCapturePage> {
                           child: LinearProgressIndicator(
                             value: capturedCount / 6,
                             minHeight: 6,
-                            backgroundColor: AppColors.primary.withOpacity(0.2),
+                            backgroundColor: AppColors.primary.withValues(alpha: 0.2),
                             valueColor: AlwaysStoppedAnimation<Color>(
                               allCaptured
                                   ? AppColors.success
@@ -297,7 +298,7 @@ class _BoxCapturePageState extends State<BoxCapturePage> {
                       ),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.primary,
-                        disabledForegroundColor: AppColors.primary.withOpacity(
+                        disabledForegroundColor: AppColors.primary.withValues(alpha:
                           0.6,
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 16),
