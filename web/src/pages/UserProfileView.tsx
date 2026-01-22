@@ -10,12 +10,15 @@ import {
   Phone,
   Badge as BadgeIcon,
   Eye,
+  Pencil,
 } from "lucide-react";
 import { UserPageService, type UserProfile } from "@/services/userPageService";
+import { AuthService } from "@/services/authService";
 import { AuditLogService, type AuditLog } from "@/services/auditLogService";
 import { DataTable, type Column } from "@/components/DataTable";
 import { Pagination } from "@/components/Pagination";
 import { Button } from "@/components/ui/button";
+import { EditProfileModal } from "@/components/EditProfileModal";
 import {
   Dialog,
   DialogContent,
@@ -41,10 +44,12 @@ export function UserProfileView() {
   const [sortBy, setSortBy] = useState<"all" | "platform" | "action">("all");
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   useEffect(() => {
     if (!id) return;
-    // Prefill from navigation hint if available for immediate UI feedback
+    fetchCurrentUser();
     if (userHint) {
       const hint = userHint as any;
       const name: string = hint.name || hint.fullName || "";
@@ -273,6 +278,26 @@ export function UserProfileView() {
     setShowDetailsModal(true);
   };
 
+  const isAdmin = (): boolean => {
+    if (!currentUser) return false;
+    if (currentUser.isSuperAdmin) return true;
+    if (typeof currentUser.role === 'string') {
+      return currentUser.role === 'ADMIN';
+    }
+    return currentUser.role === 2 || currentUser.role === 3;
+  };
+
+  const fetchCurrentUser = async () => {
+    try {
+      const response = await AuthService.getCurrentUser();
+      if (response) {
+        setCurrentUser(response);
+      }
+    } catch (error) {
+      console.error("Error fetching current user:", error);
+    }
+  };
+
   const getFullName = (u: UserProfile | null) => {
     if (!u) return "User";
     const anyU = u as any;
@@ -332,11 +357,23 @@ export function UserProfileView() {
       <div className="grid w-full grid-cols-1 xl:grid-cols-2 gap-6 md:gap-8">
         <Card className="w-full">
           <CardContent className="p-4 sm:p-6 w-full">
-            <div className="mb-6">
-              <h2 className="text-xl font-semibold text-neutral-900 mb-1">
-                Profile Information
-              </h2>
-              <p className="text-sm text-neutral-600">Read-only view</p>
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-semibold text-neutral-900 mb-1">
+                  Profile Information
+                </h2>
+                <p className="text-sm text-neutral-600">Read-only view</p>
+              </div>
+              {isAdmin() && (
+                <Button
+                  onClick={() => setShowEditModal(true)}
+                  className="flex items-center gap-2 app-bg-primary text-white hover:opacity-90"
+                  size="sm"
+                >
+                  <Pencil className="h-4 w-4" />
+                  Edit Profile
+                </Button>
+              )}
             </div>
             <div className="text-center mb-8">
               <div className="relative inline-block">
@@ -380,7 +417,7 @@ export function UserProfileView() {
                     <p className="text-sm font-medium text-neutral-900">
                       Location
                     </p>
-                    <p className="text-sm text-neutral-600 break-words">
+                    <p className="text-sm text-neutral-600 wrap-break-word">
                       {(user as any).location || (user as any).address}
                     </p>
                   </div>
@@ -436,7 +473,7 @@ export function UserProfileView() {
                     <p className="text-sm font-medium text-neutral-900">
                       Stationed At
                     </p>
-                    <p className="text-sm text-neutral-600 break-words">
+                    <p className="text-sm text-neutral-600 wrap-break-word">
                       {user.stationedAt}
                     </p>
                   </div>
@@ -562,7 +599,7 @@ export function UserProfileView() {
                   <p className="text-sm font-medium text-neutral-500 mb-1">
                     User Agent
                   </p>
-                  <p className="text-sm text-neutral-700 break-words">
+                  <p className="text-sm text-neutral-700 wrap-break-word">
                     {selectedLog.userAgent}
                   </p>
                 </div>
@@ -608,6 +645,21 @@ export function UserProfileView() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {showEditModal && user && (
+        <EditProfileModal
+          isOpen={showEditModal}
+          user={user}
+          onClose={() => setShowEditModal(false)}
+          onSave={async () => {
+            setShowEditModal(false);
+            // Refresh user data after edit
+            if (id) {
+              await fetchUser();
+            }
+          }}
+        />
+      )}
     </PageContainer>
   );
 }
