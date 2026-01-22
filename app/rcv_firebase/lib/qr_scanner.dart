@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:rcv_firebase/themes/app_colors.dart';
 import 'pages/ocr_scanner_page.dart';
+import 'pages/qr_scanner_page.dart';
 import 'dart:math'; // THIS IS NOW CORRECTLY PLACED AT THE TOP
 
 // =========================================================================

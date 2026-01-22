@@ -16,6 +16,7 @@ import 'auth/reset_new_password_page.dart';
 import 'pages/user_profile_page.dart';
 import 'user_page/agent_home_page.dart';
 import 'user_page/scanning_page.dart';
+import 'user_page/scanning_category_page.dart';
 import 'pages/audit_trail_page.dart';
 import 'user_page/agent_reports.dart';
 import 'pages/location_page.dart';
@@ -139,7 +140,7 @@ class _MyAppState extends State<MyApp> {
         '/user-home': (context) => const UserHomePage(),
         '/user-audit-trail': (context) => const AuditTrailPage(),
         '/user-reports': (context) => const UserReportsPage(),
-        '/scanning': (context) => const QRScannerPage(),
+        '/scanning': (context) => const ScanningCategoryPage(),
         '/location': (context) => const LocationPage(),
         '/crop-label': (context) => const CropLabelPage(),
       },
