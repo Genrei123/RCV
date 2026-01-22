@@ -85,6 +85,7 @@ export function Sidebar({
   const location = useLocation();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showWalletMenu, setShowWalletMenu] = useState(false);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -93,6 +94,7 @@ export function Sidebar({
   const { isConnected, walletAddress, isAuthorized, isMetaMaskInstalled, connect, disconnect, switchAccount } = useMetaMask();
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const mobileProfileMenuRef = useRef<HTMLDivElement>(null);
+  const walletMenuRef = useRef<HTMLDivElement>(null);
   
   // Close profile menu when clicking outside
   useEffect(() => {
@@ -206,9 +208,8 @@ export function Sidebar({
     { path: "/maps", label: "Maps", icon: MapPin },
     { path: "/analytics", label: "Analytics", icon: BarChart3 },
     { path: "/remote-config", label: "Mobile Config", icon: Sliders },
-    // { path: '/kiosk-monitor', label: 'Kiosk Monitor', icon: Activity },
-    // { path: '/users', label: 'Users', icon: Users },
     { path: "/blockchain", label: "Blockchain", icon: Verified },
+    { path: "/wallet", label: "Connect Wallet", icon: Wallet, isWallet: true },
   ];
 
   const handleLogout = async () => {
@@ -232,7 +233,12 @@ export function Sidebar({
           <div className="flex items-center gap-2 ">
             {/* Figma-style logo */}
             <div className="flex items-center justify-center">
-              <LogoIcon className="w-8 h-8" />
+                <img
+                  src="/logo_inv.svg"
+                  alt="RCV System logo"
+                  draggable="false"
+                  className="w-8 h-8 object-contain rounded-lg"
+                />
             </div>
             <span className="text-xl font-semibold app-text-primary">RCV</span>
             <span className="text-xs text-neutral-400">v.01</span>
@@ -308,6 +314,83 @@ export function Sidebar({
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
 
+              if ((item as any).isWallet) {
+                // Wallet menu item with dropdown
+                return (
+                  <div key={item.path} ref={walletMenuRef} className="relative">
+                    <button
+                      onClick={() => setShowWalletMenu(!showWalletMenu)}
+                      className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
+                        showWalletMenu
+                          ? "app-bg-primary text-white"
+                          : "text-neutral-600 hover:bg-neutral-100"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon size={20} />
+                        <span className="font-medium">{item.label}</span>
+                      </div>
+                      <ChevronDown
+                        size={16}
+                        className={`transition-transform ${showWalletMenu ? "rotate-180" : ""}`}
+                      />
+                    </button>
+
+                    {/* Wallet dropdown */}
+                    {showWalletMenu && (
+                      <div className="absolute left-4 right-4 top-full mt-2 bg-white border rounded-lg shadow-lg z-50">
+                        <div className="p-3 space-y-3">
+                          {/* Wallet Status */}
+                          <div className="text-xs">
+                            <p className="font-medium text-neutral-600 mb-2">Wallet Status</p>
+                            {isConnected && walletAddress ? (
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                  <div className={`w-2 h-2 rounded-full ${isAuthorized ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                                  <p className="font-mono text-neutral-700 truncate" title={walletAddress}>
+                                    {walletAddress.slice(0, 8)}...{walletAddress.slice(-6)}
+                                  </p>
+                                </div>
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={switchAccount}
+                                    className="flex-1 text-xs text-blue-500 hover:text-blue-700 py-1.5 border border-blue-200 rounded hover:bg-blue-50"
+                                  >
+                                    Switch
+                                  </button>
+                                  <button
+                                    onClick={disconnect}
+                                    className="flex-1 text-xs text-red-500 hover:text-red-700 py-1.5 border border-red-200 rounded hover:bg-red-50"
+                                  >
+                                    Disconnect
+                                  </button>
+                                </div>
+                              </div>
+                            ) : !isMetaMaskInstalled ? (
+                              <button
+                                onClick={() => window.open('https://metamask.io/download/', '_blank')}
+                                className="w-full text-xs text-white bg-[#f6851b] hover:bg-[#e2761b] py-1.5 px-2 rounded flex items-center justify-center gap-1"
+                              >
+                                <ExternalLink size={12} />
+                                Install MetaMask
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => connect(true)}
+                                className="w-full text-xs app-bg-primary app-text-foreground hover:opacity-80 py-1.5 px-2 rounded flex items-center justify-center gap-1 text-white"
+                              >
+                                <Wallet size={12} />
+                                Connect MetaMask
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
               return (
                 <Link
                   key={item.path}
@@ -328,59 +411,6 @@ export function Sidebar({
             })}
           </div>
         </nav>
-
-        {/* MetaMask Wallet Section */}
-        <div className="p-4 border-t border-neutral-200">
-          <div className="bg-neutral-50 rounded-lg p-3">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <Wallet size={16} className="text-orange-500" />
-                <span className="text-xs font-medium text-neutral-700">Wallet</span>
-              </div>
-              {isConnected && (
-                <div className={`w-2 h-2 rounded-full ${isAuthorized ? 'bg-green-500' : 'bg-yellow-500'}`} />
-              )}
-            </div>
-            {isConnected && walletAddress ? (
-              <div className="space-y-2">
-                <p className="text-xs font-mono text-neutral-600 truncate" title={walletAddress}>
-                  {walletAddress.slice(0, 8)}...{walletAddress.slice(-6)}
-                </p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={switchAccount}
-                    className="flex-1 text-xs text-blue-500 hover:text-blue-700 py-1"
-                    title="Switch to another account"
-                  >
-                    Switch
-                  </button>
-                  <button
-                    onClick={disconnect}
-                    className="flex-1 text-xs text-red-500 hover:text-red-700 py-1"
-                  >
-                    Disconnect
-                  </button>
-                </div>
-              </div>
-            ) : !isMetaMaskInstalled ? (
-              <button
-                onClick={() => window.open('https://metamask.io/download/', '_blank')}
-                className="w-full text-xs text-white bg-[#f6851b] hover:bg-[#e2761b] py-2 px-3 rounded flex items-center justify-center gap-1"
-              >
-                <ExternalLink size={12} />
-                Install MetaMask
-              </button>
-            ) : (
-              <button
-                onClick={() => connect(true)}
-                className="w-full text-xs app-text-primary hover:opacity-80 py-1 flex items-center justify-center gap-1"
-              >
-                <Wallet size={12} />
-                Connect MetaMask
-              </button>
-            )}
-          </div>
-        </div>
       </aside>
 
       {/* mobile/tablet drawer: visible below lg, use visible & closeDrawer */}
@@ -409,7 +439,12 @@ export function Sidebar({
           {/* Drawer header: logo + title + close button */}
           <div className="flex items-center justify-between px-6 py-5 border-b border-neutral-200">
             <div className="flex items-center gap-2">
-              <LogoIcon className="w-7 h-7" />
+              <img
+                src="/logo_inv.svg"
+                alt="RCV System logo"
+                draggable="false"
+                className="w-7 h-7 object-contain rounded-lg"
+              />
               <span className="text-base font-medium text-neutral-800">RCV</span>
               <span className="text-xs text-neutral-400">v.01</span>
             </div>
