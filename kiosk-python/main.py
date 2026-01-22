@@ -35,18 +35,29 @@ try:
 except ImportError:
     pass  # dotenv not installed, use system env vars
 
-# Text-to-Speech imports
+# Text-to-Speech imports - Priority: edge-tts (best quality) > pyttsx3 > gTTS
 TTS_AVAILABLE = False
 TTS_ENGINE = None
 
+# Try edge-tts first (Microsoft neural voices - best quality for Filipino)
 try:
-    import pyttsx3
+    import edge_tts
+    import asyncio
     TTS_AVAILABLE = True
-    TTS_ENGINE = "pyttsx3"
+    TTS_ENGINE = "edge_tts"
 except ImportError:
     pass
 
-# Fallback to gTTS if pyttsx3 not available
+# Fallback to pyttsx3 (offline, English only)
+if not TTS_AVAILABLE:
+    try:
+        import pyttsx3
+        TTS_AVAILABLE = True
+        TTS_ENGINE = "pyttsx3"
+    except ImportError:
+        pass
+
+# Fallback to gTTS (Google, supports Tagalog but sounds robotic)
 if not TTS_AVAILABLE:
     try:
         from gtts import gTTS
@@ -54,7 +65,7 @@ if not TTS_AVAILABLE:
         TTS_AVAILABLE = True
         TTS_ENGINE = "gtts"
     except ImportError:
-        print("TTS not available. Install pyttsx3 or gtts for voice output.")
+        print("TTS not available. Install edge-tts for best Filipino voice: pip install edge-tts")
 
 # Configure Tesseract path for Windows
 if platform.system() == 'Windows':
@@ -93,11 +104,23 @@ class Colors:
 
 class KioskState(Enum):
     IDLE = "idle"                      # Ready to scan - camera active
+    CAMERA_OFF = "camera_off"          # Camera not started yet (lazy loading)
     SCANNING = "scanning"              # Actively scanning
+    OCR_CAPTURE = "ocr_capture"        # OCR photo capture mode (2-photo flow)
     PROCESSING = "processing"          # Processing QR/OCR data - HUGE loading screen
     DISPLAY_CERTIFICATE = "certificate" # Showing certificate info - MASSIVE display
     DISPLAY_PRODUCT = "product"        # Showing product info - MASSIVE display
+    DISPLAY_COMPLIANCE = "compliance"  # Showing OCR compliance report
     ERROR = "error"                    # Error state - 10 second timeout
+    MAINTENANCE = "maintenance"        # Server offline/unreachable - polling for recovery
+
+class OCRCaptureStep(Enum):
+    """Steps in the OCR 2-photo capture flow"""
+    READY_FRONT = "ready_front"        # Ready to capture front
+    PREVIEW_FRONT = "preview_front"    # Previewing front photo
+    READY_BACK = "ready_back"          # Ready to capture back
+    PREVIEW_BACK = "preview_back"      # Previewing back photo  
+    SUBMITTING = "submitting"          # Sending to backend
 
 @dataclass
 class CertificateData:
@@ -294,9 +317,14 @@ class RCVApiService:
             return {"success": False, "message": "API not accessible"}
 
 # ============================================================================
-# TTS Service for Tagalog Voice Output
+# TTS Service for Tagalog Voice Output - Using Microsoft Neural Voices
 # ============================================================================
 class TTSService:
+    # Microsoft Edge TTS Filipino voices (neural, natural-sounding)
+    FILIPINO_VOICE = "fil-PH-BlessicaNeural"  # Female Filipino voice
+    FILIPINO_VOICE_MALE = "fil-PH-AngeloNeural"  # Male Filipino voice
+    ENGLISH_VOICE = "en-US-JennyNeural"  # Fallback English voice
+    
     def __init__(self):
         self.enabled = TTS_AVAILABLE
         self.is_muted = False
@@ -304,19 +332,21 @@ class TTSService:
         os.makedirs(self.temp_dir, exist_ok=True)
         self.engine = None
         self.is_speaking = False
+        self.playback_process = None
+        
+        print(f"TTS Engine: {TTS_ENGINE}")
         
         if TTS_AVAILABLE and TTS_ENGINE == "pyttsx3":
             try:
                 self.engine = pyttsx3.init()
-                # Configure voice properties
-                self.engine.setProperty('rate', 150)  # Speed
-                self.engine.setProperty('volume', 1.0)  # Volume
+                self.engine.setProperty('rate', 150)
+                self.engine.setProperty('volume', 1.0)
             except Exception as e:
                 print(f"pyttsx3 init error: {e}")
                 self.enabled = False
     
-    def speak(self, text: str, lang: str = "tl"):
-        """Speak text - uses pyttsx3 (offline) or gTTS (online with Tagalog)"""
+    def speak(self, text: str, lang: str = "fil"):
+        """Speak text using Microsoft neural voice (edge-tts) for natural Filipino"""
         if not self.enabled or self.is_muted or self.is_speaking:
             return
         
@@ -331,34 +361,93 @@ class TTSService:
         """Async TTS playback"""
         self.is_speaking = True
         try:
-            if TTS_ENGINE == "pyttsx3" and self.engine:
-                # pyttsx3 doesn't support Tagalog, so we use English
+            if TTS_ENGINE == "edge_tts":
+                # Use Microsoft Edge neural TTS (best quality for Filipino)
+                self._speak_edge_tts(text, lang)
+            elif TTS_ENGINE == "pyttsx3" and self.engine:
+                # pyttsx3 (offline, English only)
                 self.engine.say(text)
                 self.engine.runAndWait()
             elif TTS_ENGINE == "gtts":
-                # gTTS supports Tagalog (lang="tl")
+                # gTTS (Google, supports Tagalog but sounds robotic)
                 temp_file = os.path.join(self.temp_dir, "tts_output.mp3")
-                tts = gTTS(text=text, lang=lang, slow=False)
+                tts = gTTS(text=text, lang="tl", slow=False)
                 tts.save(temp_file)
-                
-                # Play using Windows default player
-                if platform.system() == 'Windows':
-                    os.startfile(temp_file)
-                else:
-                    subprocess.run(['mpg123', '-q', temp_file], check=False)
+                self._play_audio(temp_file)
                     
         except Exception as e:
             print(f"TTS playback error: {e}")
         finally:
             self.is_speaking = False
     
+    def _speak_edge_tts(self, text: str, lang: str):
+        """Use Microsoft Edge neural TTS for natural-sounding Filipino"""
+        try:
+            # Select voice based on language
+            voice = self.FILIPINO_VOICE if lang in ["fil", "tl", "tagalog"] else self.ENGLISH_VOICE
+            
+            temp_file = os.path.join(self.temp_dir, "tts_edge_output.mp3")
+            
+            # edge-tts is async, need to run in event loop
+            async def generate_audio():
+                communicate = edge_tts.Communicate(text, voice)
+                await communicate.save(temp_file)
+            
+            # Run async function
+            asyncio.run(generate_audio())
+            
+            # Play the audio
+            self._play_audio(temp_file)
+            
+        except Exception as e:
+            print(f"Edge TTS error: {e}")
+    
+    def _play_audio(self, filepath: str):
+        """Play audio file using system player"""
+        try:
+            if platform.system() == 'Windows':
+                # Try multiple Windows playback methods
+                try:
+                    # Method 1: Windows Media Player COM object (best for MP3)
+                    import winsound
+                    import subprocess
+                    # Use ffplay from ffmpeg if available (best quality)
+                    result = subprocess.run(
+                        ['ffplay', '-nodisp', '-autoexit', '-loglevel', 'quiet', filepath],
+                        check=False,
+                        timeout=60
+                    )
+                except FileNotFoundError:
+                    # Method 2: PowerShell with Windows Media Player
+                    import subprocess
+                    ps_script = f'''
+                    $player = New-Object -ComObject WMPlayer.OCX
+                    $player.URL = "{filepath}"
+                    $player.controls.play()
+                    while ($player.playState -ne 1) {{ Start-Sleep -Milliseconds 100 }}
+                    '''
+                    self.playback_process = subprocess.Popen(
+                        ['powershell', '-Command', ps_script],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL
+                    )
+                    self.playback_process.wait()
+            else:
+                # Linux/Mac: use mpg123 or afplay
+                import subprocess
+                subprocess.run(['mpg123', '-q', filepath], check=False)
+        except Exception as e:
+            print(f"Audio playback error: {e}")
+    
     def stop(self):
         """Stop current playback"""
-        if TTS_ENGINE == "pyttsx3" and self.engine:
-            try:
+        try:
+            if TTS_ENGINE == "pyttsx3" and self.engine:
                 self.engine.stop()
-            except:
-                pass
+            if self.playback_process:
+                self.playback_process.terminate()
+        except:
+            pass
     
     def toggle_mute(self):
         """Toggle mute state"""
@@ -421,7 +510,7 @@ class KioskApp:
         self.root.bind('<Escape>', lambda e: self.on_closing())
         
         # State management
-        self.state = KioskState.IDLE
+        self.state = KioskState.CAMERA_OFF  # Start with camera off (lazy loading)
         self.camera = None
         self.is_running = False
         self.last_scan_time = 0
@@ -431,9 +520,30 @@ class KioskApp:
         self.loading_angle = 0
         self.is_error_timer = False
         
+        # Touch-to-pause timer
+        self.timer_paused = False
+        self.remaining_time = 0
+        
+        # OCR Capture state (2-photo flow)
+        self.ocr_step = OCRCaptureStep.READY_FRONT
+        self.ocr_front_image = None  # PIL Image
+        self.ocr_back_image = None   # PIL Image
+        self.ocr_front_frame = None  # Raw OpenCV frame
+        self.ocr_back_frame = None   # Raw OpenCV frame
+        self.current_frame = None    # Current camera frame for capture
+        
         # Services
         self.tts = TTSService()
         self.api = RCVApiService()  # RCV API Service
+        
+        # Connectivity monitoring
+        self.is_online = False
+        self.last_connectivity_check = 0
+        self.connectivity_poll_id = None
+        self.CONNECTIVITY_POLL_INTERVAL = 10000  # Check every 10 seconds when offline
+        self.CONNECTIVITY_POLL_INTERVAL_ONLINE = 60000  # Check every 60 seconds when online
+        self.consecutive_failures = 0
+        self.MAX_FAILURES_BEFORE_MAINTENANCE = 3  # Enter maintenance after 3 failures
         
         # Data directory
         self.data_dir = os.path.expanduser("~/kiosk_data")
@@ -462,8 +572,14 @@ class KioskApp:
         self.main_frame = tk.Frame(self.root, bg=Colors.BACKGROUND)
         self.main_frame.pack(fill=tk.BOTH, expand=True)
         
+        # ============ START SCREEN (Camera off, touch to start) ============
+        self.start_frame = tk.Frame(self.main_frame, bg=Colors.BACKGROUND)
+        
         # ============ SCAN SCREEN (Camera centered with logo) ============
         self.scan_frame = tk.Frame(self.main_frame, bg=Colors.BACKGROUND)
+        
+        # ============ OCR CAPTURE SCREEN (2-photo flow) ============
+        self.ocr_frame = tk.Frame(self.main_frame, bg=Colors.BACKGROUND)
         
         # ============ LOADING SCREEN (HUGE) ============
         self.loading_frame = tk.Frame(self.main_frame, bg=Colors.PRIMARY)
@@ -471,171 +587,345 @@ class KioskApp:
         # ============ RESULT SCREEN (MASSIVE with PDF) ============
         self.result_frame = tk.Frame(self.main_frame, bg=Colors.BACKGROUND)
         
+        # ============ COMPLIANCE SCREEN (OCR results) ============
+        self.compliance_frame = tk.Frame(self.main_frame, bg=Colors.BACKGROUND)
+        
         # ============ ERROR SCREEN ============
         self.error_frame = tk.Frame(self.main_frame, bg=Colors.BACKGROUND)
         
+        # ============ MAINTENANCE SCREEN (Server offline) ============
+        self.maintenance_frame = tk.Frame(self.main_frame, bg=Colors.BACKGROUND)
+        
         # Setup each screen
+        self._setup_start_screen()
         self._setup_scan_screen()
+        self._setup_ocr_capture_screen()
         self._setup_loading_screen()
         self._setup_result_screen()
+        self._setup_compliance_screen()
         self._setup_error_screen()
+        self._setup_maintenance_screen()
         
-        # Start with scan screen
-        self._show_scan_screen()
+        # Start with start screen (camera off)
+        self._show_start_screen()
     
-    def _setup_scan_screen(self):
-        """Setup the scanning screen with centered camera and logo"""
-        # Header with logo
-        header = tk.Frame(self.scan_frame, bg=Colors.PRIMARY, height=100)
-        header.pack(fill=tk.X)
-        header.pack_propagate(False)
+    def _setup_start_screen(self):
+        """Setup the initial start screen with sidebar layout for small screens"""
+        # Main horizontal layout - sidebar on left, content on right
+        main_container = tk.Frame(self.start_frame, bg=Colors.BACKGROUND)
+        main_container.pack(fill=tk.BOTH, expand=True)
         
-        # Logo and title row
-        header_content = tk.Frame(header, bg=Colors.PRIMARY)
-        header_content.pack(expand=True)
+        # LEFT SIDEBAR - Navigation buttons
+        sidebar = tk.Frame(main_container, bg=Colors.PRIMARY, width=180)
+        sidebar.pack(side=tk.LEFT, fill=tk.Y)
+        sidebar.pack_propagate(False)
         
-        # RCV Logo text
+        # Sidebar header
         tk.Label(
-            header_content,
+            sidebar,
             text="RCV",
-            font=("SF Pro Display", 36, "bold"),
+            font=("SF Pro Display", 20, "bold"),
             bg=Colors.PRIMARY,
             fg=Colors.TEXT_WHITE
-        ).pack(side=tk.LEFT, padx=(0, 20))
+        ).pack(pady=(15, 5))
         
         tk.Label(
-            header_content,
-            text="Product Verification Kiosk",
-            font=("SF Pro Display", 28),
+            sidebar,
+            text="KIOSK",
+            font=("SF Pro Text", 12),
             bg=Colors.PRIMARY,
-            fg=Colors.TEXT_WHITE
-        ).pack(side=tk.LEFT)
+            fg="#CCCCCC"
+        ).pack(pady=(0, 20))
         
-        # Center content area
-        center_area = tk.Frame(self.scan_frame, bg=Colors.BACKGROUND)
-        center_area.pack(fill=tk.BOTH, expand=True)
+        # Sidebar buttons - compact for small screens
+        self.start_camera_btn = tk.Button(
+            sidebar,
+            text="START\nCAMERA",
+            font=("SF Pro Display", 11, "bold"),
+            bg=Colors.PRIMARY_LIGHT,
+            fg=Colors.TEXT_WHITE,
+            activebackground=Colors.ACCENT,
+            activeforeground=Colors.TEXT_WHITE,
+            relief=tk.FLAT,
+            bd=0,
+            width=14,
+            pady=15,
+            command=self._start_camera_and_scan,
+            cursor="hand2"
+        )
+        self.start_camera_btn.pack(pady=8, padx=10, fill=tk.X)
         
-        # Camera preview container - CENTERED
-        camera_outer = tk.Frame(center_area, bg=Colors.BACKGROUND)
-        camera_outer.place(relx=0.5, rely=0.45, anchor=tk.CENTER)
+        self.start_ocr_btn = tk.Button(
+            sidebar,
+            text="SCAN\nLABEL",
+            font=("SF Pro Display", 11, "bold"),
+            bg=Colors.ACCENT,
+            fg=Colors.TEXT_WHITE,
+            activebackground=Colors.PRIMARY_LIGHT,
+            activeforeground=Colors.TEXT_WHITE,
+            relief=tk.FLAT,
+            bd=0,
+            width=14,
+            pady=15,
+            command=self._start_ocr_capture,
+            cursor="hand2"
+        )
+        self.start_ocr_btn.pack(pady=8, padx=10, fill=tk.X)
         
-        # Instructions above camera
+        # Spacer
+        tk.Frame(sidebar, bg=Colors.PRIMARY).pack(fill=tk.BOTH, expand=True)
+        
+        # Connection status at bottom of sidebar
+        status_frame = tk.Frame(sidebar, bg=Colors.PRIMARY_DARK, height=50)
+        status_frame.pack(fill=tk.X, side=tk.BOTTOM)
+        status_frame.pack_propagate(False)
+        
+        self.connection_status_icon = tk.Label(
+            status_frame,
+            text="*",
+            font=("SF Pro Text", 12),
+            bg=Colors.PRIMARY_DARK,
+            fg=Colors.TEXT_SECONDARY
+        )
+        self.connection_status_icon.pack(pady=(8, 2))
+        
+        self.connection_status_label = tk.Label(
+            status_frame,
+            text="Checking...",
+            font=("SF Pro Text", 9),
+            bg=Colors.PRIMARY_DARK,
+            fg="#AAAAAA"
+        )
+        self.connection_status_label.pack()
+        
+        # RIGHT CONTENT AREA
+        content_area = tk.Frame(main_container, bg=Colors.BACKGROUND)
+        content_area.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        # Center content
+        content = tk.Frame(content_area, bg=Colors.BACKGROUND)
+        content.place(relx=0.5, rely=0.45, anchor=tk.CENTER)
+        
+        # Welcome message - smaller fonts for small screens
         tk.Label(
-            camera_outer,
-            text="Place QR Code in Front of Camera",
-            font=("SF Pro Display", 28, "bold"),
+            content,
+            text="Welcome",
+            font=("SF Pro Display", 22, "bold"),
             bg=Colors.BACKGROUND,
             fg=Colors.TEXT_PRIMARY
+        ).pack(pady=(0, 5))
+        
+        tk.Label(
+            content,
+            text="Maligayang Pagdating",
+            font=("SF Pro Text", 14),
+            bg=Colors.BACKGROUND,
+            fg=Colors.TEXT_SECONDARY
+        ).pack(pady=(0, 20))
+        
+        tk.Label(
+            content,
+            text="Tap a button on the left\nto begin scanning",
+            font=("SF Pro Text", 12),
+            bg=Colors.BACKGROUND,
+            fg=Colors.TEXT_SECONDARY,
+            justify=tk.CENTER
         ).pack(pady=(0, 10))
         
         tk.Label(
+            content,
+            text="I-tap ang button sa kaliwa\npara magsimula",
+            font=("SF Pro Text", 10),
+            bg=Colors.BACKGROUND,
+            fg="#999999",
+            justify=tk.CENTER
+        ).pack()
+    
+    def _setup_scan_screen(self):
+        """Setup the scanning screen with sidebar layout for small screens"""
+        # Main horizontal layout - sidebar on left, camera on right
+        main_container = tk.Frame(self.scan_frame, bg=Colors.BACKGROUND)
+        main_container.pack(fill=tk.BOTH, expand=True)
+        
+        # LEFT SIDEBAR - Control buttons
+        sidebar = tk.Frame(main_container, bg=Colors.PRIMARY, width=140)
+        sidebar.pack(side=tk.LEFT, fill=tk.Y)
+        sidebar.pack_propagate(False)
+        
+        # Sidebar header
+        tk.Label(
+            sidebar,
+            text="RCV",
+            font=("SF Pro Display", 16, "bold"),
+            bg=Colors.PRIMARY,
+            fg=Colors.TEXT_WHITE
+        ).pack(pady=(10, 3))
+        
+        tk.Label(
+            sidebar,
+            text="QR SCAN",
+            font=("SF Pro Text", 9),
+            bg=Colors.PRIMARY,
+            fg="#CCCCCC"
+        ).pack(pady=(0, 15))
+        
+        # Sidebar control buttons - compact for small screens
+        self.mute_button = tk.Button(
+            sidebar,
+            text="SOUND\nON" if not self.tts.is_muted else "SOUND\nOFF",
+            font=("SF Pro Text", 9, "bold"),
+            bg=Colors.PRIMARY_LIGHT,
+            fg=Colors.TEXT_WHITE,
+            activebackground=Colors.ACCENT,
+            activeforeground=Colors.TEXT_WHITE,
+            relief=tk.FLAT,
+            bd=0,
+            width=12,
+            pady=10,
+            command=self.toggle_sound
+        )
+        self.mute_button.pack(pady=5, padx=8, fill=tk.X)
+        
+        self.reload_camera_btn = tk.Button(
+            sidebar,
+            text="RELOAD",
+            font=("SF Pro Text", 9, "bold"),
+            bg=Colors.WARNING,
+            fg=Colors.TEXT_WHITE,
+            activebackground="#F57C00",
+            activeforeground=Colors.TEXT_WHITE,
+            relief=tk.FLAT,
+            bd=0,
+            width=12,
+            pady=10,
+            command=self.restart_camera
+        )
+        self.reload_camera_btn.pack(pady=5, padx=8, fill=tk.X)
+        
+        self.scan_product_btn = tk.Button(
+            sidebar,
+            text="SCAN\nLABEL",
+            font=("SF Pro Text", 9, "bold"),
+            bg=Colors.ACCENT,
+            fg=Colors.TEXT_WHITE,
+            activebackground="#00A895",
+            activeforeground=Colors.TEXT_WHITE,
+            relief=tk.FLAT,
+            bd=0,
+            width=12,
+            pady=10,
+            command=self._start_ocr_capture
+        )
+        self.scan_product_btn.pack(pady=5, padx=8, fill=tk.X)
+        
+        self.back_to_start_btn = tk.Button(
+            sidebar,
+            text="BACK",
+            font=("SF Pro Text", 9, "bold"),
+            bg=Colors.TEXT_SECONDARY,
+            fg=Colors.TEXT_WHITE,
+            activebackground="#555555",
+            activeforeground=Colors.TEXT_WHITE,
+            relief=tk.FLAT,
+            bd=0,
+            width=12,
+            pady=10,
+            command=self._show_start_screen
+        )
+        self.back_to_start_btn.pack(pady=5, padx=8, fill=tk.X)
+        
+        # Spacer
+        tk.Frame(sidebar, bg=Colors.PRIMARY).pack(fill=tk.BOTH, expand=True)
+        
+        # Exit button at bottom (hidden by default)
+        self.exit_button = tk.Button(
+            sidebar,
+            text="EXIT",
+            font=("SF Pro Text", 9, "bold"),
+            bg=Colors.ERROR,
+            fg=Colors.TEXT_WHITE,
+            activebackground="#D32F2F",
+            activeforeground=Colors.TEXT_WHITE,
+            relief=tk.FLAT,
+            bd=0,
+            width=12,
+            pady=8,
+            command=self.on_closing
+        )
+        # Bind long press to show exit button
+        self.mute_button.bind('<Button-1>', self.start_exit_timer)
+        self.mute_button.bind('<ButtonRelease-1>', self.cancel_exit_timer)
+        self.exit_timer = None
+        
+        # RIGHT CONTENT AREA - Camera
+        content_area = tk.Frame(main_container, bg=Colors.BACKGROUND)
+        content_area.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        # Camera preview container - CENTERED
+        camera_outer = tk.Frame(content_area, bg=Colors.BACKGROUND)
+        camera_outer.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+        
+        # Instructions above camera - smaller for small screens
+        tk.Label(
             camera_outer,
-            text="Ilagay ang QR Code sa harap ng camera",
-            font=("SF Pro Text", 20),
+            text="Place QR Code Here",
+            font=("SF Pro Display", 14, "bold"),
+            bg=Colors.BACKGROUND,
+            fg=Colors.TEXT_PRIMARY
+        ).pack(pady=(0, 3))
+        
+        tk.Label(
+            camera_outer,
+            text="Ilagay ang QR Code dito",
+            font=("SF Pro Text", 10),
             bg=Colors.BACKGROUND,
             fg=Colors.TEXT_SECONDARY
-        ).pack(pady=(0, 30))
+        ).pack(pady=(0, 10))
         
         # Camera frame with decorative border
         camera_border = tk.Frame(
             camera_outer,
             bg=Colors.PRIMARY,
-            padx=6,
-            pady=6
+            padx=3,
+            pady=3
         )
         camera_border.pack()
         
-        # Inner camera container - fixed size to prevent growing
+        # Inner camera container - responsive size for small screens
         self.camera_container = tk.Frame(
             camera_border,
             bg=Colors.SURFACE,
-            width=640,
-            height=480
+            width=400,
+            height=300
         )
         self.camera_container.pack()
         self.camera_container.pack_propagate(False)
         self.camera_container.grid_propagate(False)
         
-        # Camera label - fixed dimensions to prevent growing
+        # Camera label
         self.camera_label = tk.Label(
             self.camera_container,
-            text="Initializing Camera...",
-            font=("SF Pro Text", 16),
+            text="Loading Camera...",
+            font=("SF Pro Text", 12),
             bg=Colors.SURFACE,
             fg=Colors.TEXT_SECONDARY,
-            width=640,
-            height=480
+            width=400,
+            height=300
         )
         self.camera_label.pack(expand=False, fill=tk.NONE)
         self.camera_label.config(anchor=tk.CENTER)
         
         # Scanning indicator below camera
         self.scan_status_frame = tk.Frame(camera_outer, bg=Colors.BACKGROUND)
-        self.scan_status_frame.pack(pady=(30, 0))
+        self.scan_status_frame.pack(pady=(10, 0))
         
         self.scan_indicator = tk.Label(
             self.scan_status_frame,
-            text="● Scanning Active",
-            font=("SF Pro Text", 20, "bold"),
+            text="* Scanning",
+            font=("SF Pro Text", 12, "bold"),
             bg=Colors.BACKGROUND,
             fg=Colors.SUCCESS
         )
-        self.scan_indicator.pack()
-        
-        # Footer with touch-friendly controls
-        footer = tk.Frame(self.scan_frame, bg=Colors.SURFACE, height=120)
-        footer.pack(fill=tk.X, side=tk.BOTTOM)
-        footer.pack_propagate(False)
-        
-        # Touch control panel
-        control_panel = tk.Frame(footer, bg=Colors.SURFACE)
-        control_panel.pack(expand=True, pady=10)
-        
-        # Mute/Unmute button - LARGE for touch
-        self.mute_button = tk.Button(
-            control_panel,
-            text="🔊 SOUND ON" if not self.tts.is_muted else "🔇 SOUND OFF",
-            font=("SF Pro Text", 18, "bold"),
-            bg=Colors.PRIMARY,
-            fg=Colors.TEXT_WHITE,
-            activebackground=Colors.PRIMARY_LIGHT,
-            activeforeground=Colors.TEXT_WHITE,
-            relief=tk.RAISED,
-            bd=3,
-            padx=30,
-            pady=20,
-            command=self.toggle_sound
-        )
-        self.mute_button.pack(side=tk.LEFT, padx=20)
-        
-        # Exit button - LARGE for touch (hidden by default, shown on long press)
-        self.exit_button = tk.Button(
-            control_panel,
-            text="EXIT KIOSK",
-            font=("SF Pro Text", 18, "bold"),
-            bg=Colors.ERROR,
-            fg=Colors.TEXT_WHITE,
-            activebackground="#D32F2F",
-            activeforeground=Colors.TEXT_WHITE,
-            relief=tk.RAISED,
-            bd=3,
-            padx=30,
-            pady=20,
-            command=self.on_closing
-        )
-        # Bind long press to show exit button (3 second touch on mute button)
-        self.mute_button.bind('<Button-1>', self.start_exit_timer)
-        self.mute_button.bind('<ButtonRelease-1>', self.cancel_exit_timer)
-        self.exit_timer = None
-        
-        # Status hint
-        tk.Label(
-            control_panel,
-            text="Place QR/Barcode in view",
-            font=("SF Pro Text", 16),
-            bg=Colors.SURFACE,
-            fg=Colors.TEXT_SECONDARY
-        ).pack(side=tk.LEFT, padx=40)
     
     def _setup_loading_screen(self):
         """Setup the HUGE loading screen"""
@@ -688,6 +978,184 @@ class KioskApp:
         )
         self.loading_detail_label.pack(pady=(50, 0))
     
+    def _setup_ocr_capture_screen(self):
+        """Setup OCR product scan screen with sidebar layout for small screens"""
+        # Main horizontal layout - sidebar on left, content on right
+        main_container = tk.Frame(self.ocr_frame, bg=Colors.BACKGROUND)
+        main_container.pack(fill=tk.BOTH, expand=True)
+        
+        # LEFT SIDEBAR - Control buttons
+        sidebar = tk.Frame(main_container, bg=Colors.ACCENT, width=140)
+        sidebar.pack(side=tk.LEFT, fill=tk.Y)
+        sidebar.pack_propagate(False)
+        
+        # Sidebar header
+        tk.Label(
+            sidebar,
+            text="SCAN",
+            font=("SF Pro Display", 14, "bold"),
+            bg=Colors.ACCENT,
+            fg=Colors.TEXT_WHITE
+        ).pack(pady=(10, 3))
+        
+        self.ocr_header_label = tk.Label(
+            sidebar,
+            text="LABEL",
+            font=("SF Pro Text", 10),
+            bg=Colors.ACCENT,
+            fg="#CCCCCC"
+        )
+        self.ocr_header_label.pack(pady=(0, 15))
+        
+        # Control buttons - compact for small screens
+        self.ocr_capture_btn = tk.Button(
+            sidebar,
+            text="CAPTURE",
+            font=("SF Pro Text", 9, "bold"),
+            bg=Colors.PRIMARY,
+            fg=Colors.TEXT_WHITE,
+            activebackground=Colors.PRIMARY_LIGHT,
+            activeforeground=Colors.TEXT_WHITE,
+            relief=tk.FLAT,
+            bd=0,
+            width=12,
+            pady=10,
+            command=self._ocr_capture_photo
+        )
+        self.ocr_capture_btn.pack(pady=5, padx=8, fill=tk.X)
+        
+        self.ocr_retake_btn = tk.Button(
+            sidebar,
+            text="RETAKE",
+            font=("SF Pro Text", 9, "bold"),
+            bg=Colors.WARNING,
+            fg=Colors.TEXT_WHITE,
+            activebackground="#F57C00",
+            activeforeground=Colors.TEXT_WHITE,
+            relief=tk.FLAT,
+            bd=0,
+            width=12,
+            pady=10,
+            command=self._ocr_retake_photo
+        )
+        self.ocr_retake_btn.pack(pady=5, padx=8, fill=tk.X)
+        
+        self.ocr_submit_btn = tk.Button(
+            sidebar,
+            text="SUBMIT",
+            font=("SF Pro Text", 9, "bold"),
+            bg=Colors.SUCCESS,
+            fg=Colors.TEXT_WHITE,
+            activebackground="#43A047",
+            activeforeground=Colors.TEXT_WHITE,
+            relief=tk.FLAT,
+            bd=0,
+            width=12,
+            pady=10,
+            command=self._ocr_submit_scan,
+            state=tk.DISABLED
+        )
+        self.ocr_submit_btn.pack(pady=5, padx=8, fill=tk.X)
+        
+        self.ocr_cancel_btn = tk.Button(
+            sidebar,
+            text="CANCEL",
+            font=("SF Pro Text", 9, "bold"),
+            bg=Colors.ERROR,
+            fg=Colors.TEXT_WHITE,
+            activebackground="#D32F2F",
+            activeforeground=Colors.TEXT_WHITE,
+            relief=tk.FLAT,
+            bd=0,
+            width=12,
+            pady=10,
+            command=self._ocr_cancel
+        )
+        self.ocr_cancel_btn.pack(pady=5, padx=8, fill=tk.X)
+        
+        # Spacer
+        tk.Frame(sidebar, bg=Colors.ACCENT).pack(fill=tk.BOTH, expand=True)
+        
+        # Thumbnails at bottom of sidebar
+        tk.Label(
+            sidebar,
+            text="Photos:",
+            font=("SF Pro Text", 9, "bold"),
+            bg=Colors.ACCENT,
+            fg=Colors.TEXT_WHITE
+        ).pack(pady=(5, 3), padx=8, anchor=tk.W)
+        
+        self.ocr_front_thumb = tk.Label(
+            sidebar,
+            text="Front: -",
+            font=("SF Pro Text", 8),
+            bg="#00A895",
+            fg=Colors.TEXT_WHITE,
+            width=14,
+            height=2
+        )
+        self.ocr_front_thumb.pack(pady=3, padx=8)
+        
+        self.ocr_back_thumb = tk.Label(
+            sidebar,
+            text="Back: -",
+            font=("SF Pro Text", 8),
+            bg="#00A895",
+            fg=Colors.TEXT_WHITE,
+            width=14,
+            height=2
+        )
+        self.ocr_back_thumb.pack(pady=(3, 10), padx=8)
+        
+        # RIGHT CONTENT AREA - Camera and instructions
+        content_area = tk.Frame(main_container, bg=Colors.BACKGROUND)
+        content_area.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        # Center content
+        center = tk.Frame(content_area, bg=Colors.BACKGROUND)
+        center.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+        
+        # Instructions - smaller for small screens
+        self.ocr_instruction_label = tk.Label(
+            center,
+            text="Position FRONT of label",
+            font=("SF Pro Display", 14, "bold"),
+            bg=Colors.BACKGROUND,
+            fg=Colors.TEXT_PRIMARY
+        )
+        self.ocr_instruction_label.pack(pady=(0, 3))
+        
+        self.ocr_instruction_sub = tk.Label(
+            center,
+            text="Ilagay ang HARAP ng label",
+            font=("SF Pro Text", 10),
+            bg=Colors.BACKGROUND,
+            fg=Colors.TEXT_SECONDARY
+        )
+        self.ocr_instruction_sub.pack(pady=(0, 10))
+        
+        # Camera frame for OCR - smaller for small screens
+        ocr_camera_border = tk.Frame(center, bg=Colors.ACCENT, padx=3, pady=3)
+        ocr_camera_border.pack()
+        
+        self.ocr_camera_container = tk.Frame(
+            ocr_camera_border,
+            bg=Colors.SURFACE,
+            width=400,
+            height=300
+        )
+        self.ocr_camera_container.pack()
+        self.ocr_camera_container.pack_propagate(False)
+        
+        self.ocr_camera_label = tk.Label(
+            self.ocr_camera_container,
+            text="Camera Preview",
+            font=("SF Pro Text", 12),
+            bg=Colors.SURFACE,
+            fg=Colors.TEXT_SECONDARY
+        )
+        self.ocr_camera_label.pack(expand=True)
+    
     def _setup_result_screen(self):
         """Setup the result screen with responsive layout for small screens"""
         # Header - responsive height
@@ -697,7 +1165,7 @@ class KioskApp:
         
         self.result_status_label = tk.Label(
             self.result_header,
-            text="✓ VERIFIED",
+            text="VERIFIED",
             font=("SF Pro Display", 36, "bold"),
             bg=Colors.SUCCESS,
             fg=Colors.TEXT_WHITE
@@ -774,19 +1242,34 @@ class KioskApp:
         )
         self.pdf_page2_label.pack(side=tk.TOP, fill=tk.BOTH, expand=True, pady=(3, 0))
         
-        # Footer with timer
-        self.result_footer = tk.Frame(self.result_frame, bg=Colors.PRIMARY, height=70)
+        # Footer with timer - touch to pause
+        self.result_footer = tk.Frame(self.result_frame, bg=Colors.PRIMARY, height=100)
         self.result_footer.pack(fill=tk.X, side=tk.BOTTOM)
         self.result_footer.pack_propagate(False)
         
         self.result_timer_label = tk.Label(
             self.result_footer,
             text="Returning to scanner in 30s",
-            font=("SF Pro Text", 18),
+            font=("SF Pro Text", 20),
             bg=Colors.PRIMARY,
             fg=Colors.TEXT_WHITE
         )
-        self.result_timer_label.pack(expand=True)
+        self.result_timer_label.pack(pady=(10, 0))
+        
+        self.result_pause_hint = tk.Label(
+            self.result_footer,
+            text="Touch and hold to pause",
+            font=("SF Pro Text", 12),
+            bg=Colors.PRIMARY,
+            fg="#CCCCCC"
+        )
+        self.result_pause_hint.pack(pady=(5, 10))
+        
+        # Bind touch-to-pause on result frame
+        self.result_frame.bind('<Button-1>', self._pause_timer)
+        self.result_frame.bind('<ButtonRelease-1>', self._resume_timer)
+        self.result_footer.bind('<Button-1>', self._pause_timer)
+        self.result_footer.bind('<ButtonRelease-1>', self._resume_timer)
     
     def _setup_error_screen(self):
         """Setup the error screen with 10 second timeout"""
@@ -876,6 +1359,272 @@ class KioskApp:
         )
         self.error_timer_label.pack(expand=True)
     
+    def _setup_compliance_screen(self):
+        """Setup the compliance report screen for OCR scan results"""
+        # Header - dynamic based on compliance status
+        self.compliance_header = tk.Frame(self.compliance_frame, bg=Colors.SUCCESS, height=100)
+        self.compliance_header.pack(fill=tk.X)
+        self.compliance_header.pack_propagate(False)
+        
+        self.compliance_status_label = tk.Label(
+            self.compliance_header,
+            text="PRODUCT COMPLIANT",
+            font=("SF Pro Display", 32, "bold"),
+            bg=Colors.SUCCESS,
+            fg=Colors.TEXT_WHITE
+        )
+        self.compliance_status_label.pack(expand=True)
+        
+        # Main content
+        content = tk.Frame(self.compliance_frame, bg=Colors.BACKGROUND)
+        content.pack(fill=tk.BOTH, expand=True)
+        
+        # Product info section
+        self.compliance_product_frame = tk.Frame(content, bg=Colors.SURFACE, padx=20, pady=15)
+        self.compliance_product_frame.pack(fill=tk.X, padx=20, pady=10)
+        
+        self.compliance_product_name = tk.Label(
+            self.compliance_product_frame,
+            text="Product Name",
+            font=("SF Pro Display", 24, "bold"),
+            bg=Colors.SURFACE,
+            fg=Colors.TEXT_PRIMARY
+        )
+        self.compliance_product_name.pack(anchor=tk.W)
+        
+        self.compliance_brand = tk.Label(
+            self.compliance_product_frame,
+            text="Brand / Manufacturer",
+            font=("SF Pro Text", 18),
+            bg=Colors.SURFACE,
+            fg=Colors.TEXT_SECONDARY
+        )
+        self.compliance_brand.pack(anchor=tk.W)
+        
+        # Compliance checklist section
+        compliance_title = tk.Label(
+            content,
+            text="PACKAGING COMPLIANCE",
+            font=("SF Pro Display", 20, "bold"),
+            bg=Colors.BACKGROUND,
+            fg=Colors.TEXT_PRIMARY
+        )
+        compliance_title.pack(pady=(20, 10))
+        
+        self.compliance_checklist_frame = tk.Frame(content, bg=Colors.SURFACE, padx=20, pady=15)
+        self.compliance_checklist_frame.pack(fill=tk.X, padx=20)
+        
+        # CFPR check
+        self.cfpr_check_label = tk.Label(
+            self.compliance_checklist_frame,
+            text="CFPR Number: Checking...",
+            font=("SF Pro Text", 18),
+            bg=Colors.SURFACE,
+            fg=Colors.TEXT_PRIMARY
+        )
+        self.cfpr_check_label.pack(anchor=tk.W, pady=5)
+        
+        # LTO check
+        self.lto_check_label = tk.Label(
+            self.compliance_checklist_frame,
+            text="LTO Number: Checking...",
+            font=("SF Pro Text", 18),
+            bg=Colors.SURFACE,
+            fg=Colors.TEXT_PRIMARY
+        )
+        self.lto_check_label.pack(anchor=tk.W, pady=5)
+        
+        # Expiry check
+        self.expiry_check_label = tk.Label(
+            self.compliance_checklist_frame,
+            text="Expiration Date: Checking...",
+            font=("SF Pro Text", 18),
+            bg=Colors.SURFACE,
+            fg=Colors.TEXT_PRIMARY
+        )
+        self.expiry_check_label.pack(anchor=tk.W, pady=5)
+        
+        # Warnings/Violations section
+        self.compliance_warnings_frame = tk.Frame(content, bg=Colors.WARNING_LIGHT, padx=20, pady=15)
+        # Don't pack yet - only shown if there are warnings
+        
+        self.compliance_warnings_label = tk.Label(
+            self.compliance_warnings_frame,
+            text="",
+            font=("SF Pro Text", 14),
+            bg=Colors.WARNING_LIGHT,
+            fg=Colors.WARNING,
+            justify=tk.LEFT
+        )
+        self.compliance_warnings_label.pack(anchor=tk.W)
+        
+        # Photo thumbnails
+        photos_frame = tk.Frame(content, bg=Colors.BACKGROUND)
+        photos_frame.pack(pady=20)
+        
+        tk.Label(
+            photos_frame,
+            text="Captured Images:",
+            font=("SF Pro Text", 14),
+            bg=Colors.BACKGROUND,
+            fg=Colors.TEXT_SECONDARY
+        ).pack()
+        
+        self.compliance_photos_frame = tk.Frame(photos_frame, bg=Colors.BACKGROUND)
+        self.compliance_photos_frame.pack(pady=10)
+        
+        self.compliance_front_thumb = tk.Label(
+            self.compliance_photos_frame,
+            text="Front",
+            font=("SF Pro Text", 12),
+            bg=Colors.SURFACE,
+            width=20,
+            height=8
+        )
+        self.compliance_front_thumb.pack(side=tk.LEFT, padx=10)
+        
+        self.compliance_back_thumb = tk.Label(
+            self.compliance_photos_frame,
+            text="Back",
+            font=("SF Pro Text", 12),
+            bg=Colors.SURFACE,
+            width=20,
+            height=8
+        )
+        self.compliance_back_thumb.pack(side=tk.LEFT, padx=10)
+        
+        # Footer with timer
+        self.compliance_footer = tk.Frame(self.compliance_frame, bg=Colors.PRIMARY, height=100)
+        self.compliance_footer.pack(fill=tk.X, side=tk.BOTTOM)
+        self.compliance_footer.pack_propagate(False)
+        
+        self.compliance_timer_label = tk.Label(
+            self.compliance_footer,
+            text="Returning to scanner in 30s",
+            font=("SF Pro Text", 20),
+            bg=Colors.PRIMARY,
+            fg=Colors.TEXT_WHITE
+        )
+        self.compliance_timer_label.pack(pady=(10, 0))
+        
+        tk.Label(
+            self.compliance_footer,
+            text="Touch and hold to pause",
+            font=("SF Pro Text", 12),
+            bg=Colors.PRIMARY,
+            fg="#CCCCCC"
+        ).pack(pady=(5, 10))
+        
+        # Bind touch-to-pause
+        self.compliance_frame.bind('<Button-1>', self._pause_timer)
+        self.compliance_frame.bind('<ButtonRelease-1>', self._resume_timer)
+    
+    def _setup_maintenance_screen(self):
+        """Setup the maintenance/offline mode screen - FULL SCREEN LOCKOUT"""
+        # FULL SCREEN RED BACKGROUND for maximum visibility
+        self.maintenance_frame.config(bg=Colors.ERROR)
+        
+        # Entire screen is one big warning
+        center = tk.Frame(self.maintenance_frame, bg=Colors.ERROR)
+        center.pack(fill=tk.BOTH, expand=True)
+        
+        content = tk.Frame(center, bg=Colors.ERROR)
+        content.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+        
+        # Warning text instead of emoji for small screens
+        tk.Label(
+            content,
+            text="!",
+            font=("SF Pro Display", 80, "bold"),
+            bg=Colors.ERROR,
+            fg=Colors.TEXT_WHITE
+        ).pack(pady=(0, 20))
+        
+        # MASSIVE "OFFLINE" text
+        tk.Label(
+            content,
+            text="OFFLINE",
+            font=("SF Pro Display", 120, "bold"),
+            bg=Colors.ERROR,
+            fg=Colors.TEXT_WHITE
+        ).pack(pady=(0, 20))
+        
+        # Tagalog translation - still large
+        tk.Label(
+            content,
+            text="WALANG KONEKSYON",
+            font=("SF Pro Display", 48, "bold"),
+            bg=Colors.ERROR,
+            fg=Colors.TEXT_WHITE
+        ).pack(pady=(0, 40))
+        
+        # Sub-message
+        self.maintenance_message = tk.Label(
+            content,
+            text="Cannot connect to server",
+            font=("SF Pro Text", 32),
+            bg=Colors.ERROR,
+            fg=Colors.TEXT_WHITE
+        )
+        self.maintenance_message.pack(pady=(0, 10))
+        
+        tk.Label(
+            content,
+            text="Hindi maka-connect sa server",
+            font=("SF Pro Text", 24),
+            bg=Colors.ERROR,
+            fg="#FFCCCC"
+        ).pack(pady=(0, 50))
+        
+        # Status indicator box
+        status_frame = tk.Frame(content, bg="#D32F2F", padx=40, pady=25)
+        status_frame.pack()
+        
+        self.maintenance_status_icon = tk.Label(
+            status_frame,
+            text="...",
+            font=("SF Pro Text", 28, "bold"),
+            bg="#D32F2F",
+            fg=Colors.TEXT_WHITE
+        )
+        self.maintenance_status_icon.pack(side=tk.LEFT, padx=(0, 20))
+        
+        self.maintenance_status_label = tk.Label(
+            status_frame,
+            text="Checking connection...",
+            font=("SF Pro Text", 24, "bold"),
+            bg="#D32F2F",
+            fg=Colors.TEXT_WHITE
+        )
+        self.maintenance_status_label.pack(side=tk.LEFT)
+        
+        # Retry countdown - prominent
+        self.maintenance_retry_label = tk.Label(
+            content,
+            text="Next check in 10 seconds",
+            font=("SF Pro Text", 22),
+            bg=Colors.ERROR,
+            fg=Colors.TEXT_WHITE
+        )
+        self.maintenance_retry_label.pack(pady=(40, 0))
+        
+        # Bottom message
+        tk.Label(
+            content,
+            text="Kiosk will resume automatically when connection is restored",
+            font=("SF Pro Text", 18),
+            bg=Colors.ERROR,
+            fg="#FFCCCC"
+        ).pack(pady=(20, 0))
+        
+        tk.Label(
+            content,
+            text="Awtomatikong magpapatuloy ang kiosk kapag naibalik ang koneksyon",
+            font=("SF Pro Text", 16),
+            bg=Colors.ERROR,
+            fg="#FF9999"
+        ).pack(pady=(5, 0))
+    
     def _draw_qr_icon(self, canvas, size, color):
         """Draw a QR code icon on canvas"""
         margin = size * 0.15
@@ -911,7 +1660,7 @@ class KioskApp:
     def toggle_sound(self):
         """Toggle sound on/off - touch friendly"""
         self.tts.toggle_mute()
-        button_text = "🔇 SOUND OFF" if self.tts.is_muted else "🔊 SOUND ON"
+        button_text = "SOUND\nOFF" if self.tts.is_muted else "SOUND\nON"
         if hasattr(self, 'mute_button'):
             self.mute_button.config(text=button_text)
     
@@ -933,9 +1682,23 @@ class KioskApp:
     
     def _hide_all_screens(self):
         """Hide all screen frames"""
-        for frame in [self.scan_frame, self.loading_frame, 
-                      self.result_frame, self.error_frame]:
+        for frame in [self.start_frame, self.scan_frame, self.ocr_frame,
+                      self.loading_frame, self.result_frame, 
+                      self.compliance_frame, self.error_frame, 
+                      self.maintenance_frame]:
             frame.pack_forget()
+    
+    def _show_start_screen(self):
+        """Show start screen with touch buttons"""
+        self._hide_all_screens()
+        self.start_frame.pack(fill=tk.BOTH, expand=True)
+        self.state = KioskState.CAMERA_OFF
+        
+        # Stop camera if running
+        if self.camera and self.camera.isOpened():
+            self.is_running = False
+            self.camera.release()
+            self.camera = None
     
     def _show_scan_screen(self):
         """Show scanning screen"""
@@ -943,6 +1706,15 @@ class KioskApp:
         self.scan_frame.pack(fill=tk.BOTH, expand=True)
         self.state = KioskState.IDLE
         self._animate_scan_indicator()
+    
+    def _show_ocr_screen(self):
+        """Show OCR capture screen"""
+        self._hide_all_screens()
+        self.ocr_frame.pack(fill=tk.BOTH, expand=True)
+        self.state = KioskState.OCR_CAPTURE
+        self.ocr_step = OCRCaptureStep.READY_FRONT
+        self._reset_ocr_capture()
+        self._update_ocr_ui()
     
     def _show_loading_screen(self, detail_text="Connecting to blockchain..."):
         """Show HUGE loading screen"""
@@ -957,6 +1729,12 @@ class KioskApp:
         self._hide_all_screens()
         self.result_frame.pack(fill=tk.BOTH, expand=True)
     
+    def _show_compliance_screen(self):
+        """Show compliance report screen"""
+        self._hide_all_screens()
+        self.compliance_frame.pack(fill=tk.BOTH, expand=True)
+        self.state = KioskState.DISPLAY_COMPLIANCE
+    
     def _show_error_screen(self, message: str, detail: str = "May nangyaring problema"):
         """Show error screen"""
         self._hide_all_screens()
@@ -966,6 +1744,26 @@ class KioskApp:
         self.state = KioskState.ERROR
         self.start_display_timer(self.ERROR_DISPLAY_DURATION, is_error=True)
         self.tts.speak(TagalogMessages.ERROR_OCCURRED)
+    
+    def _show_maintenance_screen(self, message: str = "Server connection lost"):
+        """Show maintenance/offline screen and start polling"""
+        self._hide_all_screens()
+        self.maintenance_frame.pack(fill=tk.BOTH, expand=True)
+        self.state = KioskState.MAINTENANCE
+        
+        # Update message
+        self.maintenance_message.config(text=message)
+        self.maintenance_status_label.config(text="Checking connection...")
+        self.maintenance_status_icon.config(text="...")
+        
+        # Stop camera to save resources
+        if self.camera and self.camera.isOpened():
+            self.is_running = False
+            self.camera.release()
+            self.camera = None
+        
+        # Start polling for recovery
+        self._start_connectivity_polling()
     
     def _animate_scan_indicator(self):
         """Animate the scanning indicator"""
@@ -1203,7 +2001,7 @@ class KioskApp:
                     # Verified icon
                     tk.Label(
                         name_frame,
-                        text="✓",
+                        text="OK",
                         font=("SF Pro Text", 14, "bold"),
                         bg=Colors.BACKGROUND,
                         fg=Colors.SUCCESS
@@ -1453,24 +2251,175 @@ class KioskApp:
         self._show_error_screen(message, "May nangyaring problema. Subukan muli.")
     
     def initialize_kiosk(self):
-        """Initialize kiosk - check API and start camera"""
+        """Initialize kiosk - check API, show start screen (camera off)"""
         # Check API connection in background
         thread = threading.Thread(target=self._check_api_connection, daemon=True)
         thread.start()
         
-        # Start camera and show scan screen
-        self._show_scan_screen()
-        self.start_camera()
+        # Show start screen (camera stays off until user taps)
+        self._show_start_screen()
         self.tts.speak(TagalogMessages.WELCOME)
+        
+        # Start background connectivity monitoring (after initial delay)
+        self.root.after(5000, self._start_background_monitoring)
+    
+    def _start_background_monitoring(self):
+        """Start background connectivity monitoring"""
+        if self.state != KioskState.MAINTENANCE:
+            self.connectivity_poll_id = self.root.after(
+                self.CONNECTIVITY_POLL_INTERVAL_ONLINE,
+                self._poll_connectivity
+            )
     
     def _check_api_connection(self):
-        """Check if RCV API is accessible"""
+        """Check if RCV API is accessible and update online status"""
         result = self.api.health_check()
+        was_online = self.is_online
+        
         if result.get("success"):
+            self.is_online = True
+            self.consecutive_failures = 0
             print(f"✓ Connected to RCV API: {self.api.base_url}")
+            
+            # Update start screen status indicator
+            self.root.after(0, lambda: self._update_connection_status(True))
+            
+            # If we were in maintenance mode, recover
+            if self.state == KioskState.MAINTENANCE:
+                self.root.after(0, self._recover_from_maintenance)
         else:
-            print(f"⚠ RCV API not accessible: {self.api.base_url}")
-            print("  Kiosk will work in offline mode with limited functionality")
+            self.is_online = False
+            self.consecutive_failures += 1
+            print(f"⚠ RCV API not accessible: {self.api.base_url} (failure #{self.consecutive_failures})")
+            
+            # Update start screen status indicator
+            self.root.after(0, lambda: self._update_connection_status(False))
+            
+            # Enter maintenance mode after consecutive failures
+            if self.consecutive_failures >= self.MAX_FAILURES_BEFORE_MAINTENANCE:
+                if self.state != KioskState.MAINTENANCE:
+                    self.root.after(0, lambda: self._show_maintenance_screen("Cannot connect to server"))
+        
+        self.last_connectivity_check = time.time()
+    
+    def _update_connection_status(self, is_online: bool):
+        """Update connection status indicator on start screen and enable/disable buttons"""
+        try:
+            if is_online:
+                self.connection_status_icon.config(fg=Colors.SUCCESS)
+                self.connection_status_label.config(
+                    text=" Server connected",
+                    fg=Colors.SUCCESS
+                )
+                # Enable buttons when online
+                self.start_camera_btn.config(state=tk.NORMAL)
+                self.start_ocr_btn.config(state=tk.NORMAL)
+            else:
+                self.connection_status_icon.config(fg=Colors.ERROR)
+                self.connection_status_label.config(
+                    text=" Server offline - Features disabled",
+                    fg=Colors.ERROR
+                )
+                # Disable buttons when offline
+                self.start_camera_btn.config(state=tk.DISABLED)
+                self.start_ocr_btn.config(state=tk.DISABLED)
+        except tk.TclError:
+            pass  # Widget may not exist yet
+    
+    def _start_connectivity_polling(self):
+        """Start periodic connectivity checking"""
+        if self.connectivity_poll_id:
+            self.root.after_cancel(self.connectivity_poll_id)
+        
+        self._poll_connectivity()
+    
+    def _poll_connectivity(self):
+        """Poll server connectivity and update UI"""
+        if self.state != KioskState.MAINTENANCE:
+            # Not in maintenance mode, use longer interval
+            self.connectivity_poll_id = self.root.after(
+                self.CONNECTIVITY_POLL_INTERVAL_ONLINE, 
+                self._poll_connectivity
+            )
+            thread = threading.Thread(target=self._check_api_connection, daemon=True)
+            thread.start()
+            return
+        
+        # Update status UI
+        self.maintenance_status_label.config(text="Checking connection...")
+        self.maintenance_status_icon.config(text="...")
+        
+        # Check in background
+        def check_and_update():
+            result = self.api.health_check()
+            self.root.after(0, lambda: self._update_maintenance_status(result))
+        
+        thread = threading.Thread(target=check_and_update, daemon=True)
+        thread.start()
+        
+        # Schedule next check
+        self.connectivity_poll_id = self.root.after(
+            self.CONNECTIVITY_POLL_INTERVAL, 
+            self._poll_connectivity
+        )
+        
+        # Update countdown
+        self._update_retry_countdown()
+    
+    def _update_maintenance_status(self, result: dict):
+        """Update maintenance screen based on connectivity check result"""
+        if result.get("success"):
+            self.is_online = True
+            self.consecutive_failures = 0
+            self.maintenance_status_icon.config(text="OK")
+            self.maintenance_status_label.config(text="Server connected! Resuming...")
+            
+            # Cancel polling and recover
+            if self.connectivity_poll_id:
+                self.root.after_cancel(self.connectivity_poll_id)
+            
+            self.root.after(1500, self._recover_from_maintenance)
+        else:
+            self.is_online = False
+            self.consecutive_failures += 1
+            self.maintenance_status_icon.config(text="X")
+            self.maintenance_status_label.config(
+                text=f"Server unreachable (attempt {self.consecutive_failures})"
+            )
+    
+    def _update_retry_countdown(self):
+        """Update the retry countdown on maintenance screen"""
+        if self.state != KioskState.MAINTENANCE:
+            return
+        
+        interval_seconds = self.CONNECTIVITY_POLL_INTERVAL // 1000
+        
+        def countdown(remaining):
+            if self.state != KioskState.MAINTENANCE or remaining <= 0:
+                return
+            self.maintenance_retry_label.config(text=f"Next check in {remaining} seconds")
+            self.root.after(1000, lambda: countdown(remaining - 1))
+        
+        countdown(interval_seconds)
+    
+    def _recover_from_maintenance(self):
+        """Recover from maintenance mode when server comes back online"""
+        print("✓ Server connection restored - recovering from maintenance mode")
+        
+        # Cancel any pending polls
+        if self.connectivity_poll_id:
+            self.root.after_cancel(self.connectivity_poll_id)
+            self.connectivity_poll_id = None
+        
+        # Return to start screen
+        self._show_start_screen()
+        self.tts.speak("Koneksyon sa server ay naibalik. Handa na ulit ang kiosk.")
+        
+        # Start background monitoring (longer interval)
+        self.connectivity_poll_id = self.root.after(
+            self.CONNECTIVITY_POLL_INTERVAL_ONLINE,
+            self._poll_connectivity
+        )
     
     def start_camera(self):
         """Initialize and start the camera automatically"""
@@ -1510,6 +2459,40 @@ class KioskApp:
                 "Hindi mahanap ang camera. Mangyaring ikonekta ang camera."
             )
     
+    def restart_camera(self):
+        """Restart camera - used when camera is unplugged/replugged"""
+        # Stop current camera
+        if self.camera and self.camera.isOpened():
+            self.is_running = False
+            time.sleep(0.2)  # Give video loop time to stop
+            self.camera.release()
+            self.camera = None
+        
+        # Show loading briefly
+        self.camera_label.config(text="Reloading Camera...\nNagre-reload ng camera...", image="")
+        self.root.update()
+        
+        # Restart
+        time.sleep(0.5)
+        self.start_camera()
+        self.tts.speak("Camera reloaded")
+    
+    def _start_camera_and_scan(self):
+        """Start camera and switch to QR scan mode"""
+        self._show_scan_screen()
+        self.start_camera()
+        self.tts.speak("Camera started. Ready to scan.")
+    
+    def _start_ocr_capture(self):
+        """Start OCR product label capture flow"""
+        # Start camera if not running
+        if not self.camera or not self.camera.isOpened():
+            self.start_camera()
+        
+        # Switch to OCR capture screen
+        self._show_ocr_screen()
+        self.tts.speak("Position the front of the product label and tap Capture.")
+    
     def video_loop(self):
         """Main video loop - continuous scanning with performance optimization"""
         target_fps = 15  # Target frame rate for smooth display
@@ -1522,17 +2505,24 @@ class KioskApp:
             if not ret:
                 continue
             
+            # Store current frame for OCR capture
+            self.current_frame = frame.copy()
+            
             # Only process QR detection if in scanning state
             if self.state == KioskState.IDLE:
                 # Try to detect QR code
-                frame, qr_data = self.process_qr_frame(frame)
+                display_frame, qr_data = self.process_qr_frame(frame)
                 
                 if qr_data and self.can_process_scan(qr_data):
                     self.handle_qr_detection(qr_data)
+                
+                # Display frame in scan mode
+                self.display_frame(display_frame)
             
-            # Display frame only when in scan mode
-            if self.state == KioskState.IDLE:
-                self.display_frame(frame)
+            # Display frame in OCR capture mode (when ready to capture)
+            elif self.state == KioskState.OCR_CAPTURE:
+                if self.ocr_step in [OCRCaptureStep.READY_FRONT, OCRCaptureStep.READY_BACK]:
+                    self._display_ocr_frame(frame)
             
             # Frame rate limiting
             elapsed = time.time() - loop_start
@@ -2021,16 +3011,24 @@ class KioskApp:
         """Start countdown timer for display"""
         self.remaining_time = duration
         self.is_error_timer = is_error
+        self.timer_paused = False
         self.update_timer()
     
     def update_timer(self):
         """Update the countdown timer"""
+        # Skip if timer is paused
+        if self.timer_paused:
+            self.display_timer = self.root.after(500, self.update_timer)
+            return
+        
         if self.remaining_time > 0:
             timer_text = f"Returning to scanner in {self.remaining_time}s"
             
             # Update the correct timer label based on current screen
             if self.is_error_timer:
                 self.error_timer_label.config(text=timer_text)
+            elif self.state == KioskState.DISPLAY_COMPLIANCE:
+                self.compliance_timer_label.config(text=timer_text)
             else:
                 self.result_timer_label.config(text=timer_text)
             
@@ -2038,6 +3036,20 @@ class KioskApp:
             self.display_timer = self.root.after(1000, self.update_timer)
         else:
             self.reset_to_idle()
+    
+    def _pause_timer(self, event=None):
+        """Pause the countdown timer when user touches screen"""
+        self.timer_paused = True
+        pause_text = "PAUSED - Release to continue"
+        
+        if self.state == KioskState.DISPLAY_COMPLIANCE:
+            self.compliance_timer_label.config(text=pause_text)
+        elif not self.is_error_timer:
+            self.result_timer_label.config(text=pause_text)
+    
+    def _resume_timer(self, event=None):
+        """Resume the countdown timer when user releases touch"""
+        self.timer_paused = False
     
     def reset_to_idle(self):
         """Reset kiosk to idle/scan state"""
@@ -2056,6 +3068,283 @@ class KioskApp:
             self.start_camera()
         
         self.tts.speak(TagalogMessages.READY_FOR_NEXT)
+    
+    # ============ OCR Capture Methods ============
+    
+    def _reset_ocr_capture(self):
+        """Reset OCR capture state for a new scan"""
+        self.ocr_step = OCRCaptureStep.READY_FRONT
+        self.ocr_front_image = None
+        self.ocr_back_image = None
+        self.ocr_front_frame = None
+        self.ocr_back_frame = None
+        
+        # Reset thumbnails
+        self.ocr_front_thumb.config(text="Not captured", image="")
+        self.ocr_back_thumb.config(text="Not captured", image="")
+        
+        # Enable capture button, disable submit
+        self.ocr_capture_btn.config(state=tk.NORMAL)
+        self.ocr_submit_btn.config(state=tk.DISABLED)
+    
+    def _update_ocr_ui(self):
+        """Update OCR capture screen UI based on current step"""
+        if self.ocr_step == OCRCaptureStep.READY_FRONT:
+            self.ocr_instruction_label.config(text="Position FRONT of label")
+            self.ocr_instruction_sub.config(text="Ilagay ang HARAP ng label")
+            self.ocr_capture_btn.config(text="CAPTURE", state=tk.NORMAL)
+            self.ocr_retake_btn.config(state=tk.DISABLED)
+        
+        elif self.ocr_step == OCRCaptureStep.PREVIEW_FRONT:
+            self.ocr_instruction_label.config(text="Front captured! Ready for BACK")
+            self.ocr_instruction_sub.config(text="Handa na para sa LIKOD")
+            self.ocr_capture_btn.config(text="CAPTURE", state=tk.NORMAL)
+            self.ocr_retake_btn.config(state=tk.NORMAL)
+        
+        elif self.ocr_step == OCRCaptureStep.READY_BACK:
+            self.ocr_instruction_label.config(text="Position BACK of label")
+            self.ocr_instruction_sub.config(text="Ilagay ang LIKOD ng label")
+            self.ocr_capture_btn.config(text="CAPTURE", state=tk.NORMAL)
+            self.ocr_retake_btn.config(state=tk.NORMAL)
+        
+        elif self.ocr_step == OCRCaptureStep.PREVIEW_BACK:
+            self.ocr_instruction_label.config(text="Both sides captured! Ready")
+            self.ocr_instruction_sub.config(text="Nakuha ang dalawang panig!")
+            self.ocr_capture_btn.config(state=tk.DISABLED)
+            self.ocr_retake_btn.config(state=tk.NORMAL)
+            self.ocr_submit_btn.config(state=tk.NORMAL)
+    
+    def _display_ocr_frame(self, frame):
+        """Display frame in OCR capture camera preview"""
+        try:
+            # Resize and convert
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            frame_resized = cv2.resize(frame_rgb, (400, 300))
+            
+            pil_image = Image.fromarray(frame_resized)
+            photo = ImageTk.PhotoImage(pil_image)
+            
+            self.ocr_camera_label.config(image=photo, text="")
+            self.ocr_camera_label.image = photo
+        except Exception as e:
+            pass
+    
+    def _ocr_capture_photo(self):
+        """Capture current frame as photo"""
+        if self.current_frame is None:
+            return
+        
+        # Capture the current frame
+        frame_copy = self.current_frame.copy()
+        
+        if self.ocr_step == OCRCaptureStep.READY_FRONT:
+            self.ocr_front_frame = frame_copy
+            
+            # Create thumbnail
+            thumb = self._create_thumbnail(frame_copy, 150, 100)
+            self.ocr_front_thumb.config(image=thumb, text="")
+            self.ocr_front_thumb.image = thumb
+            
+            # Move to ready for back
+            self.ocr_step = OCRCaptureStep.PREVIEW_FRONT
+            self._update_ocr_ui()
+            self.tts.speak("Front captured. Now position the back.")
+        
+        elif self.ocr_step in [OCRCaptureStep.PREVIEW_FRONT, OCRCaptureStep.READY_BACK]:
+            self.ocr_back_frame = frame_copy
+            
+            # Create thumbnail
+            thumb = self._create_thumbnail(frame_copy, 150, 100)
+            self.ocr_back_thumb.config(image=thumb, text="")
+            self.ocr_back_thumb.image = thumb
+            
+            # Ready to submit
+            self.ocr_step = OCRCaptureStep.PREVIEW_BACK
+            self._update_ocr_ui()
+            self.tts.speak("Back captured. Tap Submit to analyze.")
+    
+    def _create_thumbnail(self, frame, width, height):
+        """Create a thumbnail from a frame"""
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        pil_image = Image.fromarray(frame_rgb)
+        pil_image.thumbnail((width, height))
+        return ImageTk.PhotoImage(pil_image)
+    
+    def _ocr_retake_photo(self):
+        """Retake the last captured photo"""
+        if self.ocr_step == OCRCaptureStep.PREVIEW_FRONT:
+            # Retake front
+            self.ocr_front_frame = None
+            self.ocr_front_thumb.config(text="Not captured", image="")
+            self.ocr_step = OCRCaptureStep.READY_FRONT
+        elif self.ocr_step in [OCRCaptureStep.READY_BACK, OCRCaptureStep.PREVIEW_BACK]:
+            # Retake back
+            self.ocr_back_frame = None
+            self.ocr_back_thumb.config(text="Not captured", image="")
+            self.ocr_step = OCRCaptureStep.READY_BACK
+        
+        self._update_ocr_ui()
+    
+    def _ocr_cancel(self):
+        """Cancel OCR capture and return to start screen"""
+        self._reset_ocr_capture()
+        self._show_start_screen()
+    
+    def _ocr_submit_scan(self):
+        """Submit captured photos for OCR processing"""
+        if self.ocr_front_frame is None or self.ocr_back_frame is None:
+            return
+        
+        # Show loading screen
+        self._show_loading_screen("Processing product label...\nPinoproseso ang label ng produkto...")
+        
+        # Process in background
+        thread = threading.Thread(target=self._process_ocr_scan, daemon=True)
+        thread.start()
+    
+    def _process_ocr_scan(self):
+        """Process OCR scan - extract text and send to API"""
+        try:
+            # Extract text from both images using Tesseract
+            self.root.after(0, lambda: self.loading_detail_label.config(text="Reading front label..."))
+            
+            front_rgb = cv2.cvtColor(self.ocr_front_frame, cv2.COLOR_BGR2RGB)
+            front_pil = Image.fromarray(front_rgb)
+            front_text = pytesseract.image_to_string(front_pil)
+            
+            self.root.after(0, lambda: self.loading_detail_label.config(text="Reading back label..."))
+            
+            back_rgb = cv2.cvtColor(self.ocr_back_frame, cv2.COLOR_BGR2RGB)
+            back_pil = Image.fromarray(back_rgb)
+            back_text = pytesseract.image_to_string(back_pil)
+            
+            # Combine text
+            combined_text = f"{front_text}\n\n{back_text}"
+            print(f"OCR Text extracted ({len(combined_text)} chars)")
+            
+            self.root.after(0, lambda: self.loading_detail_label.config(text="Searching for product..."))
+            
+            # Send to API - calling /scan/scanProduct endpoint
+            print(f"📡 Calling /scan/scanProduct API...")
+            response = self.api.scan_product_ocr(combined_text)
+            print(f"📨 API Response: found={response.get('found')}, isCompliant={response.get('isCompliant')}")
+            
+            if response.get("success"):
+                print(f"✅ Displaying compliance result to user")
+                self.root.after(0, lambda: self._display_compliance_result(response))
+            else:
+                print(f"❌ Scan failed: {response.get('message')}")
+                self.root.after(0, lambda: self._show_error_screen(
+                    "Scan failed",
+                    response.get("message", "Could not process the product label")
+                ))
+                
+        except Exception as e:
+            print(f"OCR processing error: {e}")
+            self.root.after(0, lambda: self._show_error_screen(
+                f"Processing Error: {str(e)}",
+                "May problema sa pagproseso ng label"
+            ))
+    
+    def _display_compliance_result(self, response: dict):
+        """Display compliance scan result"""
+        is_compliant = response.get("isCompliant", False)
+        found = response.get("found", False)
+        
+        # Update header based on result
+        if not found:
+            self.compliance_header.config(bg=Colors.ERROR)
+            self.compliance_status_label.config(
+                bg=Colors.ERROR,
+                text="PRODUCT NOT FOUND"
+            )
+        elif is_compliant:
+            self.compliance_header.config(bg=Colors.SUCCESS)
+            self.compliance_status_label.config(
+                bg=Colors.SUCCESS,
+                text="PRODUCT COMPLIANT"
+            )
+        else:
+            self.compliance_header.config(bg=Colors.WARNING)
+            self.compliance_status_label.config(
+                bg=Colors.WARNING,
+                text="PACKAGING VIOLATIONS"
+            )
+        
+        # Product info
+        product_info = response.get("productInfo", {})
+        self.compliance_product_name.config(
+            text=product_info.get("productName", "Unknown Product")
+        )
+        self.compliance_brand.config(
+            text=f"{product_info.get('brandName', '')} / {product_info.get('manufacturer', '')}"
+        )
+        
+        # Compliance checklist
+        compliance = response.get("packagingCompliance", {})
+        
+        cfpr = compliance.get("cfpr", {})
+        cfpr_status = cfpr.get("status", "N/A")
+        cfpr_icon = "✓" if cfpr_status == "COMPLIANT" else ("✗" if cfpr_status == "VIOLATION" else "?")
+        cfpr_color = Colors.SUCCESS if cfpr_status == "COMPLIANT" else (Colors.ERROR if cfpr_status == "VIOLATION" else Colors.TEXT_SECONDARY)
+        self.cfpr_check_label.config(
+            text=f"{cfpr_icon} CFPR: {cfpr.get('required', 'N/A')} - {cfpr_status}",
+            fg=cfpr_color
+        )
+        
+        lto = compliance.get("lto", {})
+        lto_status = lto.get("status", "N/A")
+        lto_icon = "✓" if lto_status == "COMPLIANT" else ("✗" if lto_status == "VIOLATION" else "?")
+        lto_color = Colors.SUCCESS if lto_status == "COMPLIANT" else (Colors.ERROR if lto_status == "VIOLATION" else Colors.TEXT_SECONDARY)
+        self.lto_check_label.config(
+            text=f"{lto_icon} LTO: {lto.get('required', 'N/A')} - {lto_status}",
+            fg=lto_color
+        )
+        
+        expiry = compliance.get("expirationDate", {})
+        expiry_status = expiry.get("status", "N/A")
+        expiry_icon = "✓" if expiry_status == "COMPLIANT" else "✗"
+        expiry_color = Colors.SUCCESS if expiry_status == "COMPLIANT" else Colors.ERROR
+        self.expiry_check_label.config(
+            text=f"{expiry_icon} Expiry: {expiry.get('foundOnPackaging', 'Not found')} - {expiry_status}",
+            fg=expiry_color
+        )
+        
+        # Warnings/Violations
+        violations = response.get("violations", [])
+        warnings = response.get("warnings", [])
+        
+        if violations or warnings:
+            all_warnings = violations + warnings
+            self.compliance_warnings_label.config(
+                text="\n".join(f"• {w}" for w in all_warnings[:5])
+            )
+            self.compliance_warnings_frame.pack(fill=tk.X, padx=20, pady=10)
+        else:
+            self.compliance_warnings_frame.pack_forget()
+        
+        # Show thumbnails
+        if self.ocr_front_frame is not None:
+            thumb = self._create_thumbnail(self.ocr_front_frame, 150, 100)
+            self.compliance_front_thumb.config(image=thumb, text="")
+            self.compliance_front_thumb.image = thumb
+        
+        if self.ocr_back_frame is not None:
+            thumb = self._create_thumbnail(self.ocr_back_frame, 150, 100)
+            self.compliance_back_thumb.config(image=thumb, text="")
+            self.compliance_back_thumb.image = thumb
+        
+        # Show compliance screen and start timer
+        self._show_compliance_screen()
+        self.start_display_timer(self.RESULT_DISPLAY_DURATION, is_error=False)
+        
+        # TTS
+        if not found:
+            self.tts.speak("Product not found in database.")
+        elif is_compliant:
+            self.tts.speak("Product is compliant. All required information found on packaging.")
+        else:
+            self.tts.speak("Warning. Packaging has violations. Please check the details.")
     
     def _fetch_and_display_pdf_pages(self, pdf_url: str):
         """Fetch PDF and display 2 pages side by side"""
