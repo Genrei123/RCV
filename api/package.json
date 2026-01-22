@@ -28,7 +28,7 @@
     "firebase-admin": "^13.5.0",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
-    "jspdf": "^3.0.3",
+    "jspdf": "^4.0.0",
     "mysql2": "^3.14.4",
     "nodemailer": "^7.0.7",
     "openai": "^6.3.0",
