@@ -38,7 +38,7 @@ type LogoIconProps = {
 };
 
 // Inline logo component (hexagon + inner circle)
-const LogoIcon = ({
+export const LogoIcon = ({
   className = "w-8 h-8 app-bg-primary",
 }: LogoIconProps) => {
   const gradId = useId();

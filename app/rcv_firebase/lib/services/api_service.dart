@@ -45,17 +45,20 @@ class ApiService {
     String ocrText, {
     String? frontImageUrl,
     String? backImageUrl,
+    String? packageType,
   }) async {
     try {
       developer.log('Sending OCR text to backend for processing...');
       developer.log('OCR Text length: ${ocrText.length} characters');
       if (frontImageUrl != null) developer.log('Front image: $frontImageUrl');
       if (backImageUrl != null) developer.log('Back image: $backImageUrl');
+      if (packageType != null) developer.log('Package type: $packageType');
 
       final requestBody = {
         'blockOfText': ocrText,
         if (frontImageUrl != null) 'frontImageUrl': frontImageUrl,
         if (backImageUrl != null) 'backImageUrl': backImageUrl,
+        if (packageType != null) 'packageType': packageType,
       };
 
       final response = await http

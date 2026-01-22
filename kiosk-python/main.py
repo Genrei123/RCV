@@ -610,317 +610,322 @@ class KioskApp:
         self._show_start_screen()
     
     def _setup_start_screen(self):
-        """Setup the initial start screen with touch-friendly buttons"""
-        # Header with logo
-        header = tk.Frame(self.start_frame, bg=Colors.PRIMARY, height=120)
-        header.pack(fill=tk.X)
-        header.pack_propagate(False)
+        """Setup the initial start screen with sidebar layout for small screens"""
+        # Main horizontal layout - sidebar on left, content on right
+        main_container = tk.Frame(self.start_frame, bg=Colors.BACKGROUND)
+        main_container.pack(fill=tk.BOTH, expand=True)
         
+        # LEFT SIDEBAR - Navigation buttons
+        sidebar = tk.Frame(main_container, bg=Colors.PRIMARY, width=180)
+        sidebar.pack(side=tk.LEFT, fill=tk.Y)
+        sidebar.pack_propagate(False)
+        
+        # Sidebar header
         tk.Label(
-            header,
-            text="RCV Product Verification Kiosk",
-            font=("SF Pro Display", 36, "bold"),
+            sidebar,
+            text="RCV",
+            font=("SF Pro Display", 20, "bold"),
             bg=Colors.PRIMARY,
             fg=Colors.TEXT_WHITE
-        ).pack(expand=True)
+        ).pack(pady=(15, 5))
+        
+        tk.Label(
+            sidebar,
+            text="KIOSK",
+            font=("SF Pro Text", 12),
+            bg=Colors.PRIMARY,
+            fg="#CCCCCC"
+        ).pack(pady=(0, 20))
+        
+        # Sidebar buttons - compact for small screens
+        self.start_camera_btn = tk.Button(
+            sidebar,
+            text="START\nCAMERA",
+            font=("SF Pro Display", 11, "bold"),
+            bg=Colors.PRIMARY_LIGHT,
+            fg=Colors.TEXT_WHITE,
+            activebackground=Colors.ACCENT,
+            activeforeground=Colors.TEXT_WHITE,
+            relief=tk.FLAT,
+            bd=0,
+            width=14,
+            pady=15,
+            command=self._start_camera_and_scan,
+            cursor="hand2"
+        )
+        self.start_camera_btn.pack(pady=8, padx=10, fill=tk.X)
+        
+        self.start_ocr_btn = tk.Button(
+            sidebar,
+            text="SCAN\nLABEL",
+            font=("SF Pro Display", 11, "bold"),
+            bg=Colors.ACCENT,
+            fg=Colors.TEXT_WHITE,
+            activebackground=Colors.PRIMARY_LIGHT,
+            activeforeground=Colors.TEXT_WHITE,
+            relief=tk.FLAT,
+            bd=0,
+            width=14,
+            pady=15,
+            command=self._start_ocr_capture,
+            cursor="hand2"
+        )
+        self.start_ocr_btn.pack(pady=8, padx=10, fill=tk.X)
+        
+        # Spacer
+        tk.Frame(sidebar, bg=Colors.PRIMARY).pack(fill=tk.BOTH, expand=True)
+        
+        # Connection status at bottom of sidebar
+        status_frame = tk.Frame(sidebar, bg=Colors.PRIMARY_DARK, height=50)
+        status_frame.pack(fill=tk.X, side=tk.BOTTOM)
+        status_frame.pack_propagate(False)
+        
+        self.connection_status_icon = tk.Label(
+            status_frame,
+            text="*",
+            font=("SF Pro Text", 12),
+            bg=Colors.PRIMARY_DARK,
+            fg=Colors.TEXT_SECONDARY
+        )
+        self.connection_status_icon.pack(pady=(8, 2))
+        
+        self.connection_status_label = tk.Label(
+            status_frame,
+            text="Checking...",
+            font=("SF Pro Text", 9),
+            bg=Colors.PRIMARY_DARK,
+            fg="#AAAAAA"
+        )
+        self.connection_status_label.pack()
+        
+        # RIGHT CONTENT AREA
+        content_area = tk.Frame(main_container, bg=Colors.BACKGROUND)
+        content_area.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
         # Center content
-        center = tk.Frame(self.start_frame, bg=Colors.BACKGROUND)
-        center.pack(fill=tk.BOTH, expand=True)
-        
-        content = tk.Frame(center, bg=Colors.BACKGROUND)
+        content = tk.Frame(content_area, bg=Colors.BACKGROUND)
         content.place(relx=0.5, rely=0.45, anchor=tk.CENTER)
         
-        # Welcome message
+        # Welcome message - smaller fonts for small screens
         tk.Label(
             content,
-            text="Welcome / Maligayang Pagdating",
-            font=("SF Pro Display", 32, "bold"),
+            text="Welcome",
+            font=("SF Pro Display", 22, "bold"),
             bg=Colors.BACKGROUND,
             fg=Colors.TEXT_PRIMARY
+        ).pack(pady=(0, 5))
+        
+        tk.Label(
+            content,
+            text="Maligayang Pagdating",
+            font=("SF Pro Text", 14),
+            bg=Colors.BACKGROUND,
+            fg=Colors.TEXT_SECONDARY
+        ).pack(pady=(0, 20))
+        
+        tk.Label(
+            content,
+            text="Tap a button on the left\nto begin scanning",
+            font=("SF Pro Text", 12),
+            bg=Colors.BACKGROUND,
+            fg=Colors.TEXT_SECONDARY,
+            justify=tk.CENTER
         ).pack(pady=(0, 10))
         
         tk.Label(
             content,
-            text="Tap a button below to begin",
-            font=("SF Pro Text", 22),
+            text="I-tap ang button sa kaliwa\npara magsimula",
+            font=("SF Pro Text", 10),
             bg=Colors.BACKGROUND,
-            fg=Colors.TEXT_SECONDARY
-        ).pack(pady=(0, 50))
+            fg="#999999",
+            justify=tk.CENTER
+        ).pack()
+    
+    def _setup_scan_screen(self):
+        """Setup the scanning screen with sidebar layout for small screens"""
+        # Main horizontal layout - sidebar on left, camera on right
+        main_container = tk.Frame(self.scan_frame, bg=Colors.BACKGROUND)
+        main_container.pack(fill=tk.BOTH, expand=True)
         
-        # Buttons container
-        buttons_frame = tk.Frame(content, bg=Colors.BACKGROUND)
-        buttons_frame.pack()
+        # LEFT SIDEBAR - Control buttons
+        sidebar = tk.Frame(main_container, bg=Colors.PRIMARY, width=140)
+        sidebar.pack(side=tk.LEFT, fill=tk.Y)
+        sidebar.pack_propagate(False)
         
-        # Fixed button width for alignment (in characters)
-        BUTTON_WIDTH = 35
-        
-        # START CAMERA button - Large touch-friendly
-        self.start_camera_btn = tk.Button(
-            buttons_frame,
-            text="🎥  START CAMERA\nSimulan ang Camera",
-            font=("SF Pro Display", 24, "bold"),
+        # Sidebar header
+        tk.Label(
+            sidebar,
+            text="RCV",
+            font=("SF Pro Display", 16, "bold"),
             bg=Colors.PRIMARY,
-            fg=Colors.TEXT_WHITE,
-            activebackground=Colors.PRIMARY_LIGHT,
-            activeforeground=Colors.TEXT_WHITE,
-            relief=tk.RAISED,
-            bd=4,
-            width=BUTTON_WIDTH,
-            pady=30,
-            command=self._start_camera_and_scan,
-            cursor="hand2"
-        )
-        self.start_camera_btn.pack(pady=15)
+            fg=Colors.TEXT_WHITE
+        ).pack(pady=(10, 3))
         
-        # SCAN PRODUCT (OCR) button - Large touch-friendly
-        self.start_ocr_btn = tk.Button(
-            buttons_frame,
-            text="📷  SCAN PRODUCT LABEL\nI-scan ang Label ng Produkto",
-            font=("SF Pro Display", 24, "bold"),
+        tk.Label(
+            sidebar,
+            text="QR SCAN",
+            font=("SF Pro Text", 9),
+            bg=Colors.PRIMARY,
+            fg="#CCCCCC"
+        ).pack(pady=(0, 15))
+        
+        # Sidebar control buttons - compact for small screens
+        self.mute_button = tk.Button(
+            sidebar,
+            text="SOUND\nON" if not self.tts.is_muted else "SOUND\nOFF",
+            font=("SF Pro Text", 9, "bold"),
+            bg=Colors.PRIMARY_LIGHT,
+            fg=Colors.TEXT_WHITE,
+            activebackground=Colors.ACCENT,
+            activeforeground=Colors.TEXT_WHITE,
+            relief=tk.FLAT,
+            bd=0,
+            width=12,
+            pady=10,
+            command=self.toggle_sound
+        )
+        self.mute_button.pack(pady=5, padx=8, fill=tk.X)
+        
+        self.reload_camera_btn = tk.Button(
+            sidebar,
+            text="RELOAD",
+            font=("SF Pro Text", 9, "bold"),
+            bg=Colors.WARNING,
+            fg=Colors.TEXT_WHITE,
+            activebackground="#F57C00",
+            activeforeground=Colors.TEXT_WHITE,
+            relief=tk.FLAT,
+            bd=0,
+            width=12,
+            pady=10,
+            command=self.restart_camera
+        )
+        self.reload_camera_btn.pack(pady=5, padx=8, fill=tk.X)
+        
+        self.scan_product_btn = tk.Button(
+            sidebar,
+            text="SCAN\nLABEL",
+            font=("SF Pro Text", 9, "bold"),
             bg=Colors.ACCENT,
             fg=Colors.TEXT_WHITE,
             activebackground="#00A895",
             activeforeground=Colors.TEXT_WHITE,
-            relief=tk.RAISED,
-            bd=4,
-            width=BUTTON_WIDTH,
-            pady=30,
-            command=self._start_ocr_capture,
-            cursor="hand2"
+            relief=tk.FLAT,
+            bd=0,
+            width=12,
+            pady=10,
+            command=self._start_ocr_capture
         )
-        self.start_ocr_btn.pack(pady=15)
+        self.scan_product_btn.pack(pady=5, padx=8, fill=tk.X)
         
-        # Footer with connection status
-        footer = tk.Frame(self.start_frame, bg=Colors.SURFACE, height=100)
-        footer.pack(fill=tk.X, side=tk.BOTTOM)
-        footer.pack_propagate(False)
-        
-        tk.Label(
-            footer,
-            text="Touch screen to interact • I-touch ang screen para makipag-interact",
-            font=("SF Pro Text", 16),
-            bg=Colors.SURFACE,
-            fg=Colors.TEXT_SECONDARY
-        ).pack(pady=(10, 5))
-        
-        # Connection status indicator
-        status_frame = tk.Frame(footer, bg=Colors.SURFACE)
-        status_frame.pack()
-        
-        self.connection_status_icon = tk.Label(
-            status_frame,
-            text="●",
-            font=("SF Pro Text", 14),
-            bg=Colors.SURFACE,
-            fg=Colors.TEXT_SECONDARY
+        self.back_to_start_btn = tk.Button(
+            sidebar,
+            text="BACK",
+            font=("SF Pro Text", 9, "bold"),
+            bg=Colors.TEXT_SECONDARY,
+            fg=Colors.TEXT_WHITE,
+            activebackground="#555555",
+            activeforeground=Colors.TEXT_WHITE,
+            relief=tk.FLAT,
+            bd=0,
+            width=12,
+            pady=10,
+            command=self._show_start_screen
         )
-        self.connection_status_icon.pack(side=tk.LEFT)
+        self.back_to_start_btn.pack(pady=5, padx=8, fill=tk.X)
         
-        self.connection_status_label = tk.Label(
-            status_frame,
-            text=" Checking server...",
-            font=("SF Pro Text", 14),
-            bg=Colors.SURFACE,
-            fg=Colors.TEXT_SECONDARY
+        # Spacer
+        tk.Frame(sidebar, bg=Colors.PRIMARY).pack(fill=tk.BOTH, expand=True)
+        
+        # Exit button at bottom (hidden by default)
+        self.exit_button = tk.Button(
+            sidebar,
+            text="EXIT",
+            font=("SF Pro Text", 9, "bold"),
+            bg=Colors.ERROR,
+            fg=Colors.TEXT_WHITE,
+            activebackground="#D32F2F",
+            activeforeground=Colors.TEXT_WHITE,
+            relief=tk.FLAT,
+            bd=0,
+            width=12,
+            pady=8,
+            command=self.on_closing
         )
-        self.connection_status_label.pack(side=tk.LEFT)
-    
-    def _setup_scan_screen(self):
-        """Setup the scanning screen with centered camera and logo"""
-        # Header with logo
-        header = tk.Frame(self.scan_frame, bg=Colors.PRIMARY, height=100)
-        header.pack(fill=tk.X)
-        header.pack_propagate(False)
+        # Bind long press to show exit button
+        self.mute_button.bind('<Button-1>', self.start_exit_timer)
+        self.mute_button.bind('<ButtonRelease-1>', self.cancel_exit_timer)
+        self.exit_timer = None
         
-        # Logo and title row
-        header_content = tk.Frame(header, bg=Colors.PRIMARY)
-        header_content.pack(expand=True)
-        
-        # RCV Logo text
-        tk.Label(
-            header_content,
-            text="RCV",
-            font=("SF Pro Display", 36, "bold"),
-            bg=Colors.PRIMARY,
-            fg=Colors.TEXT_WHITE
-        ).pack(side=tk.LEFT, padx=(0, 20))
-        
-        tk.Label(
-            header_content,
-            text="Product Verification Kiosk",
-            font=("SF Pro Display", 28),
-            bg=Colors.PRIMARY,
-            fg=Colors.TEXT_WHITE
-        ).pack(side=tk.LEFT)
-        
-        # Center content area
-        center_area = tk.Frame(self.scan_frame, bg=Colors.BACKGROUND)
-        center_area.pack(fill=tk.BOTH, expand=True)
+        # RIGHT CONTENT AREA - Camera
+        content_area = tk.Frame(main_container, bg=Colors.BACKGROUND)
+        content_area.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
         # Camera preview container - CENTERED
-        camera_outer = tk.Frame(center_area, bg=Colors.BACKGROUND)
-        camera_outer.place(relx=0.5, rely=0.45, anchor=tk.CENTER)
+        camera_outer = tk.Frame(content_area, bg=Colors.BACKGROUND)
+        camera_outer.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
         
-        # Instructions above camera
+        # Instructions above camera - smaller for small screens
         tk.Label(
             camera_outer,
-            text="Place QR Code in Front of Camera",
-            font=("SF Pro Display", 28, "bold"),
+            text="Place QR Code Here",
+            font=("SF Pro Display", 14, "bold"),
             bg=Colors.BACKGROUND,
             fg=Colors.TEXT_PRIMARY
-        ).pack(pady=(0, 10))
+        ).pack(pady=(0, 3))
         
         tk.Label(
             camera_outer,
-            text="Ilagay ang QR Code sa harap ng camera",
-            font=("SF Pro Text", 20),
+            text="Ilagay ang QR Code dito",
+            font=("SF Pro Text", 10),
             bg=Colors.BACKGROUND,
             fg=Colors.TEXT_SECONDARY
-        ).pack(pady=(0, 30))
+        ).pack(pady=(0, 10))
         
         # Camera frame with decorative border
         camera_border = tk.Frame(
             camera_outer,
             bg=Colors.PRIMARY,
-            padx=6,
-            pady=6
+            padx=3,
+            pady=3
         )
         camera_border.pack()
         
-        # Inner camera container - fixed size to prevent growing
+        # Inner camera container - responsive size for small screens
         self.camera_container = tk.Frame(
             camera_border,
             bg=Colors.SURFACE,
-            width=640,
-            height=480
+            width=400,
+            height=300
         )
         self.camera_container.pack()
         self.camera_container.pack_propagate(False)
         self.camera_container.grid_propagate(False)
         
-        # Camera label - fixed dimensions to prevent growing
+        # Camera label
         self.camera_label = tk.Label(
             self.camera_container,
-            text="Initializing Camera...",
-            font=("SF Pro Text", 16),
+            text="Loading Camera...",
+            font=("SF Pro Text", 12),
             bg=Colors.SURFACE,
             fg=Colors.TEXT_SECONDARY,
-            width=640,
-            height=480
+            width=400,
+            height=300
         )
         self.camera_label.pack(expand=False, fill=tk.NONE)
         self.camera_label.config(anchor=tk.CENTER)
         
         # Scanning indicator below camera
         self.scan_status_frame = tk.Frame(camera_outer, bg=Colors.BACKGROUND)
-        self.scan_status_frame.pack(pady=(30, 0))
+        self.scan_status_frame.pack(pady=(10, 0))
         
         self.scan_indicator = tk.Label(
             self.scan_status_frame,
-            text="● Scanning Active",
-            font=("SF Pro Text", 20, "bold"),
+            text="* Scanning",
+            font=("SF Pro Text", 12, "bold"),
             bg=Colors.BACKGROUND,
             fg=Colors.SUCCESS
         )
-        self.scan_indicator.pack()
-        
-        # Footer with touch-friendly controls
-        footer = tk.Frame(self.scan_frame, bg=Colors.SURFACE, height=120)
-        footer.pack(fill=tk.X, side=tk.BOTTOM)
-        footer.pack_propagate(False)
-        
-        # Touch control panel
-        control_panel = tk.Frame(footer, bg=Colors.SURFACE)
-        control_panel.pack(expand=True, pady=10)
-        
-        # Mute/Unmute button - LARGE for touch
-        self.mute_button = tk.Button(
-            control_panel,
-            text="🔊 SOUND ON" if not self.tts.is_muted else "🔇 SOUND OFF",
-            font=("SF Pro Text", 18, "bold"),
-            bg=Colors.PRIMARY,
-            fg=Colors.TEXT_WHITE,
-            activebackground=Colors.PRIMARY_LIGHT,
-            activeforeground=Colors.TEXT_WHITE,
-            relief=tk.RAISED,
-            bd=3,
-            padx=30,
-            pady=20,
-            command=self.toggle_sound
-        )
-        self.mute_button.pack(side=tk.LEFT, padx=10)
-        
-        # RELOAD CAMERA button - touch friendly
-        self.reload_camera_btn = tk.Button(
-            control_panel,
-            text="🔄 RELOAD",
-            font=("SF Pro Text", 16, "bold"),
-            bg=Colors.WARNING,
-            fg=Colors.TEXT_WHITE,
-            activebackground="#F57C00",
-            activeforeground=Colors.TEXT_WHITE,
-            relief=tk.RAISED,
-            bd=3,
-            padx=20,
-            pady=15,
-            command=self.restart_camera
-        )
-        self.reload_camera_btn.pack(side=tk.LEFT, padx=10)
-        
-        # SCAN PRODUCT button - touch friendly
-        self.scan_product_btn = tk.Button(
-            control_panel,
-            text="📷 SCAN LABEL",
-            font=("SF Pro Text", 16, "bold"),
-            bg=Colors.ACCENT,
-            fg=Colors.TEXT_WHITE,
-            activebackground="#00A895",
-            activeforeground=Colors.TEXT_WHITE,
-            relief=tk.RAISED,
-            bd=3,
-            padx=20,
-            pady=15,
-            command=self._start_ocr_capture
-        )
-        self.scan_product_btn.pack(side=tk.LEFT, padx=10)
-        
-        # BACK button - return to start screen
-        self.back_to_start_btn = tk.Button(
-            control_panel,
-            text="🔙 BACK",
-            font=("SF Pro Text", 16, "bold"),
-            bg=Colors.TEXT_SECONDARY,
-            fg=Colors.TEXT_WHITE,
-            activebackground="#555555",
-            activeforeground=Colors.TEXT_WHITE,
-            relief=tk.RAISED,
-            bd=3,
-            padx=20,
-            pady=15,
-            command=self._show_start_screen
-        )
-        self.back_to_start_btn.pack(side=tk.LEFT, padx=10)
-        
-        # Exit button - LARGE for touch (hidden by default, shown on long press)
-        self.exit_button = tk.Button(
-            control_panel,
-            text="EXIT KIOSK",
-            font=("SF Pro Text", 18, "bold"),
-            bg=Colors.ERROR,
-            fg=Colors.TEXT_WHITE,
-            activebackground="#D32F2F",
-            activeforeground=Colors.TEXT_WHITE,
-            relief=tk.RAISED,
-            bd=3,
-            padx=30,
-            pady=20,
-            command=self.on_closing
-        )
-        # Bind long press to show exit button (3 second touch on mute button)
-        self.mute_button.bind('<Button-1>', self.start_exit_timer)
-        self.mute_button.bind('<ButtonRelease-1>', self.cancel_exit_timer)
-        self.exit_timer = None
     
     def _setup_loading_screen(self):
         """Setup the HUGE loading screen"""
@@ -974,57 +979,170 @@ class KioskApp:
         self.loading_detail_label.pack(pady=(50, 0))
     
     def _setup_ocr_capture_screen(self):
-        """Setup OCR product scan screen with 2-photo capture"""
-        # Header
-        header = tk.Frame(self.ocr_frame, bg=Colors.ACCENT, height=100)
-        header.pack(fill=tk.X)
-        header.pack_propagate(False)
+        """Setup OCR product scan screen with sidebar layout for small screens"""
+        # Main horizontal layout - sidebar on left, content on right
+        main_container = tk.Frame(self.ocr_frame, bg=Colors.BACKGROUND)
+        main_container.pack(fill=tk.BOTH, expand=True)
         
-        self.ocr_header_label = tk.Label(
-            header,
-            text="📷 SCAN PRODUCT LABEL",
-            font=("SF Pro Display", 32, "bold"),
+        # LEFT SIDEBAR - Control buttons
+        sidebar = tk.Frame(main_container, bg=Colors.ACCENT, width=140)
+        sidebar.pack(side=tk.LEFT, fill=tk.Y)
+        sidebar.pack_propagate(False)
+        
+        # Sidebar header
+        tk.Label(
+            sidebar,
+            text="SCAN",
+            font=("SF Pro Display", 14, "bold"),
             bg=Colors.ACCENT,
             fg=Colors.TEXT_WHITE
+        ).pack(pady=(10, 3))
+        
+        self.ocr_header_label = tk.Label(
+            sidebar,
+            text="LABEL",
+            font=("SF Pro Text", 10),
+            bg=Colors.ACCENT,
+            fg="#CCCCCC"
         )
-        self.ocr_header_label.pack(expand=True)
+        self.ocr_header_label.pack(pady=(0, 15))
         
-        # Main content area
-        content = tk.Frame(self.ocr_frame, bg=Colors.BACKGROUND)
-        content.pack(fill=tk.BOTH, expand=True)
+        # Control buttons - compact for small screens
+        self.ocr_capture_btn = tk.Button(
+            sidebar,
+            text="CAPTURE",
+            font=("SF Pro Text", 9, "bold"),
+            bg=Colors.PRIMARY,
+            fg=Colors.TEXT_WHITE,
+            activebackground=Colors.PRIMARY_LIGHT,
+            activeforeground=Colors.TEXT_WHITE,
+            relief=tk.FLAT,
+            bd=0,
+            width=12,
+            pady=10,
+            command=self._ocr_capture_photo
+        )
+        self.ocr_capture_btn.pack(pady=5, padx=8, fill=tk.X)
         
-        # Left side - Camera preview
-        left_panel = tk.Frame(content, bg=Colors.BACKGROUND)
-        left_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=20, pady=20)
+        self.ocr_retake_btn = tk.Button(
+            sidebar,
+            text="RETAKE",
+            font=("SF Pro Text", 9, "bold"),
+            bg=Colors.WARNING,
+            fg=Colors.TEXT_WHITE,
+            activebackground="#F57C00",
+            activeforeground=Colors.TEXT_WHITE,
+            relief=tk.FLAT,
+            bd=0,
+            width=12,
+            pady=10,
+            command=self._ocr_retake_photo
+        )
+        self.ocr_retake_btn.pack(pady=5, padx=8, fill=tk.X)
         
-        # Instructions
+        self.ocr_submit_btn = tk.Button(
+            sidebar,
+            text="SUBMIT",
+            font=("SF Pro Text", 9, "bold"),
+            bg=Colors.SUCCESS,
+            fg=Colors.TEXT_WHITE,
+            activebackground="#43A047",
+            activeforeground=Colors.TEXT_WHITE,
+            relief=tk.FLAT,
+            bd=0,
+            width=12,
+            pady=10,
+            command=self._ocr_submit_scan,
+            state=tk.DISABLED
+        )
+        self.ocr_submit_btn.pack(pady=5, padx=8, fill=tk.X)
+        
+        self.ocr_cancel_btn = tk.Button(
+            sidebar,
+            text="CANCEL",
+            font=("SF Pro Text", 9, "bold"),
+            bg=Colors.ERROR,
+            fg=Colors.TEXT_WHITE,
+            activebackground="#D32F2F",
+            activeforeground=Colors.TEXT_WHITE,
+            relief=tk.FLAT,
+            bd=0,
+            width=12,
+            pady=10,
+            command=self._ocr_cancel
+        )
+        self.ocr_cancel_btn.pack(pady=5, padx=8, fill=tk.X)
+        
+        # Spacer
+        tk.Frame(sidebar, bg=Colors.ACCENT).pack(fill=tk.BOTH, expand=True)
+        
+        # Thumbnails at bottom of sidebar
+        tk.Label(
+            sidebar,
+            text="Photos:",
+            font=("SF Pro Text", 9, "bold"),
+            bg=Colors.ACCENT,
+            fg=Colors.TEXT_WHITE
+        ).pack(pady=(5, 3), padx=8, anchor=tk.W)
+        
+        self.ocr_front_thumb = tk.Label(
+            sidebar,
+            text="Front: -",
+            font=("SF Pro Text", 8),
+            bg="#00A895",
+            fg=Colors.TEXT_WHITE,
+            width=14,
+            height=2
+        )
+        self.ocr_front_thumb.pack(pady=3, padx=8)
+        
+        self.ocr_back_thumb = tk.Label(
+            sidebar,
+            text="Back: -",
+            font=("SF Pro Text", 8),
+            bg="#00A895",
+            fg=Colors.TEXT_WHITE,
+            width=14,
+            height=2
+        )
+        self.ocr_back_thumb.pack(pady=(3, 10), padx=8)
+        
+        # RIGHT CONTENT AREA - Camera and instructions
+        content_area = tk.Frame(main_container, bg=Colors.BACKGROUND)
+        content_area.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        # Center content
+        center = tk.Frame(content_area, bg=Colors.BACKGROUND)
+        center.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+        
+        # Instructions - smaller for small screens
         self.ocr_instruction_label = tk.Label(
-            left_panel,
-            text="Position FRONT of product label",
-            font=("SF Pro Display", 24, "bold"),
+            center,
+            text="Position FRONT of label",
+            font=("SF Pro Display", 14, "bold"),
             bg=Colors.BACKGROUND,
             fg=Colors.TEXT_PRIMARY
         )
-        self.ocr_instruction_label.pack(pady=(0, 10))
+        self.ocr_instruction_label.pack(pady=(0, 3))
         
         self.ocr_instruction_sub = tk.Label(
-            left_panel,
-            text="Ilagay ang HARAP ng label ng produkto",
-            font=("SF Pro Text", 18),
+            center,
+            text="Ilagay ang HARAP ng label",
+            font=("SF Pro Text", 10),
             bg=Colors.BACKGROUND,
             fg=Colors.TEXT_SECONDARY
         )
-        self.ocr_instruction_sub.pack(pady=(0, 20))
+        self.ocr_instruction_sub.pack(pady=(0, 10))
         
-        # Camera frame for OCR
-        ocr_camera_border = tk.Frame(left_panel, bg=Colors.ACCENT, padx=4, pady=4)
+        # Camera frame for OCR - smaller for small screens
+        ocr_camera_border = tk.Frame(center, bg=Colors.ACCENT, padx=3, pady=3)
         ocr_camera_border.pack()
         
         self.ocr_camera_container = tk.Frame(
             ocr_camera_border,
             bg=Colors.SURFACE,
-            width=640,
-            height=480
+            width=400,
+            height=300
         )
         self.ocr_camera_container.pack()
         self.ocr_camera_container.pack_propagate(False)
@@ -1032,141 +1150,11 @@ class KioskApp:
         self.ocr_camera_label = tk.Label(
             self.ocr_camera_container,
             text="Camera Preview",
-            font=("SF Pro Text", 16),
+            font=("SF Pro Text", 12),
             bg=Colors.SURFACE,
             fg=Colors.TEXT_SECONDARY
         )
         self.ocr_camera_label.pack(expand=True)
-        
-        # Right side - Thumbnails and controls
-        right_panel = tk.Frame(content, bg=Colors.SURFACE, width=300)
-        right_panel.pack(side=tk.RIGHT, fill=tk.Y, padx=20, pady=20)
-        right_panel.pack_propagate(False)
-        
-        tk.Label(
-            right_panel,
-            text="Captured Photos",
-            font=("SF Pro Display", 18, "bold"),
-            bg=Colors.SURFACE,
-            fg=Colors.TEXT_PRIMARY
-        ).pack(pady=(20, 10))
-        
-        # Front thumbnail
-        tk.Label(
-            right_panel,
-            text="FRONT:",
-            font=("SF Pro Text", 14),
-            bg=Colors.SURFACE,
-            fg=Colors.TEXT_SECONDARY
-        ).pack(anchor=tk.W, padx=20)
-        
-        self.ocr_front_thumb = tk.Label(
-            right_panel,
-            text="Not captured",
-            font=("SF Pro Text", 12),
-            bg=Colors.BACKGROUND,
-            fg=Colors.TEXT_SECONDARY,
-            width=25,
-            height=8
-        )
-        self.ocr_front_thumb.pack(pady=10, padx=20)
-        
-        # Back thumbnail
-        tk.Label(
-            right_panel,
-            text="BACK:",
-            font=("SF Pro Text", 14),
-            bg=Colors.SURFACE,
-            fg=Colors.TEXT_SECONDARY
-        ).pack(anchor=tk.W, padx=20)
-        
-        self.ocr_back_thumb = tk.Label(
-            right_panel,
-            text="Not captured",
-            font=("SF Pro Text", 12),
-            bg=Colors.BACKGROUND,
-            fg=Colors.TEXT_SECONDARY,
-            width=25,
-            height=8
-        )
-        self.ocr_back_thumb.pack(pady=10, padx=20)
-        
-        # Footer with control buttons
-        footer = tk.Frame(self.ocr_frame, bg=Colors.SURFACE, height=120)
-        footer.pack(fill=tk.X, side=tk.BOTTOM)
-        footer.pack_propagate(False)
-        
-        btn_frame = tk.Frame(footer, bg=Colors.SURFACE)
-        btn_frame.pack(expand=True)
-        
-        # CAPTURE button
-        self.ocr_capture_btn = tk.Button(
-            btn_frame,
-            text="📸 CAPTURE",
-            font=("SF Pro Display", 20, "bold"),
-            bg=Colors.PRIMARY,
-            fg=Colors.TEXT_WHITE,
-            activebackground=Colors.PRIMARY_LIGHT,
-            activeforeground=Colors.TEXT_WHITE,
-            relief=tk.RAISED,
-            bd=4,
-            padx=40,
-            pady=20,
-            command=self._ocr_capture_photo
-        )
-        self.ocr_capture_btn.pack(side=tk.LEFT, padx=15)
-        
-        # RETAKE button
-        self.ocr_retake_btn = tk.Button(
-            btn_frame,
-            text="↩️ RETAKE",
-            font=("SF Pro Display", 20, "bold"),
-            bg=Colors.WARNING,
-            fg=Colors.TEXT_WHITE,
-            activebackground="#F57C00",
-            activeforeground=Colors.TEXT_WHITE,
-            relief=tk.RAISED,
-            bd=4,
-            padx=40,
-            pady=20,
-            command=self._ocr_retake_photo
-        )
-        self.ocr_retake_btn.pack(side=tk.LEFT, padx=15)
-        
-        # SUBMIT button
-        self.ocr_submit_btn = tk.Button(
-            btn_frame,
-            text="✅ SUBMIT",
-            font=("SF Pro Display", 20, "bold"),
-            bg=Colors.SUCCESS,
-            fg=Colors.TEXT_WHITE,
-            activebackground="#43A047",
-            activeforeground=Colors.TEXT_WHITE,
-            relief=tk.RAISED,
-            bd=4,
-            padx=40,
-            pady=20,
-            command=self._ocr_submit_scan,
-            state=tk.DISABLED
-        )
-        self.ocr_submit_btn.pack(side=tk.LEFT, padx=15)
-        
-        # CANCEL button
-        self.ocr_cancel_btn = tk.Button(
-            btn_frame,
-            text="✖ CANCEL",
-            font=("SF Pro Display", 20, "bold"),
-            bg=Colors.ERROR,
-            fg=Colors.TEXT_WHITE,
-            activebackground="#D32F2F",
-            activeforeground=Colors.TEXT_WHITE,
-            relief=tk.RAISED,
-            bd=4,
-            padx=40,
-            pady=20,
-            command=self._ocr_cancel
-        )
-        self.ocr_cancel_btn.pack(side=tk.LEFT, padx=15)
     
     def _setup_result_screen(self):
         """Setup the result screen with responsive layout for small screens"""
@@ -1177,7 +1165,7 @@ class KioskApp:
         
         self.result_status_label = tk.Label(
             self.result_header,
-            text="✓ VERIFIED",
+            text="VERIFIED",
             font=("SF Pro Display", 36, "bold"),
             bg=Colors.SUCCESS,
             fg=Colors.TEXT_WHITE
@@ -1270,8 +1258,8 @@ class KioskApp:
         
         self.result_pause_hint = tk.Label(
             self.result_footer,
-            text="👆 Touch & hold to pause timer",
-            font=("SF Pro Text", 14),
+            text="Touch and hold to pause",
+            font=("SF Pro Text", 12),
             bg=Colors.PRIMARY,
             fg="#CCCCCC"
         )
@@ -1380,7 +1368,7 @@ class KioskApp:
         
         self.compliance_status_label = tk.Label(
             self.compliance_header,
-            text="✓ PRODUCT COMPLIANT",
+            text="PRODUCT COMPLIANT",
             font=("SF Pro Display", 32, "bold"),
             bg=Colors.SUCCESS,
             fg=Colors.TEXT_WHITE
@@ -1521,8 +1509,8 @@ class KioskApp:
         
         tk.Label(
             self.compliance_footer,
-            text="👆 Touch & hold to pause timer",
-            font=("SF Pro Text", 14),
+            text="Touch and hold to pause",
+            font=("SF Pro Text", 12),
             bg=Colors.PRIMARY,
             fg="#CCCCCC"
         ).pack(pady=(5, 10))
@@ -1543,12 +1531,13 @@ class KioskApp:
         content = tk.Frame(center, bg=Colors.ERROR)
         content.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
         
-        # HUGE warning icon
+        # Warning text instead of emoji for small screens
         tk.Label(
             content,
-            text="⚠️",
-            font=("Segoe UI Emoji", 150),
-            bg=Colors.ERROR
+            text="!",
+            font=("SF Pro Display", 80, "bold"),
+            bg=Colors.ERROR,
+            fg=Colors.TEXT_WHITE
         ).pack(pady=(0, 20))
         
         # MASSIVE "OFFLINE" text
@@ -1593,8 +1582,8 @@ class KioskApp:
         
         self.maintenance_status_icon = tk.Label(
             status_frame,
-            text="⏳",
-            font=("Segoe UI Emoji", 40),
+            text="...",
+            font=("SF Pro Text", 28, "bold"),
             bg="#D32F2F",
             fg=Colors.TEXT_WHITE
         )
@@ -1671,7 +1660,7 @@ class KioskApp:
     def toggle_sound(self):
         """Toggle sound on/off - touch friendly"""
         self.tts.toggle_mute()
-        button_text = "🔇 SOUND OFF" if self.tts.is_muted else "🔊 SOUND ON"
+        button_text = "SOUND\nOFF" if self.tts.is_muted else "SOUND\nON"
         if hasattr(self, 'mute_button'):
             self.mute_button.config(text=button_text)
     
@@ -1765,7 +1754,7 @@ class KioskApp:
         # Update message
         self.maintenance_message.config(text=message)
         self.maintenance_status_label.config(text="Checking connection...")
-        self.maintenance_status_icon.config(text="⏳")
+        self.maintenance_status_icon.config(text="...")
         
         # Stop camera to save resources
         if self.camera and self.camera.isOpened():
@@ -2012,7 +2001,7 @@ class KioskApp:
                     # Verified icon
                     tk.Label(
                         name_frame,
-                        text="✓",
+                        text="OK",
                         font=("SF Pro Text", 14, "bold"),
                         bg=Colors.BACKGROUND,
                         fg=Colors.SUCCESS
@@ -2358,7 +2347,7 @@ class KioskApp:
         
         # Update status UI
         self.maintenance_status_label.config(text="Checking connection...")
-        self.maintenance_status_icon.config(text="⏳")
+        self.maintenance_status_icon.config(text="...")
         
         # Check in background
         def check_and_update():
@@ -2382,7 +2371,7 @@ class KioskApp:
         if result.get("success"):
             self.is_online = True
             self.consecutive_failures = 0
-            self.maintenance_status_icon.config(text="✅")
+            self.maintenance_status_icon.config(text="OK")
             self.maintenance_status_label.config(text="Server connected! Resuming...")
             
             # Cancel polling and recover
@@ -2393,7 +2382,7 @@ class KioskApp:
         else:
             self.is_online = False
             self.consecutive_failures += 1
-            self.maintenance_status_icon.config(text="❌")
+            self.maintenance_status_icon.config(text="X")
             self.maintenance_status_label.config(
                 text=f"Server unreachable (attempt {self.consecutive_failures})"
             )
@@ -3051,7 +3040,7 @@ class KioskApp:
     def _pause_timer(self, event=None):
         """Pause the countdown timer when user touches screen"""
         self.timer_paused = True
-        pause_text = "⏸️ Timer Paused - Release to continue"
+        pause_text = "PAUSED - Release to continue"
         
         if self.state == KioskState.DISPLAY_COMPLIANCE:
             self.compliance_timer_label.config(text=pause_text)
@@ -3101,26 +3090,26 @@ class KioskApp:
     def _update_ocr_ui(self):
         """Update OCR capture screen UI based on current step"""
         if self.ocr_step == OCRCaptureStep.READY_FRONT:
-            self.ocr_instruction_label.config(text="Position FRONT of product label")
-            self.ocr_instruction_sub.config(text="Ilagay ang HARAP ng label ng produkto")
-            self.ocr_capture_btn.config(text="📸 CAPTURE FRONT", state=tk.NORMAL)
+            self.ocr_instruction_label.config(text="Position FRONT of label")
+            self.ocr_instruction_sub.config(text="Ilagay ang HARAP ng label")
+            self.ocr_capture_btn.config(text="CAPTURE", state=tk.NORMAL)
             self.ocr_retake_btn.config(state=tk.DISABLED)
         
         elif self.ocr_step == OCRCaptureStep.PREVIEW_FRONT:
             self.ocr_instruction_label.config(text="Front captured! Ready for BACK")
-            self.ocr_instruction_sub.config(text="Nakuha ang harap! Handa na para sa LIKOD")
-            self.ocr_capture_btn.config(text="📸 CAPTURE BACK", state=tk.NORMAL)
+            self.ocr_instruction_sub.config(text="Handa na para sa LIKOD")
+            self.ocr_capture_btn.config(text="CAPTURE", state=tk.NORMAL)
             self.ocr_retake_btn.config(state=tk.NORMAL)
         
         elif self.ocr_step == OCRCaptureStep.READY_BACK:
-            self.ocr_instruction_label.config(text="Position BACK of product label")
-            self.ocr_instruction_sub.config(text="Ilagay ang LIKOD ng label ng produkto")
-            self.ocr_capture_btn.config(text="📸 CAPTURE BACK", state=tk.NORMAL)
+            self.ocr_instruction_label.config(text="Position BACK of label")
+            self.ocr_instruction_sub.config(text="Ilagay ang LIKOD ng label")
+            self.ocr_capture_btn.config(text="CAPTURE", state=tk.NORMAL)
             self.ocr_retake_btn.config(state=tk.NORMAL)
         
         elif self.ocr_step == OCRCaptureStep.PREVIEW_BACK:
-            self.ocr_instruction_label.config(text="Both sides captured! Ready to submit")
-            self.ocr_instruction_sub.config(text="Nakuha ang dalawang panig! Handa na i-submit")
+            self.ocr_instruction_label.config(text="Both sides captured! Ready")
+            self.ocr_instruction_sub.config(text="Nakuha ang dalawang panig!")
             self.ocr_capture_btn.config(state=tk.DISABLED)
             self.ocr_retake_btn.config(state=tk.NORMAL)
             self.ocr_submit_btn.config(state=tk.NORMAL)
@@ -3130,7 +3119,7 @@ class KioskApp:
         try:
             # Resize and convert
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            frame_resized = cv2.resize(frame_rgb, (640, 480))
+            frame_resized = cv2.resize(frame_rgb, (400, 300))
             
             pil_image = Image.fromarray(frame_resized)
             photo = ImageTk.PhotoImage(pil_image)
@@ -3267,19 +3256,19 @@ class KioskApp:
             self.compliance_header.config(bg=Colors.ERROR)
             self.compliance_status_label.config(
                 bg=Colors.ERROR,
-                text="✗ PRODUCT NOT FOUND"
+                text="PRODUCT NOT FOUND"
             )
         elif is_compliant:
             self.compliance_header.config(bg=Colors.SUCCESS)
             self.compliance_status_label.config(
                 bg=Colors.SUCCESS,
-                text="✓ PRODUCT COMPLIANT"
+                text="PRODUCT COMPLIANT"
             )
         else:
             self.compliance_header.config(bg=Colors.WARNING)
             self.compliance_status_label.config(
                 bg=Colors.WARNING,
-                text="⚠ PACKAGING VIOLATIONS"
+                text="PACKAGING VIOLATIONS"
             )
         
         # Product info

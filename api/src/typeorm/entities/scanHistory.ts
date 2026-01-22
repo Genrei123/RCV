@@ -17,6 +17,7 @@ export const ScanHistoryValidation = z.object({
     frontImageUrl: z.string().url().optional(),
     backImageUrl: z.string().url().optional(),
     extractedInfo: z.any().optional(),
+    packageType: z.enum(['CANNED_PRODUCT', 'SACK_PRODUCT', 'PACK_PRODUCT', 'BOX_PRODUCT', 'QR_SCAN']).optional(),
 })
 
 @Entity()
@@ -60,6 +61,13 @@ export class ScanHistory {
 
     @Column({ type: 'json', nullable: true })
     extractedInfo?: Record<string, any>;
+
+    @Column({ 
+        type: 'enum', 
+        enum: ['CANNED_PRODUCT', 'SACK_PRODUCT', 'PACK_PRODUCT', 'BOX_PRODUCT', 'QR_SCAN'], 
+        nullable: true 
+    })
+    packageType?: string;
 
     @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
     createdAt!: Date;
