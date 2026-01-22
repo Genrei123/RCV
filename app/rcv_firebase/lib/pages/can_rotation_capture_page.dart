@@ -53,8 +53,43 @@ class _CanRotationCapturePageState extends State<CanRotationCapturePage>
     final XFile? image = await _picker.pickImage(source: ImageSource.camera);
     if (image == null) return;
 
+    if (!mounted) return;
+    
+    // Show crop option dialog
+    final shouldCrop = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Crop Image?'),
+        content: const Text('Would you like to crop this image for better results?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Skip'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Crop'),
+          ),
+        ],
+      ),
+    ) ?? false;
+
+    String imagePath = image.path;
+    if (shouldCrop) {
+      if (!mounted) return;
+      final croppedPath = await Navigator.pushNamed(
+        context,
+        '/crop-label',
+        arguments: {'imagePath': image.path},
+      ) as String?;
+      
+      if (croppedPath != null && croppedPath.isNotEmpty) {
+        imagePath = croppedPath;
+      }
+    }
+
     setState(() {
-      capturedImages[side] = image.path;
+      capturedImages[side] = imagePath;
       if (currentStep < 3) {
         currentStep++;
       }

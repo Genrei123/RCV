@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:developer' as developer;
 
 /// Service for uploading and managing files in Firebase Storage
@@ -22,6 +23,7 @@ class FirebaseStorageService {
   static Future<String?> uploadAvatar(String userId, File imageFile) async {
     try {
       developer.log('📤 [Storage] Uploading avatar for user: $userId');
+      await _logAuthStatus();
       
       final ref = _storage.ref().child('avatars/$userId.jpg');
       
@@ -42,6 +44,7 @@ class FirebaseStorageService {
     } catch (e, stackTrace) {
       developer.log('❌ [Storage] Avatar upload failed: $e');
       developer.log('Stack trace: $stackTrace');
+      await _logAuthStatus();
       return null;
     }
   }
@@ -66,6 +69,7 @@ class FirebaseStorageService {
   }) async {
     try {
       developer.log('📤 [Storage] Uploading scan images for: $scanId');
+      await _logAuthStatus();
       
       final frontRef = _storage.ref().child('scans/$scanId/front.jpg');
       final backRef = _storage.ref().child('scans/$scanId/back.jpg');
@@ -96,6 +100,7 @@ class FirebaseStorageService {
     } catch (e, stackTrace) {
       developer.log('❌ [Storage] Scan upload failed: $e');
       developer.log('Stack trace: $stackTrace');
+      await _logAuthStatus();
       return {'frontUrl': null, 'backUrl': null};
     }
   }
@@ -184,6 +189,25 @@ class FirebaseStorageService {
     } catch (e) {
       developer.log('⚠️ [Storage] Failed to get metadata: $e');
       return null;
+    }
+  }
+
+  /// Helper method to log current Firebase Auth status
+  static Future<void> _logAuthStatus() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('access_token');
+      final userEmail = prefs.getString('user_email');
+      
+      if (token != null && token.isNotEmpty) {
+        developer.log('👤 [Auth] User authenticated: $userEmail');
+        developer.log('🔑 [Auth] Has valid access token: true');
+      } else {
+        developer.log('⚠️ [Auth] Not authenticated - Anonymous uploads may be rejected');
+        developer.log('💡 [Auth] Token missing: Make sure user is logged in');
+      }
+    } catch (e) {
+      developer.log('❌ [Auth] Error checking auth status: $e');
     }
   }
 }

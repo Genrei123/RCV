@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../services/ocr_service.dart';
 import '../services/firebase_storage_service.dart';
+import '../services/image_preprocessing_service.dart';
 // import '../widgets/gradient_header_app_bar.dart';
 import '../widgets/title_logo_header_app_bar.dart';
 import '../widgets/navigation_bar.dart';
@@ -835,6 +836,10 @@ class _QRScannerPageState extends State<QRScannerPage>
     final certificateId = _extractCertificateId(qrData);
     final isCertificate = certificateId != null;
 
+    // Stop camera when modal opens
+    cameraController.stop();
+    developer.log('📹 Camera stopped - QR result modal opened');
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -1056,6 +1061,10 @@ class _QRScannerPageState extends State<QRScannerPage>
         );
       },
     ).then((_) {
+      // Restart camera when modal is closed
+      cameraController.start();
+      developer.log('📹 Camera restarted - QR result modal closed');
+
       // Reset result when modal is closed to allow re-scanning the same QR code
       if (mounted) {
         setState(() {
@@ -3602,20 +3611,33 @@ class _QRScannerPageState extends State<QRScannerPage>
 
       if (_useTesseract) {
         // Tesseract path using OcrService with smart auto-detection
-        final File frontFile = File(frontImagePath);
-        final File backFile = File(backImagePath);
+        // Note: Keep original file references for fallback, but use grayscale paths for OCR
 
-        // Use smart OCR with automatic language detection
+        // Convert images to grayscale for better OCR extraction
+        developer.log('🖼️ Converting images to grayscale for OCR processing...');
+        String grayscaleFrontPath = frontImagePath;
+        String grayscaleBackPath = backImagePath;
+        
+        try {
+          grayscaleFrontPath = await ImagePreprocessingService.convertToGrayscale(frontImagePath);
+          grayscaleBackPath = await ImagePreprocessingService.convertToGrayscale(backImagePath);
+          developer.log('✅ Images converted to grayscale');
+        } catch (e) {
+          developer.log('⚠️ Grayscale conversion failed, using original images: $e');
+          // Continue with original images if grayscale conversion fails
+        }
+
+        // Use smart OCR with automatic language detection on grayscale images
         developer.log('🔍 Processing front image with auto-detection...');
         final ocrFront = await _ocrService.smartOcr(
-          frontFile,
+          File(grayscaleFrontPath),
           dpi: 300,
           saveResult: false,
         );
 
         developer.log('🔍 Processing back image with auto-detection...');
         final ocrBack = await _ocrService.smartOcr(
-          backFile,
+          File(grayscaleBackPath),
           dpi: 300,
           saveResult: false,
         );

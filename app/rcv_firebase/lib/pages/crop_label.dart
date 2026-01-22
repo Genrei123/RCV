@@ -224,22 +224,7 @@ class _CropLabelPageState extends State<CropLabelPage> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Switch(
-                                value: _applyGrayscale,
-                                onChanged: (_isCropping || _isBuildingPreview)
-                                    ? null
-                                    : (v) async {
-                                        setState(() => _applyGrayscale = v);
-                                        await _rebuildPreview();
-                                      },
-                              ),
-                              const SizedBox(width: 8),
-                              const Text('Apply grayscale (better OCR)'),
-                            ],
-                          ),
+                        
                           const SizedBox(height: 8),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
