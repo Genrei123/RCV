@@ -57,15 +57,14 @@ class _PackCapturePageState extends State<PackCapturePage> {
 
   Widget _buildPackImageSlot(PackSide side) {
     final isCaptured = capturedImages[side] != null;
-    final displayName = side.toString().split('.').last.toUpperCase();
 
     return GestureDetector(
       onTap: () => _captureImage(side),
       child: Container(
         decoration: BoxDecoration(
           color: isCaptured
-              ? AppColors.success.withOpacity(0.2)
-              : AppColors.primary.withOpacity(0.1),
+              ? AppColors.success.withValues(alpha:0.2)
+              : AppColors.primary.withValues(alpha:0.1),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isCaptured ? AppColors.success : AppColors.primary,

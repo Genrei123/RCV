@@ -61,33 +61,7 @@ class _CanRotationCapturePageState extends State<CanRotationCapturePage>
     });
   }
 
-  void _removeImage(CanSide side) {
-    setState(() {
-      capturedImages[side] = null;
-      if (currentStep > 0) {
-        currentStep--;
-      }
-    });
-  }
-
   bool get _allCaptured => capturedImages.values.every((path) => path != null);
-
-  CanSide _getCanSideByIndex(int index) {
-    return CanSide.values[index];
-  }
-
-  String _getCanSideLabel(CanSide side) {
-    switch (side) {
-      case CanSide.front:
-        return 'Front';
-      case CanSide.right:
-        return 'Right (90°)';
-      case CanSide.back:
-        return 'Back (180°)';
-      case CanSide.left:
-        return 'Left (270°)';
-    }
-  }
 
   String _getCanCaptureLabelButton(CanSide side) {
     switch (side) {
@@ -102,22 +76,8 @@ class _CanRotationCapturePageState extends State<CanRotationCapturePage>
     }
   }
 
-  int _getCanRotationAngle(CanSide side) {
-    switch (side) {
-      case CanSide.front:
-        return 0;
-      case CanSide.right:
-        return 90;
-      case CanSide.back:
-        return 180;
-      case CanSide.left:
-        return 270;
-    }
-  }
-
   Widget _buildCanSideButton(CanSide side) {
     final isCaptured = capturedImages[side] != null;
-    final displayName = _getCanSideLabel(side);
 
     return GestureDetector(
       onTap: () => _captureImage(side),
