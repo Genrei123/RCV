@@ -56,6 +56,8 @@ export function LandingPage() {
   const navigate = useNavigate();
   const [api, setApi] = useState<any>(null);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [isSliding, setIsSliding] = useState(false);
+  const [slideDirection, setSlideDirection] = useState<"left" | "right">("left");
 
   // Monitor carousel slides
   useEffect(() => {
@@ -73,8 +75,17 @@ export function LandingPage() {
     };
   }, [api]);
 
+  const handleNavClick = (direction: "left" | "right") => {
+    setSlideDirection(direction);
+    setIsSliding(true);
+    // Reset animation state after transition
+    setTimeout(() => {
+      setIsSliding(false);
+    }, 500);
+  };
+
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white overflow-hidden">
       {/* Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -96,27 +107,51 @@ export function LandingPage() {
             <div className="ml-0 hidden md:flex items-center gap-8">
               <a
                 href="#features"
-                className="text-sm text-text hover:text-primary transition-colors"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleNavClick("right");
+                  document.getElementById("features")?.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="text-sm text-text hover:text-primary transition-colors cursor-pointer group"
               >
                 Features
+                <span className="block h-0.5 bg-primary w-0 group-hover:w-full transition-all duration-300"></span>
               </a>
               <a
                 href="#transparency"
-                className="text-sm text-text hover:text-primary transition-colors"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleNavClick("right");
+                  document.getElementById("transparency")?.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="text-sm text-text hover:text-primary transition-colors cursor-pointer group"
               >
                 Transparency
+                <span className="block h-0.5 bg-primary w-0 group-hover:w-full transition-all duration-300"></span>
               </a>
               <a
                 href="#about"
-                className="text-sm text-text hover:text-muted transition-colors"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleNavClick("right");
+                  document.getElementById("about")?.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="text-sm text-text hover:text-primary transition-colors cursor-pointer group"
               >
                 About
+                <span className="block h-0.5 bg-primary w-0 group-hover:w-full transition-all duration-300"></span>
               </a>
               <a
                 href="#mission"
-                className="text-sm text-text hover:text-muted transition-colors"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleNavClick("right");
+                  document.getElementById("mission")?.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="text-sm text-text hover:text-primary transition-colors cursor-pointer group"
               >
                 Our Mission
+                <span className="block h-0.5 bg-primary w-0 group-hover:w-full transition-all duration-300"></span>
               </a>
               {/* Get Started Button */}
               <Button
@@ -131,7 +166,13 @@ export function LandingPage() {
       </nav>
 
       {/* Hero Carousel */}
-      <section className="pt-16 relative w-full">
+      <section className={`pt-16 relative w-full transition-all duration-500 ${
+        isSliding 
+          ? slideDirection === "right" 
+            ? "translate-x-full opacity-0" 
+            : "-translate-x-full opacity-0"
+          : "translate-x-0 opacity-100"
+      }`}>
         <Carousel
           setApi={setApi}
           opts={{

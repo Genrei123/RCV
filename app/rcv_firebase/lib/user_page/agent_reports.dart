@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:rcv_firebase/themes/app_fonts.dart';
-import '../widgets/navigation_bar.dart';
 import '../widgets/title_logo_header_app_bar.dart';
 import '../services/api_service.dart';
 import '../pages/report_detail_page.dart';
@@ -122,6 +121,7 @@ class _UserReportsPageState extends State<UserReportsPage> {
   }
 
   Future<void> _fetchReports() async {
+    if (!mounted) return;
     setState(() {
       _loading = true;
       _error = null;
@@ -132,6 +132,8 @@ class _UserReportsPageState extends State<UserReportsPage> {
         page: 1,
         limit: 100,
       );
+
+      if (!mounted) return;
 
       if (result['success'] == true) {
         final List<dynamic> data = result['data'] ?? [];
@@ -147,6 +149,7 @@ class _UserReportsPageState extends State<UserReportsPage> {
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = 'Error: ${e.toString()}';
         _loading = false;
@@ -178,53 +181,47 @@ class _UserReportsPageState extends State<UserReportsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: const TitleLogoHeaderAppBar(
-        title: 'User Reports',
-        showBackButton: false,
-      ),
-      body: Column(
-        children: [
-          _buildCategoryFilters(),
-          Expanded(
-            child: _loading
-                ? const Center(child: CircularProgressIndicator())
-                : _filteredReports().isEmpty
-                ? _buildEmptyState()
-                : RefreshIndicator(
-                    onRefresh: _fetchReports,
-                    child: ListView.separated(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      itemCount: _filteredReports().length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final r = _filteredReports()[index];
-                        return _ReportCard(
-                          report: r,
-                          relativeTime: _relativeTime(r.createdAt),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    ReportDetailPage(reportData: r.rawData),
-                              ),
-                            );
-                          },
-                        );
-                      },
+    return Column(
+      children: [
+        const TitleLogoHeaderAppBar(
+          title: 'User Reports',
+          showBackButton: false,
+        ),
+        _buildCategoryFilters(),
+        Expanded(
+          child: _loading
+              ? const Center(child: CircularProgressIndicator())
+              : _filteredReports().isEmpty
+              ? _buildEmptyState()
+              : RefreshIndicator(
+                  onRefresh: _fetchReports,
+                  child: ListView.separated(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
                     ),
+                    itemCount: _filteredReports().length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final r = _filteredReports()[index];
+                      return _ReportCard(
+                        report: r,
+                        relativeTime: _relativeTime(r.createdAt),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  ReportDetailPage(reportData: r.rawData),
+                            ),
+                          );
+                        },
+                      );
+                    },
                   ),
-          ),
-        ],
-      ),
-      bottomNavigationBar: const AppBottomNavBar(
-        selectedIndex: 3,
-        role: NavBarRole.user,
-      ),
+                ),
+        ),
+      ],
     );
   }
 

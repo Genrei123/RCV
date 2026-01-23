@@ -3,14 +3,12 @@ import 'package:location/location.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 // import '../widgets/gradient_header_app_bar.dart';
 import '../widgets/title_logo_header_app_bar.dart';
-import '../widgets/navigation_bar.dart';
 import '../services/gps_service.dart';
 import '../services/firestore_service.dart';
 import 'dart:async';
 import 'dart:io';
 import '../services/remote_config_service.dart';
-import '../widgets/feature_disabled_screen.dart';
-import '../utils/tab_history.dart';
+
 
 class UserHomePage extends StatefulWidget {
   const UserHomePage({super.key});
@@ -20,44 +18,13 @@ class UserHomePage extends StatefulWidget {
 }
 
 class _UserHomePageState extends State<UserHomePage> {
-  final int _selectedIndex = 0;
-
-  final List<Widget> _pages = [const HomeContent()];
-
   @override
   Widget build(BuildContext context) {
     //Feature disable checker
     if (RemoteConfigService.isFeatureDisabled('disable_home_page')) {
-      return FeatureDisabledScreen(
-        featureName: 'Home',
-        icon: Icons.home,
-        selectedNavIndex: _selectedIndex,
-        navBarRole: NavBarRole.user,
-      );
+      return const SizedBox.shrink();
     }
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) {
-        if (didPop) return;
-        final prev = TabHistory.instance.popAndGetPrevious();
-        if (prev != null && prev >= 0 && prev < AppBottomNavBar.routes.length) {
-          Navigator.pushReplacementNamed(context, AppBottomNavBar.routes[prev]);
-        } else {
-          Navigator.maybePop(context);
-        }
-      },
-      child: Scaffold(
-        appBar: const TitleLogoHeaderAppBar(
-          title: 'Home Dashboard',
-          showBackButton: false,
-        ),
-        body: _pages[_selectedIndex],
-        bottomNavigationBar: AppBottomNavBar(
-          selectedIndex: _selectedIndex,
-          role: NavBarRole.user,
-        ),
-      ),
-    );
+    return const HomeContent();
   }
 }
 
@@ -166,7 +133,20 @@ class _HomeContentState extends State<HomeContent> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Internet Connection Status Card
+        const TitleLogoHeaderAppBar(
+          title: 'Home Dashboard',
+          showBackButton: false,
+        ),
+        Expanded(
+          child: _buildContent(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildContent() {
+    return Column(
+      children: [
         Padding(
           padding: const EdgeInsets.all(16.0),
           child: AnimatedContainer(

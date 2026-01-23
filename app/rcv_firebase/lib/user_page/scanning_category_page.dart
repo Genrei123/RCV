@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../widgets/title_logo_header_app_bar.dart';
-import '../widgets/navigation_bar.dart';
-import '../utils/tab_history.dart';
 import '../themes/app_colors.dart';
 import 'scanning_page.dart';
 
@@ -20,28 +18,26 @@ class ScanningCategoryPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) {
-        if (didPop) return;
-        final prev = TabHistory.instance.popAndGetPrevious();
-        if (prev != null && prev >= 0 && prev < AppBottomNavBar.routes.length) {
-          Navigator.pushReplacementNamed(context, AppBottomNavBar.routes[prev]);
-        } else {
-          Navigator.maybePop(context);
-        }
-      },
-      child: Scaffold(
-        appBar: const TitleLogoHeaderAppBar(
+    return Column(
+      children: [
+        const TitleLogoHeaderAppBar(
           title: 'Scanning',
           showBackButton: false,
         ),
-        body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+        Expanded(
+          child: _buildContent(context),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildContent(BuildContext context) {
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
                 const SizedBox(height: 8),
                 const Text(
                   'Product Category',
@@ -159,14 +155,8 @@ class ScanningCategoryPage extends StatelessWidget {
               ],
             ),
           ),
-        ),
-        bottomNavigationBar: const AppBottomNavBar(
-          selectedIndex: 2,
-          role: NavBarRole.user,
-        ),
-      ),
-    );
-  }
+        );
+      }
 
   Widget _buildCategoryCard(
     BuildContext context, {

@@ -13,11 +13,7 @@ import 'auth/login_page.dart';
 import 'auth/otp_verification_page.dart';
 import 'auth/reset_password.dart';
 import 'auth/reset_new_password_page.dart';
-import 'pages/user_profile_page.dart';
-import 'user_page/agent_home_page.dart';
-import 'user_page/scanning_category_page.dart';
-import 'pages/audit_trail_page.dart';
-import 'user_page/agent_reports.dart';
+import 'user_page/user_main_page.dart';
 import 'pages/location_page.dart';
 import 'pages/crop_label.dart';
 import 'pages/splash_page.dart';
@@ -135,11 +131,12 @@ class _MyAppState extends State<MyApp> {
         '/otp-verification': (context) => const OtpVerificationPage(),
         '/reset-password': (context) => ResetPasswordPage(),
         '/reset-new-password': (context) => const ResetNewPasswordPage(),
-        '/user-profile': (context) => const UserProfilePage(),
-        '/user-home': (context) => const UserHomePage(),
-        '/user-audit-trail': (context) => const AuditTrailPage(),
-        '/user-reports': (context) => const UserReportsPage(),
-        '/scanning': (context) => const ScanningCategoryPage(),
+        '/user-main': (context) => const UserMainPage(),
+        '/user-home': (context) => const UserMainPage(initialIndex: 0),
+        '/user-audit-trail': (context) => const UserMainPage(initialIndex: 1),
+        '/scanning': (context) => const UserMainPage(initialIndex: 2),
+        '/user-reports': (context) => const UserMainPage(initialIndex: 3),
+        '/user-profile': (context) => const UserMainPage(initialIndex: 4),
         '/location': (context) => const LocationPage(),
         '/crop-label': (context) => const CropLabelPage(),
       },

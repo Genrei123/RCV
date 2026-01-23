@@ -8,11 +8,13 @@ enum NavBarRole { admin, user }
 class AppBottomNavBar extends StatelessWidget {
   final int selectedIndex;
   final NavBarRole role;
+  final Function(int)? onTabSelected; // Callback for tab selection
 
   const AppBottomNavBar({
     super.key,
     required this.selectedIndex,
     required this.role,
+    this.onTabSelected,
   });
 
   // Simplified to user-only routes
@@ -25,7 +27,13 @@ class AppBottomNavBar extends StatelessWidget {
   ];
 
   void _onTabSelected(BuildContext context, int index) {
-    // Only navigate if the index is valid and within bounds
+    // If callback is provided, use it (for static navbar)
+    if (onTabSelected != null) {
+      onTabSelected!(index);
+      return;
+    }
+
+    // Fallback to navigation (for pages that use this navbar without callback)
     if (index >= 0 && index < routes.length) {
       final targetRoute = routes[index];
       final currentRoute = ModalRoute.of(context)?.settings.name;
