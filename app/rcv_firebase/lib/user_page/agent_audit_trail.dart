@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
-import '../widgets/gradient_header_app_bar.dart';
-import '../widgets/navigation_bar.dart';
+import '../widgets/title_logo_header_app_bar.dart';
 import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
 import '../services/remote_config_service.dart';
-import '../widgets/feature_disabled_screen.dart';
 
 // Mock scan data model
 class ScanRecord {
@@ -318,56 +316,53 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
 
     //Feature disable checker
     if (RemoteConfigService.isFeatureDisabled('disable_audit_page')) {
-      return FeatureDisabledScreen(
-        featureName: 'Audit',
-        icon: Icons.qr_code_scanner,
-        selectedNavIndex: 2,
-        navBarRole: NavBarRole.user,
-      );
+      return const SizedBox.shrink();
     }
 
-    return Scaffold(
-      appBar: GradientHeaderAppBar(
-        showBackButton: false,
-        showBranding: true, // Show simplified branding
-      ),
-      body: _mockScans.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.history, size: 80, color: Colors.grey[300]),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No scan records yet',
-                    style: TextStyle(fontSize: 18, color: Colors.grey[600]),
-                  ),
-                ],
-              ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _mockScans.length,
-              itemBuilder: (context, index) {
-                final scan = _mockScans[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.all(12),
-                    leading: Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: scan.type == 'QR'
-                            ? app_colors.AppColors.primary.withValues(alpha: 0.1)
-                            : Colors.blue.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10),
+    return Column(
+      children: [
+        const TitleLogoHeaderAppBar(
+          title: 'Audit Trail',
+          showBackButton: false,
+        ),
+        Expanded(
+          child: _mockScans.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.history, size: 80, color: Colors.grey[300]),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No scan records yet',
+                        style: TextStyle(fontSize: 18, color: Colors.grey[600]),
                       ),
-                      child: Icon(
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _mockScans.length,
+                  itemBuilder: (context, index) {
+                    final scan = _mockScans[index];
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.all(12),
+                        leading: Container(
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            color: scan.type == 'QR'
+                                ? app_colors.AppColors.primary.withValues(alpha: 0.1)
+                                : Colors.blue.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
                         scan.type == 'QR'
                             ? Icons.qr_code_2
                             : Icons.text_snippet,
@@ -457,10 +452,7 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
                 );
               },
             ),
-      bottomNavigationBar: AppBottomNavBar(
-        selectedIndex: 1,
-        role: NavBarRole.user,
-      ),
-    );
+        ),
+      ],    );
   }
 }

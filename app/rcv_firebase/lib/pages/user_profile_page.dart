@@ -294,10 +294,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
           body: const SafeArea(
             child: Center(child: CircularProgressIndicator()),
           ),
-          bottomNavigationBar: AppBottomNavBar(
-            selectedIndex: 4,
-            role: NavBarRole.user,
-          ),
         ),
       );
     }
@@ -327,10 +323,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
               ],
             ),
           ),
-        ),
-        bottomNavigationBar: AppBottomNavBar(
-          selectedIndex: 4,
-          role: NavBarRole.user,
         ),
       );
     }
@@ -580,10 +572,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
               ],
             ),
           ),
-        ),
-        bottomNavigationBar: AppBottomNavBar(
-          selectedIndex: 4,
-          role: NavBarRole.user,
         ),
       ),
     );

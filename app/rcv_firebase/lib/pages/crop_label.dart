@@ -3,9 +3,7 @@ import 'dart:typed_data';
 
 import 'package:crop_your_image/crop_your_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show compute; // offload heavy work
 import 'package:path_provider/path_provider.dart';
-import 'package:image/image.dart' as img;
 import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
 
 class CropLabelPage extends StatefulWidget {
@@ -18,12 +16,7 @@ class CropLabelPage extends StatefulWidget {
 class _CropLabelPageState extends State<CropLabelPage> {
   final CropController _controller = CropController();
   Uint8List? _imageBytes;
-  Uint8List?
-  _previewBytes; // what the Crop widget displays (original or grayscale)
   bool _isCropping = false;
-  bool _applyGrayscale = false;
-  bool _isBuildingPreview = false;
-  int _previewTaskId = 0; // guards against outdated async results
 
   @override
   void didChangeDependencies() {
@@ -41,42 +34,12 @@ class _CropLabelPageState extends State<CropLabelPage> {
       final bytes = await file.readAsBytes();
       if (!mounted) return;
       setState(() => _imageBytes = bytes);
-      await _rebuildPreview();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Failed to load image: $e')));
       Navigator.pop(context);
-    }
-  }
-
-  Future<void> _rebuildPreview() async {
-    if (_imageBytes == null) return;
-    if (_isBuildingPreview) return; // debounce if a build is already running
-    final int taskId = ++_previewTaskId;
-    setState(() => _isBuildingPreview = true);
-    try {
-      if (_applyGrayscale) {
-        final Uint8List result = await compute(
-          _buildPreviewBytes,
-          <String, dynamic>{
-            'bytes': _imageBytes!,
-            'applyGrayscale': true,
-            'maxDim': 1600,
-          },
-        );
-        if (!mounted || taskId != _previewTaskId) return;
-        _previewBytes = result;
-      } else {
-        _previewBytes = _imageBytes;
-      }
-    } catch (_) {
-      _previewBytes = _imageBytes;
-    } finally {
-      if (mounted && taskId == _previewTaskId) {
-        setState(() => _isBuildingPreview = false);
-      }
     }
   }
 
@@ -88,22 +51,11 @@ class _CropLabelPageState extends State<CropLabelPage> {
 
   Future<void> _handleCropped(Uint8List bytes) async {
     try {
-      Uint8List outputBytes = bytes;
-      if (_applyGrayscale) {
-        final img.Image? decoded = img.decodeImage(bytes);
-        if (decoded != null) {
-          final img.Image gray = img.grayscale(decoded);
-          final List<int> png = img.encodePng(gray, level: 6);
-          outputBytes = Uint8List.fromList(png);
-        }
-      }
-
       final dir = await getTemporaryDirectory();
-      final ext = _applyGrayscale ? 'png' : 'jpg';
       final file = File(
-        '${dir.path}/crop_${DateTime.now().millisecondsSinceEpoch}.$ext',
+        '${dir.path}/crop_${DateTime.now().millisecondsSinceEpoch}.jpg',
       );
-      await file.writeAsBytes(outputBytes);
+      await file.writeAsBytes(bytes);
       if (!mounted) return;
       Navigator.pop(context, file.path);
     } catch (e) {
@@ -118,7 +70,7 @@ class _CropLabelPageState extends State<CropLabelPage> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: !(_isCropping || _isBuildingPreview),
+      canPop: !_isCropping,
       child: Scaffold(
         appBar: AppBar(
           backgroundColor: app_colors.AppColors.primary,
@@ -137,11 +89,11 @@ class _CropLabelPageState extends State<CropLabelPage> {
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
-                        if (_previewBytes != null)
+                        if (_imageBytes != null)
                           Padding(
                             padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
                             child: Crop(
-                              image: _previewBytes!,
+                              image: _imageBytes!,
                               controller: _controller,
                               withCircleUi: false,
                               onCropped: (result) async {
@@ -181,37 +133,11 @@ class _CropLabelPageState extends State<CropLabelPage> {
                                   ),
                             ),
                           ),
-                        if (_isBuildingPreview)
-                          Container(
-                            color: Colors.black.withValues(alpha: 0.2),
-                            child: const Center(
-                              child: CircularProgressIndicator(),
-                            ),
-                          ),
                         if (_isCropping)
                           Container(
                             color: Colors.black.withValues(alpha: 0.3),
                             child: const Center(
                               child: CircularProgressIndicator(),
-                            ),
-                          ),
-                        if (_applyGrayscale && !_isBuildingPreview)
-                          Positioned(
-                            left: 8,
-                            top: 8,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.6),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: const Text(
-                                'Grayscale preview',
-                                style: TextStyle(color: Colors.white),
-                              ),
                             ),
                           ),
                       ],
@@ -224,52 +150,6 @@ class _CropLabelPageState extends State<CropLabelPage> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // Grayscale toggle
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              children: [
-                                Checkbox(
-                                  value: _applyGrayscale,
-                                  onChanged: (_isCropping || _isBuildingPreview)
-                                      ? null
-                                      : (value) {
-                                          if (value != null) {
-                                            setState(() => _applyGrayscale = value);
-                                            _rebuildPreview();
-                                          }
-                                        },
-                                ),
-                                Expanded(
-                                  child: GestureDetector(
-                                    onTap: (_isCropping || _isBuildingPreview)
-                                        ? null
-                                        : () {
-                                            setState(
-                                              () => _applyGrayscale = !_applyGrayscale,
-                                            );
-                                            _rebuildPreview();
-                                          },
-                                    child: const Text(
-                                      'Apply Grayscale (Better OCR)',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 8),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -281,7 +161,7 @@ class _CropLabelPageState extends State<CropLabelPage> {
                                 label: const Text('Cancel'),
                               ),
                               FilledButton(
-                                onPressed: (_isCropping || _isBuildingPreview || _imageBytes == null)
+                                onPressed: (_isCropping || _imageBytes == null)
                                     ? null
                                     : _onConfirmCrop,
                                 child: _isCropping
@@ -320,40 +200,4 @@ class _CropLabelPageState extends State<CropLabelPage> {
       ),
     );
   }
-
-  // (Reverted) Binarization helper removed
-}
-
-// Top-level function for compute(): builds a fast preview (optionally grayscale)
-Uint8List _buildPreviewBytes(Map<String, dynamic> args) {
-  final Uint8List bytes = args['bytes'] as Uint8List;
-  final bool applyGrayscale = args['applyGrayscale'] == true;
-  final int maxDim = (args['maxDim'] as int?) ?? 1600;
-
-  final img.Image? decoded = img.decodeImage(bytes);
-  if (decoded == null) return bytes;
-
-  img.Image image = decoded;
-  final int w = image.width;
-  final int h = image.height;
-
-  if (w > maxDim || h > maxDim) {
-    final double scale = w > h ? maxDim / w : maxDim / h;
-    final int newW = (w * scale).round();
-    final int newH = (h * scale).round();
-    image = img.copyResize(
-      image,
-      width: newW,
-      height: newH,
-      interpolation: img.Interpolation.linear,
-    );
-  }
-
-  if (applyGrayscale) {
-    image = img.grayscale(image);
-  }
-
-  // JPEG is faster/smaller for preview; crop output quality is handled separately
-  final List<int> jpg = img.encodeJpg(image, quality: 90);
-  return Uint8List.fromList(jpg);
 }
