@@ -33,11 +33,15 @@ class AuditLog {
   });
 
   factory AuditLog.fromJson(Map<String, dynamic> json) {
+    
+    final utcDate = DateTime.parse(json['createdAt']);
+    final utc8Date = utcDate.add(const Duration(hours: 8));
+    
     return AuditLog(
       id: json['_id'] ?? '',
       action: json['action'] ?? '',
       actionType: json['actionType'] ?? '',
-      createdAt: DateTime.parse(json['createdAt']),
+      createdAt: utc8Date,
       ipAddress: json['ipAddress'],
       userAgent: json['userAgent'],
       platform: json['platform'] ?? 'MOBILE',
