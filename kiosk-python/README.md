@@ -13,7 +13,7 @@ Automated product verification kiosk for QR code and product scanning. Connects 
 
 ## Quick Start (Development)
 
-```bash
+```bash 
 # Install dependencies
 pip install -r requirements.txt
 
@@ -76,7 +76,7 @@ Edit `.env` file:
 
 ```env
 # RCV API Server URL
-RCV_API_URL=https://enlargedly-obnoxious-shalanda.ngrok-free.dev /api/v1
+RCV_API_URL=https://rcv-production-cbd6.up.railway.app/api/v1
 
 # Display duration (seconds)
 DISPLAY_DURATION=20
@@ -156,7 +156,7 @@ pip install gTTS
 ### API connection issues
 ```bash
 # Test API connectivity
-curl https://enlargedly-obnoxious-shalanda.ngrok-free.dev /
+curl https://rcv-production-cbd6.up.railway.app/
 
 # Check .env file
 cat ~/rcv-kiosk/.env
