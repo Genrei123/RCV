@@ -13,7 +13,7 @@ Automated product verification kiosk for QR code and product scanning. Connects 
 
 ## Quick Start (Development)
 
-```bash
+```bash 
 # Install dependencies
 pip install -r requirements.txt
 

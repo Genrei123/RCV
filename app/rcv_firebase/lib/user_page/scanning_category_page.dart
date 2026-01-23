@@ -33,12 +33,12 @@ class ScanningCategoryPage extends StatelessWidget {
 
   Widget _buildContent(BuildContext context) {
     return SafeArea(
+      top: false,
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-                const SizedBox(height: 8),
                 const Text(
                   'Product Category',
                   style: TextStyle(
@@ -52,7 +52,7 @@ class ScanningCategoryPage extends StatelessWidget {
                   'Select the type of product you want to scan',
                   style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 22),
 
                 // Product Type Cards
                 _buildCategoryCard(

@@ -6,7 +6,6 @@ import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
 import '../widgets/navigation_bar.dart';
 import '../widgets/processing_modal.dart';
 import '../services/auth_service.dart';
-import '../services/audit_log_service.dart';
 import 'package:flutter/scheduler.dart';
 
 NavBarRole? appRole;
@@ -90,9 +89,6 @@ class _LoginPageState extends State<LoginPage> {
       } else {
         appRole = NavBarRole.user;
       }
-
-      // Log the login action to audit trail
-      AuditLogService.logLogin();
 
       return true;
     } else {
