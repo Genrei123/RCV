@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:developer' as developer;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../config/api_constants.dart';
 
 /// Authentication Service using JWT Tokens
@@ -133,6 +134,15 @@ class AuthService {
         if (responseData?['token'] != null) {
           await _saveToken(responseData!['token']);
           developer.log('💾 JWT token saved');
+        }
+
+        // Sign in anonymously to Firebase for Storage/Firestore access
+        try {
+          final firebaseUser = await FirebaseAuth.instance.signInAnonymously();
+          developer.log('🔐 Firebase Anonymous Auth successful: ${firebaseUser.user?.uid}');
+        } catch (e) {
+          developer.log('⚠️ Firebase Anonymous Auth failed (non-critical): $e');
+          // Continue anyway - backend login already succeeded
         }
 
         return {
@@ -312,6 +322,14 @@ class AuthService {
   Future<void> logout() async {
     try {
       developer.log('🚪 Logging out user...');
+
+      // Sign out from Firebase
+      try {
+        await FirebaseAuth.instance.signOut();
+        developer.log('🔐 Firebase Sign out successful');
+      } catch (e) {
+        developer.log('⚠️ Firebase Sign out failed: $e');
+      }
 
       // Clear all cached data
       final prefs = await SharedPreferences.getInstance();

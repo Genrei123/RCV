@@ -84,7 +84,7 @@ export function Profile({
     total_pages: 1,
     total_items: 0,
   });
-  const [sortBy, setSortBy] = useState<"all" | "platform" | "action">("all");
+  const [sortBy, setSortBy] = useState<"all" | "platform" | "action" | "compliance" | "scans">("all");
 
   const sortedFullLogs = useMemo(() => {
     const arr = [...fullAuditLogs];
@@ -103,6 +103,16 @@ export function Profile({
     }
     if (sortBy === "action") {
       return arr.sort((a, b) => a.action.localeCompare(b.action));
+    }
+    if (sortBy === "compliance") {
+      return arr.filter(log => log.actionType === "COMPLIANCE_REPORT").sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    }
+    if (sortBy === "scans") {
+      return arr.filter(log => log.actionType === "SCAN_PRODUCT").sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
     }
     return arr;
   }, [fullAuditLogs, sortBy]);
@@ -659,6 +669,8 @@ export function Profile({
                 >
                   <option value="all">All (default)</option>
                   <option value="action">Action (A–Z)</option>
+                  <option value="compliance">Compliance Reports</option>
+                  <option value="scans">Scanned Products</option>
                 </select>
                 <Button
                   variant="outline"

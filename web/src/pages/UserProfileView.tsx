@@ -38,7 +38,7 @@ export function UserProfileView() {
     total_pages: 1,
     total_items: 0,
   });
-  const [sortBy, setSortBy] = useState<"all" | "platform" | "action">("all");
+  const [sortBy, setSortBy] = useState<"all" | "platform" | "action" | "compliance" | "scans">("all");
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
 
@@ -189,6 +189,16 @@ export function UserProfileView() {
     }
     if (sortBy === "action")
       return arr.sort((a, b) => a.action.localeCompare(b.action));
+    if (sortBy === "compliance") {
+      return arr.filter(log => log.actionType === "COMPLIANCE_REPORT").sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    }
+    if (sortBy === "scans") {
+      return arr.filter(log => log.actionType === "SCAN_PRODUCT").sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    }
     return arr;
   }, [fullAuditLogs, sortBy]);
 
@@ -466,6 +476,8 @@ export function UserProfileView() {
                 >
                   <option value="all">All (default)</option>
                   <option value="action">Action (A–Z)</option>
+                  <option value="compliance">Compliance Reports</option>
+                  <option value="scans">Scanned Products</option>
                 </select>
               </div>
             </div>
@@ -588,6 +600,55 @@ export function UserProfileView() {
                   </div>
                 </div>
               )}
+              {/* Scan Images */}
+              {selectedLog.metadata?.frontImageUrl ||
+              selectedLog.metadata?.backImageUrl ? (
+                <div className="border-b pb-3">
+                  <p className="text-sm font-medium text-neutral-500 mb-3">
+                    Scan Images
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {selectedLog.metadata.frontImageUrl && (
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-neutral-600">
+                          Front Image
+                        </p>
+                        <a
+                          href={selectedLog.metadata.frontImageUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block border rounded-lg overflow-hidden hover:opacity-80 transition-opacity"
+                        >
+                          <img
+                            src={selectedLog.metadata.frontImageUrl}
+                            alt="Front scan"
+                            className="w-full h-48 object-cover"
+                          />
+                        </a>
+                      </div>
+                    )}
+                    {selectedLog.metadata.backImageUrl && (
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-neutral-600">
+                          Back Image
+                        </p>
+                        <a
+                          href={selectedLog.metadata.backImageUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block border rounded-lg overflow-hidden hover:opacity-80 transition-opacity"
+                        >
+                          <img
+                            src={selectedLog.metadata.backImageUrl}
+                            alt="Back scan"
+                            className="w-full h-48 object-cover"
+                          />
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : null}
               <div>
                 <p className="text-sm font-medium text-neutral-500 mb-1">
                   Log ID

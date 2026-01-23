@@ -52,6 +52,41 @@ export function EditProfileModal({
   const [showCityDropdown, setShowCityDropdown] = useState(false);
   const [citySearchTerm, setCitySearchTerm] = useState("");
 
+  /**
+   * Normalize phone number for display/editing
+   * Accepts both "+639XXXXXXXXX" and "+6309XXXXXXXXX" formats
+   * Returns only the 10 digits (without +63 prefix and without leading 0)
+   */
+  const normalizePhoneForEdit = (phone: string): string => {
+    if (!phone) return "";
+    
+    // Remove all non-digits
+    const digitsOnly = phone.replace(/\D/g, "");
+    
+    // If it starts with 63 (country code), remove it
+    let withoutCountryCode = digitsOnly;
+    if (digitsOnly.startsWith("63")) {
+      withoutCountryCode = digitsOnly.substring(2);
+    }
+    
+    // If it starts with 0 (leading zero), remove it to get 10 digits
+    if (withoutCountryCode.startsWith("0") && withoutCountryCode.length === 11) {
+      return withoutCountryCode.substring(1);
+    }
+    
+    // If it's already 10 digits starting with 9, return as is
+    if (withoutCountryCode.length === 10 && withoutCountryCode.startsWith("9")) {
+      return withoutCountryCode;
+    }
+    
+    // Otherwise return what we have (trimmed to last 10 digits if needed)
+    if (withoutCountryCode.length > 10) {
+      return withoutCountryCode.substring(withoutCountryCode.length - 10);
+    }
+    
+    return withoutCountryCode;
+  };
+
   useEffect(() => {
     if (user) {
       setFormData({
@@ -59,7 +94,7 @@ export function EditProfileModal({
         middleName: user.middleName || "",
         lastName: (user.lastName || "").replace(/[0-9]/g, ""),
         email: user.email || "",
-        phoneNumber: (user.phoneNumber || "").replace(/^\+63\s?/, ""),
+        phoneNumber: normalizePhoneForEdit(user.phoneNumber || ""),
         location: user.location || "",
         dateOfBirth: user.dateOfBirth || "",
         badgeId: user.badgeId || "",
@@ -298,6 +333,14 @@ export function EditProfileModal({
     // Filter out numbers from firstName and lastName
     if (field === "firstName" || field === "lastName") {
       value = value.replace(/[0-9]/g, "");
+    }
+    
+    // Limit phone number to 10 digits only
+    if (field === "phoneNumber") {
+      // Remove all non-digit characters
+      const digitsOnly = value.replace(/\D/g, "");
+      // Keep only first 10 digits
+      value = digitsOnly.substring(0, 10);
     }
     
     setFormData((prev) => ({ ...prev, [field]: value }));

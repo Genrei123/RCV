@@ -1,8 +1,6 @@
 import { Router } from 'express';
 import { 
   userSignIn,
-  mobileSignIn,
-  mobileSignUp,
   logout, 
   me,
   refreshToken, 
@@ -20,10 +18,6 @@ const AuthRouter = Router();
 // Web Authentication
 AuthRouter.post('/login', userSignIn);
 AuthRouter.post('/register', userSignUp);
-
-// Mobile Authentication (includes full user data in JWT)
-AuthRouter.post('/mobile-login', mobileSignIn);
-AuthRouter.post('/mobile-register', mobileSignUp);
 
 // Common Auth Routes
 AuthRouter.post('/logout', logout);
