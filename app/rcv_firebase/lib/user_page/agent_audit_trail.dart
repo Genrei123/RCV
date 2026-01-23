@@ -1,24 +1,46 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
 import '../widgets/title_logo_header_app_bar.dart';
 import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
 import '../services/remote_config_service.dart';
+import '../services/audit_log_service.dart';
 
-// Mock scan data model
-class ScanRecord {
+// Audit log model
+class AuditLog {
   final String id;
-  final String type; // 'QR' or 'OCR'
-  final String content;
-  final DateTime timestamp;
-  final String location;
+  final String action;
+  final String actionType;
+  final DateTime createdAt;
+  final String? ipAddress;
+  final String? userAgent;
+  final String platform;
+  final Map<String, dynamic>? location;
+  final Map<String, dynamic>? metadata;
 
-  ScanRecord({
+  AuditLog({
     required this.id,
-    required this.type,
-    required this.content,
-    required this.timestamp,
-    required this.location,
+    required this.action,
+    required this.actionType,
+    required this.createdAt,
+    this.ipAddress,
+    this.userAgent,
+    required this.platform,
+    this.location,
+    this.metadata,
   });
+
+  factory AuditLog.fromJson(Map<String, dynamic> json) {
+    return AuditLog(
+      id: json['_id'] ?? '',
+      action: json['action'] ?? '',
+      actionType: json['actionType'] ?? '',
+      createdAt: DateTime.parse(json['createdAt']),
+      ipAddress: json['ipAddress'],
+      userAgent: json['userAgent'],
+      platform: json['platform'] ?? 'MOBILE',
+      location: json['location'],
+      metadata: json['metadata'],
+    );
+  }
 }
 
 class AuditTrailPage extends StatefulWidget {
@@ -29,6 +51,66 @@ class AuditTrailPage extends StatefulWidget {
 }
 
 class _AuditTrailPageState extends State<AuditTrailPage> {
+  List<AuditLog> _auditLogs = [];
+  bool _isLoading = true;
+  bool _hasError = false;
+  int _currentPage = 1;
+  int _totalPages = 1;
+  bool _isLoadingMore = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAuditLogs();
+  }
+
+  Future<void> _loadAuditLogs({bool loadMore = false}) async {
+    if (loadMore) {
+      if (_isLoadingMore || _currentPage >= _totalPages) return;
+      if (!mounted) return;
+      setState(() => _isLoadingMore = true);
+    } else {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = true;
+        _hasError = false;
+        _currentPage = 1;
+      });
+    }
+
+    final result = await AuditLogService.getMyAuditLogs(
+      page: loadMore ? _currentPage + 1 : 1,
+      limit: 20,
+    );
+
+    if (!mounted) return;
+
+    if (result != null && result['success'] == true) {
+      final logs = (result['data'] as List)
+          .map((json) => AuditLog.fromJson(json))
+          .toList();
+
+      setState(() {
+        if (loadMore) {
+          _auditLogs.addAll(logs);
+          _currentPage++;
+        } else {
+          _auditLogs = logs;
+        }
+        _totalPages = result['pagination']?['total_pages'] ?? 1;
+        _isLoading = false;
+        _isLoadingMore = false;
+        _hasError = false;
+      });
+    } else {
+      setState(() {
+        _isLoading = false;
+        _isLoadingMore = false;
+        _hasError = true;
+      });
+    }
+  }
+
   // Format date to readable string
   String _formatShortDate(DateTime date) {
     final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -37,48 +119,48 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
     return '${months[date.month - 1]} ${date.day}, ${hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')} $period';
   }
 
-  // Mock data - will be replaced with backend data later
-  final List<ScanRecord> _mockScans = [
-    ScanRecord(
-      id: 'SCAN001',
-      type: 'QR',
-      content: 'https://example.com/product/12345',
-      timestamp: DateTime.now().subtract(const Duration(hours: 2)),
-      location: 'Manila, Philippines',
-    ),
-    ScanRecord(
-      id: 'SCAN002',
-      type: 'OCR',
-      content:
-          'Product Name: Premium Dog Food\nBrand: PetCare\nExpiry: 2025-12-31\nBatch: A12345',
-      timestamp: DateTime.now().subtract(const Duration(days: 1)),
-      location: 'Quezon City, Philippines',
-    ),
-    ScanRecord(
-      id: 'SCAN003',
-      type: 'QR',
-      content: 'Product ID: ABC-XYZ-789\nStatus: Verified',
-      timestamp: DateTime.now().subtract(const Duration(days: 2)),
-      location: 'Makati, Philippines',
-    ),
-    ScanRecord(
-      id: 'SCAN004',
-      type: 'OCR',
-      content:
-          'Ingredients: Chicken, Rice, Vegetables\nNet Weight: 1.5kg\nManufactured by: ABC Corp',
-      timestamp: DateTime.now().subtract(const Duration(days: 3)),
-      location: 'Pasig, Philippines',
-    ),
-    ScanRecord(
-      id: 'SCAN005',
-      type: 'QR',
-      content: 'https://verify.product.com/item/67890',
-      timestamp: DateTime.now().subtract(const Duration(days: 5)),
-      location: 'Taguig, Philippines',
-    ),
-  ];
+  IconData _getIconForActionType(String actionType) {
+    switch (actionType) {
+      case 'LOGIN':
+        return Icons.login;
+      case 'LOGOUT':
+        return Icons.logout;
+      case 'SCAN_PRODUCT':
+        return Icons.qr_code_scanner;
+      case 'UPDATE_PROFILE':
+        return Icons.person;
+      case 'CHANGE_PASSWORD':
+        return Icons.lock;
+      case 'LOCATION_UPDATE':
+        return Icons.location_on;
+      case 'APP_CLOSED':
+        return Icons.close;
+      default:
+        return Icons.info;
+    }
+  }
 
-  void _showScanDetails(ScanRecord scan) {
+  Color _getColorForActionType(String actionType) {
+    switch (actionType) {
+      case 'LOGIN':
+        return Colors.green;
+      case 'LOGOUT':
+        return Colors.orange;
+      case 'SCAN_PRODUCT':
+        return app_colors.AppColors.primary;
+      case 'UPDATE_PROFILE':
+      case 'CHANGE_PASSWORD':
+        return Colors.blue;
+      case 'LOCATION_UPDATE':
+        return Colors.purple;
+      case 'APP_CLOSED':
+        return Colors.grey;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  void _showScanDetails(AuditLog log) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -97,7 +179,7 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: app_colors.AppColors.primary,
+                    color: _getColorForActionType(log.actionType),
                     borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(20),
                       topRight: Radius.circular(20),
@@ -106,7 +188,7 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
                   child: Row(
                     children: [
                       Icon(
-                        scan.type == 'QR' ? Icons.qr_code : Icons.text_fields,
+                        _getIconForActionType(log.actionType),
                         color: Colors.white,
                         size: 28,
                       ),
@@ -116,7 +198,7 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '${scan.type} Scan Details',
+                              '${log.actionType} Details',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 20,
@@ -124,7 +206,7 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
                               ),
                             ),
                             Text(
-                              'ID: ${scan.id}',
+                              'ID: ${log.id}',
                               style: const TextStyle(
                                 color: Colors.white70,
                                 fontSize: 12,
@@ -147,25 +229,40 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildDetailRow('Scan Type', scan.type),
+                        _buildDetailRow('Action', log.action),
+                        const Divider(height: 24),
+                        _buildDetailRow('Action Type', log.actionType),
                         const Divider(height: 24),
                         _buildDetailRow(
                           'Date & Time',
-                          _formatShortDate(scan.timestamp),
+                          _formatShortDate(log.createdAt),
                         ),
                         const Divider(height: 24),
-                        _buildDetailRow('Location', scan.location),
-                        const Divider(height: 24),
-                        const Text(
-                          'Scanned Content:',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black54,
+                        _buildDetailRow('Platform', log.platform),
+                        if (log.ipAddress != null) ...[
+                          const Divider(height: 24),
+                          _buildDetailRow('IP Address', log.ipAddress ?? 'N/A'),
+                        ],
+                        if (log.location != null) ...[
+                          const Divider(height: 24),
+                          _buildDetailRow(
+                            'Location',
+                            '${log.location?['address'] ?? 'N/A'}',
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        _buildFormattedContent(scan.content),
+                        ],
+                        if (log.metadata != null && log.metadata!.isNotEmpty) ...[
+                          const Divider(height: 24),
+                          const Text(
+                            'Additional Data:',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black54,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          _buildFormattedMetadata(log.metadata ?? {}),
+                        ],
                       ],
                     ),
                   ),
@@ -211,109 +308,50 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
     );
   }
 
-  // Helper method to format scanned content
-  Widget _buildFormattedContent(String content) {
-    try {
-      // Try to parse as JSON
-      final Map<String, dynamic> data = jsonDecode(content);
-      
-      // If successful, display formatted data
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: const Color(0xFF005440), width: 1.5),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (data.containsKey('company_name'))
-              _buildInfoRow('Company Name:', data['company_name'] ?? 'N/A'),
-            if (data.containsKey('product_name'))
-              _buildInfoRow('Product Name:', data['product_name'] ?? 'N/A'),
-            if (data.containsKey('brand_name'))
-              _buildInfoRow('Brand Name:', data['brand_name'] ?? 'N/A'),
-            if (data.containsKey('reg_number'))
-              _buildInfoRow('Registration No:', data['reg_number'] ?? 'N/A'),
-            if (data.containsKey('LTONumber'))
-              _buildInfoRow('LTO Number:', data['LTONumber'] ?? 'N/A'),
-            if (data.containsKey('CFPRNumber'))
-              _buildInfoRow('CFPR Number:', data['CFPRNumber'] ?? 'N/A'),
-            if (data.containsKey('expirationDate'))
-              _buildInfoRow('Expiration Date:', data['expirationDate'] ?? 'N/A'),
-            if (data.containsKey('manufacturer'))
-              _buildInfoRow('Manufacturer:', data['manufacturer'] ?? 'N/A'),
-            
-            // Show any other fields
-            ...data.entries
-                .where((entry) => ![
-                      'company_name',
-                      'product_name',
-                      'brand_name',
-                      'reg_number',
-                      'LTONumber',
-                      'CFPRNumber',
-                      'expirationDate',
-                      'manufacturer',
-                      'product_image'
-                    ].contains(entry.key))
-                .map((entry) => _buildInfoRow(
-                      '${entry.key}:',
-                      entry.value?.toString() ?? 'N/A',
-                    )),
-          ],
-        ),
-      );
-    } catch (e) {
-      // If not JSON or parsing fails, show raw text
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.grey[100],
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: SelectableText(
-          content,
-          style: const TextStyle(fontSize: 14),
-        ),
-      );
-    }
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+  Widget _buildFormattedMetadata(Map<String, dynamic> metadata) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey[300]!, width: 1),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Colors.black54,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Colors.black87,
-            ),
-          ),
-        ],
+        children: metadata.entries
+            .map((entry) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${entry.key}:',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black54,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    entry.value?.toString() ?? 'N/A',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
+            ))
+            .toList(),
       ),
     );
   }
 
   @override
-  Widget build(BuildContext context) {
-
+Widget build(BuildContext context) {
     //Feature disable checker
     if (RemoteConfigService.isFeatureDisabled('disable_audit_page')) {
       return const SizedBox.shrink();
@@ -326,133 +364,168 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
           showBackButton: false,
         ),
         Expanded(
-          child: _mockScans.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.history, size: 80, color: Colors.grey[300]),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No scan records yet',
-                        style: TextStyle(fontSize: 18, color: Colors.grey[600]),
-                      ),
-                    ],
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _mockScans.length,
-                  itemBuilder: (context, index) {
-                    final scan = _mockScans[index];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.all(12),
-                        leading: Container(
-                          width: 50,
-                          height: 50,
-                          decoration: BoxDecoration(
-                            color: scan.type == 'QR'
-                                ? app_colors.AppColors.primary.withValues(alpha: 0.1)
-                                : Colors.blue.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(10),
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _hasError
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.error_outline, size: 80, color: Colors.red[300]),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Failed to load audit logs',
+                            style: TextStyle(fontSize: 18, color: Colors.grey[600]),
                           ),
-                          child: Icon(
-                        scan.type == 'QR'
-                            ? Icons.qr_code_2
-                            : Icons.text_snippet,
-                        color: scan.type == 'QR'
-                            ? app_colors.AppColors.primary
-                            : Colors.blue,
-                        size: 28,
-                      ),
-                    ),
-                    title: Text(
-                      scan.id,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 4),
-                        Text(
-                          '${scan.type} Scan',
-                          style: TextStyle(
-                            color: scan.type == 'QR'
-                                ? app_colors.AppColors.primary
-                                : Colors.blue,
-                            fontWeight: FontWeight.w500,
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () => _loadAuditLogs(),
+                            child: const Text('Retry'),
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.access_time,
-                              size: 14,
-                              color: Colors.grey[600],
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              _formatShortDate(scan.timestamp),
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
+                        ],
+                      ),
+                    )
+                  : _auditLogs.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.history, size: 80, color: Colors.grey[300]),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No audit records yet',
+                                style: TextStyle(fontSize: 18, color: Colors.grey[600]),
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 2),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.location_on,
-                              size: 14,
-                              color: Colors.grey[600],
-                            ),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                scan.location,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[600],
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: _auditLogs.length + (_isLoadingMore ? 1 : 0),
+                          itemBuilder: (context, index) {
+                            if (index == _auditLogs.length) {
+                              return const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.all(16.0),
+                                  child: CircularProgressIndicator(),
                                 ),
-                                overflow: TextOverflow.ellipsis,
+                              );
+                            }
+
+                            final log = _auditLogs[index];
+
+                            // Load more when near the end
+                            if (index == _auditLogs.length - 3) {
+                              _loadAuditLogs(loadMore: true);
+                            }
+
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              elevation: 2,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                            ),
-                          ],
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.all(12),
+                                leading: Container(
+                                  width: 50,
+                                  height: 50,
+                                  decoration: BoxDecoration(
+                                    color: _getColorForActionType(log.actionType)
+                                        .withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Icon(
+                                    _getIconForActionType(log.actionType),
+                                    color:
+                                        _getColorForActionType(log.actionType),
+                                    size: 28,
+                                  ),
+                                ),
+                                title: Text(
+                                  log.action,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      log.actionType,
+                                      style: TextStyle(
+                                        color: _getColorForActionType(
+                                            log.actionType),
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.access_time,
+                                          size: 14,
+                                          color: Colors.grey[600],
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          _formatShortDate(log.createdAt),
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey[600],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    if (log.platform.isNotEmpty)
+                                      Padding(
+                                        padding:
+                                            const EdgeInsets.only(top: 2),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.devices,
+                                              size: 14,
+                                              color: Colors.grey[600],
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              log.platform,
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey[600],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                trailing: ElevatedButton(
+                                  onPressed: () => _showScanDetails(log),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor:
+                                        app_colors.AppColors.primary,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  child: const Text('View'),
+                                ),
+                              ),
+                            );
+                          },
                         ),
-                      ],
-                    ),
-                    trailing: ElevatedButton(
-                      onPressed: () => _showScanDetails(scan),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: app_colors.AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: const Text('View'),
-                    ),
-                  ),
-                );
-              },
-            ),
         ),
-      ],    );
+      ],
+    );
   }
 }
