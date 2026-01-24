@@ -35,10 +35,6 @@ import {
 } from "@/services/approvalService";
 import { useMetaMask } from "@/contexts/MetaMaskContext";
 import { AuthService } from "@/services/authService";
-import { ProductCard } from "./ProductCard";
-import type { Product } from "@/typeorm/entities/product.entity";
-import type { Company } from "@/typeorm/entities/company.entity";
-import { CompanyDetailsModal } from "./CompanyDetailsModal";
 import ApprovalQueueModal, {
   type PendingCompanyDetails,
   type PendingProductDetails,
