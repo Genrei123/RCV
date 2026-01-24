@@ -3,7 +3,7 @@ import 'package:rcv_firebase/services/remote_config_service.dart';
 import 'package:rcv_firebase/utils/tab_history.dart';
 import 'package:rcv_firebase/widgets/navigation_bar.dart';
 import 'agent_home_page.dart';
-import 'agent_audit_trail.dart';
+import '../pages/audit_trail_page.dart';
 import 'scanning_category_page.dart';
 import 'agent_reports.dart';
 import '../pages/user_profile_page.dart';

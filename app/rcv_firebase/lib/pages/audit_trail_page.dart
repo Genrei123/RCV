@@ -6,7 +6,6 @@ import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
 import '../services/audit_log_service.dart';
 import '../services/remote_config_service.dart';
 import '../widgets/feature_disabled_screen.dart';
-import '../utils/tab_history.dart';
 
 // Audit Log model
 class AuditLog {
@@ -33,11 +32,15 @@ class AuditLog {
   });
 
   factory AuditLog.fromJson(Map<String, dynamic> json) {
+    
+    final utcDate = DateTime.parse(json['createdAt']);
+    final utc8Date = utcDate.add(const Duration(hours: 8));
+    
     return AuditLog(
       id: json['_id'] ?? '',
       action: json['action'] ?? '',
       actionType: json['actionType'] ?? '',
-      createdAt: DateTime.parse(json['createdAt']),
+      createdAt: utc8Date,
       ipAddress: json['ipAddress'],
       userAgent: json['userAgent'],
       platform: json['platform'] ?? 'MOBILE',
@@ -658,12 +661,7 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        final prev = TabHistory.instance.popAndGetPrevious();
-        if (prev != null && prev >= 0 && prev < AppBottomNavBar.routes.length) {
-          Navigator.pushReplacementNamed(context, AppBottomNavBar.routes[prev]);
-        } else {
-          Navigator.maybePop(context);
-        }
+        Navigator.maybePop(context);
       },
       child: Scaffold(
         appBar: const TitleLogoHeaderAppBar(
@@ -842,10 +840,6 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
                   ),
                 ),
               ),
-        bottomNavigationBar: AppBottomNavBar(
-          selectedIndex: 1,
-          role: NavBarRole.user,
-        ),
       ),
     );
   }
