@@ -4,7 +4,7 @@ import { CertificateApproval, ApprovalStatus } from '../typeorm/entities/certifi
 import { User } from '../typeorm/entities/user.entity';
 import { ethers } from 'ethers';
 import CustomError from '../utils/CustomError';
-import { storePDFHashOnBlockchain, BlockchainTransaction, BlockchainEntityData, BlockchainApprover } from './sepoliaBlockchainService';
+import { storePDFHashOnBlockchain, renewProductCertificate, updateProductCertificate, BlockchainTransaction, BlockchainEntityData, BlockchainApprover } from './sepoliaBlockchainService';
 import { redisService } from './redisService';
 
 const approvalRepo: Repository<CertificateApproval> = DB.getRepository(CertificateApproval);
@@ -435,11 +435,24 @@ export async function processApproval(input: ProcessApprovalInput): Promise<Cert
     // Register the certificate on the Sepolia blockchain
     console.log('All approvals received - registering on blockchain...');
     try {
-      // Build entity data for blockchain storage (allows full recovery)
-      let entityData: BlockchainEntityData | undefined;
+      // Check if this is a renewal or update
+      const isUpdate = approval.pendingEntityData?.isUpdate;
+      const isRenewal = approval.isRenewal || approval.pendingEntityData?.isRenewal;
+      const isArchive = approval.pendingEntityData?.isArchive;
+      const isUnarchive = approval.pendingEntityData?.isUnarchive;
       
-      if (approval.pendingEntityData) {
-        if (approval.entityType === 'product') {
+      if (isUpdate && approval.entityType === 'product') {
+        // UPDATE FLOW - Use updateProductCertificate
+        console.log('Processing UPDATE for product...');
+        const oldTxHash = approval.previousCertificateHash || approval.pendingEntityData?.oldTransactionHash;
+        
+        if (!oldTxHash) {
+          throw new Error('Update missing previous transaction hash');
+        }
+        
+        // Build full entity data from pendingEntityData
+        let entityData: BlockchainEntityData | undefined;
+        if (approval.pendingEntityData) {
           // Get company info if available
           let companyName: string | undefined;
           let companyLicense: string | undefined;
@@ -468,74 +481,449 @@ export async function processApproval(input: ProcessApprovalInput): Promise<Cert
             productImageFront: approval.pendingEntityData.productImageFront,
             productImageBack: approval.pendingEntityData.productImageBack
           };
-        } else {
-          entityData = {
-            address: approval.pendingEntityData.address,
-            licenseNumber: approval.pendingEntityData.licenseNumber,
-            phone: approval.pendingEntityData.phone,
-            email: approval.pendingEntityData.email,
-            businessType: approval.pendingEntityData.businessType
-          };
         }
-      }
-      
-      // Build approvers list for blockchain storage
-      const blockchainApprovers: BlockchainApprover[] = approval.approvers?.map(a => ({
-        wallet: a.approverWallet,
-        name: a.approverName,
-        date: a.approvalDate
-      })) || [];
-      
-      const blockchainTx = await storePDFHashOnBlockchain(
-        approval.pdfHash,
-        approval.certificateId,
-        approval.entityType,
-        approval.entityName,
-        entityData,
-        blockchainApprovers
-      );
-
-      if (blockchainTx) {
-        approval.blockchainTxHash = blockchainTx.txHash;
-        approval.blockchainTimestamp = blockchainTx.timestamp;
-        approval.blockchainBlockNumber = blockchainTx.blockNumber;
-        console.log(`Blockchain registration successful! Tx Hash: ${blockchainTx.txHash}`);
-
-        // Also update the entity (Product/Company) with the transaction ID
-        if (approval.entityId && approval.entityId !== 'pending') {
-          if (approval.entityType === 'product') {
-            await ProductRepo.update(approval.entityId, {
-              sepoliaTransactionId: blockchainTx.txHash,
-            });
-            console.log(`Product ${approval.entityId} updated with transaction ID`);
-            // Invalidate products cache so fresh data is fetched
+        
+        // Build approvers list for blockchain storage
+        const blockchainApprovers: BlockchainApprover[] = approval.approvers?.map(a => ({
+          wallet: a.approverWallet,
+          name: a.approverName,
+          date: a.approvalDate
+        })) || [];
+        
+        const blockchainTx = await updateProductCertificate(
+          oldTxHash,
+          approval.pdfHash,
+          approval.certificateId,
+          entityData,
+          blockchainApprovers
+        );
+        
+        if (blockchainTx) {
+          approval.blockchainTxHash = blockchainTx.txHash;
+          approval.blockchainTimestamp = blockchainTx.timestamp;
+          approval.blockchainBlockNumber = blockchainTx.blockNumber;
+          console.log(`Update blockchain registration successful! Tx Hash: ${blockchainTx.txHash}`);
+          
+          // Update product with new transaction ID AND ALL updated info
+          if (approval.entityId && approval.entityId !== 'pending') {
+            const product = await ProductRepo.findOne({ where: { _id: approval.entityId } });
+            
+            if (product) {
+              console.log(`Updating product ${product._id} after edit approval...`);
+              
+              const updateData: any = {
+                sepoliaTransactionId: blockchainTx.txHash,
+              };
+              
+              // If we have pendingEntityData, it contains updated info
+              if (approval.pendingEntityData) {
+                const { _id: pid, isUpdate: isUp, oldTransactionHash, oldCertificateId, updateRequestDate, ...rest } = approval.pendingEntityData;
+                // Only merge fields that aren't the restricted ones above
+                Object.assign(updateData, rest);
+              }
+              
+              console.log('Final update data for product:', {
+                id: product._id,
+                txHash: updateData.sepoliaTransactionId
+              });
+              
+              // Use merge and save for better consistency
+              ProductRepo.merge(product, updateData);
+              await ProductRepo.save(product);
+              console.log(`Product ${product._id} updated successfully (edit).`);
+            }
+            
+            // Invalidate products cache
             try {
               await redisService.invalidateProductsCache();
-              console.log('Products cache invalidated');
             } catch (cacheError) {
               console.warn('Failed to invalidate products cache:', cacheError);
             }
-          } else if (approval.entityType === 'company') {
-            await CompanyRepo.update(approval.entityId, {
-              sepoliaTransactionId: blockchainTx.txHash,
+          }
+        }
+      } else if (isArchive && approval.entityType === 'product') {
+        // ARCHIVE FLOW - Archive product and record on blockchain
+        console.log('Processing ARCHIVE for product...');
+        const oldTxHash = approval.previousCertificateHash || approval.pendingEntityData?.oldTransactionHash;
+        
+        if (!oldTxHash) {
+          throw new Error('Archive missing previous transaction hash');
+        }
+        
+        // Build entity data for blockchain record
+        let entityData: BlockchainEntityData | undefined;
+        if (approval.pendingEntityData) {
+          let companyName: string | undefined;
+          let companyLicense: string | undefined;
+          if (approval.pendingEntityData.companyId) {
+            const company = await CompanyRepo.findOne({
+              where: { _id: approval.pendingEntityData.companyId }
             });
-            console.log(`Company ${approval.entityId} updated with transaction ID`);
-            // Invalidate companies cache so fresh data is fetched
+            if (company) {
+              companyName = company.name;
+              companyLicense = company.licenseNumber;
+            }
+          }
+          
+          entityData = {
+            LTONumber: approval.pendingEntityData.LTONumber,
+            CFPRNumber: approval.pendingEntityData.CFPRNumber,
+            lotNumber: approval.pendingEntityData.lotNumber,
+            brandName: approval.pendingEntityData.brandName,
+            productName: approval.pendingEntityData.productName,
+            productClassification: approval.pendingEntityData.productClassification,
+            productSubClassification: approval.pendingEntityData.productSubClassification,
+            expirationDate: approval.pendingEntityData.expirationDate?.toString(),
+            companyName,
+            companyLicense,
+            productImageFront: approval.pendingEntityData.productImageFront,
+            productImageBack: approval.pendingEntityData.productImageBack
+          };
+        }
+        
+        // Build approvers list for blockchain
+        const blockchainApprovers: BlockchainApprover[] = approval.approvers?.map(a => ({
+          wallet: a.approverWallet,
+          name: a.approverName,
+          date: a.approvalDate
+        })) || [];
+        
+        // Use updateProductCertificate to record archive on blockchain
+        const blockchainTx = await updateProductCertificate(
+          oldTxHash,
+          approval.pdfHash,
+          approval.certificateId,
+          entityData,
+          blockchainApprovers
+        );
+        
+        if (blockchainTx) {
+          approval.blockchainTxHash = blockchainTx.txHash;
+          approval.blockchainTimestamp = blockchainTx.timestamp;
+          approval.blockchainBlockNumber = blockchainTx.blockNumber;
+          console.log(`Archive blockchain registration successful! Tx Hash: ${blockchainTx.txHash}`);
+          
+          // Archive the product
+          if (approval.entityId && approval.entityId !== 'pending') {
+            const product = await ProductRepo.findOne({ where: { _id: approval.entityId } });
+            
+            if (product) {
+              console.log(`Archiving product ${product._id}...`);
+              product.isArchived = true;
+              product.sepoliaTransactionId = blockchainTx.txHash; // Update with new tx
+              await ProductRepo.save(product);
+              console.log(`Product ${product._id} archived successfully.`);
+            }
+            
+            // Invalidate products cache
             try {
-              await redisService.invalidateCompaniesCache();
-              console.log('Companies cache invalidated');
+              await redisService.invalidateProductsCache();
             } catch (cacheError) {
-              console.warn('Failed to invalidate companies cache:', cacheError);
+              console.warn('Failed to invalidate products cache:', cacheError);
+            }
+          }
+        }
+      } else if (isUnarchive && approval.entityType === 'product') {
+        // UNARCHIVE FLOW - Unarchive product and record on blockchain
+        console.log('Processing UNARCHIVE for product...');
+        const oldTxHash = approval.previousCertificateHash || approval.pendingEntityData?.oldTransactionHash;
+        
+        if (!oldTxHash) {
+          throw new Error('Unarchive missing previous transaction hash');
+        }
+        
+        // Build entity data for blockchain record
+        let entityData: BlockchainEntityData | undefined;
+        if (approval.pendingEntityData) {
+          let companyName: string | undefined;
+          let companyLicense: string | undefined;
+          if (approval.pendingEntityData.companyId) {
+            const company = await CompanyRepo.findOne({
+              where: { _id: approval.pendingEntityData.companyId }
+            });
+            if (company) {
+              companyName = company.name;
+              companyLicense = company.licenseNumber;
+            }
+          }
+          
+          entityData = {
+            LTONumber: approval.pendingEntityData.LTONumber,
+            CFPRNumber: approval.pendingEntityData.CFPRNumber,
+            lotNumber: approval.pendingEntityData.lotNumber,
+            brandName: approval.pendingEntityData.brandName,
+            productName: approval.pendingEntityData.productName,
+            productClassification: approval.pendingEntityData.productClassification,
+            productSubClassification: approval.pendingEntityData.productSubClassification,
+            expirationDate: approval.pendingEntityData.expirationDate?.toString(),
+            companyName,
+            companyLicense,
+            productImageFront: approval.pendingEntityData.productImageFront,
+            productImageBack: approval.pendingEntityData.productImageBack
+          };
+        }
+        
+        // Build approvers list for blockchain
+        const blockchainApprovers: BlockchainApprover[] = approval.approvers?.map(a => ({
+          wallet: a.approverWallet,
+          name: a.approverName,
+          date: a.approvalDate
+        })) || [];
+        
+        // Use updateProductCertificate to record unarchive on blockchain
+        const blockchainTx = await updateProductCertificate(
+          oldTxHash,
+          approval.pdfHash,
+          approval.certificateId,
+          entityData,
+          blockchainApprovers
+        );
+        
+        if (blockchainTx) {
+          approval.blockchainTxHash = blockchainTx.txHash;
+          approval.blockchainTimestamp = blockchainTx.timestamp;
+          approval.blockchainBlockNumber = blockchainTx.blockNumber;
+          console.log(`Unarchive blockchain registration successful! Tx Hash: ${blockchainTx.txHash}`);
+          
+          // Unarchive the product
+          if (approval.entityId && approval.entityId !== 'pending') {
+            const product = await ProductRepo.findOne({ where: { _id: approval.entityId } });
+            
+            if (product) {
+              console.log(`Unarchiving product ${product._id}...`);
+              product.isArchived = false;
+              product.sepoliaTransactionId = blockchainTx.txHash; // Update with new tx
+              await ProductRepo.save(product);
+              console.log(`Product ${product._id} unarchived successfully.`);
+            }
+            
+            // Invalidate products cache
+            try {
+              await redisService.invalidateProductsCache();
+            } catch (cacheError) {
+              console.warn('Failed to invalidate products cache:', cacheError);
+            }
+          }
+        }
+      } else if (isRenewal && approval.entityType === 'product') {
+        // RENEWAL FLOW - Use renewProductCertificate
+        console.log('Processing RENEWAL for product...');
+        const oldTxHash = approval.previousCertificateHash || approval.pendingEntityData?.oldTransactionHash;
+        
+        if (!oldTxHash) {
+          throw new Error('Renewal missing previous transaction hash');
+        }
+        
+        // Build full entity data from pendingEntityData
+        let entityData: BlockchainEntityData | undefined;
+        if (approval.pendingEntityData) {
+          // Get company info if available
+          let companyName: string | undefined;
+          let companyLicense: string | undefined;
+          if (approval.pendingEntityData.companyId) {
+            const company = await CompanyRepo.findOne({
+              where: { _id: approval.pendingEntityData.companyId }
+            });
+            if (company) {
+              companyName = company.name;
+              companyLicense = company.licenseNumber;
+            }
+          }
+          
+          entityData = {
+            LTONumber: approval.pendingEntityData.LTONumber,
+            CFPRNumber: approval.pendingEntityData.CFPRNumber,
+            lotNumber: approval.pendingEntityData.lotNumber,
+            brandName: approval.pendingEntityData.brandName,
+            productName: approval.pendingEntityData.productName,
+            productClassification: approval.pendingEntityData.productClassification,
+            productSubClassification: approval.pendingEntityData.productSubClassification,
+            expirationDate: approval.pendingEntityData.expirationDate?.toString(),
+            companyName,
+            companyLicense,
+            // Include product images for recovery
+            productImageFront: approval.pendingEntityData.productImageFront,
+            productImageBack: approval.pendingEntityData.productImageBack
+          };
+        }
+        
+        // Build approvers list for blockchain storage
+        const blockchainApprovers: BlockchainApprover[] = approval.approvers?.map(a => ({
+          wallet: a.approverWallet,
+          name: a.approverName,
+          date: a.approvalDate
+        })) || [];
+        
+        const blockchainTx = await renewProductCertificate(
+          oldTxHash,
+          approval.pdfHash,
+          approval.certificateId,
+          entityData,
+          blockchainApprovers
+        );
+        
+        if (blockchainTx) {
+          approval.blockchainTxHash = blockchainTx.txHash;
+          approval.blockchainTimestamp = blockchainTx.timestamp;
+          approval.blockchainBlockNumber = blockchainTx.blockNumber;
+          console.log(`Renewal blockchain registration successful! Tx Hash: ${blockchainTx.txHash}`);
+          
+          // Update product with new transaction ID AND ALL updated info
+          if (approval.entityId && approval.entityId !== 'pending') {
+            const product = await ProductRepo.findOne({ where: { _id: approval.entityId } });
+            
+            if (product) {
+              console.log(`Updating product ${product._id} after renewal approval...`);
+              
+              const updateData: any = {
+                sepoliaTransactionId: blockchainTx.txHash,
+              };
+              
+              // Ensure we have a new expiration date
+              let finalExpirationDate: Date;
+              const now = new Date();
+              
+              if (approval.renewalMetadata?.newExpirationDate) {
+                finalExpirationDate = new Date(approval.renewalMetadata.newExpirationDate);
+              } else if (approval.pendingEntityData?.expirationDate && new Date(approval.pendingEntityData.expirationDate) > now) {
+                finalExpirationDate = new Date(approval.pendingEntityData.expirationDate);
+              } else {
+                finalExpirationDate = new Date();
+                finalExpirationDate.setFullYear(finalExpirationDate.getFullYear() + 1);
+              }
+              
+              updateData.expirationDate = finalExpirationDate;
+              
+              // If we have pendingEntityData, it might contain updated info (like photos)
+              if (approval.pendingEntityData) {
+                const { _id: pid, isRenewal: isRen, oldTransactionHash, oldCertificateId, renewalRequestDate, expirationDate: expDate, ...rest } = approval.pendingEntityData;
+                // Only merge fields that aren't the restricted ones above
+                Object.assign(updateData, rest);
+                
+                // Re-enforce the calculated expiration date
+                updateData.expirationDate = finalExpirationDate;
+              }
+              
+              console.log('Final update data for product:', {
+                id: product._id,
+                expirationDate: updateData.expirationDate,
+                txHash: updateData.sepoliaTransactionId
+              });
+              
+              console.log('=== PRODUCT RENEWAL UPDATE DEBUG ===');
+              console.log('Product ID:', product._id);
+              console.log('Old Expiration:', product.expirationDate);
+              console.log('New Expiration (Target):', finalExpirationDate);
+              console.log('Update Data:', updateData);
+              
+              // Use merge and save for better consistency
+              ProductRepo.merge(product, updateData);
+              const result = await ProductRepo.save(product);
+              console.log('Update Result - New Exp Date:', result.expirationDate);
+              console.log('=== END RENEWAL UPDATE DEBUG ===');
+            }
+            
+            // Invalidate products cache
+            try {
+              await redisService.invalidateProductsCache();
+            } catch (cacheError) {
+              console.warn('Failed to invalidate products cache:', cacheError);
             }
           }
         }
       } else {
-        console.warn('Blockchain registration returned null - transaction may have failed');
+        // NORMAL FLOW - Use storePDFHashOnBlockchain
+        console.log('Processing NORMAL certificate approval...');
+        
+        // Build entity data for blockchain storage (allows full recovery)
+        let entityData: BlockchainEntityData | undefined;
+        
+        if (approval.pendingEntityData) {
+          if (approval.entityType === 'product') {
+            // Get company info if available
+            let companyName: string | undefined;
+            let companyLicense: string | undefined;
+            if (approval.pendingEntityData.companyId) {
+              const company = await CompanyRepo.findOne({
+                where: { _id: approval.pendingEntityData.companyId }
+              });
+              if (company) {
+                companyName = company.name;
+                companyLicense = company.licenseNumber;
+              }
+            }
+            
+            entityData = {
+              LTONumber: approval.pendingEntityData.LTONumber,
+              CFPRNumber: approval.pendingEntityData.CFPRNumber,
+              lotNumber: approval.pendingEntityData.lotNumber,
+              brandName: approval.pendingEntityData.brandName,
+              productName: approval.pendingEntityData.productName,
+              productClassification: approval.pendingEntityData.productClassification,
+              productSubClassification: approval.pendingEntityData.productSubClassification,
+              expirationDate: approval.pendingEntityData.expirationDate?.toString(),
+              companyName,
+              companyLicense,
+              productImageFront: approval.pendingEntityData.productImageFront,
+              productImageBack: approval.pendingEntityData.productImageBack
+            };
+          } else {
+            entityData = {
+              address: approval.pendingEntityData.address,
+              licenseNumber: approval.pendingEntityData.licenseNumber,
+              phone: approval.pendingEntityData.phone,
+              email: approval.pendingEntityData.email,
+              businessType: approval.pendingEntityData.businessType
+            };
+          }
+        }
+        
+        const blockchainApprovers: BlockchainApprover[] = approval.approvers?.map(a => ({
+          wallet: a.approverWallet,
+          name: a.approverName,
+          date: a.approvalDate
+        })) || [];
+        
+        const blockchainTx = await storePDFHashOnBlockchain(
+          approval.pdfHash,
+          approval.certificateId,
+          approval.entityType,
+          approval.entityName,
+          entityData,
+          blockchainApprovers
+        );
+
+        if (blockchainTx) {
+          approval.blockchainTxHash = blockchainTx.txHash;
+          approval.blockchainTimestamp = blockchainTx.timestamp;
+          approval.blockchainBlockNumber = blockchainTx.blockNumber;
+          console.log(`Blockchain registration successful! Tx Hash: ${blockchainTx.txHash}`);
+
+          if (approval.entityId && approval.entityId !== 'pending') {
+            if (approval.entityType === 'product') {
+              await ProductRepo.update(approval.entityId, {
+                sepoliaTransactionId: blockchainTx.txHash,
+              });
+              try {
+                await redisService.invalidateProductsCache();
+              } catch (cacheError) {
+                console.warn('Failed to invalidate products cache:', cacheError);
+              }
+            } else if (approval.entityType === 'company') {
+              await CompanyRepo.update(approval.entityId, {
+                sepoliaTransactionId: blockchainTx.txHash,
+              });
+              try {
+                await redisService.invalidateCompaniesCache();
+              } catch (cacheError) {
+                console.warn('Failed to invalidate companies cache:', cacheError);
+              }
+            }
+          }
+        }
       }
     } catch (blockchainError) {
-      // Log the error but don't fail the approval - blockchain can be retried
       console.error('Failed to register on blockchain:', blockchainError);
-      // The approval is still marked as approved, blockchain registration can be retried manually
     }
   }
 

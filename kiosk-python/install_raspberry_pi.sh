@@ -43,12 +43,21 @@ sudo apt-get install -y \
     tesseract-ocr-fil \
     libopencv-dev \
     python3-opencv \
-    espeak \
-    libespeak1 \
-    mpg123 \
     xserver-xorg \
     x11-xserver-utils \
-    unclutter
+    unclutter \
+    libjpeg-dev \
+    zlib1g-dev \
+    libatlas-base-dev \
+    libhdf5-dev \
+    libhdf5-serial-dev \
+    libharfbuzz-dev \
+    libwebp-dev \
+    libtiff5-dev \
+    libjasper-dev \
+    libilmbase-dev \
+    libopenexr-dev \
+    libgstreamer1.0-dev
 
 echo -e "${GREEN}Step 3: Creating kiosk directory...${NC}"
 KIOSK_DIR="$HOME/rcv-kiosk"
@@ -60,17 +69,20 @@ python3 -m venv venv
 source venv/bin/activate
 
 echo -e "${GREEN}Step 5: Installing Python dependencies...${NC}"
-pip install --upgrade pip
+pip install --upgrade pip setuptools wheel
+
+# Install dependencies in order (opencv can be tricky on RPi)
 pip install \
-    opencv-python-headless \
     numpy \
     Pillow \
     pyzbar \
     pytesseract \
-    pyttsx3 \
-    gTTS \
     requests \
     python-dotenv
+
+# Install OpenCV (using headless version for better compatibility)
+echo -e "${YELLOW}Installing OpenCV (this may take a while on Raspberry Pi)...${NC}"
+pip install opencv-python-headless
 
 echo -e "${GREEN}Step 6: Copying application files...${NC}"
 # Copy main application file
@@ -142,6 +154,30 @@ EOF
 echo -e "${GREEN}Step 10: Setting up camera permissions...${NC}"
 # Add user to video group for camera access
 sudo usermod -a -G video $USER
+
+echo -e "${GREEN}Step 11: Testing Python imports...${NC}"
+source venv/bin/activate
+python3 << 'PYEOF'
+import sys
+try:
+    import cv2
+    import numpy as np
+    from pyzbar import pyzbar
+    import pytesseract
+    import tkinter as tk
+    from PIL import Image, ImageTk, ImageDraw, ImageFont
+    import requests
+    print("✓ All Python dependencies imported successfully!")
+except ImportError as e:
+    print(f"✗ Import error: {e}")
+    sys.exit(1)
+PYEOF
+
+if [ $? -eq 0 ]; then
+    echo -e "${GREEN}Python dependencies verified!${NC}"
+else
+    echo -e "${RED}Warning: Some Python dependencies failed to import${NC}"
+fi
 
 echo ""
 echo -e "${GREEN}========================================"

@@ -78,7 +78,8 @@ export function BlockchainRecovery() {
     recovery: false,
     verification: false,
     singleRecovery: false,
-    rebuild: false
+    rebuild: false,
+    rebuildAll: false
   });
 
   // Rebuild modal state
@@ -370,6 +371,114 @@ export function BlockchainRecovery() {
     }
   };
 
+  const handleRebuildAll = async () => {
+    if (!recoveryResult?.recoveredRecords.length) return;
+    
+    // Filter records that have full entity data (v2.0+) as they can be auto-rebuilt
+    const autoRecoverable = recoveryResult.recoveredRecords.filter(r => r.entityData);
+    
+    if (autoRecoverable.length === 0) {
+      toast.warning("No records found with full blockchain data for auto-recovery. Please rebuild manually.");
+      return;
+    }
+
+    setLoading(prev => ({ ...prev, rebuildAll: true }));
+    let successCount = 0;
+    let failCount = 0;
+
+    toast.info(`Starting auto-recovery for ${autoRecoverable.length} records...`);
+
+    // Sort to process companies first to satisfy dependencies? 
+    // Actually, backend might handle "create missing company" nicely if we send company detail.
+    // But let's be safe and try to sort companies first.
+    const sortedRecords = [...autoRecoverable].sort((a, b) => {
+        if (a.entityType === 'company' && b.entityType !== 'company') return -1;
+        if (a.entityType !== 'company' && b.entityType === 'company') return 1;
+        return 0;
+    });
+
+    for (const record of sortedRecords) {
+        try {
+            const data: Record<string, unknown> = {
+                txHash: record.txHash,
+                entityType: record.entityType,
+                name: record.entityName
+            };
+
+            const ed = record.entityData!;
+
+            if (record.entityType === 'company') {
+                 if (!ed.address || !ed.licenseNumber) {
+                     console.warn(`Skipping company ${record.entityName}: missing address or license`);
+                     failCount++;
+                     continue; 
+                 }
+                 data.address = ed.address;
+                 data.licenseNumber = ed.licenseNumber;
+                 data.phone = ed.phone;
+                 data.email = ed.email;
+                 data.businessType = ed.businessType;
+            } else {
+                 // Product
+                 if (!ed.LTONumber || !ed.CFPRNumber || !ed.lotNumber || !ed.classification || !ed.subClassification || !ed.expirationDate) {
+                     console.warn(`Skipping product ${record.entityName}: missing fields`);
+                     failCount++;
+                     continue;
+                 }
+                 data.brandName = ed.brandName || record.entityName;
+                 data.productName = ed.productName || record.entityName;
+                 data.LTONumber = ed.LTONumber;
+                 data.CFPRNumber = ed.CFPRNumber;
+                 data.lotNumber = ed.lotNumber;
+                 data.productClassification = ed.classification;
+                 data.productSubClassification = ed.subClassification;
+                 data.expirationDate = ed.expirationDate.split('T')[0];
+                 
+                 // If company info is in blockchain data, we don't send companyId (backend handles it)
+                 // But if we have a companyId in ed.companyId but no company object... (old behavior)
+                 // With our new fix, ed.company should be present.
+                 if (!(ed.company)) {
+                     // If we are strictly auto-recovering, we can't guess the company.
+                     // But maybe we can try to find it by name if we fetched companies?
+                     // For now, let's assume our fix works or user accepts some failures.
+                     console.warn(`Skipping product ${record.entityName}: missing embedded company data`);
+                     failCount++; 
+                     continue;
+                 }
+            }
+
+            const result = await BlockchainRecoveryService.rebuildRecord(data as any);
+            if (result.success) {
+                successCount++;
+            } else {
+                failCount++;
+            }
+        } catch (e) {
+            console.error(e);
+            failCount++;
+        }
+    }
+
+    setLoading(prev => ({ ...prev, rebuildAll: false }));
+    
+    if (successCount > 0) {
+        toast.success(`Successfully auto-recovered ${successCount} records!`);
+        await fetchStatus();
+        // Update local list
+         if (recoveryResult) {
+             // Re-fetch logic is better but we can filter locally
+             // Actually calling fetchStatus triggers refresh? No, only status numbers.
+             // We should triggerRecovery again or just filter.
+             // triggerRecovery updates recoveryResult.
+             triggerRecovery(); 
+         }
+    }
+    
+    if (failCount > 0) {
+        toast.error(`Failed to auto-recover ${failCount} records. They may need manual rebuild.`);
+    }
+  };
+
   const getSingleRecoveryResultClass = () => {
     if (!singleRecoveryResult) return '';
     if (singleRecoveryResult.success && singleRecoveryResult.recoveredEntityId) {
@@ -578,6 +687,27 @@ export function BlockchainRecovery() {
                   <p className="text-sm text-muted-foreground mb-3">
                     These records exist on the blockchain but not in the database. Click &quot;Rebuild&quot; to add them back with verified blockchain data.
                   </p>
+                  
+                  <div className="flex gap-2 mb-4">
+                     <Button 
+                        onClick={handleRebuildAll} 
+                        disabled={loading.rebuildAll || recoveryResult.recoveredRecords.filter(r => r.entityData).length === 0}
+                        variant="default"
+                     >
+                       {loading.rebuildAll ? (
+                         <>
+                           <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                           Processing ({recoveryResult.recoveredRecords.filter(r => r.entityData).length} recoverable)...
+                         </>
+                       ) : (
+                         <>
+                           <Hammer className="h-4 w-4 mr-2" />
+                           Process All Auto-Recoverable ({recoveryResult.recoveredRecords.filter(r => r.entityData).length})
+                         </>
+                       )}
+                     </Button>
+                  </div>
+
                   <div className="border rounded-lg overflow-hidden">
                     <Table>
                       <TableHeader>

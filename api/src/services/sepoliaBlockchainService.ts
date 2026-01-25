@@ -672,8 +672,8 @@ export const extractCertificateFromTransaction = async (
         const dataString = ethers.toUtf8String(tx.data);
         const parsed = JSON.parse(dataString);
         
-        // Verify it's an RCV certificate
-        if (parsed.type === 'RCV_CERTIFICATE') {
+        // Verify it's an RCV certificate, renewal, or update
+        if (parsed.type === 'RCV_CERTIFICATE' || parsed.type === 'RCV_CERTIFICATE_RENEWAL' || parsed.type === 'RCV_CERTIFICATE_UPDATE') {
           certificate = parsed as BlockchainCertificateData;
         } else {
           return {
@@ -682,7 +682,7 @@ export const extractCertificateFromTransaction = async (
             blockNumber: receipt.blockNumber,
             blockTimestamp: null,
             etherscanUrl: `https://sepolia.etherscan.io/tx/${txHash}`,
-            error: 'Transaction is not an RCV certificate'
+            error: 'Transaction is not an RCV certificate, renewal, or update'
           };
         }
       } catch {
@@ -764,6 +764,217 @@ export const verifyPDFHashOnBlockchain = async (
   };
 };
 
+export const renewProductCertificate = async (
+  oldTxHash: string,
+  newPdfHash: string,
+  newCertificateId: string,
+  entityData?: BlockchainEntityData,
+  approvers?: BlockchainApprover[]
+): Promise<BlockchainTransaction | null> => {
+  if (!provider || !wallet) {
+    console.error('Sepolia blockchain not initialized');
+    return null;
+  }
+
+  try {
+    // Check if oldHash does exist on blockchain
+    const verification = await verifyTransactionOnBlockchain(oldTxHash);
+    if (!verification.isValid || !verification.data) {
+      console.error('Original certificate not found on blockchain');
+      return null;
+    }
+
+    // Extract certificate data from old transaction
+    const certData = verification.data as BlockchainCertificateData;
+    if (certData.entityType !== 'product') {
+      console.error('Only product certificates can be renewed');
+      return null;
+    }
+
+    console.log('Renewing product certificate on Sepolia blockchain...');
+
+    // Create the renewal payload with link to old certificate
+    const dataPayload = JSON.stringify({
+      type: 'RCV_CERTIFICATE_RENEWAL',
+      version: '2.0',
+      certificateId: newCertificateId,
+      entityType: 'product',
+      entityName: certData.entityName,
+      pdfHash: newPdfHash,
+      timestamp: new Date().toISOString(),
+      // Link to previous certificate for audit trail
+      previousCertificate: {
+        txHash: oldTxHash,
+        certificateId: certData.certificateId,
+        pdfHash: certData.pdfHash,
+        timestamp: certData.timestamp
+      },
+      // Entity details for recovery
+      entity: entityData ? {
+        LTONumber: entityData.LTONumber,
+        CFPRNumber: entityData.CFPRNumber,
+        lotNumber: entityData.lotNumber,
+        brandName: entityData.brandName,
+        productName: entityData.productName,
+        classification: entityData.productClassification,
+        subClassification: entityData.productSubClassification,
+        expirationDate: entityData.expirationDate,
+        company: entityData.companyName ? {
+          name: entityData.companyName,
+          license: entityData.companyLicense
+        } : undefined
+      } : undefined,
+      // Admin approvers who signed off on this renewal
+      approvers: approvers?.map(a => ({
+        wallet: a.wallet,
+        name: a.name,
+        date: a.date
+      }))
+    });
+
+    // Convert to hex
+    const dataInHex = ethers.hexlify(ethers.toUtf8Bytes(dataPayload));
+
+    // Get current gas price
+    const feeData = await provider.getFeeData();
+
+    // Send transaction
+    const tx = await wallet.sendTransaction({
+      to: wallet.address,
+      value: 0,
+      data: dataInHex,
+      gasLimit: 150000,
+      maxFeePerGas: feeData.maxFeePerGas,
+      maxPriorityFeePerGas: feeData.maxPriorityFeePerGas
+    });
+
+    console.log(`Renewal transaction sent! Tx Hash: ${tx.hash}`);
+
+    // Wait for confirmation
+    const receipt = await tx.wait();
+
+    if (!receipt) {
+      throw new Error('Transaction receipt is null');
+    }
+
+    console.log(`Success! Block Number: ${receipt.blockNumber}`);
+    console.log(`View on Etherscan: https://sepolia.etherscan.io/tx/${tx.hash}`);
+
+    return {
+      txHash: tx.hash,
+      blockNumber: receipt.blockNumber,
+      pdfHash: newPdfHash,
+      certificateId: newCertificateId,
+      timestamp: new Date(),
+      etherscanUrl: `https://sepolia.etherscan.io/tx/${tx.hash}`
+    };
+  } catch (error) {
+    console.error('Error renewing certificate on blockchain:', error);
+    return null;
+  }
+};
+
+export const updateProductCertificate = async (
+  oldTxHash: string,
+  newPdfHash: string,
+  newCertificateId: string,
+  entityData?: BlockchainEntityData,
+  approvers?: BlockchainApprover[]
+): Promise<BlockchainTransaction | null> => {
+  if (!provider || !wallet) {
+    console.error('Sepolia blockchain not initialized');
+    return null;
+  }
+
+  try {
+    // Check if oldHash does exist on blockchain
+    const verification = await verifyTransactionOnBlockchain(oldTxHash);
+    if (!verification.isValid || !verification.data) {
+      console.error('Original certificate not found on blockchain');
+      return null;
+    }
+
+    const certData = verification.data as BlockchainCertificateData;
+    console.log('Updating product information on Sepolia blockchain...');
+
+    // Create the update payload with link to old certificate
+    const dataPayload = JSON.stringify({
+      type: 'RCV_CERTIFICATE_UPDATE',
+      version: '2.0',
+      certificateId: newCertificateId,
+      entityType: 'product',
+      entityName: entityData?.productName || certData.entityName,
+      pdfHash: newPdfHash,
+      timestamp: new Date().toISOString(),
+      // Link to previous certificate for audit trail
+      previousCertificate: {
+        txHash: oldTxHash,
+        certificateId: certData.certificateId,
+        timestamp: certData.timestamp
+      },
+      // Entity details for recovery
+      entity: entityData ? {
+        LTONumber: entityData.LTONumber,
+        CFPRNumber: entityData.CFPRNumber,
+        lotNumber: entityData.lotNumber,
+        brandName: entityData.brandName,
+        productName: entityData.productName,
+        classification: entityData.productClassification,
+        subClassification: entityData.productSubClassification,
+        expirationDate: entityData.expirationDate,
+        company: entityData.companyName ? {
+          name: entityData.companyName,
+          license: entityData.companyLicense
+        } : undefined
+      } : undefined,
+      // Admin approvers who signed off on this update
+      approvers: approvers?.map(a => ({
+        wallet: a.wallet,
+        name: a.name,
+        date: a.date
+      }))
+    });
+
+    // Convert to hex
+    const dataInHex = ethers.hexlify(ethers.toUtf8Bytes(dataPayload));
+    
+    // Get current gas price
+    const feeData = await provider.getFeeData();
+
+    // Send transaction
+    const tx = await wallet.sendTransaction({
+      to: wallet.address,
+      value: 0,
+      data: dataInHex,
+      gasLimit: 150000,
+      maxFeePerGas: feeData.maxFeePerGas,
+      maxPriorityFeePerGas: feeData.maxPriorityFeePerGas
+    });
+
+    console.log(`Update transaction sent! Tx Hash: ${tx.hash}`);
+
+    // Wait for confirmation
+    const receipt = await tx.wait();
+
+    if (!receipt) {
+      throw new Error('Transaction receipt is null');
+    }
+
+    console.log(`Success! Block Number: ${receipt.blockNumber}`);
+    
+    return {
+      txHash: tx.hash,
+      blockNumber: receipt.blockNumber,
+      pdfHash: newPdfHash,
+      certificateId: newCertificateId,
+      timestamp: new Date(),
+      etherscanUrl: `https://sepolia.etherscan.io/tx/${tx.hash}`
+    };
+  } catch (error) {
+    console.error('Error updating certificate on blockchain:', error);
+    return null;
+  }
+};
 export default {
   initializeSepoliaBlockchain,
   isSepoliaInitialized,
@@ -780,5 +991,7 @@ export default {
   verifyTransactionOnBlockchain,
   isValidWalletAddress,
   extractCertificateFromTransaction,
-  verifyPDFHashOnBlockchain
+  verifyPDFHashOnBlockchain,
+  renewProductCertificate,
+  updateProductCertificate
 };

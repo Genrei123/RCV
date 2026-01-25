@@ -20,10 +20,12 @@ export const getAllCompanies = async (
     const { page, limit, skip } = parsePageParams(req, 10);
     const search =
       typeof req.query.search === "string" ? req.query.search.trim() : "";
+    const status = typeof req.query.status === "string" ? req.query.status : "active";
+    const isArchived = status === "archived";
 
     // Try to get cached data
     try {
-      const cachedData = await redisService.getCachedCompanies(page, limit, search);
+      const cachedData = await redisService.getCachedCompanies(page, limit, search + `:${status}`);
       if (cachedData) {
         return res.status(200).json(cachedData);
       }
@@ -47,6 +49,7 @@ export const getAllCompanies = async (
           q: `%${search}%`,
         })
         .orderBy("company.name", "ASC")
+        .andWhere("company.isArchived = :isArchived", { isArchived })
         .skip(skip)
         .take(limit);
       [companies, total] = await qb.getManyAndCount();
@@ -55,6 +58,7 @@ export const getAllCompanies = async (
         skip,
         take: limit,
         order: { name: "ASC" },
+        where: { isArchived }
       });
     }
 
@@ -82,7 +86,7 @@ export const getAllCompanies = async (
 
     // Cache the result for 5 minutes
     try {
-      await redisService.setCachedCompanies(page, limit, responseData, search, 300);
+      await redisService.setCachedCompanies(page, limit, responseData, search + `:${status}`, 300);
     } catch (redisError) {
       console.warn("Failed to cache companies:", redisError instanceof Error ? redisError.message : 'Unknown error');
     }
@@ -191,19 +195,101 @@ export const updateCompany = async (
   res: Response,
   next: NextFunction
 ) => {
-  if (!CompanyValidation.parse({ _id: req.params.id, ...req.body })) {
-    return new CustomError(400, "Invalid Company Data");
-  }
   try {
-    const company = await CompanyRepo.findOneBy({ _id: req.params.id });
+    const { id } = req.params;
+    
+    // Parse partial update - allow partial data
+    const companyResult = CompanyValidation.partial().safeParse(req.body);
+    
+    if (companyResult.error) {
+       return next(new CustomError(400, "Invalid Company Data", { errors: companyResult.error.issues }));
+    }
+
+    const company = await CompanyRepo.findOneBy({ _id: id });
     if (!company) {
       return new CustomError(404, "Company not found");
     }
-    CompanyRepo.merge(company, req.body);
+
+    // Check license uniqueness if it's changing
+    if (companyResult.data.licenseNumber && companyResult.data.licenseNumber !== company.licenseNumber) {
+        const existing = await CompanyRepo.findOneBy({ licenseNumber: companyResult.data.licenseNumber });
+        if (existing) {
+             return next(new CustomError(400, "Company with this license number already exists"));
+        }
+    }
+
+    CompanyRepo.merge(company, companyResult.data);
     await CompanyRepo.save(company);
-    res.status(200).json({ company });
+    
+    // Invalidate cache
+    try {
+      await redisService.invalidateCompaniesCache();
+    } catch(e) { console.error(e); }
+
+    res.status(200).json({ success: true, company });
   } catch (error) {
-    return new CustomError(500, "Failed to update company");
+    console.error(error);
+    return next(new CustomError(500, "Failed to update company"));
+  }
+};
+
+export const archiveCompany = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = req.params;
+    const company = await CompanyRepo.findOneBy({ _id: id });
+    
+    if (!company) {
+      return next(new CustomError(404, "Company not found"));
+    }
+    
+    company.isArchived = true;
+    await CompanyRepo.save(company);
+    
+    // Invalidate cache
+    try {
+      await redisService.invalidateCompaniesCache();
+    } catch(e) { console.error(e); }
+
+    res.status(200).json({ 
+        success: true, 
+        message: "Company archived successfully" 
+    });
+  } catch (error) {
+    return next(new CustomError(500, "Failed to archive company"));
+  }
+};
+
+export const unarchiveCompany = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = req.params;
+    const company = await CompanyRepo.findOneBy({ _id: id });
+    
+    if (!company) {
+      return next(new CustomError(404, "Company not found"));
+    }
+    
+    company.isArchived = false;
+    await CompanyRepo.save(company);
+    
+    // Invalidate cache
+    try {
+      await redisService.invalidateCompaniesCache();
+    } catch(e) { console.error(e); }
+
+    res.status(200).json({ 
+        success: true, 
+        message: "Company unarchived successfully" 
+    });
+  } catch (error) {
+    return next(new CustomError(500, "Failed to unarchive company"));
   }
 };
 

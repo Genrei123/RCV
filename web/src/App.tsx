@@ -242,7 +242,13 @@ function App() {
             element={
               <ProtectedRoutes>
                 <AppLayout>
-                  <Dashboard {...dashboardData} />
+                  <Dashboard 
+                    {...dashboardData} 
+                    onRefreshData={() => {
+                      fetchProductsData();
+                      fetchCompaniesData();
+                    }}
+                  />
                 </AppLayout>
               </ProtectedRoutes>
             }
@@ -253,6 +259,7 @@ function App() {
               <ProtectedRoutes>
                 <AppLayout>
                   <Products
+                    products={productsData?.data || productsData?.products}
                     {...productsData}
                     companies={companiesData?.companies}
                     onRefresh={fetchProductsData}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { toast } from "react-toastify";
 import {
   Card,
   CardContent,
@@ -18,6 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import {
   CheckCircle,
   XCircle,
@@ -42,9 +44,10 @@ import ApprovalQueueModal, {
 
 interface ApprovalQueueProps {
   isAdmin?: boolean;
+  onSuccess?: () => void;
 }
 
-const ApprovalQueue: React.FC<ApprovalQueueProps> = ({ isAdmin = false }) => {
+const ApprovalQueue: React.FC<ApprovalQueueProps> = ({ isAdmin = false, onSuccess }) => {
   const [pendingApprovals, setPendingApprovals] = useState<
     CertificateApproval[]
   >([]);
@@ -62,6 +65,11 @@ const ApprovalQueue: React.FC<ApprovalQueueProps> = ({ isAdmin = false }) => {
     PendingProductDetails | PendingCompanyDetails | null
   >(null);
   const [isModalLoading, setIsModalLoading] = useState(false);
+  const [currentProductData, setCurrentProductData] = useState<any | null>(null);
+  
+  // Search and filtering
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filteredApprovals, setFilteredApprovals] = useState<CertificateApproval[]>([]);
 
   const { walletAddress, isConnected } = useMetaMask();
 
@@ -100,6 +108,24 @@ const ApprovalQueue: React.FC<ApprovalQueueProps> = ({ isAdmin = false }) => {
     fetchPendingApprovals();
   }, [isAdmin]);
 
+  // Filter approvals based on search query
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredApprovals(pendingApprovals);
+    } else {
+      const query = searchQuery.toLowerCase();
+      const filtered = pendingApprovals.filter((approval) => {
+        return (
+          approval.entityName.toLowerCase().includes(query) ||
+          approval.certificateId.toLowerCase().includes(query) ||
+          approval.entityType.toLowerCase().includes(query) ||
+          (approval.submitterName && approval.submitterName.toLowerCase().includes(query))
+        );
+      });
+      setFilteredApprovals(filtered);
+    }
+  }, [searchQuery, pendingApprovals]);
+
   const handleApprove = async () => {
     if (!selectedApproval || !walletAddress) return;
 
@@ -113,10 +139,10 @@ const ApprovalQueue: React.FC<ApprovalQueueProps> = ({ isAdmin = false }) => {
           walletAddress,
         );
 
-      alert(
+      toast.success(
         isFullyApproved
           ? "Certificate fully approved and registered on the blockchain! ✓"
-          : `Approval recorded (${selectedApproval.approvalCount + 1}/${selectedApproval.requiredApprovals}). Awaiting remaining approvals.`,
+          : `Approval recorded (${selectedApproval.approvalCount + 1}/${selectedApproval.requiredApprovals}). Awaiting remaining approvals.`
       );
 
       // Remove from pending list
@@ -125,12 +151,13 @@ const ApprovalQueue: React.FC<ApprovalQueueProps> = ({ isAdmin = false }) => {
       );
       setSelectedApproval(null);
       setActionType(null);
+      if (onSuccess) onSuccess();
     } catch (err: any) {
       console.error("Approval failed:", err);
       const errorMessage =
         err.response?.data?.message || err.message || "Failed to approve";
       setError(errorMessage);
-      alert(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setProcessing(false);
     }
@@ -149,7 +176,7 @@ const ApprovalQueue: React.FC<ApprovalQueueProps> = ({ isAdmin = false }) => {
         walletAddress,
       );
 
-      alert("Certificate rejected");
+      toast.info("Certificate rejected");
 
       // Remove from pending list
       setPendingApprovals((prev) =>
@@ -158,6 +185,7 @@ const ApprovalQueue: React.FC<ApprovalQueueProps> = ({ isAdmin = false }) => {
       setSelectedApproval(null);
       setActionType(null);
       setRejectionReason("");
+      if (onSuccess) onSuccess();
     } catch (err: any) {
       console.error("Rejection failed:", err);
       const errorMessage =
@@ -258,10 +286,36 @@ const ApprovalQueue: React.FC<ApprovalQueueProps> = ({ isAdmin = false }) => {
       console.log("Certificate Details:", response);
 
       if (response.entityType === "product") {
-        const productData = response.pendingEntityData as PendingProductDetails;
+        const productData = {
+          ...(response.pendingEntityData as PendingProductDetails),
+          // Include renewal fields
+          isRenewal: response.isRenewal,
+          previousCertificateHash: response.previousCertificateHash,
+          renewalRequestDate: response.renewalMetadata?.renewalRequestDate,
+          oldCertificateId: response.pendingEntityData?.oldCertificateId,
+          // Include update fields
+          isUpdate: response.pendingEntityData?.isUpdate,
+        };
         setModalData(productData);
+        
+        // Fetch current product data if it's an update
+        if (response.pendingEntityData?.isUpdate && response.entityId) {
+          try {
+             // Dynamically import ProductService to avoid circular dependency issues
+             const { ProductService } = await import("@/services/productService");
+             const productResp = await ProductService.getProductById(response.entityId);
+             setCurrentProductData(productResp.product || productResp.data);
+          } catch (e) {
+            console.error("Failed to fetch current product data:", e);
+            setCurrentProductData(null);
+          }
+        } else {
+          setCurrentProductData(null);
+        }
+
         console.log("Product details set in modal data", productData);
       } else if (response.entityType === "company") {
+        setCurrentProductData(null); // Reset for company views
         const companyDetails = {
           companyName: response?.entityName,
           status: response?.status,
@@ -289,7 +343,7 @@ const ApprovalQueue: React.FC<ApprovalQueueProps> = ({ isAdmin = false }) => {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold">Certificate Approvals</h2>
           <p className="text-muted-foreground">
@@ -298,16 +352,25 @@ const ApprovalQueue: React.FC<ApprovalQueueProps> = ({ isAdmin = false }) => {
               : "Pending approvals for your review"}
           </p>
         </div>
-        <Button
-          variant="outline"
-          onClick={fetchPendingApprovals}
-          disabled={loading}
-        >
-          <RefreshCw
-            className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`}
+        <div className="flex gap-2">
+          <Input
+            type="text"
+            placeholder="Search approvals..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full md:w-64"
           />
-          Refresh
-        </Button>
+          <Button
+            variant="outline"
+            onClick={fetchPendingApprovals}
+            disabled={loading}
+          >
+            <RefreshCw
+              className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`}
+            />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {error && (
@@ -318,32 +381,44 @@ const ApprovalQueue: React.FC<ApprovalQueueProps> = ({ isAdmin = false }) => {
       )}
 
       {/* Approval Cards */}
-      {pendingApprovals.length === 0 ? (
+      {filteredApprovals.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <CheckCircle className="w-12 h-12 text-green-500 mb-4" />
             <h3 className="text-lg font-medium">All caught up!</h3>
             <p className="text-muted-foreground">
-              No pending approvals at this time.
+              {searchQuery ? 'No approvals match your search.' : 'No pending approvals at this time.'}
             </p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {pendingApprovals.map((approval) => (
+          {filteredApprovals.map((approval) => (
             <Card
               key={approval._id}
               className="flex flex-col cursor-pointer"
-              onClick={() => handleView(approval)}
             >
-              <CardHeader className="pb-3">
+              <CardHeader className="pb-3" onClick={() => handleView(approval)}>
                 <div className="flex items-start justify-between">
                   <CardTitle className="text-lg">
                     {approval.entityName}
                   </CardTitle>
-                  {getStatusBadge(approval.status)}
+                  <div className="flex gap-2">
+                    {/* Renewal Badge */}
+                    {(approval.isRenewal || approval.pendingEntityData?.isRenewal) && (
+                      <Badge variant="default" className="bg-orange-600">
+                        RENEWAL
+                      </Badge>
+                    )}
+                    {approval.pendingEntityData?.isUpdate && (
+                      <Badge variant="default" className="bg-blue-600">
+                        UPDATE
+                      </Badge>
+                    )}
+                    {getStatusBadge(approval.status)}
+                  </div>
                 </div>
-                <CardDescription className="flex items-center gap-2r">
+                <CardDescription className="flex items-center gap-2">
                   <FileText className="w-4 h-4" />
                   {approval.entityType === "product"
                     ? "Product Certificate"
@@ -437,20 +512,6 @@ const ApprovalQueue: React.FC<ApprovalQueueProps> = ({ isAdmin = false }) => {
                       </div>
                     )}
 
-                  <div className="text-xs mt-2">
-                    <span className="font-medium">PDF Hash:</span>
-                    <code className="ml-1 p-1 bg-muted rounded text-xs break-all">
-                      {approval.pdfHash.substring(0, 20)}...
-                    </code>
-                  </div>
-
-                  {/* Show submission version if resubmitted */}
-                  {approval.submissionVersion &&
-                    approval.submissionVersion > 1 && (
-                      <div className="text-xs mt-1 text-orange-600">
-                        Resubmission #{approval.submissionVersion}
-                      </div>
-                    )}
                 </div>
               </CardContent>
 
@@ -537,12 +598,14 @@ const ApprovalQueue: React.FC<ApprovalQueueProps> = ({ isAdmin = false }) => {
                     ? "Product"
                     : "Company"}
                 </div>
-                <div className="break-all">
-                  <span className="font-medium">PDF Hash:</span>
-                  <code className="ml-1 p-1 bg-muted rounded text-xs">
-                    {selectedApproval.pdfHash}
-                  </code>
-                </div>
+                {(selectedApproval.pdfHash && selectedApproval.pdfHash !== '') && (
+                  <div className="break-all">
+                    <span className="font-medium">PDF Hash:</span>
+                    <code className="ml-1 p-1 bg-muted rounded text-xs">
+                      {selectedApproval.pdfHash}
+                    </code>
+                  </div>
+                )}
               </div>
 
               {actionType === "reject" && (
@@ -636,8 +699,12 @@ const ApprovalQueue: React.FC<ApprovalQueueProps> = ({ isAdmin = false }) => {
         <ApprovalQueueModal
           entityType={"companyName" in modalData ? "company" : "product"}
           isOpen={true}
-          onClose={() => setModalData(null)}
+          onClose={() => {
+            setModalData(null);
+            setCurrentProductData(null);
+          }}
           data={modalData}
+          currentProductData={currentProductData}
         />
       )}
     </div>

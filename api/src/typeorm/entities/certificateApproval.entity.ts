@@ -145,6 +145,25 @@ export class CertificateApproval {
   @Column({ default: false })
   entityCreated!: boolean;
 
+  // Renewal tracking fields
+  @Column({ default: false })
+  isRenewal!: boolean;
+
+  @Column({ nullable: true })
+  previousCertificateHash?: string;
+
+  @Column({ type: 'jsonb', nullable: true })
+  renewalChain?: Array<{
+    approvalId: string;
+    certificateId: string;
+    transactionHash: string;
+    approvedDate: string;
+    approvers: ApproverRecord[];
+  }>;
+
+  @Column({ type: 'jsonb', nullable: true })
+  renewalMetadata?: Record<string, any>;
+
   @BeforeInsert()
   assignId() {
     if (!this._id) this._id = uuidv4();

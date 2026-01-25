@@ -18,6 +18,12 @@ import {
   getEntityApprovalStatus,
   getMySubmissions,
   getRequiredAdminCount,
+  submitRenewalForProduct,
+  getRenewalTimeline,
+  getRenewalDetails,
+  submitUpdateForProduct,
+  submitArchiveForProduct,
+  submitUnarchiveForProduct,
 } from '../../controllers/blockchain/CertificateApproval';
 import { verifyUser } from '../../middleware/verifyUser';
 import { verifyAdmin } from '../../middleware/verifyAdmin';
@@ -165,5 +171,22 @@ router.post('/renewal', verifyUser, async (req, res, next) => {
     next(error);
   }
 });
+
+router.post('/renewProduct', verifyUser, submitRenewalForProduct );
+
+// Submit an update request for a product
+router.post('/updateProduct', verifyUser, submitUpdateForProduct);
+
+// Submit an archive request for a product
+router.post('/archiveProduct', verifyUser, submitArchiveForProduct);
+
+// Submit an unarchive request for a product
+router.post('/unarchiveProduct', verifyUser, submitUnarchiveForProduct);
+
+// Get renewal timeline for a product  
+router.get('/renewal-timeline/:productId', verifyUser, getRenewalTimeline);
+
+// Get detailed renewal information for an approval
+router.get('/renewal-details/:approvalId', verifyUser, getRenewalDetails);
 
 export default router;

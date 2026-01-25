@@ -80,9 +80,11 @@ export interface DashboardProps {
           total_items?: number;
         };
       };
+  onRefreshData?: () => void;
 }
 
 export function Dashboard(props: DashboardProps) {
+  const { onRefreshData } = props;
   const [, setSearch] = useState<string>("");
   const [sortKey, setSortKey] = useState<"lastName" | "email" | "statusActive" | "statusPending">(
     "lastName"
@@ -1100,7 +1102,13 @@ export function Dashboard(props: DashboardProps) {
         {/* Approvals Queue (Admin only) */}
         {viewMode === "approvals" && isAdmin() && (
           <div className="w-full">
-            <ApprovalQueue isAdmin={true} />
+            <ApprovalQueue 
+              isAdmin={true} 
+              onSuccess={() => {
+                fetchDashboardStats();
+                if (onRefreshData) onRefreshData();
+              }}
+            />
           </div>
         )}
 

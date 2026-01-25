@@ -144,4 +144,7 @@ export class Product {
   // Sepolia blockchain transaction ID for verification
   @Column({ nullable: true })
   sepoliaTransactionId?: string;
+
+  @Column({ default: false })
+  isArchived!: boolean;
 }

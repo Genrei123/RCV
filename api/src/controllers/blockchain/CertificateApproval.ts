@@ -18,7 +18,8 @@ import {
   getAdminCount,
 } from '../../services/certificateApprovalService';
 import CustomError from '../../utils/CustomError';
-import { ApprovalStatus } from '../../typeorm/entities/certificateApproval.entity';
+import { ApprovalStatus, CertificateApproval } from '../../typeorm/entities/certificateApproval.entity';
+import { CertificateApprovalRepo, ProductRepo, UserRepo } from '../../typeorm/data-source';
 
 /**
  * Submit a certificate for multi-signature approval
@@ -554,6 +555,789 @@ export async function getRequiredAdminCount(req: Request, res: Response, next: N
       },
     });
   } catch (error) {
+    next(error);
+  }
+}
+
+export async function submitRenewalForProduct(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { entityId, forcePush } = req.body;
+    const userId = req.user?._id;
+
+    if (!entityId) {
+      return res.status(400).json({
+        success: false,
+        message: 'entityId is required'
+      });
+    }
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not authenticated'
+      });
+    }
+
+    // Get the product
+    const product = await ProductRepo.findOne({
+      where: { _id: entityId },
+      relations: ['company', 'registeredBy']
+    });
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    // Check if product is expired (skip if forcePush is enabled for testing)
+    const isExpired = product.expirationDate 
+      ? new Date(product.expirationDate) < new Date() 
+      : false;
+
+    if (!isExpired && !forcePush) {
+      return res.status(400).json({
+        success: false,
+        message: 'Product certificate is not yet expired. Renewal is only available for expired certificates.'
+      });
+    }
+
+    // Check if there's an existing old blockchain transaction
+    if (!product.sepoliaTransactionId) {
+      return res.status(400).json({
+        success: false,
+        message: 'No blockchain record found for this product. Cannot renew certificate without original blockchain registration.'
+      });
+    }
+
+    // Get the user who's submitting
+    const submitter = await UserRepo.findOne({ where: { _id: userId } });
+    if (!submitter) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Check for existing pending approvals
+    const existingApproval = await CertificateApprovalRepo.findOne({
+      where: {
+        entityId: product._id,
+        entityType: 'product',
+        status: 'pending'
+      }
+    });
+
+    if (existingApproval) {
+      return res.status(400).json({
+        success: false,
+        message: 'There is already a pending approval request for this product.'
+      });
+    }
+
+    // Build renewal chain - get all previous approvals for this product
+    const previousApprovals = await CertificateApprovalRepo.find({
+      where: {
+        entityId: product._id,
+        entityType: 'product',
+        status: 'approved'
+      },
+      order: { createdAt: 'ASC' }
+    });
+
+    const renewalChain = previousApprovals
+      .filter(a => a.blockchainTxHash)
+      .map(a => ({
+        approvalId: a._id,
+        certificateId: a.certificateId,
+        transactionHash: a.blockchainTxHash!,
+        approvedDate: a.updatedAt.toISOString(),
+        approvers: a.approvers || []
+      }));
+
+    // Get admin count for required approvals
+    const adminCount = await UserRepo.count({
+      where: {
+        role: 'ADMIN',
+        walletAuthorized: true,
+      },
+    });
+    const requiredApprovals = Math.max(adminCount, 1);
+
+    // Create a renewal approval request
+    const approval = new CertificateApproval();
+    approval.certificateId = `RENEWAL-${product._id}-${Date.now()}`;
+    approval.entityType = 'product';
+    approval.entityId = product._id;
+    approval.entityName = product.productName;
+    approval.pdfHash = ''; // Will be generated on approval
+    approval.submittedBy = userId;
+    approval.submitterName = submitter.fullName || submitter.email;
+    approval.submitterWallet = submitter.walletAddress;
+    approval.status = 'pending';
+    approval.approvers = [];
+    approval.approvalCount = 0;
+    approval.requiredApprovals = requiredApprovals;
+    approval.entityCreated = true; // Product already exists
+    
+    // Set renewal tracking fields
+    approval.isRenewal = true;
+    approval.previousCertificateHash = product.sepoliaTransactionId;
+    approval.renewalChain = renewalChain;
+    
+    // Calculate new expiration date (1 year from now)
+    const newExpirationDate = new Date();
+    newExpirationDate.setFullYear(newExpirationDate.getFullYear() + 1);
+    
+    approval.renewalMetadata = {
+      oldExpirationDate: product.expirationDate?.toISOString(),
+      newExpirationDate: newExpirationDate.toISOString(),
+      renewalRequestDate: new Date().toISOString(),
+      requestedBy: userId,
+      requestedByName: submitter.fullName || submitter.email,
+      productDetails: {
+        LTONumber: product.LTONumber,
+        CFPRNumber: product.CFPRNumber,
+        lotNumber: product.lotNumber,
+        brandName: product.brandName,
+        productName: product.productName,
+        productClassification: product.productClassification,
+        productSubClassification: product.productSubClassification,
+        productImageFront: product.productImageFront,
+        productImageBack: product.productImageBack
+      },
+      forcePush: forcePush || false
+    };
+    
+    // Store complete product data for renewal display in ApprovalQueueModal
+    approval.pendingEntityData = {
+      isRenewal: true,
+      oldTransactionHash: product.sepoliaTransactionId,
+      oldCertificateId: product._id,
+      renewalRequestDate: new Date().toISOString(),
+      // Include all required product fields
+      LTONumber: product.LTONumber,
+      CFPRNumber: product.CFPRNumber,
+      lotNumber: product.lotNumber,
+      brandName: product.brandName,
+      productName: product.productName,
+      expirationDate: newExpirationDate.toISOString(), // Use NEW expiration date
+      productClassification: product.productClassification,
+      productSubClassification: product.productSubClassification,
+      productImageFront: product.productImageFront,
+      productImageBack: product.productImageBack,
+      companyId: product.companyId,
+      company: product.company ? {
+        name: product.company.name,
+        license: product.company.licenseNumber
+      } : undefined,
+      brandNameId: product.brandNameId,
+      registeredById: product.registeredById,
+      classificationId: product.classificationId,
+      subClassificationId: product.subClassificationId,
+      dateOfRegistration: product.dateOfRegistration?.toISOString()
+    };
+
+    const savedApproval = await CertificateApprovalRepo.save(approval);
+
+    return res.status(201).json({
+      success: true,
+      message: 'Renewal request submitted successfully. Awaiting admin approval.',
+      data: {
+        approvalId: savedApproval._id,
+        certificateId: savedApproval.certificateId,
+        status: savedApproval.status,
+        oldTransactionHash: product.sepoliaTransactionId,
+        renewalChainLength: renewalChain.length,
+        isRenewal: true
+      }
+    });
+
+  } catch (error) {
+    console.error('Error submitting renewal:', error);
+    next(error);
+  }
+}
+
+export async function submitUpdateForProduct(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { entityId, updateData } = req.body;
+    const userId = req.user?._id;
+
+    if (!entityId) {
+      return res.status(400).json({
+        success: false,
+        message: 'entityId is required'
+      });
+    }
+
+    if (!updateData) {
+      return res.status(400).json({
+        success: false,
+        message: 'updateData is required'
+      });
+    }
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not authenticated'
+      });
+    }
+
+    // Get the product
+    const product = await ProductRepo.findOne({
+      where: { _id: entityId },
+      relations: ['company', 'registeredBy']
+    });
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    // Check if there's an existing old blockchain transaction
+    if (!product.sepoliaTransactionId) {
+      return res.status(400).json({
+        success: false,
+        message: 'No blockchain record found for this product. Cannot update certificate without original blockchain registration.'
+      });
+    }
+
+    // Get the user who's submitting
+    const submitter = await UserRepo.findOne({ where: { _id: userId } });
+    if (!submitter) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Check for existing pending approvals
+    const existingApproval = await CertificateApprovalRepo.findOne({
+      where: {
+        entityId: product._id,
+        entityType: 'product',
+        status: 'pending'
+      }
+    });
+
+    if (existingApproval) {
+      return res.status(400).json({
+        success: false,
+        message: 'There is already a pending approval request for this product.'
+      });
+    }
+
+    // Get admin count for required approvals
+    const adminCount = await UserRepo.count({
+      where: {
+        role: 'ADMIN',
+        walletAuthorized: true,
+      },
+    });
+    const requiredApprovals = Math.max(adminCount, 1);
+
+    // Create a update approval request
+    const approval = new CertificateApproval();
+    approval.certificateId = `UPDATE-${product._id}-${Date.now()}`;
+    approval.entityType = 'product';
+    approval.entityId = product._id;
+    approval.entityName = product.productName;
+    approval.pdfHash = ''; // Will be generated on approval
+    approval.submittedBy = userId;
+    approval.submitterName = submitter.fullName || submitter.email;
+    approval.submitterWallet = submitter.walletAddress;
+    approval.status = 'pending';
+    approval.approvers = [];
+    approval.approvalCount = 0;
+    approval.requiredApprovals = requiredApprovals;
+    approval.entityCreated = true; // Product already exists
+
+    // Set update tracking fields
+    // We reuse isRenewal flag? No, let's use pendingEntityData.isUpdate
+    approval.isRenewal = false; 
+    approval.previousCertificateHash = product.sepoliaTransactionId;
+    
+    // Store complete product data with UPDATES applied
+    // This allows ApprovalQueueModal to show the *proposed* state
+    approval.pendingEntityData = {
+      isUpdate: true, 
+      oldTransactionHash: product.sepoliaTransactionId,
+      oldCertificateId: product._id,
+      updateRequestDate: new Date().toISOString(),
+      
+      // Default to existing values
+      LTONumber: product.LTONumber,
+      CFPRNumber: product.CFPRNumber,
+      lotNumber: product.lotNumber,
+      brandName: product.brandName,
+      productName: product.productName,
+      expirationDate: product.expirationDate?.toISOString(), 
+      productClassification: product.productClassification,
+      productSubClassification: product.productSubClassification,
+      productImageFront: product.productImageFront,
+      productImageBack: product.productImageBack,
+      companyId: product.companyId,
+      brandNameId: product.brandNameId,
+      registeredById: product.registeredById,
+      classificationId: product.classificationId,
+      subClassificationId: product.subClassificationId,
+      dateOfRegistration: product.dateOfRegistration?.toISOString(),
+
+      // OVERWRITE with provided updateData
+      ...updateData,
+      // Ensure company info is preserved for blockchain recovery
+      company: product.company ? {
+        name: product.company.name,
+        license: product.company.licenseNumber
+      } : undefined
+    };
+
+    const savedApproval = await CertificateApprovalRepo.save(approval);
+
+    return res.status(201).json({
+      success: true,
+      message: 'Update request submitted successfully. Awaiting admin approval.',
+      data: {
+        approvalId: savedApproval._id,
+        certificateId: savedApproval.certificateId,
+        status: savedApproval.status,
+      }
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Get renewal timeline for a product
+ * GET /api/v1/certificate-approval/renewal-timeline/:productId
+ */
+export async function getRenewalTimeline(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { productId } = req.params;
+
+    // Get all approvals for this product (original + all renewals)
+    const approvals = await CertificateApprovalRepo.find({
+      where: {
+        entityId: productId,
+        entityType: 'product',
+        status: 'approved'
+      },
+      order: { createdAt: 'ASC' }
+    });
+
+    // Build timeline data
+    const timeline = approvals.map(approval => ({
+      approvalId: approval._id,
+      certificateId: approval.certificateId,
+      isRenewal: approval.isRenewal || false,
+      isUpdate: approval.pendingEntityData?.isUpdate || false,
+      isArchive: approval.pendingEntityData?.isArchive || false,
+      isUnarchive: approval.pendingEntityData?.isUnarchive || false,
+      previousCertificateHash: approval.previousCertificateHash,
+      transactionHash: approval.blockchainTxHash,
+      approvedDate: approval.updatedAt,
+      createdDate: approval.createdAt,
+      approvers: approval.approvers || [],
+      approvalCount: approval.approvalCount,
+      requiredApprovals: approval.requiredApprovals,
+      submittedBy: approval.submittedBy,
+      submitterName: approval.submitterName,
+      renewalMetadata: approval.renewalMetadata,
+      blockNumber: approval.blockchainBlockNumber,
+      blockchainTimestamp: approval.blockchainTimestamp
+    }));
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        productId,
+        totalRenewals: timeline.filter(t => t.isRenewal).length,
+        timeline
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching renewal timeline:', error);
+    next(error);
+  }
+}
+
+/**
+ * Get detailed renewal chain information for an approval
+ * GET /api/v1/certificate-approval/renewal-details/:approvalId
+ */
+export async function getRenewalDetails(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { approvalId } = req.params;
+
+    const approval = await CertificateApprovalRepo.findOne({
+      where: { _id: approvalId }
+    });
+
+    if (!approval) {
+      return res.status(404).json({
+        success: false,
+        message: 'Approval not found'
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        approvalId: approval._id,
+        certificateId: approval.certificateId,
+        isRenewal: approval.isRenewal || false,
+        previousCertificateHash: approval.previousCertificateHash,
+        renewalChain: approval.renewalChain || [],
+        renewalMetadata: approval.renewalMetadata,
+        transactionHash: approval.blockchainTxHash,
+        blockNumber: approval.blockchainBlockNumber,
+        blockchainTimestamp: approval.blockchainTimestamp,
+        approvers: approval.approvers || [],
+        approvalCount: approval.approvalCount,
+        requiredApprovals: approval.requiredApprovals,
+        status: approval.status,
+        entityId: approval.entityId,
+        entityName: approval.entityName,
+        entityType: approval.entityType,
+        pdfHash: approval.pdfHash,
+        pdfUrl: approval.pdfUrl,
+        submittedBy: approval.submittedBy,
+        submitterName: approval.submitterName,
+        submitterWallet: approval.submitterWallet,
+        createdAt: approval.createdAt,
+        updatedAt: approval.updatedAt,
+        pendingEntityData: approval.pendingEntityData
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching renewal details:', error);
+    next(error);
+  }
+}
+
+/**
+ * Submit archive request for a product (approval workflow)
+ * POST /api/v1/certificate-approval/archiveProduct
+ */
+export async function submitArchiveForProduct(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { entityId } = req.body;
+    const userId = req.user?._id;
+
+    if (!entityId) {
+      return res.status(400).json({
+        success: false,
+        message: 'entityId is required'
+      });
+    }
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not authenticated'
+      });
+    }
+
+    // Get the product
+    const product = await ProductRepo.findOne({
+      where: { _id: entityId },
+      relations: ['company', 'registeredBy']
+    });
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    // Check if already archived
+    if (product.isArchived) {
+      return res.status(400).json({
+        success: false,
+        message: 'Product is already archived'
+      });
+    }
+
+    // Check if there's a blockchain record
+    if (!product.sepoliaTransactionId) {
+      return res.status(400).json({
+        success: false,
+        message: 'No blockchain record found for this product. Cannot archive without blockchain registration.'
+      });
+    }
+
+    // Get the user who's submitting
+    const submitter = await UserRepo.findOne({ where: { _id: userId } });
+    if (!submitter) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Check for existing pending approvals
+    const existingApproval = await CertificateApprovalRepo.findOne({
+      where: {
+        entityId: product._id,
+        entityType: 'product',
+        status: 'pending'
+      }
+    });
+
+    if (existingApproval) {
+      return res.status(400).json({
+        success: false,
+        message: 'There is already a pending approval request for this product.'
+      });
+    }
+
+    // Get admin count for required approvals
+    const adminCount = await UserRepo.count({
+      where: {
+        role: 'ADMIN',
+        walletAuthorized: true,
+      },
+    });
+    const requiredApprovals = Math.max(adminCount, 1);
+
+    // Create an archive approval request
+    const approval = new CertificateApproval();
+    approval.certificateId = `ARCHIVE-${product._id}-${Date.now()}`;
+    approval.entityType = 'product';
+    approval.entityId = product._id;
+    approval.entityName = product.productName;
+    approval.pdfHash = ''; // Will be generated on approval
+    approval.submittedBy = userId;
+    approval.submitterName = submitter.fullName || submitter.email;
+    approval.submitterWallet = submitter.walletAddress;
+    approval.status = 'pending';
+    approval.approvers = [];
+    approval.approvalCount = 0;
+    approval.requiredApprovals = requiredApprovals;
+    approval.entityCreated = true; // Product already exists
+
+    // Set archive tracking fields
+    approval.isRenewal = false;
+    approval.previousCertificateHash = product.sepoliaTransactionId;
+    
+    // Store complete product data with archive flag
+    approval.pendingEntityData = {
+      isArchive: true,
+      oldTransactionHash: product.sepoliaTransactionId,
+      oldCertificateId: product._id,
+      archiveRequestDate: new Date().toISOString(),
+      requestedBy: userId,
+      requestedByName: submitter.fullName || submitter.email,
+      
+      // Include all product fields
+      LTONumber: product.LTONumber,
+      CFPRNumber: product.CFPRNumber,
+      lotNumber: product.lotNumber,
+      brandName: product.brandName,
+      productName: product.productName,
+      expirationDate: product.expirationDate?.toISOString(),
+      productClassification: product.productClassification,
+      productSubClassification: product.productSubClassification,
+      productImageFront: product.productImageFront,
+      productImageBack: product.productImageBack,
+      companyId: product.companyId,
+      company: product.company ? {
+        name: product.company.name,
+        license: product.company.licenseNumber
+      } : undefined,
+      brandNameId: product.brandNameId,
+      registeredById: product.registeredById,
+      classificationId: product.classificationId,
+      subClassificationId: product.subClassificationId,
+      dateOfRegistration: product.dateOfRegistration?.toISOString(),
+      
+      // Archive-specific field
+      willBeArchived: true
+    };
+
+    const savedApproval = await CertificateApprovalRepo.save(approval);
+
+    return res.status(201).json({
+      success: true,
+      message: 'Archive request submitted successfully. Awaiting admin approval.',
+      data: {
+        approvalId: savedApproval._id,
+        certificateId: savedApproval.certificateId,
+        status: savedApproval.status,
+        isArchive: true
+      }
+    });
+
+  } catch (error) {
+    console.error('Error submitting archive request:', error);
+    next(error);
+  }
+}
+
+/**
+ * Submit unarchive request for a product (approval workflow)
+ * POST /api/v1/certificate-approval/unarchiveProduct
+ */
+export async function submitUnarchiveForProduct(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { entityId } = req.body;
+    const userId = req.user?._id;
+
+    if (!entityId) {
+      return res.status(400).json({
+        success: false,
+        message: 'entityId is required'
+      });
+    }
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not authenticated'
+      });
+    }
+
+    // Get the product
+    const product = await ProductRepo.findOne({
+      where: { _id: entityId },
+      relations: ['company', 'registeredBy']
+    });
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    // Check if actually archived
+    if (!product.isArchived) {
+      return res.status(400).json({
+        success: false,
+        message: 'Product is not archived'
+      });
+    }
+
+    // Check if there's a blockchain record
+    if (!product.sepoliaTransactionId) {
+      return res.status(400).json({
+        success: false,
+        message: 'No blockchain record found for this product.'
+      });
+    }
+
+    // Get the user who's submitting
+    const submitter = await UserRepo.findOne({ where: { _id: userId } });
+    if (!submitter) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Check for existing pending approvals
+    const existingApproval = await CertificateApprovalRepo.findOne({
+      where: {
+        entityId: product._id,
+        entityType: 'product',
+        status: 'pending'
+      }
+    });
+
+    if (existingApproval) {
+      return res.status(400).json({
+        success: false,
+        message: 'There is already a pending approval request for this product.'
+      });
+    }
+
+    // Get admin count for required approvals
+    const adminCount = await UserRepo.count({
+      where: {
+        role: 'ADMIN',
+        walletAuthorized: true,
+      },
+    });
+    const requiredApprovals = Math.max(adminCount, 1);
+
+    // Create an unarchive approval request
+    const approval = new CertificateApproval();
+    approval.certificateId = `UNARCHIVE-${product._id}-${Date.now()}`;
+    approval.entityType = 'product';
+    approval.entityId = product._id;
+    approval.entityName = product.productName;
+    approval.pdfHash = ''; // Will be generated on approval
+    approval.submittedBy = userId;
+    approval.submitterName = submitter.fullName || submitter.email;
+    approval.submitterWallet = submitter.walletAddress;
+    approval.status = 'pending';
+    approval.approvers = [];
+    approval.approvalCount = 0;
+    approval.requiredApprovals = requiredApprovals;
+    approval.entityCreated = true; // Product already exists
+
+    // Set unarchive tracking fields
+    approval.isRenewal = false;
+    approval.previousCertificateHash = product.sepoliaTransactionId;
+    
+    // Store complete product data with unarchive flag
+    approval.pendingEntityData = {
+      isUnarchive: true,
+      oldTransactionHash: product.sepoliaTransactionId,
+      oldCertificateId: product._id,
+      unarchiveRequestDate: new Date().toISOString(),
+      requestedBy: userId,
+      requestedByName: submitter.fullName || submitter.email,
+      
+      // Include all product fields
+      LTONumber: product.LTONumber,
+      CFPRNumber: product.CFPRNumber,
+      lotNumber: product.lotNumber,
+      brandName: product.brandName,
+      productName: product.productName,
+      expirationDate: product.expirationDate?.toISOString(),
+      productClassification: product.productClassification,
+      productSubClassification: product.productSubClassification,
+      productImageFront: product.productImageFront,
+      productImageBack: product.productImageBack,
+      companyId: product.companyId,
+      company: product.company ? {
+        name: product.company.name,
+        license: product.company.licenseNumber
+      } : undefined,
+      brandNameId: product.brandNameId,
+      registeredById: product.registeredById,
+      classificationId: product.classificationId,
+      subClassificationId: product.subClassificationId,
+      dateOfRegistration: product.dateOfRegistration?.toISOString(),
+      
+      // Unarchive-specific field
+      willBeUnarchived: true
+    };
+
+    const savedApproval = await CertificateApprovalRepo.save(approval);
+
+    return res.status(201).json({
+      success: true,
+      message: 'Unarchive request submitted successfully. Awaiting admin approval.',
+      data: {
+        approvalId: savedApproval._id,
+        certificateId: savedApproval.certificateId,
+        status: savedApproval.status,
+        isUnarchive: true
+      }
+    });
+
+  } catch (error) {
+    console.error('Error submitting unarchive request:', error);
     next(error);
   }
 }

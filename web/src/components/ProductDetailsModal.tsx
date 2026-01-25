@@ -23,6 +23,9 @@ import type { Product } from "@/typeorm/entities/product.entity";
 import { PDFGenerationService } from "@/services/pdfGenerationService";
 import { toast } from "react-toastify";
 import axios from 'axios';
+import { EditProductModal } from "@/components/EditProductModal";
+import { Edit, Archive } from "lucide-react";
+import CertificateTimelineModal from "@/components/CertificateTimelineModal";
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
 
@@ -50,17 +53,54 @@ interface ProductDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   product: Product | null;
+  onRenewalSuccess?: () => void;
+  companies?: Array<{ _id: string; name: string }>;
 }
 
 export function ProductDetailsModal({
   isOpen,
   onClose,
   product,
+  onRenewalSuccess,
+  companies = [],
 }: ProductDetailsModalProps) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [approvalData, setApprovalData] = useState<ApprovalData | null>(null);
   const [loadingApproval, setLoadingApproval] = useState(false);
   const [isRenewing, setIsRenewing] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
+  const [showTimelineModal, setShowTimelineModal] = useState(false);
+  const [hasPendingApproval, setHasPendingApproval] = useState(false);
+  const [checkingPending, setCheckingPending] = useState(false);
+
+  // Check for pending approvals when product changes
+  useEffect(() => {
+    if (isOpen && product) {
+      checkPendingApproval();
+    }
+  }, [isOpen, product]);
+
+  const checkPendingApproval = async () => {
+    if (!product?._id) return;
+    
+    setCheckingPending(true);
+    try {
+      const response = await axios.get(
+        `${API_URL}/certificate-approval/entity/product/${product._id}`,
+        { withCredentials: true }
+      );
+      
+      // Check if there's a pending approval
+      const hasPending = response.data.data?.status === 'pending';
+      setHasPendingApproval(hasPending);
+    } catch (error) {
+      // If no approval found or error, assume no pending approval
+      setHasPendingApproval(false);
+    } finally {
+      setCheckingPending(false);
+    }
+  };
 
   // Disable background scroll when modal is open (match AddAgentModal behavior)
   useEffect(() => {
@@ -131,17 +171,17 @@ export function ProductDetailsModal({
     try {
       // Submit renewal request through the certificate approval system
       const response = await axios.post(
-        `${API_URL}/certificate-approval/renewal`,
+        `${API_URL}/certificate-approval/renewProduct`,
         {
-          entityType: 'product',
           entityId: product._id,
-          entityName: product.productName,
+          forcePush: false
         },
         { withCredentials: true }
       );
       
       if (response.data.success) {
         toast.success('Renewal request submitted successfully! It will be reviewed by administrators.');
+        onRenewalSuccess?.(); // Trigger refresh in parent
         onClose();
       } else {
         toast.error(response.data.message || 'Failed to submit renewal request');
@@ -151,6 +191,56 @@ export function ProductDetailsModal({
       toast.error(error.response?.data?.message || 'Failed to submit renewal request');
     } finally {
       setIsRenewing(false);
+    }
+  };
+
+  const handleArchive = async () => {
+    if (!product || isArchiving) return;
+    
+    if (!window.confirm("Submit archive request for admin approval? The product will be archived after approval.")) {
+      return;
+    }
+
+    setIsArchiving(true);
+    try {
+      await axios.post(
+        `${API_URL}/certificate-approval/archiveProduct`,
+        { entityId: product._id },
+        { withCredentials: true }
+      );
+      toast.success("Archive request submitted for admin approval");
+      if (onRenewalSuccess) onRenewalSuccess();
+      onClose();
+    } catch (error: any) {
+      console.error("Error submitting archive request:", error);
+      toast.error(error.response?.data?.message || "Failed to submit archive request");
+    } finally {
+      setIsArchiving(false);
+    }
+  };
+
+  const handleUnarchive = async () => {
+    if (!product || isArchiving) return;
+    
+    if (!window.confirm("Submit unarchive request for admin approval? The product will be restored after approval.")) {
+      return;
+    }
+
+    setIsArchiving(true);
+    try {
+      await axios.post(
+        `${API_URL}/certificate-approval/unarchiveProduct`,
+        { entityId: product._id },
+        { withCredentials: true }
+      );
+      toast.success("Unarchive request submitted for admin approval");
+      if (onRenewalSuccess) onRenewalSuccess();
+      onClose();
+    } catch (error: any) {
+      console.error("Error submitting unarchive request:", error);
+      toast.error(error.response?.data?.message || "Failed to submit unarchive request");
+    } finally {
+      setIsArchiving(false);
     }
   };
 
@@ -206,14 +296,77 @@ export function ProductDetailsModal({
               <p className="text-sm app-text-subtle">
                 View complete product information
               </p>
+              {product.isArchived && (
+                <Badge variant="destructive" className="mt-2">
+                  ARCHIVED
+                </Badge>
+              )}
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:app-bg-neutral rounded-lg transition-colors"
-          >
-            <X className="h-5 w-5 app-text-subtle" />
-          </button>
+          <div className="flex items-center gap-2">
+            {product.sepoliaTransactionId && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowTimelineModal(true)}
+                className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Timeline
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowEditModal(true)}
+              disabled={hasPendingApproval || checkingPending}
+              className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm"
+              title={hasPendingApproval ? "Cannot edit - pending approval exists" : ""}
+            >
+              <Edit className="h-4 w-4 mr-2" />
+              Edit
+            </Button>
+            {!product.isArchived && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleArchive}
+                disabled={isArchiving || hasPendingApproval || checkingPending}
+                className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm text-red-600 hover:text-red-700 border-red-200 hover:border-red-300 hover:bg-red-50"
+                title={hasPendingApproval ? "Cannot archive - pending approval exists" : ""}
+              >
+                {isArchiving ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Archive className="h-4 w-4 mr-2" />
+                )}
+                Archive
+              </Button>
+            )}
+            {product.isArchived && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleUnarchive}
+                disabled={isArchiving || hasPendingApproval || checkingPending}
+                className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm text-green-600 hover:text-green-700 border-green-200 hover:border-green-300 hover:bg-green-50"
+                title={hasPendingApproval ? "Cannot unarchive - pending approval exists" : ""}
+              >
+                {isArchiving ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                )}
+                Unarchive
+              </Button>
+            )}
+            <button
+              onClick={onClose}
+              className="p-2 hover:app-bg-neutral rounded-lg transition-colors"
+            >
+              <X className="h-5 w-5 app-text-subtle" />
+            </button>
+          </div>
         </div>
 
         <div className="p-6">
@@ -636,8 +789,9 @@ export function ProductDetailsModal({
                       </p>
                       <Button
                         onClick={handleRenewal}
-                        disabled={isRenewing}
-                        className="mt-3 bg-red-600 hover:bg-red-700"
+                        disabled={isRenewing || hasPendingApproval || checkingPending}
+                        className="mt-3 w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                        variant={hasPendingApproval ? "outline" : "default"}
                         size="sm"
                       >
                         {isRenewing ? (
@@ -713,6 +867,28 @@ export function ProductDetailsModal({
           </div>
         </div>
       </div>
+
+      {/* Edit Modal */}
+      {showEditModal && product && (
+        <EditProductModal
+          isOpen={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          onSuccess={() => {
+            if (onRenewalSuccess) onRenewalSuccess(); // Reuse refresh logic
+            toast.success("Update request submitted.");
+          }}
+          product={product}
+          companies={companies || []}
+        />
+      )}
+
+      {/* Certificate Timeline Modal */}
+      <CertificateTimelineModal
+        isOpen={showTimelineModal}
+        onClose={() => setShowTimelineModal(false)}
+        productId={product?._id || ''}
+        productName={product?.productName || ''}
+      />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Building2, Download, Link2 } from "lucide-react";
+import { Plus, Building2, Download, Link2, Archive, RefreshCw } from "lucide-react";
 import { PageContainer } from "@/components/PageContainer";
 import { Button } from "@/components/ui/button";
 import { DataTable, type Column } from "@/components/DataTable";
@@ -38,6 +38,7 @@ export function Companies(props: CompaniesProps) {
   const pageSize = 10;
   const [searchQuery, setSearchQuery] = useState("");
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"active" | "archived">("active");
 
   // Disable body scroll when a modal is open
   useEffect(() => {
@@ -70,7 +71,7 @@ export function Companies(props: CompaniesProps) {
     }, 300);
     return () => clearTimeout(handle);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery]);
+  }, [searchQuery, activeTab]);
 
   // Fallback: Sometimes initial response/set doesn't include pagination yet (or parent passed just a single page array)
   // causing totalPages to evaluate to 1 and hiding the pagination controls until a manual refresh.
@@ -93,7 +94,8 @@ export function Companies(props: CompaniesProps) {
       const resp = await CompanyService.getCompaniesPage(
         page,
         pageSize,
-        searchQuery
+        searchQuery,
+        activeTab
       );
       // debug: log server response for pagination diagnosis
       // eslint-disable-next-line no-console
@@ -143,6 +145,26 @@ export function Companies(props: CompaniesProps) {
       toast.error("Failed to generate certificate. Please try again.");
     } finally {
       setDownloadingId(null);
+    }
+  };
+  
+  const handleArchiveClick = async (company: Company, event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (!window.confirm(`Are you sure you want to ${activeTab === 'active' ? 'archive' : 'activate'} "${company.name}"?`)) {
+      return;
+    }
+    
+    try {
+      if (activeTab === 'active') {
+        await CompanyService.archiveCompany(company._id);
+        toast.success("Company archived successfully");
+      } else {
+        await CompanyService.unarchiveCompany(company._id);
+        toast.success("Company restored successfully");
+      }
+      fetchCompaniesPage(currentPage);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Action failed");
     }
   };
 
@@ -236,7 +258,16 @@ export function Companies(props: CompaniesProps) {
               handleCompanyClick(row);
             }}
           >
-            View Details
+            View
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={(e) => handleArchiveClick(row, e)}
+            className={activeTab === 'archived' ? "text-green-600 hover:text-green-700" : "text-amber-600 hover:text-amber-700"}
+            title={activeTab === 'active' ? "Archive" : "Restore"}
+          >
+            {activeTab === 'active' ? <Archive className="h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
           </Button>
           <Button
             size="sm"
@@ -244,9 +275,9 @@ export function Companies(props: CompaniesProps) {
             onClick={(e) => handleDownloadCertificate(row, e)}
             disabled={downloadingId !== null}
             className="app-text-primary hover:opacity-90 hover:app-bg-primary-soft disabled:opacity-50"
+            title="Download Certificate"
           >
-            <Download className={`h-4 w-4 mr-1 ${downloadingId === row._id ? 'animate-pulse' : ''}`} />
-            {downloadingId === row._id ? 'Downloading...' : 'Certificate'}
+            <Download className={`h-4 w-4 ${downloadingId === row._id ? 'animate-pulse' : ''}`} />
           </Button>
         </div>
       ),
@@ -297,13 +328,37 @@ export function Companies(props: CompaniesProps) {
             emptyStateTitle="No Companies Found"
             emptyStateDescription="Try adjusting your search or add a new company to get started."
             customControls={
-              <Button
-                onClick={() => setShowAddModal(true)}
-                className="whitespace-nowrap cursor-pointer"
-              >
-                <Plus className="h-4 w-4 mr-2 " />
-                Add Company
-              </Button>
+              <>
+                <Button
+                  onClick={() => setShowAddModal(true)}
+                  className="whitespace-nowrap cursor-pointer"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Company
+                </Button>
+                <div className="flex bg-muted p-1 rounded-md ml-2">
+                  <button
+                    onClick={() => setActiveTab("active")}
+                    className={`px-3 py-1 text-sm rounded-sm transition-all ${
+                      activeTab === "active"
+                        ? "bg-white shadow text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    Active
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("archived")}
+                    className={`px-3 py-1 text-sm rounded-sm transition-all ${
+                      activeTab === "archived"
+                        ? "bg-white shadow text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    Archived
+                  </button>
+                </div>
+              </>
             }
           />
 
