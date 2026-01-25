@@ -47,10 +47,19 @@ export interface PendingProductDetails {
   productClassification: string;
   productSubClassification: string;
   // Renewal fields
+  isRenewal?: boolean;
+  previousCertificateHash?: string;
   oldCertificateId?: string;
+  renewalRequestDate?: string;
   // Update fields
   isUpdate?: boolean;
   updateRequestDate?: string;
+  // Archive fields
+  isArchive?: boolean;
+  archiveRequestDate?: string;
+  // Unarchive fields
+  isUnarchive?: boolean;
+  unarchiveRequestDate?: string;
 }
 
 const ApprovalQueueModal = ({

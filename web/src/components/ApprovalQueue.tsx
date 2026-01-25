@@ -304,7 +304,7 @@ const ApprovalQueue: React.FC<ApprovalQueueProps> = ({ isAdmin = false, onSucces
              // Dynamically import ProductService to avoid circular dependency issues
              const { ProductService } = await import("@/services/productService");
              const productResp = await ProductService.getProductById(response.entityId);
-             setCurrentProductData(productResp.product || productResp.data);
+             setCurrentProductData(productResp.product || productResp);
           } catch (e) {
             console.error("Failed to fetch current product data:", e);
             setCurrentProductData(null);
