@@ -53,7 +53,7 @@ export class ProductService {
     }
   }
 
-  static async getProductsPage(page = 1, limit = 10, search?: string) {
+  static async getProductsPage(page = 1, limit = 10, search?: string, status?: string) {
     try {
       const params = new URLSearchParams({
         page: String(page),
@@ -61,6 +61,9 @@ export class ProductService {
       });
       if (search && search.trim().length > 0) {
         params.append("search", search.trim());
+      }
+      if (status) {
+        params.append("status", status);
       }
       const response = await apiClient.get<ProductApiResponse>(
         `/product/products?${params.toString()}`
@@ -106,6 +109,30 @@ export class ProductService {
       return response.data;
     } catch (error: any) {
       console.error("Error fetching product:", error);
+      throw error;
+    }
+  }
+
+  static async archiveProduct(id: string) {
+    try {
+      const response = await apiClient.post<{ success: boolean; message: string }>(
+        `/product/products/${id}/archive`
+      );
+      return response.data;
+    } catch (error: any) {
+      console.error("Error archiving product:", error);
+      throw error;
+    }
+  }
+
+  static async unarchiveProduct(id: string) {
+    try {
+      const response = await apiClient.post<{ success: boolean; message: string }>(
+        `/product/products/${id}/unarchive`
+      );
+      return response.data;
+    } catch (error: any) {
+      console.error("Error unarchiving product:", error);
       throw error;
     }
   }

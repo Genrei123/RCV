@@ -56,7 +56,7 @@ export class CompanyService {
   }
 
   // New: fetch a specific page of companies from the server
-  static async getCompaniesPage(page = 1, limit = 10, search?: string) {
+  static async getCompaniesPage(page = 1, limit = 10, search?: string, status: "active" | "archived" = "active") {
     try {
       const params = new URLSearchParams({
         page: String(page),
@@ -64,6 +64,9 @@ export class CompanyService {
       });
       if (search && search.trim().length > 0) {
         params.append("search", search.trim());
+      }
+      if (status) {
+        params.append("status", status);
       }
       const response = await apiClient.get<CompanyApiResponse>(
         `/company/companies?${params.toString()}`
@@ -121,6 +124,30 @@ export class CompanyService {
       return response.data;
     } catch (error) {
       console.error("Error deleting company:", error);
+      throw error;
+    }
+  }
+
+  static async archiveCompany(id: string) {
+    try {
+      const response = await apiClient.post<{ message: string }>(
+        `/company/companies/${id}/archive`
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error archiving company:", error);
+      throw error;
+    }
+  }
+
+  static async unarchiveCompany(id: string) {
+    try {
+      const response = await apiClient.post<{ message: string }>(
+        `/company/companies/${id}/unarchive`
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error unarchiving company:", error);
       throw error;
     }
   }

@@ -10,6 +10,9 @@ export interface BlockchainCertificateData {
   blockTimestamp?: string;
   transactionHash: string;
   version?: string;
+  // Renewal fields
+  isRenewal?: boolean;
+  previousCertificateHash?: string;
 }
 
 /**
@@ -80,6 +83,21 @@ export const generateBlockchainCertificatePDF = (data: BlockchainCertificateData
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
   doc.text(data.entityType.toUpperCase(), pageWidth / 2, yPos, { align: 'center' });
+
+  // Renewal Badge (if applicable)
+  if (data.isRenewal) {
+    yPos += 12;
+    const renewalBadgeWidth = 50;
+    const renewalBadgeHeight = 8;
+    const renewalBadgeX = (pageWidth - renewalBadgeWidth) / 2;
+    const orangeColor: [number, number, number] = [234, 88, 12]; // Orange-600
+    doc.setFillColor(...orangeColor);
+    doc.roundedRect(renewalBadgeX, yPos - 6, renewalBadgeWidth, renewalBadgeHeight, 2, 2, 'F');
+    doc.setFontSize(9);
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.text('RENEWAL', pageWidth / 2, yPos, { align: 'center' });
+  }
 
   // Entity Name
   yPos += 15;
@@ -184,6 +202,45 @@ export const generateBlockchainCertificatePDF = (data: BlockchainCertificateData
     yPos,
     { url: `https://sepolia.etherscan.io/tx/${data.transactionHash}` }
   );
+
+  // Previous Certificate Section (for renewals)
+  if (data.isRenewal && data.previousCertificateHash) {
+    yPos += 20;
+    doc.setDrawColor(229, 231, 235);
+    doc.line(margin, yPos, pageWidth - margin, yPos);
+
+    yPos += 10;
+    doc.setFontSize(11);
+    doc.setTextColor(...primaryColor);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PREVIOUS CERTIFICATE', margin, yPos);
+
+    yPos += 8;
+    const renewalInfoColor: [number, number, number] = [255, 247, 237]; // Orange-50
+    doc.setFillColor(...renewalInfoColor);
+    doc.roundedRect(margin, yPos - 3, pageWidth - margin * 2, 25, 2, 2, 'F');
+    
+    yPos += 5;
+    doc.setFontSize(8);
+    doc.setTextColor(...secondaryColor);
+    doc.text('This certificate renews the previous registration:', margin + 5, yPos);
+    
+    yPos += 6;
+    doc.setFontSize(7);
+    doc.setFont('courier', 'normal');
+    doc.setTextColor(...primaryColor);
+    doc.text(data.previousCertificateHash, margin + 5, yPos);
+
+    yPos += 6;
+    doc.setFontSize(7);
+    doc.setTextColor(59, 130, 246); // Blue-500
+    doc.textWithLink(
+      `https://sepolia.etherscan.io/tx/${data.previousCertificateHash}`,
+      margin + 5,
+      yPos,
+      { url: `https://sepolia.etherscan.io/tx/${data.previousCertificateHash}` }
+    );
+  }
 
   // PDF Hash Section
   yPos += 20;

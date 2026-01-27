@@ -32,6 +32,7 @@ export interface ProductsProps {
   onAddProduct?: () => void;
   loading?: boolean;
   onRefresh?: () => void;
+  data?: Product[];
 }
 
 export function Products(props: ProductsProps) {
@@ -48,6 +49,7 @@ export function Products(props: ProductsProps) {
   // Unified search term (server-side for both list & grid views)
   const [searchQuery, setSearchQuery] = useState("");
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [productStatus, setProductStatus] = useState<"active" | "archived">("active");
 
   // Disable body scroll when a modal is open
   useEffect(() => {
@@ -106,13 +108,15 @@ export function Products(props: ProductsProps) {
     }
   };
 
+
+
   // Server-driven: fetch a page of products (uses current searchQuery state)
   const fetchProductsPage = async (page: number) => {
     setLoading(true);
     try {
       const resp = await (
         await import("@/services/productService")
-      ).ProductService.getProductsPage(page, pageSize, searchQuery);
+      ).ProductService.getProductsPage(page, pageSize, searchQuery, productStatus);
       const items = resp.products || resp.data || [];
       setProducts(items);
       setPagination(resp.pagination || null);
@@ -194,7 +198,7 @@ export function Products(props: ProductsProps) {
       key: "actions",
       label: "Actions",
       render: (_: any, row: Product) => (
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button
             size="sm"
             variant="outline"
@@ -220,15 +224,27 @@ export function Products(props: ProductsProps) {
     },
   ];
 
+  // Refetch when productStatus changes
+  useEffect(() => {
+    fetchProductsPage(1);
+  }, [productStatus]);
+
   // Initial load (or use provided products)
   useEffect(() => {
-    if (props.products && props.products.length > 0) {
-      setProducts(props.products);
+    const sourceProducts = props.products || props.data;
+    if (sourceProducts && sourceProducts.length > 0) {
+      setProducts(sourceProducts);
+      
+      // If we have a selected product, update it with the fresh data from the list
+      if (selectedProduct) {
+        const updated = sourceProducts.find(p => p._id === selectedProduct._id);
+        if (updated) setSelectedProduct(updated);
+      }
     } else {
       fetchProductsPage(1);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props.products]);
+  }, [props.products, props.data]);
 
   useEffect(() => {
     if (!pagination && products.length === pageSize) {
@@ -330,10 +346,41 @@ export function Products(props: ProductsProps) {
             emptyStateTitle="No Products Found"
             emptyStateDescription="Try adjusting your search or add a new product to get started."
             customControls={
-              <Button onClick={handleAddProduct} className="whitespace-nowrap cursor-pointer">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Product
-              </Button>
+              <div className="flex items-center gap-3">
+                 <div className="flex bg-gray-100 p-1 rounded-lg">
+                  <button
+                    className={`px-3 py-1 text-sm font-medium rounded-md transition-all ${
+                      productStatus === "active"
+                        ? "bg-white text-gray-900 shadow-sm"
+                        : "text-gray-500 hover:text-gray-900"
+                    }`}
+                    onClick={() => {
+                      setProductStatus("active");
+                      setCurrentPage(1); 
+                    }}
+                  >
+                    Active
+                  </button>
+                  <button
+                    className={`px-3 py-1 text-sm font-medium rounded-md transition-all ${
+                      productStatus === "archived"
+                        ? "bg-white text-red-600 shadow-sm"
+                        : "text-gray-500 hover:text-gray-900"
+                    }`}
+                    onClick={() => {
+                      setProductStatus("archived");
+                      setCurrentPage(1);
+                    }}
+                  >
+                    Archived
+                  </button>
+                </div>
+                <div className="h-6 w-px bg-gray-200 mx-1"></div>
+                <Button onClick={handleAddProduct} className="whitespace-nowrap cursor-pointer">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Product
+                </Button>
+              </div>
             }
           />
 
@@ -529,6 +576,8 @@ export function Products(props: ProductsProps) {
         isOpen={showDetailsModal}
         onClose={() => setShowDetailsModal(false)}
         product={selectedProduct}
+        companies={props.companies || []}
+        onRenewalSuccess={handleAddSuccess}
       />
     </PageContainer>
   );

@@ -32,6 +32,8 @@ export const CompanyValidation = z.object({
     description: z.string().max(1000).optional().nullable().transform(nullToUndefined),
     // Sepolia blockchain transaction ID
     sepoliaTransactionId: z.string().optional().nullable().transform(nullToUndefined),
+    // Status
+    isArchived: z.boolean().optional().default(false),
 });
 
 @Entity()
@@ -89,6 +91,9 @@ export class Company {
     // Sepolia blockchain transaction ID for verification
     @Column({ nullable: true })
     sepoliaTransactionId?: string;
+
+    @Column({ default: false })
+    isArchived!: boolean;
 
     @OneToMany(() => Product, product => product._id)
     products!: Product[];

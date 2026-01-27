@@ -46,14 +46,29 @@ export interface PendingProductDetails {
   subClassificationId: string;
   productClassification: string;
   productSubClassification: string;
+  // Renewal fields
+  isRenewal?: boolean;
+  previousCertificateHash?: string;
+  oldCertificateId?: string;
+  renewalRequestDate?: string;
+  // Update fields
+  isUpdate?: boolean;
+  updateRequestDate?: string;
+  // Archive fields
+  isArchive?: boolean;
+  archiveRequestDate?: string;
+  // Unarchive fields
+  isUnarchive?: boolean;
+  unarchiveRequestDate?: string;
 }
 
 const ApprovalQueueModal = ({
   isOpen,
   onClose,
   entityType,
-  data
-}: ApprovalQueueModalProps) => {
+  data,
+  currentProductData 
+}: ApprovalQueueModalProps & { currentProductData?: any }) => {
   // Disable background scroll when modal is open
   useEffect(() => {
     if (isOpen) {
@@ -198,6 +213,54 @@ const ApprovalQueueModal = ({
 
             {entityType === 'product' && 'productName' in data && (
               <>
+                {/* Renewal Badge */}
+                {data.isRenewal && (
+                  <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="default" className="bg-orange-600">
+                        RENEWAL
+                      </Badge>
+                      <p className="text-sm app-text-subtle">
+                        This is a renewal request for an expired certificate
+                      </p>
+                    </div>
+                    {data.previousCertificateHash && (
+                      <div className="mt-2 space-y-1">
+                        <label className="text-xs font-medium app-text-subtle">
+                          Previous Certificate Hash:
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <code className="text-xs app-text break-all bg-white px-2 py-1 rounded border">
+                            {data.previousCertificateHash}
+                          </code>
+                          <a
+                            href={`https://sepolia.etherscan.io/tx/${data.previousCertificateHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-800"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Update Badge */}
+                {data.isUpdate && (
+                  <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center gap-2">
+                       <Badge variant="default" className="bg-blue-600">
+                        UPDATE
+                      </Badge>
+                      <p className="text-sm app-text-subtle">
+                        This is a request to update product information
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <h3 className="text-lg font-semibold app-text mb-4">
                     Basic Information
@@ -209,7 +272,16 @@ const ApprovalQueueModal = ({
                       </label>
                       <div className="flex items-center gap-2">
                         <Hash className="h-4 w-4 app-text-subtle" />
-                        <p className="app-text font-medium">{data.LTONumber}</p>
+                        <p className="app-text font-medium">
+                          {data.isUpdate && currentProductData && currentProductData.LTONumber !== data.LTONumber ? (
+                            <span>
+                              <span className="text-red-500 line-through mr-2">{currentProductData.LTONumber}</span>
+                              <span className="text-green-600">{data.LTONumber}</span>
+                            </span>
+                          ) : (
+                            data.LTONumber
+                          )}
+                        </p>
                       </div>
                     </div>
                     <div className="space-y-1">
@@ -218,7 +290,16 @@ const ApprovalQueueModal = ({
                       </label>
                       <div className="flex items-center gap-2">
                         <Hash className="h-4 w-4 app-text-subtle" />
-                        <p className="app-text font-medium">{data.CFPRNumber}</p>
+                        <p className="app-text font-medium">
+                          {data.isUpdate && currentProductData && currentProductData.CFPRNumber !== data.CFPRNumber ? (
+                            <span>
+                              <span className="text-red-500 line-through mr-2">{currentProductData.CFPRNumber}</span>
+                              <span className="text-green-600">{data.CFPRNumber}</span>
+                            </span>
+                          ) : (
+                            data.CFPRNumber
+                          )}
+                        </p>
                       </div>
                     </div>
                     <div className="space-y-1">
@@ -227,7 +308,16 @@ const ApprovalQueueModal = ({
                       </label>
                       <div className="flex items-center gap-2">
                         <Hash className="h-4 w-4 app-text-subtle" />
-                        <p className="app-text">{data.lotNumber}</p>
+                        <p className="app-text">
+                          {data.isUpdate && currentProductData && currentProductData.lotNumber !== data.lotNumber ? (
+                            <span>
+                              <span className="text-red-500 line-through mr-2">{currentProductData.lotNumber}</span>
+                              <span className="text-green-600">{data.lotNumber}</span>
+                            </span>
+                          ) : (
+                            data.lotNumber
+                          )}
+                        </p>
                       </div>
                     </div>
                     <div className="space-y-1">
@@ -236,7 +326,16 @@ const ApprovalQueueModal = ({
                       </label>
                       <div className="flex items-center gap-2">
                         <Package className="h-4 w-4 app-text-subtle" />
-                        <p className="app-text">{data.brandName}</p>
+                        <p className="app-text">
+                          {data.isUpdate && currentProductData && currentProductData.brandName !== data.brandName ? (
+                            <span>
+                              <span className="text-red-500 line-through mr-2">{currentProductData.brandName}</span>
+                              <span className="text-green-600">{data.brandName}</span>
+                            </span>
+                          ) : (
+                            data.brandName
+                          )}
+                        </p>
                       </div>
                     </div>
                     <div className="space-y-1 col-span-1 md:col-span-2">
@@ -246,7 +345,14 @@ const ApprovalQueueModal = ({
                       <div className="flex items-center gap-2">
                         <Package className="h-4 w-4 app-text-subtle" />
                         <p className="app-text font-medium">
-                          {data.productName}
+                          {data.isUpdate && currentProductData && currentProductData.productName !== data.productName ? (
+                            <span>
+                              <span className="text-red-500 line-through mr-2">{currentProductData.productName}</span>
+                              <span className="text-green-600">{data.productName}</span>
+                            </span>
+                          ) : (
+                            data.productName
+                          )}
                         </p>
                       </div>
                     </div>

@@ -20,10 +20,12 @@ export const getAllProducts = async (
     const { page, limit, skip } = parsePageParams(req, 10);
     const search =
       typeof req.query.search === "string" ? req.query.search.trim() : "";
+    const status = typeof req.query.status === "string" ? req.query.status : "active";
+    const isArchived = status === "archived";
 
-    // Try to get from cache first
+    // Try to get from cache first (include isArchived in cache key)
     try {
-      const cachedData = await redisService.getCachedProducts(page, limit, search);
+      const cachedData = await redisService.getCachedProducts(page, limit, search + `:${status}`);
       if (cachedData) {
         return res.status(200).json(cachedData);
       }
@@ -38,18 +40,10 @@ export const getAllProducts = async (
       const qb = ProductRepo.createQueryBuilder("product")
         .leftJoinAndSelect("product.company", "company")
         .leftJoinAndSelect("product.registeredBy", "registeredBy")
-        .where("LOWER(product.productName) LIKE LOWER(:q)", {
+        .where("(LOWER(product.productName) LIKE LOWER(:q) OR LOWER(product.brandName) LIKE LOWER(:q) OR LOWER(product.lotNumber) LIKE LOWER(:q) OR LOWER(company.name) LIKE LOWER(:q))", {
           q: `%${search}%`,
         })
-        .orWhere("LOWER(product.brandName) LIKE LOWER(:q)", {
-          q: `%${search}%`,
-        })
-        .orWhere("LOWER(product.lotNumber) LIKE LOWER(:q)", {
-          q: `%${search}%`,
-        })
-        .orWhere("LOWER(company.name) LIKE LOWER(:q)", {
-          q: `%${search}%`,
-        })
+        .andWhere("product.isArchived = :isArchived", { isArchived })
         .orderBy("product.dateOfRegistration", "DESC")
         .skip(skip)
         .take(limit);
@@ -60,6 +54,7 @@ export const getAllProducts = async (
         take: limit,
         order: { dateOfRegistration: "DESC" },
         relations: ["company", "registeredBy"],
+        where: { isArchived }
       });
     }
 
@@ -69,7 +64,7 @@ export const getAllProducts = async (
 
     // Cache the result for 5 minutes
     try {
-      await redisService.setCachedProducts(page, limit, responseData, search, 300);
+      await redisService.setCachedProducts(page, limit, responseData, search + `:${status}`, 300);
     } catch (redisError) {
       console.warn("Failed to cache products:", redisError instanceof Error ? redisError.message : 'Unknown error');
     }
@@ -86,18 +81,29 @@ export const getProductById = async (
   res: Response,
   next: NextFunction
 ) => {
-  if (!ProductValidation.parse({ id: req.params.id })) {
-    return new CustomError(400, "Invalid Product ID");
-  }
   try {
-    // Logic to get a product by ID (placeholder)
+    const { id } = req.params;
+    if (!id) {
+       return next(new CustomError(400, "Product ID is required"));
+    }
+
+    const product = await ProductRepo.findOne({
+      where: { _id: id },
+      relations: ["company", "registeredBy", "brandNameEntity", "classificationEntity", "subClassificationEntity"]
+    });
+
+    if (!product) {
+      return next(new CustomError(404, "Product not found"));
+    }
+
     res.status(200).json({
-      message: `Product with ID ${req.params.id} retrieved successfully`,
+      success: true,
+      product
     });
   } catch (error) {
-    return new CustomError(500, "Failed to retrieve product");
+    console.error("Error retrieving product:", error);
+    return next(new CustomError(500, "Failed to retrieve product"));
   }
-  return CustomError.security(400, "Invalid user data");
 };
 
 export const createProduct = async (
@@ -282,11 +288,8 @@ export const searchProduct = async (
     const { page, limit, skip } = parsePageParams(req, 10);
     const qb = ProductRepo.createQueryBuilder("product")
       .leftJoinAndSelect("product.companyId", "company")
-      .where("product.LTONumber LIKE :query", { query: `%${query}%` })
-      .orWhere("product.CFPRNumber LIKE :query", { query: `%${query}%` })
-      .orWhere("product.lotNumber LIKE :query", { query: `%${query}%` })
-      .orWhere("product.brandName LIKE :query", { query: `%${query}%` })
-      .orWhere("product.productName LIKE :query", { query: `%${query}%` });
+      .where("(product.LTONumber LIKE :query OR product.CFPRNumber LIKE :query OR product.lotNumber LIKE :query OR product.brandName LIKE :query OR product.productName LIKE :query)", { query: `%${query}%` })
+      .andWhere("product.isArchived = :isArchived", { isArchived: false });
 
     const [products, total] = await qb.skip(skip).take(limit).getManyAndCount();
     const meta = buildPaginationMeta(page, limit, total);
@@ -294,5 +297,89 @@ export const searchProduct = async (
     res.status(200).json({ data: products, pagination: meta, links });
   } catch (error) {
     return new CustomError(500, "Failed to search products");
+  }
+};
+
+export const archiveProduct = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const { id } = req.params;
+  const user = req.user;
+
+  try {
+    const product = await ProductRepo.findOne({ where: { _id: id } });
+    if (!product) {
+      return next(new CustomError(404, "Product not found"));
+    }
+
+    product.isArchived = true;
+    await ProductRepo.save(product);
+
+    // Clear cache
+    try {
+      await redisService.invalidateProductsCache();
+    } catch (e) {
+      console.error("Failed to invalidate cache");
+    }
+
+    // Log action
+    if (user) {
+      await AuditLogService.createLog({
+        action: `Archived product: ${product.productName}`,
+        actionType: "UPDATE_PRODUCT",
+        userId: user._id,
+        targetProductId: product._id,
+        platform: "WEB",
+        req,
+      });
+    }
+
+    res.status(200).json({ success: true, message: "Product archived successfully" });
+  } catch (error) {
+    return next(new CustomError(500, "Failed to archive product"));
+  }
+};
+
+export const unarchiveProduct = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const { id } = req.params;
+  const user = req.user;
+
+  try {
+    const product = await ProductRepo.findOne({ where: { _id: id } });
+    if (!product) {
+      return next(new CustomError(404, "Product not found"));
+    }
+
+    product.isArchived = false;
+    await ProductRepo.save(product);
+
+    // Clear cache
+    try {
+      await redisService.invalidateProductsCache();
+    } catch (e) {
+      console.error("Failed to invalidate cache");
+    }
+
+    // Log action
+    if (user) {
+      await AuditLogService.createLog({
+        action: `Unarchived product: ${product.productName}`,
+        actionType: "UPDATE_PRODUCT",
+        userId: user._id,
+        targetProductId: product._id,
+        platform: "WEB",
+        req,
+      });
+    }
+
+    res.status(200).json({ success: true, message: "Product unarchived successfully" });
+  } catch (error) {
+    return next(new CustomError(500, "Failed to unarchive product"));
   }
 };

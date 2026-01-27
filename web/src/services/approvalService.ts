@@ -63,6 +63,18 @@ export interface CertificateApproval {
   pendingEntityData?: Record<string, any>;
   entityCreated?: boolean;
   
+  // Renewal tracking fields
+  isRenewal?: boolean;
+  previousCertificateHash?: string;
+  renewalChain?: Array<{
+    approvalId: string;
+    certificateId: string;
+    transactionHash: string;
+    approvedDate: string;
+    approvers: ApproverRecord[];
+  }>;
+  renewalMetadata?: Record<string, any>;
+  
   createdAt: string;
   updatedAt: string;
   approvalCount: number;
