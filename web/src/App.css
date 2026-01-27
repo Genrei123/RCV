@@ -674,3 +674,38 @@
   font-size: 12px;
   animation: slideInUp 0.8s ease-out 0.8s both;
 }
+
+/* Archive Button Styling */
+.archive-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  border-radius: 0.375rem;
+  transition: all 0.2s ease-in-out;
+}
+
+.archive-btn svg {
+  color: #D47A00;
+  width: 1.25rem;
+  height: 1.25rem;
+  transition: color 0.2s ease-in-out;
+}
+
+.archive-btn span {
+  color: #D47A00;
+  transition: color 0.2s ease-in-out;
+}
+
+.archive-btn:hover {
+  background-color: rgba(212, 122, 0, 0.08);
+}
+
+.archive-btn:hover svg,
+.archive-btn:hover span {
+  color: #B84900;
+}
