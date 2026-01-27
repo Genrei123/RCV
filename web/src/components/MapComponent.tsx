@@ -440,8 +440,9 @@ export function MapComponent({
     <div className="relative w-full h-full">
       <div ref={mapRef} className="w-full h-full" />
       
-      {/* Mobile Search - Form visible, compact width */}
-      <div className="md:hidden fixed top-18 left-2 z-50 w-64">
+      {/* Mobile Search - Form visible, compact static width */}
+      {/* Lowered even further so it clearly matches/clears desktop spacing */}
+      <div className="md:hidden fixed top-40 left-2 z-50 w-64">
         <Card className="bg-white rounded-lg shadow-lg">
           <div className="relative p-2">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -539,7 +540,8 @@ export function MapComponent({
       {/* Desktop Search panel */}
       <div 
         ref={searchContainerRef}
-        className={`hidden md:block ${isFullscreen ? 'fixed' : 'absolute'} top-4 left-3 lg:left-4 z-[50] w-80 md:w-96 max-w-[28rem]`}
+        /* Top offset increased enough so it doesn't cover Google Maps menu/controls or their checkbox dropdowns */
+        className={`hidden md:block ${isFullscreen ? 'fixed' : 'absolute'} top-32 lg:top-28 left-3 lg:left-4 z-[50] w-80 md:w-96 max-w-[28rem]`}
         style={{ pointerEvents: 'auto' }}
       >
         <Card className="bg-white rounded-none sm:rounded-lg border-0 shadow-xl m-0 sm:m-0" style={{ pointerEvents: 'auto' }}>
@@ -639,7 +641,8 @@ export function MapComponent({
       {/* Inspector count container: bottom center */}
       <div 
         ref={inspectorCountRef}
-        className={`${isFullscreen ? 'fixed' : 'absolute'} bottom-6 left-1/2 -translate-x-1/2 z-[51]`}
+        /* Positioned so its vertical center roughly aligns with the Google zoom (+) button */
+        className={`${isFullscreen ? 'fixed' : 'absolute'} bottom-16 md:bottom-10 left-1/2 -translate-x-1/2 z-[51]`}
         style={{ 
           pointerEvents: 'auto'
         }}
