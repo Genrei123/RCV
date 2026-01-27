@@ -39,6 +39,7 @@ class HomeContent extends StatefulWidget {
 class _HomeContentState extends State<HomeContent> {
   final GpsService _gpsService = GpsService();
   GoogleMapController? _mapController;
+  Timer? _connectionCheckTimer;
 
   // Location state
   LocationData? _currentLocation;
@@ -50,24 +51,47 @@ class _HomeContentState extends State<HomeContent> {
     super.initState();
     _checkInternetConnection();
     _getCurrentLocation();
+    // Check connection every 5 seconds
+    _connectionCheckTimer = Timer.periodic(
+      const Duration(seconds: 5),
+      (_) => _checkInternetConnection(),
+    );
   }
 
   Future<void> _checkInternetConnection() async {
+    if (!mounted) return;
     setState(() => _isChecking = true);
 
     try {
+      // Check basic internet connectivity using DNS lookup
       final result = await InternetAddress.lookup(
         'google.com',
       ).timeout(const Duration(seconds: 5));
-      setState(() {
-        _isConnected = result.isNotEmpty && result[0].rawAddress.isNotEmpty;
-        _isChecking = false;
-      });
+      
+      bool hasInternet = result.isNotEmpty && result[0].rawAddress.isNotEmpty;
+      
+      if (!mounted) return;
+      
+      if (mounted) {
+        setState(() {
+          _isConnected = hasInternet;
+          _isChecking = false;
+        });
+      }
+      
+      debugPrint(
+        hasInternet
+            ? '✅ [HomePage] Connected to Internet'
+            : '❌ [HomePage] No Internet Connection',
+      );
     } catch (e) {
-      setState(() {
-        _isConnected = false;
-        _isChecking = false;
-      });
+      debugPrint('❌ [HomePage] Internet lookup failed: $e');
+      if (mounted) {
+        setState(() {
+          _isConnected = false;
+          _isChecking = false;
+        });
+      }
     }
   }
 
@@ -126,6 +150,7 @@ class _HomeContentState extends State<HomeContent> {
   @override
   void dispose() {
     _mapController?.dispose();
+    _connectionCheckTimer?.cancel();
     super.dispose();
   }
 

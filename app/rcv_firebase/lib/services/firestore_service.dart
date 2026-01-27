@@ -123,4 +123,22 @@ class FirestoreService {
       return false;
     }
   }
+
+  /// Check Firestore connectivity by attempting a simple read
+  static Future<bool> checkFirestoreConnection() async {
+    try {
+      debugPrint('🔍 [Firestore] Checking connection...');
+      // Try to access Firestore with a timeout
+      await _firestore
+          .collection('_test')
+          .doc('_ping')
+          .get()
+          .timeout(const Duration(seconds: 5));
+      debugPrint('✅ [Firestore] Connection check successful');
+      return true;
+    } catch (e) {
+      debugPrint('❌ [Firestore] Connection check failed: $e');
+      rethrow;
+    }
+  }
 }
