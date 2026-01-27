@@ -441,7 +441,7 @@ export function MapComponent({
       <div ref={mapRef} className="w-full h-full" />
       
       {/* Mobile Search - Form visible, compact width */}
-      <div className="md:hidden fixed top-18 left-2 z-50 w-64">
+      <div className="md:hidden fixed left-2 z-50 w-64" style={{ top: 'calc(4.5rem + 10px)' }}>
         <Card className="bg-white rounded-lg shadow-lg">
           <div className="relative p-2">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
