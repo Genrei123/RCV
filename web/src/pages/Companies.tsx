@@ -260,15 +260,13 @@ export function Companies(props: CompaniesProps) {
           >
             View
           </Button>
-          <Button
-            size="sm"
-            variant="outline"
+          <button
             onClick={(e) => handleArchiveClick(row, e)}
-            className={activeTab === 'archived' ? "text-green-600 hover:text-green-700" : "text-amber-600 hover:text-amber-700"}
+            className="archive-btn"
             title={activeTab === 'active' ? "Archive" : "Restore"}
           >
-            {activeTab === 'active' ? <Archive className="h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
-          </Button>
+            {activeTab === 'active' ? <Archive /> : <RefreshCw />}
+          </button>
           <Button
             size="sm"
             variant="outline"
