@@ -690,22 +690,22 @@
 }
 
 .archive-btn svg {
-  color: #FFB300;
+  color: #D47A00;
   width: 1.25rem;
   height: 1.25rem;
   transition: color 0.2s ease-in-out;
 }
 
 .archive-btn span {
-  color: #FFB300;
+  color: #D47A00;
   transition: color 0.2s ease-in-out;
 }
 
 .archive-btn:hover {
-  background-color: rgba(255, 179, 0, 0.08);
+  background-color: rgba(212, 122, 0, 0.08);
 }
 
 .archive-btn:hover svg,
 .archive-btn:hover span {
-  color: #E6A200;
+  color: #B84900;
 }

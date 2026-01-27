@@ -3,7 +3,6 @@ import { UserRepo } from "../../typeorm/data-source";
 import { UserValidation } from "../../typeorm/entities/user.entity";
 import CustomError from "../../utils/CustomError";
 import { z } from "zod";
-import { Not } from "typeorm";
 import {
   parsePageParams,
   buildLinks,
