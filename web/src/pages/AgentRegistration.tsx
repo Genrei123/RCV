@@ -282,8 +282,12 @@ export function AgentRegistration() {
         "Password must be at least 14 characters with uppercase, lowercase, number, and may contain special characters";
     }
 
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = "Passwords do not match";
+    if (!formData.confirmPassword) {
+      newErrors.confirmPasswordRequired = "Confirm password is required";
+    }
+    if (formData.confirmPassword && formData.password !== formData.confirmPassword) {
+      newErrors.confirmPasswordMismatch = "Passwords do not match";
+      newErrors.confirmPasswordRequired = "Confirm password is required";
     }
 
     if (!formData.phoneNumber) {
@@ -834,6 +838,27 @@ export function AgentRegistration() {
                             setShowCityDropdown(true);
                           }
                         }}
+                        onBlur={() => {
+                          // Handle autocomplete/autosuggestion selection
+                          const currentValue = citySearchTerm || formData.location;
+                          if (currentValue) {
+                            // Check if the current value matches a valid city
+                            const matchedCity = philippineCities.find(
+                              (city) => city.name.toLowerCase() === currentValue.toLowerCase()
+                            );
+                            if (matchedCity) {
+                              setFormData({ ...formData, location: matchedCity.name });
+                              setCitySearchTerm(matchedCity.name);
+                              if (errors.location) {
+                                setErrors({ ...errors, location: "" });
+                              }
+                            }
+                          }
+                          // Close dropdown after a short delay to allow click events
+                          setTimeout(() => {
+                            setShowCityDropdown(false);
+                          }, 200);
+                        }}
                         onFocus={() => {
                           if (citySearchTerm || !formData.location) {
                             setShowCityDropdown(true);
@@ -913,9 +938,19 @@ export function AgentRegistration() {
                         errors.password ? "border-red-500" : ""
                       }`}
                       value={formData.password}
-                      onChange={(e) =>
-                        setFormData({ ...formData, password: e.target.value })
-                      }
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setFormData({ ...formData, password: value });
+                        // Real-time validation for password mismatch - preserve required error
+                        const newErrors = { ...errors };
+                        if (formData.confirmPassword && value && value !== formData.confirmPassword) {
+                          newErrors.confirmPasswordMismatch = "Passwords do not match";
+                        } else if (formData.confirmPassword && value && value === formData.confirmPassword) {
+                          // Clear mismatch error if passwords match (but keep required if it exists)
+                          delete newErrors.confirmPasswordMismatch;
+                        }
+                        setErrors(newErrors);
+                      }}
                       disabled={loading}
                     />
                     <button
@@ -924,9 +959,9 @@ export function AgentRegistration() {
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                     >
                       {showPassword ? (
-                        <EyeOff className="w-5 h-5" />
-                      ) : (
                         <Eye className="w-5 h-5" />
+                      ) : (
+                        <EyeOff className="w-5 h-5" />
                       )}
                     </button>
                   </div>
@@ -962,7 +997,10 @@ export function AgentRegistration() {
                 </div>
 
                 <div>
-                  <Label htmlFor="confirmPassword">Confirm Password *</Label>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Label htmlFor="confirmPassword">Confirm Password *</Label>
+                    <div className="w-5 h-5"></div>
+                  </div>
                   <div className="relative mt-1">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                     <Input
@@ -970,15 +1008,35 @@ export function AgentRegistration() {
                       type={showConfirmPassword ? "text" : "password"}
                       placeholder="Confirm your password"
                       className={`pl-10 pr-10 h-11 ${
-                        errors.confirmPassword ? "border-red-500" : ""
+                        errors.confirmPasswordRequired ? "border-red-500" : ""
                       }`}
                       value={formData.confirmPassword}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        const value = e.target.value;
                         setFormData({
                           ...formData,
-                          confirmPassword: e.target.value,
-                        })
-                      }
+                          confirmPassword: value,
+                        });
+                        const newErrors = { ...errors };
+                        
+                        if (value && formData.password && value === formData.password) {
+                          delete newErrors.confirmPasswordRequired;
+                        } else if (!value) {
+                          newErrors.confirmPasswordRequired = "Confirm password is required";
+                        }
+                        
+                        if (value && formData.password) {
+                          if (value !== formData.password) {
+                            newErrors.confirmPasswordMismatch = "Passwords do not match";
+                          } else {
+                            delete newErrors.confirmPasswordMismatch;
+                          }
+                        } else if (!value) {
+                          delete newErrors.confirmPasswordMismatch;
+                        }
+                        
+                        setErrors(newErrors);
+                      }}
                       disabled={loading}
                     />
                     <button
@@ -989,21 +1047,32 @@ export function AgentRegistration() {
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                     >
                       {showConfirmPassword ? (
-                        <EyeOff className="w-5 h-5" />
-                      ) : (
                         <Eye className="w-5 h-5" />
+                      ) : (
+                        <EyeOff className="w-5 h-5" />
                       )}
                     </button>
                   </div>
                   {formData.confirmPassword &&
                     formData.password === formData.confirmPassword && (
-                      <p className="text-green-600 text-xs mt-1 flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3" /> Passwords match
-                      </p>
+                      <div className="mt-2">
+                        <p className="text-green-600 text-xs flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" /> Passwords match
+                        </p>
+                      </div>
                     )}
-                  {errors.confirmPassword && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {errors.confirmPassword}
+                  {errors.confirmPasswordMismatch && (
+                    <div className="mt-2">
+                      <p className="text-red-500 text-xs">
+                        {errors.confirmPasswordMismatch}
+                      </p>
+                    </div>
+                  )}
+                  {errors.confirmPasswordRequired && (
+                    <p className={`text-red-500 text-xs ${
+                      errors.confirmPasswordMismatch ? "mt-3" : "mt-1"
+                    }`}>
+                      {errors.confirmPasswordRequired}
                     </p>
                   )}
                 </div>
