@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { X, Loader2, ImagePlus, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import type { Product } from "@/typeorm/entities/product.entity";
 import { submitUpdate } from "@/services/certificateUpdateService";
 import { FirebaseStorageService } from "@/services/firebaseStorageService";
+import { CompanyService } from "@/services/companyService";
 import { toast } from "react-toastify";
 
 interface EditProductModalProps {
@@ -24,6 +25,10 @@ export function EditProductModal({
   companies,
 }: EditProductModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [companyLoading, setCompanyLoading] = useState(false);
+  const [companyOptions, setCompanyOptions] = useState(companies);
+  const hasFetchedCompanies = useRef(false);
+  const COMPANY_FETCH_LIMIT = 2000;
   const [formData, setFormData] = useState({
     LTONumber: product.LTONumber || "",
     CFPRNumber: product.CFPRNumber || "",
@@ -68,6 +73,63 @@ export function EditProductModal({
       setBackImage(null);
     }
   }, [product]);
+
+  // Keep company options in sync with props (when parent provides them)
+  useEffect(() => {
+    if (companies && companies.length > 0) {
+      setCompanyOptions(companies);
+      hasFetchedCompanies.current = true;
+    }
+  }, [companies]);
+
+  // Fallback: fetch companies when opening (if none were provided)
+  useEffect(() => {
+    if (!isOpen) return;
+    if (hasFetchedCompanies.current) return;
+    if (companies && companies.length > 0) return;
+
+    let isActive = true;
+    setCompanyLoading(true);
+
+    CompanyService.getCompaniesPage(1, COMPANY_FETCH_LIMIT)
+      .then((response) => {
+        if (!isActive) return;
+        const fetched = response.companies || response.data || [];
+        setCompanyOptions(fetched);
+        hasFetchedCompanies.current = true;
+        if (fetched.length === 0) {
+          toast.info("No companies found. Please add a company first.");
+        }
+      })
+      .catch((error) => {
+        if (!isActive) return;
+        // eslint-disable-next-line no-console
+        console.error("Error fetching companies:", error);
+        toast.error("Failed to load companies. Please refresh and try again.");
+      })
+      .finally(() => {
+        if (isActive) setCompanyLoading(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [isOpen, companies]);
+
+  const mergedCompanyOptions = useMemo(() => {
+    const map = new Map<string, { _id: string; name: string }>();
+    for (const c of companyOptions || []) {
+      if (c?._id) map.set(c._id, c);
+    }
+    // Ensure current company is visible even if list isn't loaded yet
+    if (formData.companyId && !map.has(formData.companyId)) {
+      map.set(formData.companyId, {
+        _id: formData.companyId,
+        name: product.company?.name || "Current company",
+      });
+    }
+    return Array.from(map.values());
+  }, [companyOptions, formData.companyId, product.company?.name]);
 
   // Disable background scroll when modal is open
   useEffect(() => {
@@ -325,9 +387,12 @@ export function EditProductModal({
                 onChange={handleChange}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 required
+                disabled={companyLoading || isSubmitting}
               >
-                <option value="">Select a company</option>
-                {companies.map((company) => (
+                <option value="">
+                  {companyLoading ? "Loading companies..." : "Select a company"}
+                </option>
+                {mergedCompanyOptions.map((company) => (
                   <option key={company._id} value={company._id}>
                     {company.name}
                   </option>
