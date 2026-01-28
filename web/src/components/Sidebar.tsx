@@ -226,8 +226,8 @@ export function Sidebar({
 
   return (
     <>
-      {/* Desktop sidebar: sticky with max height; allows global footer to appear below */}
-      <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:sticky lg:top-0 lg:max-h-screen bg-white border-r overflow-y-auto flex-shrink-0">
+      {/* Desktop sidebar: sticky with max height; raised z-index and visible overflow so wallet dropdown isn't clipped or hidden */}
+      <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:sticky lg:top-0 lg:max-h-screen bg-white border-r overflow-visible flex-shrink-0 relative z-[60]">
         {/* Logo Section */}
         <div className="p-6 border-b border-neutral-200">
           <div className="flex items-center gap-2 ">
@@ -336,9 +336,9 @@ export function Sidebar({
                       />
                     </button>
 
-                    {/* Wallet dropdown */}
+                    {/* Wallet dropdown (desktop) */}
                     {showWalletMenu && (
-                      <div className="absolute left-4 right-4 top-full mt-2 bg-white border rounded-lg shadow-lg z-50">
+                      <div className="mt-2 mx-4 bg-white border rounded-lg shadow-lg z-50 relative">
                         <div className="p-3 space-y-3">
                           {/* Wallet Status */}
                           <div className="text-xs">
