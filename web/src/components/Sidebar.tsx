@@ -226,8 +226,8 @@ export function Sidebar({
 
   return (
     <>
-      {/* Desktop sidebar: sticky with max height; raised z-index and visible overflow so wallet dropdown isn't clipped or hidden */}
-      <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:sticky lg:top-0 lg:max-h-screen bg-white border-r overflow-visible flex-shrink-0 relative z-[60]">
+      {/* Desktop sidebar: sticky with max height; */}
+      <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:sticky lg:top-0 lg:max-h-screen bg-white border-r overflow-y-auto flex-shrink-0 relative z-[80]">
         {/* Logo Section */}
         <div className="p-6 border-b border-neutral-200">
           <div className="flex items-center gap-2 ">
@@ -308,7 +308,7 @@ export function Sidebar({
         </div>
       
         {/* Navigation Menu */}
-        <nav className="flex-1 p-4">
+        <nav className="flex-1 p-4 pb-24">
           <div className="space-y-1">
             {menuItems.map((item) => {
               const Icon = item.icon;
