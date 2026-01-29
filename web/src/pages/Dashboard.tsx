@@ -68,7 +68,7 @@ import { Pagination as SimplePagination } from '@/components/Pagination';
 
 export interface DashboardProps {
   success?: boolean;
-  // users can be either an array (legacy) or a paginated payload { data: User[], pagination: { ... } }
+  // users can be either an array (legacy) or a paginated payload { data: User[], pagination: { ... }  test}
   users?:
     | User[]
     | {
@@ -898,53 +898,55 @@ export function Dashboard(props: DashboardProps) {
             emptyStateTitle="No Users Found"
             emptyStateDescription="You may try to input different keywords, check for typos, or adjust your filters."
             customControls={
-              <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+              <div className="flex flex-col lg:flex-row gap-3 w-full max-w-full overflow-hidden">
                 {isAdmin() && (
                   <Button
                     onClick={() => setIsInviteModalOpen(true)}
-                    className="bg-green-600 hover:bg-green-700 text-white"
+                    className="bg-green-600 hover:bg-green-700 text-white w-full lg:w-auto text-sm px-4 py-2 min-w-0 whitespace-nowrap"
                   >
-                    <UserPlus className="w-4 h-4 mr-2" />
-                    Invite Agent
+                    <UserPlus className="w-4 h-4 mr-2 flex-shrink-0" />
+                    <span className="truncate">Invite Agent</span>
                   </Button>
                 )}
-                <Select
-                  value={statusFilter}
-                  onValueChange={(value) =>
-                    setStatusFilter(value as "all" | "Pending" | "Active")
-                  }
-                >
-                  <SelectTrigger className="w-full sm:w-[150px]">
-                    <SelectValue placeholder="Filter status..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectLabel>Status Filter</SelectLabel>
-                      <SelectItem value="all">All Users</SelectItem>
-                      <SelectItem value="Pending">Pending</SelectItem>
-                      <SelectItem value="Active">Active</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={sortKey}
-                  onValueChange={(value) =>
-                    setSortKey(value as "lastName" | "email" | "statusActive" | "statusPending")
-                  }
-                >
-                  <SelectTrigger className="w-full sm:w-[150px]">
-                    <SelectValue placeholder="Sort by..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectLabel>Sort Options</SelectLabel>
-                      <SelectItem value="lastName">Name (A→Z)</SelectItem>
-                      <SelectItem value="email">Email (A→Z)</SelectItem>
-                      <SelectItem value="statusActive">Status (Active-↑)</SelectItem>
-                      <SelectItem value="statusPending">Status (Pending-↑)</SelectItem>                      
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
+                <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
+                  <Select
+                    value={statusFilter}
+                    onValueChange={(value) =>
+                      setStatusFilter(value as "all" | "Pending" | "Active")
+                    }
+                  >
+                    <SelectTrigger className="w-full lg:w-auto min-w-[120px]">
+                      <SelectValue placeholder="Filter status..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectLabel>Status Filter</SelectLabel>
+                        <SelectItem value="all">All Users</SelectItem>
+                        <SelectItem value="Pending">Pending</SelectItem>
+                        <SelectItem value="Active">Active</SelectItem>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={sortKey}
+                    onValueChange={(value) =>
+                      setSortKey(value as "lastName" | "email" | "statusActive" | "statusPending")
+                    }
+                  >
+                    <SelectTrigger className="w-full lg:w-auto min-w-[160px]">
+                      <SelectValue placeholder="Sort by..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectLabel>Sort Options</SelectLabel>
+                        <SelectItem value="lastName">Name (A→Z)</SelectItem>
+                        <SelectItem value="email">Email (A→Z)</SelectItem>
+                        <SelectItem value="statusActive">Status (Active-↑)</SelectItem>
+                        <SelectItem value="statusPending">Status (Pending-↑)</SelectItem>                      
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             }
           />
@@ -1056,10 +1058,10 @@ export function Dashboard(props: DashboardProps) {
                     emptyStateTitle="No Invites Found"
                     emptyStateDescription="No agent invitations have been sent yet."
                     customControls={
-                      <div className="flex items-center gap-2 w-full sm:w-auto">
+                      <div className="flex flex-col gap-2 w-full lg:flex-row lg:items-center lg:gap-3">
                         <Button
                           onClick={() => setIsInviteModalOpen(true)}
-                          className="bg-green-600 hover:bg-green-700 text-white"
+                          className="bg-green-600 hover:bg-green-700 text-white w-full lg:w-auto"
                         >
                           <UserPlus className="w-4 h-4 mr-2" />
                           Invite Agent
@@ -1069,6 +1071,7 @@ export function Dashboard(props: DashboardProps) {
                           size="sm"
                           onClick={fetchInvites}
                           disabled={invitesLoading}
+                          className="w-full lg:w-auto"
                         >
                           Refresh
                         </Button>

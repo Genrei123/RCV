@@ -178,27 +178,25 @@ export function DataTable({
   return (
     <Card className="border-0 shadow-lg">
       <CardHeader className="pb-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+        <div className="flex flex-col gap-3">
           <CardTitle className="text-xl font-semibold text-gray-800">
             {title}
           </CardTitle>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
+          <div className="flex flex-col lg:flex-row gap-2 w-full items-stretch">
             {showSearch && (
-              <div className="relative group rounded-md border-2 border-gray-200 focus-within:border-gray-400 focus-within:shadow-md transition-all">
+              <div className="relative group rounded-md border-2 border-gray-200 focus-within:border-gray-400 focus-within:shadow-md transition-all lg:flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 group-focus-within:text-gray-700 transition-colors" />
                 <Input
                   placeholder={searchPlaceholder}
-                  className="pl-10 w-full sm:w-64 border-0 bg-white text-gray-800 placeholder:text-gray-500 focus:text-black focus:placeholder:text-gray-600"
+                  className="pl-10 w-full border-0 bg-white text-gray-800 placeholder:text-gray-500 focus:text-black focus:placeholder:text-gray-600"
                   value={searchQuery}
                   onChange={(e) => handleSearch(e.target.value)}
                 />
               </div>
             )}
-            {customControls && (
-              <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
-                {customControls}
-              </div>
-            )}
+            <div className="flex flex-col lg:flex-row items-stretch gap-2 flex-wrap">
+              {customControls}
+            </div>
           </div>
         </div>
       </CardHeader>

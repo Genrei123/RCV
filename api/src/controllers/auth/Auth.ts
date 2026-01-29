@@ -545,6 +545,7 @@ export const me = async (req: Request, res: Response, next: NextFunction) => {
         "firstName",
         "middleName",
         "lastName",
+        "dateOfBirth",
         "email",
         "phoneNumber",
         "location",

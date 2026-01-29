@@ -51,6 +51,9 @@ export function EditProfileModal({
   const [citiesLoading, setCitiesLoading] = useState(true);
   const [showCityDropdown, setShowCityDropdown] = useState(false);
   const [citySearchTerm, setCitySearchTerm] = useState("");
+  const [initialData, setInitialData] = useState<Partial<ProfileUser> | null>(
+    null
+  );
 
   /**
    * Normalize phone number for display/editing
@@ -89,7 +92,7 @@ export function EditProfileModal({
 
   useEffect(() => {
     if (user) {
-      setFormData({
+      const normalizedData: Partial<ProfileUser> = {
         firstName: (user.firstName || "").replace(/[0-9]/g, ""),
         middleName: user.middleName || "",
         lastName: (user.lastName || "").replace(/[0-9]/g, ""),
@@ -99,7 +102,10 @@ export function EditProfileModal({
         dateOfBirth: user.dateOfBirth || "",
         badgeId: user.badgeId || "",
         avatar: user.avatar || undefined,
-      });
+      };
+
+      setFormData(normalizedData);
+      setInitialData(normalizedData);
       setCitySearchTerm(user.location || "");
       // prefer local override for preview if exists
       try {
@@ -349,6 +355,28 @@ export function EditProfileModal({
       setErrors((prev) => ({ ...prev, [field]: "" }));
     }
   };
+
+  const isDirty = (() => {
+    if (!initialData) return false;
+
+    const fields: (keyof ProfileUser)[] = [
+      "firstName",
+      "middleName",
+      "lastName",
+      "email",
+      "phoneNumber",
+      "location",
+      "dateOfBirth",
+      "badgeId",
+      "avatar",
+    ];
+
+    return fields.some((field) => {
+      const current = formData[field] ?? "";
+      const initial = initialData[field] ?? "";
+      return current !== initial;
+    });
+  })();
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
@@ -687,8 +715,8 @@ export function EditProfileModal({
             </Button>
             <Button
               type="submit"
-              className="bg-teal-600 hover:bg-teal-700 text-white cursor-pointer"
-              disabled={loading || uploadingAvatar}
+              className="bg-teal-600 hover:bg-teal-700 text-white cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={loading || uploadingAvatar || !isDirty}
             >
               {loading
                 ? "Saving..."
