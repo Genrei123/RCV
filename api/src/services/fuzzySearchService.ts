@@ -26,7 +26,7 @@ export class FuzzySearchService {
       const match = text.match(pattern);
       if (match && match[0]) {
         const cleaned = match[0].replace(/\s+/g, '-').toUpperCase();
-        console.log("   Found CFPR in OCR:", cleaned);
+
         return cleaned;
       }
     }
@@ -49,7 +49,7 @@ export class FuzzySearchService {
       const match = text.match(pattern);
       if (match && match[0]) {
         const cleaned = match[0].replace(/\s+/g, '-').toUpperCase();
-        console.log("   Found LTO in OCR:", cleaned);
+
         return cleaned;
       }
     }
@@ -125,14 +125,10 @@ export class FuzzySearchService {
       );
       
       if (!cfprFound) {
-        console.log(`   ⚠️ CFPR ${product.CFPRNumber} NOT found in OCR text`);
         missingFields.push('CFPRNumber');
-      } else {
-        console.log(`   ✅ CFPR ${product.CFPRNumber} FOUND in OCR text`);
-      }
+      } 
     } else {
       // CRITICAL: Product has NO CFPR in database - this is ILLEGAL
-      console.log("   🚨 WARNING: Product has NO CFPR number in database (potentially illegal product)");
       warnings.push('Product is missing CFPR registration number - may be unregistered/illegal');
     }
 

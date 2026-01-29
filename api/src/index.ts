@@ -30,9 +30,6 @@ const initializeApp = async () => {
       const status = await getRecoveryStatus();
       
       if (status.missingRecords > 0) {
-        console.log(`⚠️  Found ${status.missingRecords} records on blockchain not in database`);
-        console.log('🔄 Starting automatic recovery...\n');
-        
         const recoveryResult = await recoverFromBlockchain();
         
         if (recoveryResult.companiesRecovered > 0 || recoveryResult.productsRecovered > 0) {

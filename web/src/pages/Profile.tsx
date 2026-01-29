@@ -143,7 +143,6 @@ export function Profile({
       try {
         const saved = localStorage.getItem("profile_avatar_data");
         if (saved) {
-          console.log("🔄 Avatar updated, refreshing preview");
           setLocalAvatar(saved);
         }
       } catch (e) {
@@ -176,7 +175,6 @@ export function Profile({
   const fetchAllAuditLogs = async () => {
     setLogsLoading(true);
     try {
-      console.log("Fetching all audit logs for consistent pagination");
       const first = await AuditLogService.getMyLogs(1, logsPagination.per_page);
       if (!first || !first.pagination) throw new Error("Invalid response");
       let all: AuditLog[] = [...(first.data || [])];
@@ -301,10 +299,8 @@ export function Profile({
       // Add avatar if it's a Firebase Storage URL (not base64)
       if (updatedUser.avatar && updatedUser.avatar.startsWith("http")) {
         profileData.avatar = updatedUser.avatar;
-        console.log("💾 Saving Firebase Storage URL:", updatedUser.avatar);
       }
 
-      console.log("💾 Saving profile with data:", profileData);
       await UserPageService.updateProfile(profileData);
 
       toast.success("Profile updated successfully!");
@@ -316,7 +312,6 @@ export function Profile({
       try {
         const saved = localStorage.getItem("profile_avatar_data");
         if (saved) {
-          console.log("🔄 Updating local avatar preview");
           setLocalAvatar(saved);
         }
       } catch (e) {

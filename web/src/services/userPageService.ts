@@ -115,8 +115,6 @@ export class UserPageService {
         backendData.avatarUrl = backendData.avatar;
         delete backendData.avatar;
       }
-
-      console.log("📤 Sending profile update to backend:", backendData);
       const response = await apiClient.patch<UserProfile>(
         "/user/profile",
         backendData
@@ -139,9 +137,7 @@ export class UserPageService {
 
   static async syncUserFromFirebase(firebaseUid: string): Promise<UserProfile> {
     try {
-      console.log(`[UserPageService] Syncing Firebase user: ${firebaseUid}`);
       const response = await apiClient.post<any>(`/public/users/sync/${firebaseUid}`);
-      console.log(`[UserPageService] Sync response:`, response.data);
       return response.data.user;
     } catch (error: any) {
       console.error(`[UserPageService] Sync error:`, error?.response?.data);

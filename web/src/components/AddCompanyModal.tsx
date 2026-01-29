@@ -543,8 +543,6 @@ export function AddCompanyModal({
         { autoClose: 6000 }
       );
 
-      console.log("Company submitted for approval by:", currentUser.email);
-
       // Reset form
       resetForm();
       onSuccess();

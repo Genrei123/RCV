@@ -760,8 +760,6 @@ export function AddProductModal({
         { autoClose: 6000 }
       );
 
-      console.log("Product submitted for approval by:", currentUser.email);
-
       // Reset form
       setFormData({
         LTONumber: "",

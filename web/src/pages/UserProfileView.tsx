@@ -70,10 +70,8 @@ export function UserProfileView() {
       try {
         const loadedUser = await fetchUser();
         if (loadedUser?._id) {
-          console.log(`[UserProfileView] User has MySQL ID: ${loadedUser._id}, fetching audit logs...`);
           await fetchUserAuditLogs(loadedUser._id);
         } else {
-          console.log("[UserProfileView] No MySQL user ID available, skipping audit logs");
           setFullAuditLogs([]);
         }
       } catch (e) {
@@ -90,8 +88,6 @@ export function UserProfileView() {
   const fetchUser = async (): Promise<UserProfile | null> => {
     try {
       if (!id) return null;
-      
-      console.log(`[UserProfileView] Fetching user with ID: ${id}`);
       
       try {
         const resp = await UserPageService.getUserById(id);
@@ -111,22 +107,18 @@ export function UserProfileView() {
             if (parts.length > 1) p.lastName = parts[parts.length - 1];
           }
           setUser(p);
-          console.log("[UserProfileView] User loaded from MySQL successfully");
           return p;
         }
       } catch (fetchError: any) {
         // User not found in MySQL - try to sync first
-        console.log(`[UserProfileView] User not found in MySQL, attempting to sync Firebase user...`);
         
         try {
           // Call sync endpoint to create/link user from Firebase
           const syncResult = await UserPageService.syncUserFromFirebase(id);
-          console.log(`[UserProfileView] Sync successful, got user:`, syncResult);
           setUser(syncResult);
           return syncResult;
         } catch (syncError: any) {
           console.error(`[UserProfileView] Sync failed:`, syncError);
-          console.log("[UserProfileView] Will continue with prefilled Firestore data");
           // Continue with prefilled data
         }
       }
@@ -140,7 +132,6 @@ export function UserProfileView() {
   const fetchUserAuditLogs = async (userId: string) => {
     setLogsLoading(true);
     try {
-      console.log(`[UserProfileView] Fetching audit logs for user ID: ${userId}`);
       
       // Pull all logs then filter by userId
       const first = await AuditLogService.getAllLogs(
@@ -156,11 +147,7 @@ export function UserProfileView() {
         );
         all = all.concat(resp.data || []);
       }
-      
-      console.log(`[UserProfileView] Total logs fetched: ${all.length}, filtering for user: ${userId}`);
       const filtered = all.filter((l) => l.userId === userId);
-      
-      console.log(`[UserProfileView] Found ${filtered.length} audit logs for user`);
       setFullAuditLogs(filtered);
       setLogsPagination({
         current_page: 1,

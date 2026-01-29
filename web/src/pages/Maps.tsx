@@ -20,12 +20,10 @@ export function Maps() {
     const loadInspectors = async () => {
       try {
         const users = await FirestoreService.getAllUsers();
-        console.log("Users from Firebase:", users);
 
         const mappedInspectors: Inspector[] = users
           .filter((user) => user.currentLocation)
           .map((user) => {
-            console.log("Mapping user:", user);
             return {
               id: user.id,
               name: user.fullName,
@@ -52,7 +50,6 @@ export function Maps() {
             };
           });
 
-        console.log("Mapped inspectors:", mappedInspectors);
         setInspectors(mappedInspectors);
         setFilteredInspectors(mappedInspectors);
       } catch (error) {

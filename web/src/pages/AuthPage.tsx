@@ -35,24 +35,18 @@ export function AuthPage() {
   const inviteToken = searchParams.get("invite");
   const [verifyingInvite, setVerifyingInvite] = useState(!!inviteToken);
   
-  // Debug: Log invite token on mount
-  console.log("[AuthPage] Mounted. Invite token:", inviteToken);
   
   // If invite token is present, verify with backend first then redirect to agent registration
   useEffect(() => {
     const verifyAndRedirect = async () => {
       if (inviteToken) {
-        console.log("[AuthPage] Starting invite verification for token:", inviteToken);
         setVerifyingInvite(true);
         try {
-          console.log("[AuthPage] Calling AdminInviteService.verifyInviteToken...");
           const response = await AdminInviteService.verifyInviteToken(inviteToken);
-          console.log("[AuthPage] Verification response:", response);
           if (response.success && response.invite) {
-            console.log("[AuthPage] Token valid, redirecting to agent-registration...");
             navigate(`/agent-registration?invite=${inviteToken}`, { replace: true });
           } else {
-            console.log("[AuthPage] Token invalid (no success/invite in response)");
+            console.error("[AuthPage] Invalid invite response:", response);
             toast.error("Invalid or expired invitation link.");
             setVerifyingInvite(false);
           }
@@ -125,7 +119,7 @@ export function AuthPage() {
         toast.error("Login failed. Please check your credentials.");
       }
     } catch (err: any) {
-      console.log("Login error caught:", err);
+      console.error("Login error caught:", err);
 
       const status = err.response?.status || err.status;
       const isUnapproved =

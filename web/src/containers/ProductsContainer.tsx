@@ -27,38 +27,34 @@ export function ProductsContainer() {
   const handleSearch = (query: string) => {
     setSearchQuery(query)
     // In real app, you might make an API call here
-    console.log('Searching for:', query)
   }
 
   // Handle sorting
   const handleSort = (sortBy: string) => {
-    console.log('Sorting by:', sortBy)
+    return sortBy;
     // In real app, update API call with sort parameter
   }
 
   // Handle add product
   const handleAddProduct = () => {
-    console.log('Add product clicked')
     // In real app, navigate to add product form or open modal
   }
 
   // Handle product click
   const handleProductClick = (product: Product) => {
-    console.log('Product clicked:', product)
+    return product;
     // In real app, navigate to product detail page
   }
 
   // Handle pagination
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
-    console.log('Page changed to:', page)
     // In real app, make API call with new page
   }
 
   // Handle view mode change
   const handleViewModeChange = (mode: 'grid' | 'list') => {
     setViewMode(mode)
-    console.log('View mode changed to:', mode)
   }
 
   const componentProps: any = {

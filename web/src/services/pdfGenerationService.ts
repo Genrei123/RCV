@@ -247,10 +247,8 @@ export class PDFGenerationService {
         pdfBlob,
         `certificates/company/${certificateId}.pdf`
       );
-      
-      if (firebaseUrl) {
-        console.log(`📤 PDF uploaded to Firebase: ${firebaseUrl}`);
-      } else {
+
+      if (!firebaseUrl) {
         console.warn('⚠️ Failed to upload PDF to Firebase Storage');
       }
       
@@ -265,12 +263,8 @@ export class PDFGenerationService {
       );
 
       if (blockchainResult.success) {
-        console.log(`✅ Certificate added to blockchain at block ${blockchainResult.blockIndex}`);
-        console.log(`📄 Certificate ID: ${certificateId}`);
-        console.log(`🔐 PDF Hash: ${pdfHash}`);
-      } else {
         console.warn('⚠️ Failed to add certificate to blockchain:', blockchainResult.message);
-      }
+      } 
       
       // Download PDF
       const filename = `${certificateId}.pdf`;
@@ -678,10 +672,8 @@ export class PDFGenerationService {
         pdfBlob,
         `certificates/product/${certificateId}.pdf`
       );
-      
-      if (firebaseUrl) {
-        console.log(`📤 PDF uploaded to Firebase: ${firebaseUrl}`);
-      } else {
+
+      if (!firebaseUrl) {
         console.warn('⚠️ Failed to upload PDF to Firebase Storage');
       }
       
@@ -700,13 +692,9 @@ export class PDFGenerationService {
         product.CFPRNumber
       );
 
-      if (blockchainResult.success) {
-        console.log(`✅ Product certificate added to blockchain at block ${blockchainResult.blockIndex}`);
-        console.log(`📄 Certificate ID: ${certificateId}`);
-        console.log(`🔐 PDF Hash: ${pdfHash}`);
-      } else {
+      if (!blockchainResult.success) {
         console.warn('⚠️ Failed to add certificate to blockchain:', blockchainResult.message);
-      }
+      } 
       
       // Download PDF
       const filename = `${certificateId}.pdf`;

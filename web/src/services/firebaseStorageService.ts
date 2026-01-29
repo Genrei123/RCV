@@ -24,13 +24,10 @@ export class FirebaseStorageService {
         return null;
       }
 
-      const filePath = `certificates/${certType}/${certificateId}.pdf`;
-      console.log('🔍 [Storage] Looking for PDF at:', filePath);
-      
+      const filePath = `certificates/${certType}/${certificateId}.pdf`;      
       const storageRef = ref(storage, filePath);
       const url = await getDownloadURL(storageRef);
       
-      console.log('✅ [Storage] PDF found:', url);
       return url;
     } catch (error) {
       console.error('❌ [Storage] PDF not found for certificate:', certificateId, error);
@@ -52,11 +49,7 @@ export class FirebaseStorageService {
         console.error('❌ [Storage] Firebase Storage is not initialized.');
         return null;
       }
-
-      console.log('📤 [Storage] Uploading PDF to:', filePath);
-      
       const storageRef = ref(storage, filePath);
-      
       // Upload with proper metadata
       const metadata = {
         contentType: 'application/pdf',
@@ -68,8 +61,7 @@ export class FirebaseStorageService {
       
       const snapshot = await uploadBytes(storageRef, pdf, metadata);
       const url = await getDownloadURL(snapshot.ref);
-      
-      console.log('✅ [Storage] PDF uploaded successfully:', url);
+    
       return url;
     } catch (error) {
       console.error('❌ [Storage] PDF upload failed:', error);
@@ -92,9 +84,7 @@ export class FirebaseStorageService {
    * ```
    */
   static async uploadAvatar(userId: string, file: File): Promise<string | null> {
-    try {
-      console.log('📤 [Storage] Uploading avatar for user:', userId);
-      
+    try {      
       const storageRef = ref(storage, `avatars/${userId}.jpg`);
       
       // Upload file with metadata
@@ -110,7 +100,6 @@ export class FirebaseStorageService {
       const snapshot = await uploadBytes(storageRef, file, metadata);
       const url = await getDownloadURL(snapshot.ref);
       
-      console.log('✅ [Storage] Avatar uploaded successfully:', url);
       return url;
     } catch (error) {
       console.error('❌ [Storage] Avatar upload failed:', error);
@@ -131,9 +120,7 @@ export class FirebaseStorageService {
     frontImage: File,
     backImage: File
   ): Promise<{ frontUrl: string | null; backUrl: string | null }> {
-    try {
-      console.log('📤 [Storage] Uploading scan images for:', scanId);
-      
+    try {      
       const frontRef = ref(storage, `scans/${scanId}/front.jpg`);
       const backRef = ref(storage, `scans/${scanId}/back.jpg`);
       
@@ -157,7 +144,6 @@ export class FirebaseStorageService {
         getDownloadURL(backSnapshot.ref),
       ]);
       
-      console.log('✅ [Storage] Scan images uploaded successfully');
       return { frontUrl, backUrl };
     } catch (error) {
       console.error('❌ [Storage] Scan upload failed:', error);
@@ -173,12 +159,9 @@ export class FirebaseStorageService {
    */
   static async deleteAvatar(userId: string): Promise<boolean> {
     try {
-      console.log('🗑️ [Storage] Deleting avatar for user:', userId);
-      
       const storageRef = ref(storage, `avatars/${userId}.jpg`);
       await deleteObject(storageRef);
       
-      console.log('✅ [Storage] Avatar deleted successfully');
       return true;
     } catch (error) {
       console.warn('⚠️ [Storage] Avatar delete failed (may not exist):', error);
@@ -193,9 +176,7 @@ export class FirebaseStorageService {
    * @returns true if deleted successfully
    */
   static async deleteScanImages(scanId: string): Promise<boolean> {
-    try {
-      console.log('🗑️ [Storage] Deleting scan images for:', scanId);
-      
+    try {     
       const frontRef = ref(storage, `scans/${scanId}/front.jpg`);
       const backRef = ref(storage, `scans/${scanId}/back.jpg`);
       
@@ -205,7 +186,6 @@ export class FirebaseStorageService {
         deleteObject(backRef),
       ]);
       
-      console.log('✅ [Storage] Scan images deleted successfully');
       return true;
     } catch (error) {
       console.warn('⚠️ [Storage] Scan delete failed:', error);
@@ -292,8 +272,6 @@ export class FirebaseStorageService {
     path: string
   ): Promise<{ downloadUrl: string }> {
     try {
-      console.log('📤 [Storage] Uploading agent verification document to:', path);
-      
       const fileExtension = file.name.split('.').pop() || 'jpg';
       const fullPath = `${path}.${fileExtension}`;
       const storageRef = ref(storage, fullPath);
@@ -310,7 +288,6 @@ export class FirebaseStorageService {
       const snapshot = await uploadBytes(storageRef, file, metadata);
       const downloadUrl = await getDownloadURL(snapshot.ref);
       
-      console.log('✅ [Storage] Agent verification document uploaded:', downloadUrl);
       return { downloadUrl };
     } catch (error) {
       console.error('❌ [Storage] Agent verification document upload failed:', error);
@@ -332,8 +309,6 @@ export class FirebaseStorageService {
     documentType: string
   ): Promise<{ downloadUrl: string; fileName: string; fileType: string }> {
     try {
-      console.log('📤 [Storage] Uploading company document:', documentType, 'for company:', companyId);
-      
       const timestamp = Date.now();
       const fileExtension = file.name.split('.').pop() || 'pdf';
       const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
@@ -352,8 +327,6 @@ export class FirebaseStorageService {
       
       const snapshot = await uploadBytes(storageRef, file, metadata);
       const downloadUrl = await getDownloadURL(snapshot.ref);
-      
-      console.log('✅ [Storage] Company document uploaded:', downloadUrl);
       return { 
         downloadUrl, 
         fileName: sanitizedName,
@@ -373,12 +346,9 @@ export class FirebaseStorageService {
    */
   static async deleteCompanyDocument(documentUrl: string): Promise<boolean> {
     try {
-      console.log('🗑️ [Storage] Deleting company document:', documentUrl);
-      
       const storageRef = ref(storage, documentUrl);
       await deleteObject(storageRef);
       
-      console.log('✅ [Storage] Company document deleted successfully');
       return true;
     } catch (error) {
       console.warn('⚠️ [Storage] Company document delete failed:', error);
