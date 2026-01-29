@@ -559,16 +559,12 @@ export function ProductStatsView() {
 
       {/* Edit Modal */}
       <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>
-              Edit {activeTab === "brand" ? "Brand Name" : "Classification"}
-            </DialogTitle>
-            <DialogDescription>
-              Update the {activeTab === "brand" ? "brand name" : "classification"} details.
-            </DialogDescription>
+            <DialogTitle>Edit {activeTab === "brand" ? "Brand Name" : "Classification"}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          
+          <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
             <div className="space-y-2">
               <Label htmlFor="edit-name">Name</Label>
               <Input
@@ -578,6 +574,7 @@ export function ProductStatsView() {
                 placeholder="Enter name"
               />
             </div>
+
             <div className="space-y-2">
               <Label htmlFor="edit-description">Description</Label>
               <Textarea
@@ -585,15 +582,16 @@ export function ProductStatsView() {
                 value={editDescription}
                 onChange={(e) => setEditDescription(e.target.value)}
                 placeholder="Enter description (optional)"
-                rows={3}
+                className="min-h-[100px] max-h-[200px] resize-none"
               />
             </div>
           </div>
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditModalOpen(false)} disabled={editLoading}>
+            <Button variant="outline" onClick={() => setEditModalOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleEditSubmit} disabled={editLoading || !editName.trim()}>
+            <Button onClick={handleEditSubmit} disabled={editLoading}>
               {editLoading ? "Saving..." : "Save Changes"}
             </Button>
           </DialogFooter>

@@ -28,7 +28,7 @@ const teamMembers = [
   {
     name: "Capalac, Garvy Ren",
     role: "Frontend Developer",
-    imageUrl: "/garvy.jpg",
+    imageUrl: "/garvy.png",
   },
   {
     name: "Gomez, Eugene PV",
@@ -43,7 +43,7 @@ const teamMembers = [
   {
     name: "Nepomuceno, Rogie",
     role: "Developer",
-    imageUrl: "/rogie.jpg",
+    imageUrl: "/rogie.png",
   },
 ];
 
@@ -65,7 +65,7 @@ export function About() {
           {/* Team Grid */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
             {teamMembers.map((member, index) => (
-              <div className="m-1">
+              <div className="m-1 transform transition-transform duration-300 hover:scale-110 cursor-pointer">
                 <ProfileCard
                   key={index}
                   name={member.name}
