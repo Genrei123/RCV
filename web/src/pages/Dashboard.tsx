@@ -68,7 +68,7 @@ import { Pagination as SimplePagination } from '@/components/Pagination';
 
 export interface DashboardProps {
   success?: boolean;
-  // users can be either an array (legacy) or a paginated payload { data: User[], pagination: { ... } }
+  // users can be either an array (legacy) or a paginated payload { data: User[], pagination: { ... }  test}
   users?:
     | User[]
     | {
