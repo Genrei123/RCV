@@ -351,7 +351,7 @@ export function Products(props: ProductsProps) {
                   <button
                     className={`px-3 py-1 text-sm font-medium rounded-md transition-all ${
                       productStatus === "active"
-                        ? "bg-white text-gray-900 shadow-sm"
+                        ? "bg-white app-text-primary shadow-sm"
                         : "text-gray-500 hover:text-gray-900"
                     }`}
                     onClick={() => {
@@ -364,7 +364,7 @@ export function Products(props: ProductsProps) {
                   <button
                     className={`px-3 py-1 text-sm font-medium rounded-md transition-all ${
                       productStatus === "archived"
-                        ? "bg-white text-red-600 shadow-sm"
+                        ? "bg-white app-text-archived shadow-sm"
                         : "text-gray-500 hover:text-gray-900"
                     }`}
                     onClick={() => {

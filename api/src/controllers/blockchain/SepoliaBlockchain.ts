@@ -506,28 +506,24 @@ export const getBlockchainCertificates = async (
 ) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
-    const skip = (page - 1) * limit;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const sortBy = (req.query.sortBy as string) || 'default';
 
-    // Get products with blockchain verification
-    const [products, productCount] = await ProductRepo.findAndCount({
+    // Get all products with blockchain verification
+    const products = await ProductRepo.find({
       where: { sepoliaTransactionId: Not(IsNull()) },
       order: { registeredAt: 'DESC' },
-      skip,
-      take: limit,
       relations: ['company']
     });
 
-    // Get companies with blockchain verification
-    const [companies, companyCount] = await CompanyRepo.findAndCount({
+    // Get all companies with blockchain verification
+    const companies = await CompanyRepo.find({
       where: { sepoliaTransactionId: Not(IsNull()) },
-      order: { createdAt: 'DESC' },
-      skip,
-      take: limit
+      order: { createdAt: 'DESC' }
     });
 
     // Combine and format as certificates
-    const certificates = [
+    let allCertificates = [
       ...products.map(p => ({
         id: p._id,
         certificateId: `PROD-${p._id}`,
@@ -555,9 +551,32 @@ export const getBlockchainCertificates = async (
           businessType: c.businessType
         }
       }))
-    ].sort((a, b) => new Date(b.issuedDate).getTime() - new Date(a.issuedDate).getTime());
+    ];
 
-    const totalCount = productCount + companyCount;
+    // Apply sorting based on sortBy parameter
+    if (sortBy === 'products') {
+      allCertificates.sort((a, b) => {
+        if (a.entityType === 'product' && b.entityType !== 'product') return -1;
+        if (a.entityType !== 'product' && b.entityType === 'product') return 1;
+        return 0;
+      });
+    } else if (sortBy === 'companies') {
+      allCertificates.sort((a, b) => {
+        if (a.entityType === 'company' && b.entityType !== 'company') return -1;
+        if (a.entityType !== 'company' && b.entityType === 'company') return 1;
+        return 0;
+      });
+    } else {
+      // Default: sort by issued date descending
+      allCertificates.sort((a, b) => new Date(b.issuedDate).getTime() - new Date(a.issuedDate).getTime());
+    }
+
+    // Apply pagination to combined results
+    const totalCount = allCertificates.length;
+    const productCount = products.length;
+    const companyCount = companies.length;
+    const skip = (page - 1) * limit;
+    const certificates = allCertificates.slice(skip, skip + limit);
     const totalPages = Math.ceil(totalCount / limit);
 
     res.status(200).json({

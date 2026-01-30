@@ -339,7 +339,7 @@ export function Companies(props: CompaniesProps) {
                     onClick={() => setActiveTab("active")}
                     className={`px-3 py-1 text-sm rounded-sm transition-all ${
                       activeTab === "active"
-                        ? "bg-white shadow text-foreground"
+                        ? "bg-white shadow app-text-primary"
                         : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
@@ -349,7 +349,7 @@ export function Companies(props: CompaniesProps) {
                     onClick={() => setActiveTab("archived")}
                     className={`px-3 py-1 text-sm rounded-sm transition-all ${
                       activeTab === "archived"
-                        ? "bg-white shadow text-foreground"
+                        ? "bg-white shadow app-text-archived"
                         : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
