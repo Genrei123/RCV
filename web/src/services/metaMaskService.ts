@@ -513,7 +513,8 @@ export class MetaMaskService {
    */
   static async getBlockchainCertificates(
     page: number = 1,
-    limit: number = 20
+    limit: number = 20,
+    sortBy: string = 'default'
   ): Promise<{
     success: boolean;
     certificates: BlockchainCertificate[];
@@ -534,7 +535,7 @@ export class MetaMaskService {
   }> {
     try {
       const response = await apiClient.get(`/sepolia/certificates`, {
-        params: { page, limit }
+        params: { page, limit, sortBy }
       });
       return {
         success: true,

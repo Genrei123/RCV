@@ -7,6 +7,7 @@ import type { Company } from "@/typeorm/entities/company.entity";
 import { truncateText } from "@/utils/textTruncate";
 import { AddCompanyModal } from "@/components/AddCompanyModal";
 import { CompanyDetailsModal } from "@/components/CompanyDetailsModal";
+import { ArchiveConfirmationModal } from "@/components/ArchiveConfirmationModal";
 import { CompanyService } from "@/services/companyService";
 import {
   Pagination,
@@ -39,18 +40,21 @@ export function Companies(props: CompaniesProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"active" | "archived">("active");
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [companyToArchive, setCompanyToArchive] = useState<Company | null>(null);
+  const [archiveLoading, setArchiveLoading] = useState(false);
 
   // Disable body scroll when a modal is open
   useEffect(() => {
     const body = document.body;
     const previousOverflow = body.style.overflow;
-    if (showAddModal || showDetailsModal) {
+    if (showAddModal || showDetailsModal || showArchiveModal) {
       body.style.overflow = "hidden";
     }
     return () => {
       body.style.overflow = previousOverflow;
     };
-  }, [showAddModal, showDetailsModal]);
+  }, [showAddModal, showDetailsModal, showArchiveModal]);
 
   // Fetch companies on mount
   useEffect(() => {
@@ -150,22 +154,35 @@ export function Companies(props: CompaniesProps) {
   
   const handleArchiveClick = async (company: Company, event: React.MouseEvent) => {
     event.stopPropagation();
-    if (!window.confirm(`Are you sure you want to ${activeTab === 'active' ? 'archive' : 'activate'} "${company.name}"?`)) {
-      return;
-    }
+    setCompanyToArchive(company);
+    setShowArchiveModal(true);
+  };
+
+  const confirmArchiveAction = async () => {
+    if (!companyToArchive) return;
     
+    setArchiveLoading(true);
     try {
       if (activeTab === 'active') {
-        await CompanyService.archiveCompany(company._id);
+        await CompanyService.archiveCompany(companyToArchive._id);
         toast.success("Company archived successfully");
       } else {
-        await CompanyService.unarchiveCompany(company._id);
+        await CompanyService.unarchiveCompany(companyToArchive._id);
         toast.success("Company restored successfully");
       }
       fetchCompaniesPage(currentPage);
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Action failed");
+    } finally {
+      setArchiveLoading(false);
+      setShowArchiveModal(false);
+      setCompanyToArchive(null);
     }
+  };
+
+  const cancelArchiveAction = () => {
+    setShowArchiveModal(false);
+    setCompanyToArchive(null);
   };
 
   // Handle view company details
@@ -260,13 +277,15 @@ export function Companies(props: CompaniesProps) {
           >
             View
           </Button>
-          <button
+          <Button
+            size="sm"
+            variant="outline"
             onClick={(e) => handleArchiveClick(row, e)}
-            className="archive-btn"
-            title={activeTab === 'active' ? "Archive" : "Restore"}
+            className={`${activeTab === 'active' ? 'app-text-archived hover:app-bg-secondary-soft' : 'app-text-success hover:app-bg-success-soft'} border-0 hover:opacity-90`}
+            title={activeTab === 'active' ? "Archive Company" : "Restore Company"}
           >
-            {activeTab === 'active' ? <Archive /> : <RefreshCw />}
-          </button>
+            {activeTab === 'active' ? <Archive className="h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
+          </Button>
           <Button
             size="sm"
             variant="outline"
@@ -339,7 +358,7 @@ export function Companies(props: CompaniesProps) {
                     onClick={() => setActiveTab("active")}
                     className={`px-3 py-1 text-sm rounded-sm transition-all ${
                       activeTab === "active"
-                        ? "bg-white shadow text-foreground"
+                        ? "bg-white shadow app-text-primary"
                         : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
@@ -349,7 +368,7 @@ export function Companies(props: CompaniesProps) {
                     onClick={() => setActiveTab("archived")}
                     className={`px-3 py-1 text-sm rounded-sm transition-all ${
                       activeTab === "archived"
-                        ? "bg-white shadow text-foreground"
+                        ? "bg-white shadow app-text-archived"
                         : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
@@ -474,6 +493,17 @@ export function Companies(props: CompaniesProps) {
         isOpen={showDetailsModal}
         onClose={() => setShowDetailsModal(false)}
         company={selectedCompany}
+      />
+
+      {/* Archive Confirmation Modal */}
+      <ArchiveConfirmationModal
+        isOpen={showArchiveModal}
+        onClose={cancelArchiveAction}
+        onConfirm={confirmArchiveAction}
+        entity={companyToArchive}
+        entityType="company"
+        action={activeTab === 'active' ? 'archive' : 'restore'}
+        loading={archiveLoading}
       />
     </>
   );

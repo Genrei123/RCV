@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Grid, List, Search, Download, Package, Tag, Link2 } from "lucide-react";
+import { Plus, Grid, List, Search, Download, Link2 } from "lucide-react";
 import { PageContainer } from "@/components/PageContainer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,7 +36,7 @@ export interface ProductsProps {
 }
 
 export function Products(props: ProductsProps) {
-  const [pageTab, setPageTab] = useState<PageTab>("products");
+  const [pageTab] = useState<PageTab>("products");
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -277,7 +277,7 @@ export function Products(props: ProductsProps) {
       description="Manage and view all registered products in the system."
     >
       {/* Page Tab Navigation */}
-      <div className="flex border-b mb-6">
+      {/* <div className="flex border-b mb-6">
         <button
           onClick={() => setPageTab("products")}
           className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${
@@ -300,7 +300,7 @@ export function Products(props: ProductsProps) {
           <Tag className="h-4 w-4 inline-block mr-2" />
           By Brand / Classification
         </button>
-      </div>
+      </div> */}
 
       {/* Tab Content */}
       {pageTab === "stats" ? (
@@ -351,7 +351,7 @@ export function Products(props: ProductsProps) {
                   <button
                     className={`px-3 py-1 text-sm font-medium rounded-md transition-all ${
                       productStatus === "active"
-                        ? "bg-white text-gray-900 shadow-sm"
+                        ? "bg-white app-text-primary shadow-sm"
                         : "text-gray-500 hover:text-gray-900"
                     }`}
                     onClick={() => {
@@ -364,7 +364,7 @@ export function Products(props: ProductsProps) {
                   <button
                     className={`px-3 py-1 text-sm font-medium rounded-md transition-all ${
                       productStatus === "archived"
-                        ? "bg-white text-red-600 shadow-sm"
+                        ? "bg-white app-text-archived shadow-sm"
                         : "text-gray-500 hover:text-gray-900"
                     }`}
                     onClick={() => {

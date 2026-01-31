@@ -7,6 +7,7 @@ export interface User {
   appAccess?: boolean;
   approved?: boolean;
   avatarUrl?: string;
+  isSuperAdmin?: boolean;
   firstName: string;
   middleName?: string;
   lastName: string;

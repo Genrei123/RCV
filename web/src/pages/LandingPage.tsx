@@ -92,7 +92,7 @@ export function LandingPage() {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <div className="flex items-center gap-3">
-              <img src="/logo_inv.svg" alt="RCV Logo" className="h-10 w-10" />
+              <img src="/logo_inv.svg" alt="RCV Logo" className="h-10 w-10" draggable="false"/>
               <div className="flex flex-col">
                 <span className="font-bold text-lg app-text-primary leading-tight">
                   RCV
@@ -453,14 +453,6 @@ export function LandingPage() {
             >
               Create Free Account
               <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-            <Button
-              variant="outline"
-              size="lg"
-              className="border app-border-primary hover:app-bg-primary-70 hover:text-white app-text-primary cursor-pointer transition-colors"
-              onClick={() => navigate("/contact")}
-            >
-              Contact Sales
             </Button>
           </div>
         </div>

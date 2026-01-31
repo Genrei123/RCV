@@ -419,8 +419,8 @@ export const revokeWallet = async (
 };
 
 /**
- * Link user's own wallet address (any authenticated user)
- * This allows users to link their wallet, but only Admin can authorize it
+ * Link user's wallet address (Admin only)
+ * Only admins can bind meta-mask information to users
  * POST /api/v1/sepolia/link-my-wallet
  */
 export const linkMyWallet = async (
@@ -433,16 +433,31 @@ export const linkMyWallet = async (
     if (!requestingUser) {
       throw new CustomError(401, 'Authentication required', {
         success: false,
-        message: 'You must be logged in to link a wallet'
+        message: 'You must be logged in to perform this action'
+      });
+    }
+
+    // Verify the requesting user is an admin - ONLY ADMIN CAN BIND WALLETS
+    if (requestingUser.role !== 'ADMIN' && !requestingUser.isSuperAdmin) {
+      throw new CustomError(403, 'Admin access required', {
+        success: false,
+        message: 'Only administrators can bind meta-mask information to users'
       });
     }
     
-    const { walletAddress } = req.body;
+    const { walletAddress, userId } = req.body;
     
     if (!walletAddress) {
       throw new CustomError(400, 'Missing wallet address', {
         success: false,
         message: 'walletAddress is required'
+      });
+    }
+
+    if (!userId) {
+      throw new CustomError(400, 'Missing user ID', {
+        success: false,
+        message: 'userId is required - admin must specify which user to bind the wallet to'
       });
     }
     
@@ -453,7 +468,8 @@ export const linkMyWallet = async (
       });
     }
     
-    const result = await linkUserWallet(requestingUser._id, walletAddress);
+    // Use the userId provided by the admin, not the requesting user's ID
+    const result = await linkUserWallet(userId, walletAddress);
     
     if (!result.success) {
       throw new CustomError(400, 'Link failed', {
@@ -506,28 +522,24 @@ export const getBlockchainCertificates = async (
 ) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
-    const skip = (page - 1) * limit;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const sortBy = (req.query.sortBy as string) || 'default';
 
-    // Get products with blockchain verification
-    const [products, productCount] = await ProductRepo.findAndCount({
+    // Get all products with blockchain verification
+    const products = await ProductRepo.find({
       where: { sepoliaTransactionId: Not(IsNull()) },
       order: { registeredAt: 'DESC' },
-      skip,
-      take: limit,
       relations: ['company']
     });
 
-    // Get companies with blockchain verification
-    const [companies, companyCount] = await CompanyRepo.findAndCount({
+    // Get all companies with blockchain verification
+    const companies = await CompanyRepo.find({
       where: { sepoliaTransactionId: Not(IsNull()) },
-      order: { createdAt: 'DESC' },
-      skip,
-      take: limit
+      order: { createdAt: 'DESC' }
     });
 
     // Combine and format as certificates
-    const certificates = [
+    let allCertificates = [
       ...products.map(p => ({
         id: p._id,
         certificateId: `PROD-${p._id}`,
@@ -555,9 +567,32 @@ export const getBlockchainCertificates = async (
           businessType: c.businessType
         }
       }))
-    ].sort((a, b) => new Date(b.issuedDate).getTime() - new Date(a.issuedDate).getTime());
+    ];
 
-    const totalCount = productCount + companyCount;
+    // Apply sorting based on sortBy parameter
+    if (sortBy === 'products') {
+      allCertificates.sort((a, b) => {
+        if (a.entityType === 'product' && b.entityType !== 'product') return -1;
+        if (a.entityType !== 'product' && b.entityType === 'product') return 1;
+        return 0;
+      });
+    } else if (sortBy === 'companies') {
+      allCertificates.sort((a, b) => {
+        if (a.entityType === 'company' && b.entityType !== 'company') return -1;
+        if (a.entityType !== 'company' && b.entityType === 'company') return 1;
+        return 0;
+      });
+    } else {
+      // Default: sort by issued date descending
+      allCertificates.sort((a, b) => new Date(b.issuedDate).getTime() - new Date(a.issuedDate).getTime());
+    }
+
+    // Apply pagination to combined results
+    const totalCount = allCertificates.length;
+    const productCount = products.length;
+    const companyCount = companies.length;
+    const skip = (page - 1) * limit;
+    const certificates = allCertificates.slice(skip, skip + limit);
     const totalPages = Math.ceil(totalCount / limit);
 
     res.status(200).json({

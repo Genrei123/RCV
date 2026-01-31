@@ -194,7 +194,7 @@ export function DataTable({
                 />
               </div>
             )}
-            <div className="flex flex-col lg:flex-row items-stretch gap-2 flex-wrap">
+            <div className="flex flex-col lg:flex-row items-stretch gap-2 flex-wrap [&_button]:h-10">
               {customControls}
             </div>
           </div>

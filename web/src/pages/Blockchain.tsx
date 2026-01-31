@@ -70,7 +70,7 @@ export function Blockchain() {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [pagination, setPagination] = useState<any>(null);
-  const pageSize = 20;
+  const pageSize = 10;
 
   // Certificate detail modal state
   const [selectedCertificate, setSelectedCertificate] = useState<BlockchainCertificateDetail | null>(null);
@@ -88,9 +88,12 @@ export function Blockchain() {
   const [txVerifying, setTxVerifying] = useState(false);
   const [txResult, setTxResult] = useState<any>(null);
 
+  // Sort state
+  const [sortBy, setSortBy] = useState("default");
+
   useEffect(() => {
     fetchData();
-  }, [currentPage]);
+  }, [currentPage, sortBy]);
 
   useEffect(() => {
     if (activeTab === "sepolia") {
@@ -104,7 +107,8 @@ export function Blockchain() {
     // Fetch certificates from Sepolia-verified products/companies
     const certResponse = await MetaMaskService.getBlockchainCertificates(
       currentPage,
-      pageSize
+      pageSize,
+      sortBy
     );
     if (certResponse.success) {
       setCertificates(certResponse.certificates);
@@ -165,6 +169,11 @@ export function Blockchain() {
     setCopied(label);
     setTimeout(() => setCopied(null), 2000);
     toast.success(`${label} copied!`);
+  };
+
+  const handleSort = (sortOption: string) => {
+    setSortBy(sortOption);
+    setCurrentPage(1);
   };
 
   const handleVerifyTransaction = async () => {
@@ -241,7 +250,7 @@ export function Blockchain() {
             e.stopPropagation();
             handleCertificateClick(row);
           }}
-          className="whitespace-normal break-words text-left hover:text-blue-600"
+          className="whitespace-normal wrap-break-word text-left hover:text-blue-600"
         >
           {value}
         </button>
@@ -522,22 +531,41 @@ export function Blockchain() {
               loading={loading}
               emptyStateTitle="No Certificates Found"
               emptyStateDescription="Blockchain-verified certificates will appear here once products or companies are registered with blockchain verification."
+              customControls={
+                <Select value={sortBy} onValueChange={handleSort}>
+                  <SelectTrigger className="w-full sm:w-48 h-10 flex items-center">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">
+                      <div className="flex items-center gap-2">
+                        Default
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="products">
+                      <div className="flex items-center gap-2">
+                         Products ↑
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="companies">
+                      <div className="flex items-center gap-2">
+                         Companies ↑
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              }
             />
 
             {pagination && (
               <div className="p-4 border-t flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div className="hidden sm:block">
-                  <span className="text-sm text-neutral-600">
-                    Page {currentPage} of {totalPages} ({pagination.total_items} total)
-                  </span>
-                </div>
                 <Pagination
                   currentPage={currentPage}
                   totalPages={totalPages}
                   totalItems={pagination.total_items}
                   itemsPerPage={pageSize}
                   onPageChange={setCurrentPage}
-                  showingPosition="right"
+                  showingPosition="left"
                 />
               </div>
             )}

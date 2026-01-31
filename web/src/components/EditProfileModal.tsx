@@ -90,8 +90,9 @@ export function EditProfileModal({
     return withoutCountryCode;
   };
 
+  // Reset form data when modal opens or user changes
   useEffect(() => {
-    if (user) {
+    if (isOpen && user) {
       const normalizedData: Partial<ProfileUser> = {
         firstName: (user.firstName || "").replace(/[0-9]/g, ""),
         middleName: user.middleName || "",
@@ -107,6 +108,8 @@ export function EditProfileModal({
       setFormData(normalizedData);
       setInitialData(normalizedData);
       setCitySearchTerm(user.location || "");
+      // Clear errors when modal opens
+      setErrors({});
       // prefer local override for preview if exists
       try {
         const saved = localStorage.getItem("profile_avatar_data");
@@ -115,7 +118,7 @@ export function EditProfileModal({
         setAvatarPreview(user.avatar || null);
       }
     }
-  }, [user]);
+  }, [isOpen, user]);
 
   // Fetch Philippine cities on mount
   useEffect(() => {
@@ -168,18 +171,32 @@ export function EditProfileModal({
     fetchPhilippineCities();
   }, []);
 
-  // Hide body scroll when modal or city dropdown is open
+  // Disable body scroll when modal is open 
   useEffect(() => {
-    if (isOpen || showCityDropdown) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "unset";
-    }
+    if (isOpen) {
+      const html = document.documentElement;
+      const body = document.body;
+      const previousHtmlOverflow = html.style.overflow;
+      const previousBodyOverflow = body.style.overflow;
+      const previousBodyPosition = body.style.position;
+      const scrollY = window.scrollY;
 
-    return () => {
-      document.body.style.overflow = "unset";
-    };
-  }, [isOpen, showCityDropdown]);
+      html.style.overflow = "hidden";
+      body.style.overflow = "hidden";
+      body.style.position = "fixed";
+      body.style.width = "100%";
+      body.style.top = `-${scrollY}px`;
+
+      return () => {
+        html.style.overflow = previousHtmlOverflow;
+        body.style.overflow = previousBodyOverflow;
+        body.style.position = previousBodyPosition;
+        body.style.width = "";
+        body.style.top = "";
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [isOpen]);
 
   if (!isOpen || !user) return null;
 
@@ -350,6 +367,20 @@ export function EditProfileModal({
     }
   };
 
+  const handleCancel = () => {
+    // Reset all form data to initial values
+    if (initialData) {
+      setFormData(initialData);
+      setCitySearchTerm(initialData.location || "");
+      // Reset avatar preview to original user avatar (not localStorage)
+      setAvatarPreview(user?.avatar || null);
+    }
+    // Clear any errors
+    setErrors({});
+    // Close the modal
+    onClose();
+  };
+
   const isDirty = (() => {
     if (!initialData) return false;
 
@@ -373,11 +404,11 @@ export function EditProfileModal({
   })();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
+        onClick={handleCancel}
       />
 
       {/* Modal */}
@@ -396,7 +427,7 @@ export function EditProfileModal({
             </div>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleCancel}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <X className="h-5 w-5 text-gray-500" />
@@ -702,7 +733,7 @@ export function EditProfileModal({
             <Button
               type="button"
               variant="outline"
-              onClick={onClose}
+              onClick={handleCancel}
               disabled={loading || uploadingAvatar}
             >
               Cancel
