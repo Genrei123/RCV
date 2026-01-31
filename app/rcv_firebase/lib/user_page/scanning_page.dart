@@ -3159,6 +3159,10 @@ class _QRScannerPageState extends State<QRScannerPage>
             initialStatus: status,
             frontImageUrl: frontImageUrl,
             backImageUrl: backImageUrl,
+            leftImageUrl: _allImageUrls['left'],
+            rightImageUrl: _allImageUrls['right'],
+            topImageUrl: _allImageUrls['top'],
+            bottomImageUrl: _allImageUrls['bottom'],
             // Pass local paths for deferred upload
             localFrontPath: localFrontPath,
             localBackPath: localBackPath,

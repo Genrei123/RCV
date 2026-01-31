@@ -478,6 +478,10 @@ class ApiService {
     String? additionalNotes,
     String? frontImageUrl,
     String? backImageUrl,
+    String? leftImageUrl,
+    String? rightImageUrl,
+    String? topImageUrl,
+    String? bottomImageUrl,
     Map<String, dynamic>? location,
     String? ocrBlobText, // Add OCR blob text parameter
   }) async {
@@ -485,6 +489,10 @@ class ApiService {
       developer.log('Submitting compliance report...');
       developer.log('Front Image URL: $frontImageUrl');
       developer.log('Back Image URL: $backImageUrl');
+      if (leftImageUrl != null) developer.log('Left Image URL: $leftImageUrl');
+      if (rightImageUrl != null) developer.log('Right Image URL: $rightImageUrl');
+      if (topImageUrl != null) developer.log('Top Image URL: $topImageUrl');
+      if (bottomImageUrl != null) developer.log('Bottom Image URL: $bottomImageUrl');
 
       final body = {
         'status': status,
@@ -496,6 +504,10 @@ class ApiService {
         if (additionalNotes != null) 'additionalNotes': additionalNotes,
         if (frontImageUrl != null) 'frontImageUrl': frontImageUrl,
         if (backImageUrl != null) 'backImageUrl': backImageUrl,
+        if (leftImageUrl != null) 'leftImageUrl': leftImageUrl,
+        if (rightImageUrl != null) 'rightImageUrl': rightImageUrl,
+        if (topImageUrl != null) 'topImageUrl': topImageUrl,
+        if (bottomImageUrl != null) 'bottomImageUrl': bottomImageUrl,
         if (location != null) 'location': location,
         if (ocrBlobText != null) 'ocrBlobText': ocrBlobText, // Include OCR text
       };

@@ -21,6 +21,10 @@ export const ComplianceReportValidation = z.object({
   additionalNotes: z.string().max(500).optional().nullable(),
   frontImageUrl: z.string().url(), // Required - always must have front image
   backImageUrl: z.string().url(), // Required - always must have back image
+  leftImageUrl: z.string().url().optional().nullable(), // Optional - for cans and boxes
+  rightImageUrl: z.string().url().optional().nullable(), // Optional - for cans and boxes
+  topImageUrl: z.string().url().optional().nullable(), // Optional - for boxes
+  bottomImageUrl: z.string().url().optional().nullable(), // Optional - for boxes
   ocrBlobText: z.string().optional().nullable(), // Raw OCR text blob
   location: z.object({
     latitude: z.number().optional(),
@@ -77,13 +81,24 @@ export class ComplianceReport {
   @Column({ type: 'text', nullable: true })
   ocrBlobText?: string | null;
 
-  // Firebase Storage URLs for scanned images (REQUIRED - always must have both)
+  // Firebase Storage URLs for scanned images (front and back REQUIRED, others optional)
   @Column({ type: 'varchar', length: 500 })
   frontImageUrl!: string;
 
   @Column({ type: 'varchar', length: 500 })
   backImageUrl!: string;
 
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  leftImageUrl?: string | null;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  rightImageUrl?: string | null;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  topImageUrl?: string | null;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  bottomImageUrl?: string | null;
   // Location where scan was performed
   @Column({ type: 'json', nullable: true })
   location?: {

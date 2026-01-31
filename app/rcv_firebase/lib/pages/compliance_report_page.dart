@@ -12,11 +12,16 @@ class ComplianceReportPage extends StatefulWidget {
   final Map<String, dynamic>? productSearchResult;
   final String? frontImageUrl;
   final String? backImageUrl;
+  final String? leftImageUrl;
+  final String? rightImageUrl;
+  final String? topImageUrl;
+  final String? bottomImageUrl;
   final String initialStatus; // 'COMPLIANT' or 'NON_COMPLIANT'
   final String? ocrBlobText; // Raw OCR text blob
 
   final String? localFrontPath;
   final String? localBackPath;
+  final Map<String, String>? allImageUrls; // All uploaded image URLs
   final String? draftId;
   final String? initialReason;
   final String? initialNotes;
@@ -27,8 +32,13 @@ class ComplianceReportPage extends StatefulWidget {
     this.productSearchResult,
     this.frontImageUrl,
     this.backImageUrl,
+    this.leftImageUrl,
+    this.rightImageUrl,
+    this.topImageUrl,
+    this.bottomImageUrl,
     this.localFrontPath,
     this.localBackPath,
+    this.allImageUrls,
     this.draftId,
     this.initialReason,
     this.initialNotes,
@@ -176,6 +186,10 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
             : null,
         frontImageUrl: finalFrontUrl,
         backImageUrl: finalBackUrl,
+        leftImageUrl: widget.leftImageUrl,
+        rightImageUrl: widget.rightImageUrl,
+        topImageUrl: widget.topImageUrl,
+        bottomImageUrl: widget.bottomImageUrl,
         location: locationJson,
         ocrBlobText: widget.ocrBlobText, // Pass OCR blob text to backend
       );

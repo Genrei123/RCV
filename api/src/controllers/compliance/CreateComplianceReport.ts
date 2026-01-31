@@ -32,7 +32,7 @@ export const createComplianceReport = async (
     // Validate request body
     const validatedData = ComplianceReportValidation.parse(reportData);
 
-    // Validate image URLs (both required)
+    // Validate image URLs (front and back are required)
     if (!validatedData.frontImageUrl || !validatedData.backImageUrl) {
       return next(new CustomError(400, 'Both front and back image URLs are required'));
     }
@@ -53,6 +53,47 @@ export const createComplianceReport = async (
       return next(new CustomError(400, backValidation.error || 'Invalid back image URL'));
     }
 
+    // Validate optional additional images if provided
+    if (validatedData.leftImageUrl) {
+      const leftValidation = await FirebaseStorageValidator.validateScanUrls(
+        validatedData.leftImageUrl,
+        undefined
+      );
+      if (!leftValidation.valid) {
+        return next(new CustomError(400, leftValidation.error || 'Invalid left image URL'));
+      }
+    }
+
+    if (validatedData.rightImageUrl) {
+      const rightValidation = await FirebaseStorageValidator.validateScanUrls(
+        validatedData.rightImageUrl,
+        undefined
+      );
+      if (!rightValidation.valid) {
+        return next(new CustomError(400, rightValidation.error || 'Invalid right image URL'));
+      }
+    }
+
+    if (validatedData.topImageUrl) {
+      const topValidation = await FirebaseStorageValidator.validateScanUrls(
+        validatedData.topImageUrl,
+        undefined
+      );
+      if (!topValidation.valid) {
+        return next(new CustomError(400, topValidation.error || 'Invalid top image URL'));
+      }
+    }
+
+    if (validatedData.bottomImageUrl) {
+      const bottomValidation = await FirebaseStorageValidator.validateScanUrls(
+        validatedData.bottomImageUrl,
+        undefined
+      );
+      if (!bottomValidation.valid) {
+        return next(new CustomError(400, bottomValidation.error || 'Invalid bottom image URL'));
+      }
+    }
+
     // Create compliance report
     const complianceRepo = DB.getRepository(ComplianceReport);
     const newReport = complianceRepo.create(validatedData);
@@ -71,6 +112,10 @@ export const createComplianceReport = async (
         productName: validatedData.scannedData?.productName,
         ...(validatedData.frontImageUrl && { frontImageUrl: validatedData.frontImageUrl }),
         ...(validatedData.backImageUrl && { backImageUrl: validatedData.backImageUrl }),
+        ...(validatedData.leftImageUrl && { leftImageUrl: validatedData.leftImageUrl }),
+        ...(validatedData.rightImageUrl && { rightImageUrl: validatedData.rightImageUrl }),
+        ...(validatedData.topImageUrl && { topImageUrl: validatedData.topImageUrl }),
+        ...(validatedData.bottomImageUrl && { bottomImageUrl: validatedData.bottomImageUrl }),
       },
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
