@@ -6,12 +6,14 @@ interface AppLayoutProps {
   children: React.ReactNode;
   fullBleed?: boolean;
   hideFooter?: boolean;
+  hideSidebar?: boolean;
 }
 
 export const AppLayout = ({
   children,
   fullBleed = false,
   hideFooter = false,
+  hideSidebar = false,
 }: AppLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -61,7 +63,7 @@ export const AppLayout = ({
 
         {/* Sidebar + main content */}
         <div className="flex flex-1 min-w-0">
-          <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+          {!hideSidebar && <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />}
 
           <main className="flex-1 flex flex-col min-h-0 min-w-0">
             <div

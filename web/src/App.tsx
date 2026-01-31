@@ -379,21 +379,21 @@ function App() {
           <Route
             path="/about"
             element={
-              <ProtectedRoutes>
-                <AppLayout>
+              <AccessibleRoute>
+                <AppLayout hideSidebar={!isLoggedIn}>
                 <About/>
                 </AppLayout>
-              </ProtectedRoutes>
+              </AccessibleRoute>
             }
           />
           <Route
             path="/contact"
             element={
-              <ProtectedRoutes>
-                <AppLayout>
+              <AccessibleRoute>
+                <AppLayout hideSidebar={!isLoggedIn}>
                 <Contact/>
                 </AppLayout>
-              </ProtectedRoutes>
+              </AccessibleRoute>
             }
           />
           <Route
