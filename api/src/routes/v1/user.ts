@@ -1,5 +1,8 @@
 import { Router } from "express";
 import * as UserController from "../../controllers/user/User";
+import { verifyUser } from "../../middleware/verifyUser";
+import { verifyAdmin } from "../../middleware/verifyAdmin";
+import { verifySuperAdmin } from "../../middleware/verifySuperAdmin";
 
 const UserRouter = Router();
 
@@ -14,6 +17,12 @@ UserRouter.patch("/users/:id/reject", UserController.rejectUser);
 UserRouter.patch("/users/:id/access", UserController.updateUserAccess);
 UserRouter.patch("/users/:id/toggle-approval", UserController.toggleUserApproval);
 UserRouter.delete("/users/:id", UserController.deleteUser);
+
+// Admin only - Promote agent to admin
+UserRouter.post("/promote-to-admin", verifyUser, verifyAdmin, UserController.promoteAgentToAdmin);
+
+// Super Admin only - Demote admin to agent
+UserRouter.post("/demote-to-agent", verifyUser, verifySuperAdmin, UserController.demoteAdminToAgent);
 
 // User profile management (authenticated user only)
 UserRouter.patch("/profile", UserController.updateUserProfile);
