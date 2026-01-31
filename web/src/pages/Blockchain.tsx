@@ -101,29 +101,6 @@ export function Blockchain() {
     }
   }, [activeTab]);
 
-  const applySorting = (data: BlockchainCertificate[], sortOption: string) => {
-    let sorted = [...data];
-    
-    if (sortOption === "products") {
-      sorted.sort((a, b) => {
-        if (a.entityType === "product" && b.entityType !== "product") return -1;
-        if (a.entityType !== "product" && b.entityType === "product") return 1;
-        return 0;
-      });
-    } else if (sortOption === "companies") {
-      sorted.sort((a, b) => {
-        if (a.entityType === "company" && b.entityType !== "company") return -1;
-        if (a.entityType !== "company" && b.entityType === "company") return 1;
-        return 0;
-      });
-    } else {
-      // Default: sort by issued date descending
-      sorted.sort((a, b) => new Date(b.issuedDate).getTime() - new Date(a.issuedDate).getTime());
-    }
-    
-    return sorted;
-  };
-
   const fetchData = async () => {
     setLoading(true);
 
@@ -273,7 +250,7 @@ export function Blockchain() {
             e.stopPropagation();
             handleCertificateClick(row);
           }}
-          className="whitespace-normal break-words text-left hover:text-blue-600"
+          className="whitespace-normal wrap-break-word text-left hover:text-blue-600"
         >
           {value}
         </button>

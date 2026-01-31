@@ -5,10 +5,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ChevronLeft, MapPin, Phone, Mail } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { apiClient } from "@/services/axiosConfig";
 import { toast } from "react-toastify";
-import { AuthService } from "@/services/authService";
 import {
   Select,
   SelectContent,
@@ -25,7 +24,6 @@ export function Contact() {
     concern: "",
     details: "",
   });
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -38,26 +36,11 @@ export function Contact() {
     }
   };
 
-  useEffect(() => {
-    // Determine if a user is logged in and prefill email
-    (async () => {
-      try {
-        const user = await AuthService.getCurrentUser();
-        if (user) {
-          setIsLoggedIn(true);
-          setFormData((prev) => ({ ...prev, email: user.email || prev.email }));
-        }
-      } catch (e) {
-        setIsLoggedIn(false);
-      }
-    })();
-  }, []);
-
   return (
     <PageContainer title="Contact" description="Send us a review">
       <Button
         onClick={() => navigate(-1)}
-        className="app-bg-primary hover:app-bg-secondary app-text-white mb-8"
+        className="app-bg-primary hover:bg-[#009b79] app-text-white mb-8"
       >
         <ChevronLeft className="w-4 h-4 mr-1" />
         Back to Page
@@ -89,22 +72,20 @@ export function Contact() {
                   />
                 </div>
 
-                {!isLoggedIn && (
-                  <div>
-                    <Label htmlFor="email" className="text-sm font-medium">
-                      Email Address
-                    </Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) =>
-                        setFormData({ ...formData, email: e.target.value })
-                      }
-                      className="mt-1 app-bg-neutral-300 rounded-lg border-2 app-border-text"
-                    />
-                  </div>
-                )}
+                <div>
+                  <Label htmlFor="email" className="text-sm font-medium">
+                    Email Address
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) =>
+                      setFormData({ ...formData, email: e.target.value })
+                    }
+                    className="mt-1 app-bg-neutral-300 rounded-lg border-2 app-border-text"
+                  />
+                </div>
 
                 <div>
                   <Label htmlFor="concern" className="text-sm font-medium">
@@ -152,7 +133,7 @@ export function Contact() {
 
                 <Button
                   type="submit"
-                  className="app-bg-primary hover:app-bg-secondary app-text-white"
+                  className="app-bg-primary hover:bg-[#009b79] app-text-white transition-colors duration-200"
                 >
                   Send Message
                 </Button>
