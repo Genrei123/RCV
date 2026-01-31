@@ -148,4 +148,36 @@ export class UserPageService {
       throw error;
     }
   }
+
+  /**
+   * Promote an agent to admin (Admin only)
+   */
+  static async promoteAgentToAdmin(userId: string): Promise<{ success: boolean; message: string; data?: any }> {
+    try {
+      const response = await apiClient.post(`/user/promote-to-admin`, { userId });
+      return response.data;
+    } catch (error: any) {
+      console.error("Error promoting agent to admin:", error);
+      return {
+        success: false,
+        message: error.response?.data?.message || "Failed to promote agent to admin"
+      };
+    }
+  }
+
+  /**
+   * Demote an admin to agent (Super Admin only)
+   */
+  static async demoteAdminToAgent(userId: string): Promise<{ success: boolean; message: string; data?: any }> {
+    try {
+      const response = await apiClient.post(`/user/demote-to-agent`, { userId });
+      return response.data;
+    } catch (error: any) {
+      console.error("Error demoting admin to agent:", error);
+      return {
+        success: false,
+        message: error.response?.data?.message || "Failed to demote admin to agent"
+      };
+    }
+  }
 }

@@ -16,6 +16,7 @@ const coerceDate = (val: unknown) =>
 export const UserValidation = z.object({
   _id: z.string().optional(),
   role: z.enum(['AGENT', 'ADMIN', 'USER']).optional(),
+  isSuperAdmin: z.boolean().optional().default(false),
   status: z.enum(['Archived', 'Active', 'Pending', 'Rejected']).default('Pending'),
   rejectionReason: z.string().optional(),
   webAccess: z.boolean().optional().default(false),
@@ -56,6 +57,9 @@ export class User {
 
   @Column({ type: 'enum', enum: ['AGENT', 'ADMIN', 'USER'], default: 'AGENT' })
   role!: 'AGENT' | 'ADMIN' | 'USER';
+
+  @Column({ type: 'boolean', default: false })
+  isSuperAdmin!: boolean;
 
   @Column({ type: 'enum', enum: ['Archived', 'Active', 'Pending', 'Rejected'], default: 'Pending' })
   status!: 'Archived' | 'Active' | 'Pending' | 'Rejected';

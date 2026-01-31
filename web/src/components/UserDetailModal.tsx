@@ -33,6 +33,7 @@ interface UserDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   user: User | null;
+  currentUser?: User | null; // Add current user to check if they're admin
   onApprove?: (user: User) => void;
   onReject?: (user: User) => void;
   onAccessUpdate?: (user: User) => void;
@@ -42,6 +43,7 @@ export function UserDetailModal({
   isOpen,
   onClose,
   user,
+  currentUser,
   onApprove,
   onReject,
   onAccessUpdate,
@@ -55,6 +57,12 @@ export function UserDetailModal({
   const [walletLoading, setWalletLoading] = useState(false);
   const [authorizeWallet, setAuthorizeWallet] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Promotion state
+  const [promotionLoading, setPromotionLoading] = useState(false);
+  
+  // Demotion state
+  const [demotionLoading, setDemotionLoading] = useState(false);
 
   // Update local state when user changes
   useEffect(() => {
@@ -192,6 +200,72 @@ export function UserDetailModal({
       toast.error("Failed to update access permissions");
     } finally {
       setAccessLoading(false);
+    }
+  };
+
+  // Handle promotion of agent to admin
+  const handlePromoteToAdmin = async () => {
+    if (!user?._id) return;
+
+    // Confirm before promoting
+    const confirmPromote = window.confirm(
+      `Are you sure you want to promote ${user.fullName} to admin? This user will have full administrative privileges.`
+    );
+    
+    if (!confirmPromote) return;
+
+    setPromotionLoading(true);
+    try {
+      const result = await UserPageService.promoteAgentToAdmin(user._id);
+      
+      if (result.success) {
+        toast.success(`${user.fullName} has been successfully promoted to admin`);
+        // Update parent with new role
+        onAccessUpdate?.({ 
+          ...user, 
+          role: 'ADMIN'
+        });
+      } else {
+        toast.error(result.message || "Failed to promote agent to admin");
+      }
+    } catch (error) {
+      console.error("Error promoting agent to admin:", error);
+      toast.error("Failed to promote agent to admin");
+    } finally {
+      setPromotionLoading(false);
+    }
+  };
+
+  // Handle demotion of admin to agent
+  const handleDemoteAdminToAgent = async () => {
+    if (!user?._id) return;
+
+    // Confirm before demoting
+    const confirmDemote = window.confirm(
+      `Are you sure you want to demote ${user.fullName} from admin to agent? This user will lose administrative privileges.`
+    );
+    
+    if (!confirmDemote) return;
+
+    setDemotionLoading(true);
+    try {
+      const result = await UserPageService.demoteAdminToAgent(user._id);
+      
+      if (result.success) {
+        toast.success(`${user.fullName} has been successfully demoted to agent`);
+        // Update parent with new role
+        onAccessUpdate?.({ 
+          ...user, 
+          role: 'AGENT'
+        });
+      } else {
+        toast.error(result.message || "Failed to demote admin to agent");
+      }
+    } catch (error) {
+      console.error("Error demoting admin to agent:", error);
+      toast.error("Failed to demote admin to agent");
+    } finally {
+      setDemotionLoading(false);
     }
   };
 
@@ -442,7 +516,7 @@ export function UserDetailModal({
                             if (fallback) fallback.classList.remove("hidden");
                           }}
                         />
-                        <div className="hidden h-40 bg-gray-100 flex items-center justify-center">
+                        <div className="hidden h-40 bg-gray-100 items-center justify-center">
                           <Image className="w-8 h-8 text-gray-400" />
                         </div>
                         <div className="p-2 bg-gray-50 text-center text-sm text-blue-600">
@@ -483,7 +557,7 @@ export function UserDetailModal({
                             if (fallback) fallback.classList.remove("hidden");
                           }}
                         />
-                        <div className="hidden h-40 bg-gray-100 flex items-center justify-center">
+                      <div className="hidden h-40 bg-gray-100 items-center justify-center">
                           <Image className="w-8 h-8 text-gray-400" />
                         </div>
                         <div className="p-2 bg-gray-50 text-center text-sm text-blue-600">
@@ -792,7 +866,6 @@ export function UserDetailModal({
               </div>
             </div>
           </div>
-
           {/* Action Buttons */}
           {onApprove && onReject && (
             <div className="pt-6 border-t mt-6">
@@ -858,7 +931,53 @@ export function UserDetailModal({
                       system.
                     </p>
                   </div>
-                  <div className="flex justify-end">
+                  <div className="flex gap-3 items-center">
+                    {user.role === 'AGENT' && user.status === 'Active' && (currentUser?.role === 'ADMIN' || currentUser?.isSuperAdmin) && (
+                      <>
+                        
+                        <Button
+                          onClick={handlePromoteToAdmin}
+                          disabled={promotionLoading}
+                          className="bg-blue-600 hover:bg-blue-700 text-white"
+                          size="sm"
+                        >
+                          {promotionLoading ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Promoting...
+                            </>
+                          ) : (
+                            <>
+                              <Shield className="h-4 w-4 mr-2" />
+                              Promote to Admin
+                            </>
+                          )}
+                        </Button>
+                      </>
+                    )}
+                    {user.role === 'ADMIN' && user.status === 'Active' && !user.isSuperAdmin && currentUser?.isSuperAdmin && (
+                      <>
+                        
+                        <Button
+                          onClick={handleDemoteAdminToAgent}
+                          disabled={demotionLoading}
+                          className="bg-orange-600 hover:bg-orange-700 text-white"
+                          size="sm"
+                        >
+                          {demotionLoading ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Demoting...
+                            </>
+                          ) : (
+                            <>
+                              <Shield className="h-4 w-4 mr-2" />
+                              Demote to Agent
+                            </>
+                          )}
+                        </Button>
+                      </>
+                    )}
                     <Button
                       onClick={() => onReject(user)}
                       variant="outline"

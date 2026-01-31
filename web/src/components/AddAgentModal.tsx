@@ -11,15 +11,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Mail, 
   BadgeCheck, 
   Loader2, 
   Send,
   UserPlus,
-  Monitor,
-  Smartphone
 } from "lucide-react";
 import { AdminInviteService } from "@/services/adminInviteService";
 import { toast } from "react-toastify";
@@ -37,7 +34,7 @@ export function AddAgentModal({ open, onOpenChange, onSuccess }: AddAgentModalPr
     badgeId: "",
     phoneNumber: "",
     personalMessage: "",
-    webAccess: false,
+    webAccess: true,
     appAccess: true,
   });
   const [loading, setLoading] = useState(false);
@@ -81,10 +78,6 @@ export function AddAgentModal({ open, onOpenChange, onSuccess }: AddAgentModalPr
 
     if (!formData.badgeId.trim()) {
       newErrors.badgeId = "Badge ID is required";
-    }
-
-    if (!formData.webAccess && !formData.appAccess) {
-      newErrors.access = "At least one access type must be selected";
     }
 
     setErrors(newErrors);
@@ -237,52 +230,11 @@ export function AddAgentModal({ open, onOpenChange, onSuccess }: AddAgentModalPr
             </p>
           </div>
 
-          {/* Access Permissions */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">
-              Access Permissions <span className="text-red-500">*</span>
-            </Label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 border rounded-lg bg-gray-50">
-              <div className="flex items-center space-x-3">
-                <Checkbox
-                  id="appAccess"
-                  checked={formData.appAccess}
-                  onCheckedChange={(checked) => {
-                    setFormData({ ...formData, appAccess: checked as boolean });
-                    if (errors.access) setErrors({ ...errors, access: "" });
-                  }}
-                  disabled={loading}
-                />
-                <div className="flex items-center gap-2">
-                  <Smartphone className="w-4 h-4 text-blue-600" />
-                  <Label htmlFor="appAccess" className="text-sm font-normal cursor-pointer">
-                    Mobile App Access
-                  </Label>
-                </div>
-              </div>
-              <div className="flex items-center space-x-3">
-                <Checkbox
-                  id="webAccess"
-                  checked={formData.webAccess}
-                  onCheckedChange={(checked) => {
-                    setFormData({ ...formData, webAccess: checked as boolean });
-                    if (errors.access) setErrors({ ...errors, access: "" });
-                  }}
-                  disabled={loading}
-                />
-                <div className="flex items-center gap-2">
-                  <Monitor className="w-4 h-4 text-green-600" />
-                  <Label htmlFor="webAccess" className="text-sm font-normal cursor-pointer">
-                    Web Dashboard Access
-                  </Label>
-                </div>
-              </div>
-            </div>
-            {errors.access && (
-              <p className="text-sm text-red-500">{errors.access}</p>
-            )}
-            <p className="text-xs text-gray-500">
-              Select which platforms this agent will have access to. You can change this later.
+          {/* Access Permissions - Auto-granted */}
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <p className="text-sm text-green-700 font-medium mb-2">✓ Access Permissions</p>
+            <p className="text-xs text-green-600">
+              Invited agents will automatically have access to both the mobile app and web dashboard.
             </p>
           </div>
 

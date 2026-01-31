@@ -942,3 +942,205 @@ export const syncUserFromFirebase = async (
     return next(CustomError.security(500, "Sync failed"));
   }
 };
+
+/**
+ * Promote an agent to admin (Admin only)
+ * POST /api/v1/user/promote-to-admin
+ */
+export const promoteAgentToAdmin = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { userId } = req.body;
+    const requestingUser = (req as any).user;
+
+    // Verify requesting user is admin
+    if (!requestingUser || (requestingUser.role !== 'ADMIN' && !requestingUser.isSuperAdmin)) {
+      throw new CustomError(403, 'Admin access required', {
+        success: false,
+        message: 'Only administrators can promote agents to admin'
+      });
+    }
+
+    if (!userId) {
+      throw new CustomError(400, 'Missing user ID', {
+        success: false,
+        message: 'userId is required'
+      });
+    }
+
+    // Validate user ID
+    if (!IdSchema.safeParse(userId).success) {
+      throw new CustomError(400, 'Invalid user ID', {
+        success: false,
+        message: 'User ID must be a valid UUID'
+      });
+    }
+
+    // Get the user to promote
+    const userToPromote = await UserRepo.findOne({
+      where: { _id: userId }
+    });
+
+    if (!userToPromote) {
+      throw new CustomError(404, 'User not found', {
+        success: false,
+        message: 'The specified user does not exist'
+      });
+    }
+
+    // Check if user is already an admin
+    if (userToPromote.role === 'ADMIN') {
+      throw new CustomError(400, 'User already admin', {
+        success: false,
+        message: 'This user is already an admin'
+      });
+    }
+
+    // Only agents can be promoted to admin
+    if (userToPromote.role !== 'AGENT') {
+      throw new CustomError(400, 'Invalid user role', {
+        success: false,
+        message: 'Only agents can be promoted to admin. This user has role: ' + userToPromote.role
+      });
+    }
+
+    // Promote user to admin
+    userToPromote.role = 'ADMIN';
+    userToPromote.updatedAt = new Date();
+    
+    const promotedUser = await UserRepo.save(userToPromote);
+
+    // Log the promotion action
+    try {
+      await AuditLogService.createLog({
+        userId: requestingUser._id,
+        action: 'PROMOTE_AGENT_TO_ADMIN',
+        actionType: 'UPDATE_USER',
+        targetUserId: userId,
+        metadata: {
+          promotedBy: requestingUser.email,
+          userEmail: userToPromote.email,
+          oldRole: 'AGENT',
+          newRole: 'ADMIN'
+        }
+      });
+    } catch (auditError) {
+      console.error('Failed to log promotion action:', auditError);
+      // Don't fail the promotion if audit logging fails
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `User ${userToPromote.fullName} has been successfully promoted to admin`,
+      data: {
+        _id: promotedUser._id,
+        fullName: promotedUser.fullName,
+        email: promotedUser.email,
+        role: promotedUser.role,
+        status: promotedUser.status,
+        createdAt: promotedUser.createdAt,
+        updatedAt: promotedUser.updatedAt
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Demote an admin to agent (Super Admin only)
+ */
+export const demoteAdminToAgent = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { userId } = req.body;
+    const requestingUserId = req.user?._id;
+
+    // Validate userId
+    const userIdSchema = z.string().uuid('Invalid user ID format');
+    const validatedUserId = userIdSchema.parse(userId);
+
+    if (!requestingUserId) {
+      throw new CustomError(401, 'Unauthorized');
+    }
+
+    // Get requesting user (super admin)
+    const requestingUser = await UserRepo.findOne({
+      where: { _id: requestingUserId }
+    });
+
+    if (!requestingUser || !requestingUser.isSuperAdmin) {
+      throw new CustomError(403, 'Only super admins can demote admins');
+    }
+
+    // Get user to demote
+    const userToDemote = await UserRepo.findOne({
+      where: { _id: validatedUserId }
+    });
+
+    if (!userToDemote) {
+      throw new CustomError(404, 'User not found');
+    }
+
+    // Validate user is an admin
+    if (userToDemote.role !== 'ADMIN') {
+      throw new CustomError(400, 'User is not an admin');
+    }
+
+    // Prevent demotion of super admins
+    if (userToDemote.isSuperAdmin) {
+      throw new CustomError(403, 'Super admins cannot be demoted');
+    }
+
+    // Prevent self-demotion
+    if (userToDemote._id === requestingUser._id) {
+      throw new CustomError(400, 'Cannot demote yourself');
+    }
+
+    // Demote user to agent
+    userToDemote.role = 'AGENT';
+    userToDemote.updatedAt = new Date();
+    
+    const demotedUser = await UserRepo.save(userToDemote);
+
+    // Log the demotion action
+    try {
+      await AuditLogService.createLog({
+        userId: requestingUser._id,
+        action: 'DEMOTE_ADMIN_TO_AGENT',
+        actionType: 'UPDATE_USER',
+        targetUserId: validatedUserId,
+        metadata: {
+          demotedBy: requestingUser.email,
+          userEmail: userToDemote.email,
+          oldRole: 'ADMIN',
+          newRole: 'AGENT'
+        }
+      });
+    } catch (auditError) {
+      console.error('Error logging demotion action:', auditError);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `${userToDemote.fullName} has been successfully demoted to agent`,
+      data: {
+        _id: demotedUser._id,
+        fullName: demotedUser.fullName,
+        email: demotedUser.email,
+        role: demotedUser.role,
+        status: demotedUser.status,
+        createdAt: demotedUser.createdAt,
+        updatedAt: demotedUser.updatedAt
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
