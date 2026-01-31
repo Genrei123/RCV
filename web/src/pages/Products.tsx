@@ -277,7 +277,7 @@ export function Products(props: ProductsProps) {
       description="Manage and view all registered products in the system."
     >
       {/* Page Tab Navigation */}
-      <div className="flex border-b mb-6">
+      {/* <div className="flex border-b mb-6">
         <button
           onClick={() => setPageTab("products")}
           className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${
@@ -300,7 +300,7 @@ export function Products(props: ProductsProps) {
           <Tag className="h-4 w-4 inline-block mr-2" />
           By Brand / Classification
         </button>
-      </div>
+      </div> */}
 
       {/* Tab Content */}
       {pageTab === "stats" ? (
