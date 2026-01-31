@@ -64,10 +64,10 @@ router.post('/verify-wallet', verifyUserWallet);
 router.get('/admin-wallet', getAdminWallet);
 
 // ============ USER ROUTES (Auth Required) ============
-// Users can link their own wallet, but only Admin can authorize it
+// SECURITY: Only admins can bind meta-mask information to users
 
-// Link user's own wallet address
-router.post('/link-my-wallet', verifyUser, linkMyWallet);
+// Link wallet to a user - Admin only (ONLY ADMIN CAN BIND META-MASK)
+router.post('/link-my-wallet', verifyUser, verifyAdmin, linkMyWallet);
 
 // ============ ADMIN ONLY ROUTES ============
 // These routes require authentication and admin role
