@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Grid, List, Search, Download, Package, Tag, Link2 } from "lucide-react";
+import { Plus, Grid, List, Search, Download, Link2 } from "lucide-react";
 import { PageContainer } from "@/components/PageContainer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,7 +36,7 @@ export interface ProductsProps {
 }
 
 export function Products(props: ProductsProps) {
-  const [pageTab, setPageTab] = useState<PageTab>("products");
+  const [pageTab] = useState<PageTab>("products");
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
