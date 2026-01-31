@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../widgets/title_logo_header_app_bar.dart';
 import '../themes/app_colors.dart';
 import 'scanning_page.dart';
@@ -59,7 +58,7 @@ class ScanningCategoryPage extends StatelessWidget {
                   context,
                   title: 'Canned Product',
                   description: 'Scan products in cans or tins',
-                  icon: FontAwesomeIcons.candyCane,
+                  icon: LucideIcons.candy,
                   color: AppColors.primary,
                   onTap: () {
                     Navigator.push(

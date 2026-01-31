@@ -419,8 +419,8 @@ export const revokeWallet = async (
 };
 
 /**
- * Link user's own wallet address (any authenticated user)
- * This allows users to link their wallet, but only Admin can authorize it
+ * Link user's wallet address (Admin only)
+ * Only admins can bind meta-mask information to users
  * POST /api/v1/sepolia/link-my-wallet
  */
 export const linkMyWallet = async (
@@ -433,16 +433,31 @@ export const linkMyWallet = async (
     if (!requestingUser) {
       throw new CustomError(401, 'Authentication required', {
         success: false,
-        message: 'You must be logged in to link a wallet'
+        message: 'You must be logged in to perform this action'
+      });
+    }
+
+    // Verify the requesting user is an admin - ONLY ADMIN CAN BIND WALLETS
+    if (requestingUser.role !== 'ADMIN' && !requestingUser.isSuperAdmin) {
+      throw new CustomError(403, 'Admin access required', {
+        success: false,
+        message: 'Only administrators can bind meta-mask information to users'
       });
     }
     
-    const { walletAddress } = req.body;
+    const { walletAddress, userId } = req.body;
     
     if (!walletAddress) {
       throw new CustomError(400, 'Missing wallet address', {
         success: false,
         message: 'walletAddress is required'
+      });
+    }
+
+    if (!userId) {
+      throw new CustomError(400, 'Missing user ID', {
+        success: false,
+        message: 'userId is required - admin must specify which user to bind the wallet to'
       });
     }
     
@@ -453,7 +468,8 @@ export const linkMyWallet = async (
       });
     }
     
-    const result = await linkUserWallet(requestingUser._id, walletAddress);
+    // Use the userId provided by the admin, not the requesting user's ID
+    const result = await linkUserWallet(userId, walletAddress);
     
     if (!result.success) {
       throw new CustomError(400, 'Link failed', {
