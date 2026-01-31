@@ -90,11 +90,11 @@ class _QRScannerPageState extends State<QRScannerPage>
     if (!isOCRMode) {
       if (state == AppLifecycleState.resumed) {
         // Restart camera when app resumes
-        developer.log('📱 App resumed - restarting camera');
+        developer.log('App resumed - restarting camera');
         cameraController.start();
       } else if (state == AppLifecycleState.paused) {
         // Stop camera when app is paused to save resources
-        developer.log('📱 App paused - stopping camera');
+        developer.log('App paused - stopping camera');
         cameraController.stop();
       }
     }
@@ -823,7 +823,7 @@ class _QRScannerPageState extends State<QRScannerPage>
     final now = DateTime.now();
     if (_lastErrorTime != null &&
         now.difference(_lastErrorTime!).inSeconds < 2) {
-      developer.log('⏳ Error debounced: $message');
+      developer.log('Error debounced: $message');
       return;
     }
     _lastErrorTime = now;
@@ -843,7 +843,7 @@ class _QRScannerPageState extends State<QRScannerPage>
 
     // Stop camera when modal opens
     cameraController.stop();
-    developer.log('📹 Camera stopped - QR result modal opened');
+    developer.log('Camera stopped - QR result modal opened');
 
     showDialog(
       context: context,
@@ -1068,7 +1068,7 @@ class _QRScannerPageState extends State<QRScannerPage>
     ).then((_) {
       // Restart camera when modal is closed
       cameraController.start();
-      developer.log('📹 Camera restarted - QR result modal closed');
+      developer.log('Camera restarted - QR result modal closed');
 
       // Reset result when modal is closed to allow re-scanning the same QR code
       if (mounted) {
@@ -2952,7 +2952,7 @@ class _QRScannerPageState extends State<QRScannerPage>
 
       await DraftService.saveDraft(draftData);
 
-      developer.log('📝 Scan saved as draft');
+      developer.log('Scan saved as draft');
 
       // Show success message
       if (mounted) {
@@ -3644,7 +3644,7 @@ class _QRScannerPageState extends State<QRScannerPage>
   ) async {
     // Guard against duplicate/rapid calls
     if (_isProcessingOCR) {
-      developer.log('⚠️ OCR already in progress, ignoring duplicate call');
+      developer.log('WARNING: OCR already in progress, ignoring duplicate call');
       return;
     }
 
@@ -3665,84 +3665,138 @@ class _QRScannerPageState extends State<QRScannerPage>
         builder: (context) => const Center(child: CircularProgressIndicator()),
       );
 
-      String frontText = '';
-      String backText = '';
+      // Check if we have multiple images to process (can with 4 or box with 6)
+      final hasMultipleImages = _allImagePaths.isNotEmpty && _allImagePaths.length > 2;
+      
+      Map<String, String> allOcrTexts = {};
 
-      if (_useTesseract) {
-        // Tesseract path using OcrService with smart auto-detection
-        // Note: Keep original file references for fallback, but use grayscale paths for OCR
-
-        // Convert images to grayscale for better OCR extraction
-        developer.log('🖼️ Converting images to grayscale for OCR processing...');
-        String grayscaleFrontPath = frontImagePath;
-        String grayscaleBackPath = backImagePath;
+      if (hasMultipleImages) {
+        // Process OCR for all captured images
+        developer.log('Processing OCR for ${_allImagePaths.length} images...');
         
-        try {
-          grayscaleFrontPath = await ImagePreprocessingService.convertToGrayscale(frontImagePath);
-          grayscaleBackPath = await ImagePreprocessingService.convertToGrayscale(backImagePath);
-          developer.log('✅ Images converted to grayscale');
-        } catch (e) {
-          developer.log('⚠️ Grayscale conversion failed, using original images: $e');
-          // Continue with original images if grayscale conversion fails
+        for (final entry in _allImagePaths.entries) {
+          final side = entry.key;
+          final imagePath = entry.value;
+          
+          developer.log('Processing $side image...');
+          String ocrText = '';
+
+          if (_useTesseract) {
+            // Convert to grayscale
+            String grayscalePath = imagePath;
+            try {
+              grayscalePath = await ImagePreprocessingService.convertToGrayscale(imagePath);
+            } catch (e) {
+              developer.log('WARNING: Grayscale conversion failed for $side: $e');
+            }
+
+            // Use smart OCR with automatic language detection
+            final ocrResult = await _ocrService.smartOcr(
+              File(grayscalePath),
+              dpi: 300,
+              saveResult: false,
+            );
+            ocrText = ocrResult.text;
+            
+            developer.log('$side OCR: ${ocrResult.language} - ${ocrText.length} chars');
+
+            // Fall back to ML Kit if too short
+            if (ocrText.trim().length < 10) {
+              developer.log('$side OCR too short via Tesseract; falling back to ML Kit');
+              final inputImage = InputImage.fromFilePath(imagePath);
+              final recognizedText = await _textRecognizer.processImage(inputImage);
+              ocrText = recognizedText.text;
+              developer.log('$side ML Kit length: ${ocrText.length}');
+            }
+          } else {
+            // ML Kit engine
+            final inputImage = InputImage.fromFilePath(imagePath);
+            final recognizedText = await _textRecognizer.processImage(inputImage);
+            ocrText = recognizedText.text;
+          }
+
+          allOcrTexts[side] = ocrText;
         }
+      } else {
+        // Process only front and back (original behavior for pack/sack)
+        String frontText = '';
+        String backText = '';
 
-        // Use smart OCR with automatic language detection on grayscale images
-        developer.log('🔍 Processing front image with auto-detection...');
-        final ocrFront = await _ocrService.smartOcr(
-          File(grayscaleFrontPath),
-          dpi: 300,
-          saveResult: false,
-        );
+        if (_useTesseract) {
+          // Tesseract path using OcrService with smart auto-detection
+          // Note: Keep original file references for fallback, but use grayscale paths for OCR
 
-        developer.log('🔍 Processing back image with auto-detection...');
-        final ocrBack = await _ocrService.smartOcr(
-          File(grayscaleBackPath),
-          dpi: 300,
-          saveResult: false,
-        );
+          // Convert images to grayscale for better OCR extraction
+          developer.log('Converting images to grayscale for OCR processing...');
+          String grayscaleFrontPath = frontImagePath;
+          String grayscaleBackPath = backImagePath;
+          
+          try {
+            grayscaleFrontPath = await ImagePreprocessingService.convertToGrayscale(frontImagePath);
+            grayscaleBackPath = await ImagePreprocessingService.convertToGrayscale(backImagePath);
+            developer.log('Images converted to grayscale');
+          } catch (e) {
+            developer.log('WARNING: Grayscale conversion failed, using original images: $e');
+            // Continue with original images if grayscale conversion fails
+          }
 
-        frontText = ocrFront.text;
-        backText = ocrBack.text;
+          // Use smart OCR with automatic language detection on grayscale images
+          developer.log('Processing front image with auto-detection...');
+          final ocrFront = await _ocrService.smartOcr(
+            File(grayscaleFrontPath),
+            dpi: 300,
+            saveResult: false,
+          );
 
-        developer.log(
-          '📊 Front OCR: ${ocrFront.language} - ${frontText.length} chars',
-        );
-        developer.log(
-          '📊 Back OCR: ${ocrBack.language} - ${backText.length} chars',
-        );
+          developer.log('Processing back image with auto-detection...');
+          final ocrBack = await _ocrService.smartOcr(
+            File(grayscaleBackPath),
+            dpi: 300,
+            saveResult: false,
+          );
 
-        // If any side is too short, automatically fall back to ML Kit for that side only
-        if (frontText.trim().length < 10) {
-          // ignore: avoid_print
-          print('Front OCR too short via Tesseract; falling back to ML Kit');
+          frontText = ocrFront.text;
+          backText = ocrBack.text;
+
+          developer.log(
+            'Front OCR: ${ocrFront.language} - ${frontText.length} chars',
+          );
+          developer.log(
+            'Back OCR: ${ocrBack.language} - ${backText.length} chars',
+          );
+
+          // If any side is too short, automatically fall back to ML Kit for that side only
+          if (frontText.trim().length < 10) {
+            developer.log('Front OCR too short via Tesseract; falling back to ML Kit');
+            final frontInputImage = InputImage.fromFilePath(frontImagePath);
+            final RecognizedText frontRecognizedText = await _textRecognizer
+                .processImage(frontInputImage);
+            frontText = frontRecognizedText.text;
+            developer.log('Front ML Kit length: ${frontText.length}');
+          }
+          if (backText.trim().length < 10) {
+            developer.log('Back OCR too short via Tesseract; falling back to ML Kit');
+            final backInputImage = InputImage.fromFilePath(backImagePath);
+            final RecognizedText backRecognizedText = await _textRecognizer
+                .processImage(backInputImage);
+            backText = backRecognizedText.text;
+            developer.log('Back ML Kit length: ${backText.length}');
+          }
+        } else {
+          // ML Kit engine for both
           final frontInputImage = InputImage.fromFilePath(frontImagePath);
           final RecognizedText frontRecognizedText = await _textRecognizer
               .processImage(frontInputImage);
           frontText = frontRecognizedText.text;
-          // ignore: avoid_print
-          print('Front ML Kit length: ${frontText.length}');
-        }
-        if (backText.trim().length < 10) {
-          // ignore: avoid_print
-          print('Back OCR too short via Tesseract; falling back to ML Kit');
+
           final backInputImage = InputImage.fromFilePath(backImagePath);
           final RecognizedText backRecognizedText = await _textRecognizer
               .processImage(backInputImage);
           backText = backRecognizedText.text;
-          // ignore: avoid_print
-          print('Back ML Kit length: ${backText.length}');
         }
-      } else {
-        // ML Kit engine for both
-        final frontInputImage = InputImage.fromFilePath(frontImagePath);
-        final RecognizedText frontRecognizedText = await _textRecognizer
-            .processImage(frontInputImage);
-        frontText = frontRecognizedText.text;
 
-        final backInputImage = InputImage.fromFilePath(backImagePath);
-        final RecognizedText backRecognizedText = await _textRecognizer
-            .processImage(backInputImage);
-        backText = backRecognizedText.text;
+        allOcrTexts['front'] = frontText;
+        allOcrTexts['back'] = backText;
       }
 
       // Upload images to Firebase immediately after OCR extraction
@@ -3794,11 +3848,33 @@ class _QRScannerPageState extends State<QRScannerPage>
         // Continue with OCR even if upload fails - we still have local paths
       }
 
-      // Combine both texts with clear labels
-      String combinedText =
-          '--- FRONT OF LABEL ---\n\n$frontText\n\n--- BACK OF LABEL ---\n\n$backText';
+      // Combine all OCR texts with clear labels
+      StringBuffer combinedTextBuffer = StringBuffer();
+      
+      // Define the order of sides for consistent output
+      final sideOrder = ['front', 'back', 'left', 'right', 'top', 'bottom'];
+      final sideLabels = {
+        'front': 'FRONT OF LABEL',
+        'back': 'BACK OF LABEL',
+        'left': 'LEFT SIDE OF LABEL',
+        'right': 'RIGHT SIDE OF LABEL',
+        'top': 'TOP OF LABEL',
+        'bottom': 'BOTTOM OF LABEL',
+      };
+      
+      for (final side in sideOrder) {
+        if (allOcrTexts.containsKey(side) && allOcrTexts[side]!.isNotEmpty) {
+          if (combinedTextBuffer.isNotEmpty) {
+            combinedTextBuffer.write('\n\n');
+          }
+          combinedTextBuffer.write('--- ${sideLabels[side]} ---\n\n${allOcrTexts[side]}');
+        }
+      }
+      
+      String combinedText = combinedTextBuffer.toString();
 
       developer.log('Combined OCR Text length: ${combinedText.length}');
+      developer.log('Processed ${allOcrTexts.length} image sides');
 
       // Check if we got meaningful text
       if (combinedText.trim().isEmpty || combinedText.trim().length < 20) {
@@ -3912,7 +3988,7 @@ class _QRScannerPageState extends State<QRScannerPage>
         // Close loading dialog
         if (mounted) Navigator.pop(context);
 
-        developer.log('❌ API Exception: ${apiError.message}');
+        developer.log('ERROR - API Exception: ${apiError.message}');
         developer.log('Status Code: ${apiError.statusCode}');
         developer.log('Details: ${apiError.details}');
 
@@ -3940,7 +4016,7 @@ class _QRScannerPageState extends State<QRScannerPage>
         // Close loading dialog
         if (mounted) Navigator.pop(context);
 
-        developer.log('❌ General Error: $apiError');
+        developer.log('ERROR - General Error: $apiError');
 
         // Show generic error modal for other exceptions
         _showErrorModal(
@@ -4090,7 +4166,7 @@ class _QRScannerPageState extends State<QRScannerPage>
         Navigator.of(context).popUntil((route) => route.isFirst);
       }
 
-      developer.log('❌ Error in dual OCR: $e');
+      developer.log('ERROR - Error in dual OCR: $e');
 
       // Show error modal
       if (mounted) {
