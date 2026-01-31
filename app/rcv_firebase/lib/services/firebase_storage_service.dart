@@ -68,7 +68,7 @@ class FirebaseStorageService {
     required File backImage,
   }) async {
     try {
-      developer.log('📤 [Storage] Uploading scan images for: $scanId');
+      developer.log('[Storage] Uploading scan images for: $scanId');
       await _logAuthStatus();
       
       final frontRef = _storage.ref().child('scans/$scanId/front.jpg');
@@ -92,16 +92,86 @@ class FirebaseStorageService {
       final frontUrl = await results[0].ref.getDownloadURL();
       final backUrl = await results[1].ref.getDownloadURL();
       
-      developer.log('✅ [Storage] Scan images uploaded successfully');
+      developer.log('[Storage] Scan images uploaded successfully');
       developer.log('Front: $frontUrl');
       developer.log('Back: $backUrl');
       
       return {'frontUrl': frontUrl, 'backUrl': backUrl};
     } catch (e, stackTrace) {
-      developer.log('❌ [Storage] Scan upload failed: $e');
+      developer.log('[Storage] Scan upload failed: $e');
       developer.log('Stack trace: $stackTrace');
       await _logAuthStatus();
       return {'frontUrl': null, 'backUrl': null};
+    }
+  }
+
+  /// Upload multiple scan images to Firebase Storage
+  /// 
+  /// Supports uploading a variable number of images for different product types:
+  /// - Pack/Sack: 2 images (front, back)
+  /// - Can: 4 images (front, back, left, right)
+  /// - Box: 6 images (front, back, left, right, top, bottom)
+  /// 
+  /// Example:
+  /// ```dart
+  /// final urls = await FirebaseStorageService.uploadMultipleScanImages(
+  ///   scanId: 'scan_123',
+  ///   images: {
+  ///     'front': File('path/to/front.jpg'),
+  ///     'back': File('path/to/back.jpg'),
+  ///     'left': File('path/to/left.jpg'),
+  ///     'right': File('path/to/right.jpg'),
+  ///   },
+  /// );
+  /// ```
+  static Future<Map<String, String?>> uploadMultipleScanImages({
+    required String scanId,
+    required Map<String, File> images,
+  }) async {
+    try {
+      developer.log('[Storage] Uploading ${images.length} scan images for: $scanId');
+      await _logAuthStatus();
+      
+      final metadata = SettableMetadata(
+        contentType: 'image/jpeg',
+        customMetadata: {
+          'scanId': scanId,
+          'uploadedAt': DateTime.now().toIso8601String(),
+        },
+      );
+      
+      // Create upload tasks for all images
+      final uploadTasks = <String, Future<TaskSnapshot>>{};
+      for (final entry in images.entries) {
+        final imageName = entry.key;
+        final imageFile = entry.value;
+        final ref = _storage.ref().child('scans/$scanId/$imageName.jpg');
+        uploadTasks[imageName] = ref.putFile(imageFile, metadata);
+      }
+      
+      // Upload all images in parallel for better performance
+      final results = <String, String?>{};
+      await Future.wait(
+        uploadTasks.entries.map((entry) async {
+          try {
+            final snapshot = await entry.value;
+            final url = await snapshot.ref.getDownloadURL();
+            results[entry.key] = url;
+            developer.log('[Storage] ${entry.key}: $url');
+          } catch (e) {
+            developer.log('[Storage] Failed to upload ${entry.key}: $e');
+            results[entry.key] = null;
+          }
+        }),
+      );
+      
+      developer.log('[Storage] ${results.length} scan images uploaded successfully');
+      return results;
+    } catch (e, stackTrace) {
+      developer.log('[Storage] Multi-scan upload failed: $e');
+      developer.log('Stack trace: $stackTrace');
+      await _logAuthStatus();
+      return {};
     }
   }
 

@@ -58,6 +58,11 @@ class _QRScannerPageState extends State<QRScannerPage>
   String? _backImagePath;
   String? _frontImageUrl; // Firebase URL
   String? _backImageUrl; // Firebase URL
+  
+  // For multi-side image storage (cans and boxes)
+  Map<String, String> _allImagePaths = {}; // Local paths: 'front', 'back', 'left', 'right', 'top', 'bottom'
+  Map<String, String?> _allImageUrls = {}; // Firebase URLs
+  
   String? _ocrBlobText; // Store raw OCR text for compliance reports
   bool _isProcessingOCR = false; // Guard against duplicate processing
   DateTime? _lastErrorTime; // Debounce errors to prevent spam
@@ -2972,6 +2977,8 @@ class _QRScannerPageState extends State<QRScannerPage>
         _backImagePath = null;
         _frontImageUrl = null;
         _backImageUrl = null;
+        _allImagePaths = {};
+        _allImageUrls = {};
         _ocrBlobText = null;
         _extractedInfo = null;
       });
@@ -3049,20 +3056,39 @@ class _QRScannerPageState extends State<QRScannerPage>
 
       try {
         final scanId = DateTime.now().millisecondsSinceEpoch.toString();
-        final uploadResult = await FirebaseStorageService.uploadScanImages(
-          scanId: scanId,
-          frontImage: File(_frontImagePath!),
-          backImage: File(_backImagePath!),
-        );
+        
+        // Check if we have multiple images to upload (can or box)
+        if (_allImagePaths.isNotEmpty && _allImagePaths.length > 2) {
+          // Upload all images for can (4) or box (6)
+          final imagesToUpload = <String, File>{};
+          for (final entry in _allImagePaths.entries) {
+            imagesToUpload[entry.key] = File(entry.value);
+          }
+          
+          final uploadResult = await FirebaseStorageService.uploadMultipleScanImages(
+            scanId: scanId,
+            images: imagesToUpload,
+          );
+          
+          uploadedFrontUrl = uploadResult['front'];
+          uploadedBackUrl = uploadResult['back'];
+          
+          developer.log('[Storage] ${uploadResult.length} images uploaded - Front: $uploadedFrontUrl, Back: $uploadedBackUrl');
+        } else {
+          // Upload only front and back for pack/sack or manual capture
+          final uploadResult = await FirebaseStorageService.uploadScanImages(
+            scanId: scanId,
+            frontImage: File(_frontImagePath!),
+            backImage: File(_backImagePath!),
+          );
 
-        uploadedFrontUrl = uploadResult['frontUrl'];
-        uploadedBackUrl = uploadResult['backUrl'];
+          uploadedFrontUrl = uploadResult['frontUrl'];
+          uploadedBackUrl = uploadResult['backUrl'];
 
-        developer.log(
-          '📤 Images uploaded - Front: $uploadedFrontUrl, Back: $uploadedBackUrl',
-        );
+          developer.log('[Storage] Images uploaded - Front: $uploadedFrontUrl, Back: $uploadedBackUrl');
+        }
       } catch (uploadError) {
-        developer.log('⚠️ Image upload failed: $uploadError');
+        developer.log('[Storage] Image upload failed: $uploadError');
         // Continue with local paths if upload fails
       }
 
@@ -3087,6 +3113,8 @@ class _QRScannerPageState extends State<QRScannerPage>
         _backImagePath = null;
         _frontImageUrl = null;
         _backImageUrl = null;
+        _allImagePaths = {};
+        _allImageUrls = {};
         _ocrBlobText = null;
         _extractedInfo = null;
       });
@@ -3146,6 +3174,8 @@ class _QRScannerPageState extends State<QRScannerPage>
           _backImagePath = null;
           _frontImageUrl = null;
           _backImageUrl = null;
+          _allImagePaths = {};
+          _allImageUrls = {};
           _ocrBlobText = null;
         });
 
@@ -3432,15 +3462,22 @@ class _QRScannerPageState extends State<QRScannerPage>
 
     if (result == null) return;
 
-    // Process the captured images from can rotation
-    // For now, use front and right as front/back for OCR processing
+    // Store all 4 captured images from can rotation
     final front = result[CanSide.front];
-    final back = result[CanSide.back]; // Use back side as back image
+    final back = result[CanSide.back];
+    final left = result[CanSide.left];
+    final right = result[CanSide.right];
 
     if (front != null && back != null) {
       setState(() {
         _frontImagePath = front;
         _backImagePath = back;
+        _allImagePaths = {
+          'front': front,
+          'back': back,
+          if (left != null) 'left': left,
+          if (right != null) 'right': right,
+        };
       });
 
       // Start OCR processing with all 4 images
@@ -3467,14 +3504,26 @@ class _QRScannerPageState extends State<QRScannerPage>
 
     if (result == null) return;
 
-    // Process the captured images from box capture
+    // Store all 6 captured images from box
     final front = result[BoxSide.front];
-    final back = result[BoxSide.back]; // Use back side as back image
+    final back = result[BoxSide.back];
+    final left = result[BoxSide.left];
+    final right = result[BoxSide.right];
+    final top = result[BoxSide.top];
+    final bottom = result[BoxSide.bottom];
 
     if (front != null && back != null) {
       setState(() {
         _frontImagePath = front;
         _backImagePath = back;
+        _allImagePaths = {
+          'front': front,
+          'back': back,
+          if (left != null) 'left': left,
+          if (right != null) 'right': right,
+          if (top != null) 'top': top,
+          if (bottom != null) 'bottom': bottom,
+        };
       });
 
       // Start OCR processing with front and back images
@@ -3501,7 +3550,7 @@ class _QRScannerPageState extends State<QRScannerPage>
 
     if (result == null) return;
 
-    // Process the captured images from sack capture
+    // Store 2 captured images from sack
     final front = result[SackSide.front];
     final back = result[SackSide.back];
 
@@ -3509,6 +3558,10 @@ class _QRScannerPageState extends State<QRScannerPage>
       setState(() {
         _frontImagePath = front;
         _backImagePath = back;
+        _allImagePaths = {
+          'front': front,
+          'back': back,
+        };
       });
 
       // Start OCR processing with front and back images
@@ -3535,7 +3588,7 @@ class _QRScannerPageState extends State<QRScannerPage>
 
     if (result == null) return;
 
-    // Process the captured images from pack capture
+    // Store 2 captured images from pack
     final front = result[PackSide.front];
     final back = result[PackSide.back];
 
@@ -3543,6 +3596,10 @@ class _QRScannerPageState extends State<QRScannerPage>
       setState(() {
         _frontImagePath = front;
         _backImagePath = back;
+        _allImagePaths = {
+          'front': front,
+          'back': back,
+        };
       });
 
       // Start OCR processing with front and back images
@@ -3558,8 +3615,10 @@ class _QRScannerPageState extends State<QRScannerPage>
     setState(() {
       if (isFront) {
         _frontImagePath = image.path;
+        _allImagePaths['front'] = image.path;
       } else {
         _backImagePath = image.path;
+        _allImagePaths['back'] = image.path;
       }
     });
 
@@ -3687,26 +3746,51 @@ class _QRScannerPageState extends State<QRScannerPage>
       }
 
       // Upload images to Firebase immediately after OCR extraction
-      developer.log('📤 Uploading images to Firebase...');
+      developer.log('[Storage] Uploading images to Firebase...');
       try {
         final scanId = DateTime.now().millisecondsSinceEpoch.toString();
-        final uploadResult = await FirebaseStorageService.uploadScanImages(
-          scanId: scanId,
-          frontImage: File(frontImagePath),
-          backImage: File(backImagePath),
-        );
         
-        // Store the uploaded URLs
-        setState(() {
-          _frontImageUrl = uploadResult['frontUrl'];
-          _backImageUrl = uploadResult['backUrl'];
-        });
-        
-        developer.log('✅ Images uploaded successfully');
-        developer.log('   Front URL: $_frontImageUrl');
-        developer.log('   Back URL: $_backImageUrl');
+        // Check if we have multiple images to upload (can or box)
+        if (_allImagePaths.isNotEmpty && _allImagePaths.length > 2) {
+          // Upload all images for can (4) or box (6)
+          final imagesToUpload = <String, File>{};
+          for (final entry in _allImagePaths.entries) {
+            imagesToUpload[entry.key] = File(entry.value);
+          }
+          
+          final uploadResult = await FirebaseStorageService.uploadMultipleScanImages(
+            scanId: scanId,
+            images: imagesToUpload,
+          );
+          
+          // Store the uploaded URLs
+          setState(() {
+            _allImageUrls = uploadResult;
+            _frontImageUrl = uploadResult['front'];
+            _backImageUrl = uploadResult['back'];
+          });
+          
+          developer.log('[Storage] ${uploadResult.length} images uploaded successfully');
+        } else {
+          // Upload only front and back for pack/sack or manual capture
+          final uploadResult = await FirebaseStorageService.uploadScanImages(
+            scanId: scanId,
+            frontImage: File(frontImagePath),
+            backImage: File(backImagePath),
+          );
+          
+          // Store the uploaded URLs
+          setState(() {
+            _frontImageUrl = uploadResult['frontUrl'];
+            _backImageUrl = uploadResult['backUrl'];
+          });
+          
+          developer.log('[Storage] Images uploaded successfully');
+          developer.log('Front URL: $_frontImageUrl');
+          developer.log('Back URL: $_backImageUrl');
+        }
       } catch (uploadError) {
-        developer.log('⚠️ Image upload failed: $uploadError');
+        developer.log('[Storage] Image upload failed: $uploadError');
         // Continue with OCR even if upload fails - we still have local paths
       }
 
@@ -3738,31 +3822,58 @@ class _QRScannerPageState extends State<QRScannerPage>
         setState(() {
           _frontImagePath = null;
           _backImagePath = null;
+          _allImagePaths = {};
+          _allImageUrls = {};
         });
         return;
       }
 
       // Upload images to Firebase immediately after successful OCR
-      developer.log('📤 Uploading images to Firebase...');
+      developer.log('[Storage] Uploading images to Firebase...');
       try {
         final scanId = DateTime.now().millisecondsSinceEpoch.toString();
-        final uploadResult = await FirebaseStorageService.uploadScanImages(
-          scanId: scanId,
-          frontImage: File(frontImagePath),
-          backImage: File(backImagePath),
-        );
+        
+        // Check if we have multiple images to upload (can or box)
+        if (_allImagePaths.isNotEmpty && _allImagePaths.length > 2) {
+          // Upload all images for can (4) or box (6)
+          final imagesToUpload = <String, File>{};
+          for (final entry in _allImagePaths.entries) {
+            imagesToUpload[entry.key] = File(entry.value);
+          }
+          
+          final uploadResult = await FirebaseStorageService.uploadMultipleScanImages(
+            scanId: scanId,
+            images: imagesToUpload,
+          );
+          
+          // Store the uploaded URLs
+          setState(() {
+            _allImageUrls = uploadResult;
+            _frontImageUrl = uploadResult['front'];
+            _backImageUrl = uploadResult['back'];
+          });
+          
+          developer.log('[Storage] ${uploadResult.length} images uploaded successfully');
+        } else {
+          // Upload only front and back for pack/sack or manual capture
+          final uploadResult = await FirebaseStorageService.uploadScanImages(
+            scanId: scanId,
+            frontImage: File(frontImagePath),
+            backImage: File(backImagePath),
+          );
 
-        // Store the uploaded URLs
-        setState(() {
-          _frontImageUrl = uploadResult['frontUrl'];
-          _backImageUrl = uploadResult['backUrl'];
-        });
+          // Store the uploaded URLs
+          setState(() {
+            _frontImageUrl = uploadResult['frontUrl'];
+            _backImageUrl = uploadResult['backUrl'];
+          });
 
-        developer.log('✅ Images uploaded successfully');
-        developer.log('   Front URL: $_frontImageUrl');
-        developer.log('   Back URL: $_backImageUrl');
+          developer.log('[Storage] Images uploaded successfully');
+          developer.log('Front URL: $_frontImageUrl');
+          developer.log('Back URL: $_backImageUrl');
+        }
       } catch (uploadError) {
-        developer.log('⚠️ Image upload failed: $uploadError');
+        developer.log('[Storage] Image upload failed: $uploadError');
         // Continue with OCR even if upload fails - we still have local paths
       }
 
@@ -3821,6 +3932,8 @@ class _QRScannerPageState extends State<QRScannerPage>
         setState(() {
           _frontImagePath = null;
           _backImagePath = null;
+          _allImagePaths = {};
+          _allImageUrls = {};
         });
         return;
       } catch (apiError) {
@@ -3846,6 +3959,8 @@ class _QRScannerPageState extends State<QRScannerPage>
         setState(() {
           _frontImagePath = null;
           _backImagePath = null;
+          _allImagePaths = {};
+          _allImageUrls = {};
         });
         return;
       }
@@ -3997,6 +4112,8 @@ class _QRScannerPageState extends State<QRScannerPage>
       setState(() {
         _frontImagePath = null;
         _backImagePath = null;
+        _allImagePaths = {};
+        _allImageUrls = {};
       });
     } finally {
       // Always reset the processing flag to allow future scans
