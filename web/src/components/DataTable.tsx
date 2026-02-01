@@ -182,9 +182,9 @@ export function DataTable({
           <CardTitle className="text-xl font-semibold text-gray-800">
             {title}
           </CardTitle>
-          <div className="flex flex-col lg:flex-row gap-2 w-full items-stretch">
+          <div className="flex flex-row gap-2 w-full items-center flex-wrap">
             {showSearch && (
-              <div className="relative group rounded-md border-2 border-gray-200 focus-within:border-gray-400 focus-within:shadow-md transition-all lg:flex-1">
+              <div className="relative group rounded-md border-2 border-gray-200 focus-within:border-gray-400 focus-within:shadow-md transition-all flex-1 min-w-[200px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 group-focus-within:text-gray-700 transition-colors" />
                 <Input
                   placeholder={searchPlaceholder}
@@ -194,7 +194,7 @@ export function DataTable({
                 />
               </div>
             )}
-            <div className="flex flex-col lg:flex-row items-stretch gap-2 flex-wrap [&_button]:h-10">
+            <div className="flex flex-row items-center gap-2 flex-wrap [&_button]:h-10">
               {customControls}
             </div>
           </div>

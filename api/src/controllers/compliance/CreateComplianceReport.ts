@@ -23,11 +23,20 @@ export const createComplianceReport = async (
     }
 
     const userId = user._id;
+    
+    // Debug logging
+    console.log('[CreateReport] User authenticated:', {
+      userId,
+      fullName: user.fullName,
+      email: user.email
+    });
 
     const reportData = {
       ...req.body,
       agentId: userId,
     };
+    
+    console.log('[CreateReport] Report data prepared with agentId:', reportData.agentId);
 
     // Validate request body
     const validatedData = ComplianceReportValidation.parse(reportData);
@@ -57,6 +66,12 @@ export const createComplianceReport = async (
     const complianceRepo = DB.getRepository(ComplianceReport);
     const newReport = complianceRepo.create(validatedData);
     const savedReport = await complianceRepo.save(newReport);
+    
+    console.log('[CreateReport] Report saved successfully:', {
+      reportId: savedReport._id,
+      agentId: savedReport.agentId,
+      status: savedReport.status
+    });
 
     // Create audit log
     await AuditLogService.createLog({

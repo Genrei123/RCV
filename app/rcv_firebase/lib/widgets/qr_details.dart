@@ -73,6 +73,9 @@ class ScannedItemDetails extends StatelessWidget {
             padding: const EdgeInsets.all(16.0),
             child: Center(
               child: Container(
+                constraints: const BoxConstraints(
+                  maxHeight: 250, // Limit image height
+                ),
                 decoration: BoxDecoration(
                   border: Border.all(color: AppColors.primary, width: 2),
                   borderRadius: BorderRadius.circular(12),
@@ -81,7 +84,7 @@ class ScannedItemDetails extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   child: Image.asset(
                     item.productImage,
-                    fit: BoxFit.cover,
+                    fit: BoxFit.contain,
                     errorBuilder: (context, error, stackTrace) {
                       return Container(
                         height: 200,

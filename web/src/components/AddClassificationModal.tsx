@@ -198,7 +198,7 @@ export function AddClassificationModal({
               </Button>
               <Button
                 type="submit"
-                className="app-bg-primary text-white hover:opacity-90 cursor-pointer"
+                className="app-bg-primary text-white hover:app-bg-secondary hover:opacity-90 cursor-pointer"
                 disabled={loading}
               >
                 {loading ? (

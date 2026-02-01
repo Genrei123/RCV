@@ -11,7 +11,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../services/ocr_service.dart';
 import '../services/firebase_storage_service.dart';
-import '../services/image_preprocessing_service.dart';
 // import '../widgets/gradient_header_app_bar.dart';
 import '../widgets/title_logo_header_app_bar.dart';
 import '../widgets/navigation_bar.dart';
@@ -1089,9 +1088,9 @@ class _QRScannerPageState extends State<QRScannerPage>
           child: Container(
             constraints: BoxConstraints(
               maxWidth: MediaQuery.of(context).size.width * 0.9,
+              maxHeight: MediaQuery.of(context).size.height * 0.8,
             ),
             child: Column(
-              mainAxisSize: MainAxisSize.min,
               children: [
                 // Header
                 Container(
@@ -1132,98 +1131,100 @@ class _QRScannerPageState extends State<QRScannerPage>
                     ],
                   ),
                 ),
-                // Content
-                Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(
-                        Icons.warning_amber_rounded,
-                        size: 64,
-                        color: Colors.orange,
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Something went wrong',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                // Content - Wrapped in SingleChildScrollView to prevent overflow
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(
+                          Icons.warning_amber_rounded,
+                          size: 64,
+                          color: Colors.orange,
                         ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        message,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.black54,
-                          height: 1.5,
-                        ),
-                      ),
-                      if (error != null) ...[
                         const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.grey.shade300),
+                        const Text(
+                          'Something went wrong',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.code,
-                                    size: 16,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Technical Details',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.grey.shade700,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          message,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.black54,
+                            height: 1.5,
+                          ),
+                        ),
+                        if (error != null) ...[
+                          const SizedBox(height: 16),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.code,
+                                      size: 16,
+                                      color: Colors.grey.shade600,
                                     ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                error,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.grey.shade600,
-                                  fontFamily: 'monospace',
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Technical Details',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.grey.shade700,
+                                      ),
+                                    ),
+                                  ],
                                 ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  error,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey.shade600,
+                                    fontFamily: 'monospace',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 24),
+                        // Action Button
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () => Navigator.of(context).pop(),
+                            icon: const Icon(Icons.refresh, size: 20),
+                            label: const Text('Try Again'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF005440),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                            ],
+                              elevation: 2,
+                            ),
                           ),
                         ),
                       ],
-                      const SizedBox(height: 24),
-                      // Action Button
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: () => Navigator.of(context).pop(),
-                          icon: const Icon(Icons.refresh, size: 20),
-                          label: const Text('Try Again'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF005440),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            elevation: 2,
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ],
@@ -2170,7 +2171,7 @@ class _QRScannerPageState extends State<QRScannerPage>
                               width: double.infinity,
                               child: OutlinedButton(
                                 onPressed: () {
-                                  Navigator.of(context).pop();
+                                  // Don't close parent modal - just show OCR text on top
                                   _showOCRModal(ocrText);
                                 },
                                 style: OutlinedButton.styleFrom(
@@ -3609,106 +3610,61 @@ class _QRScannerPageState extends State<QRScannerPage>
       String frontText = '';
       String backText = '';
 
-      if (_useTesseract) {
-        // Tesseract path using OcrService with smart auto-detection
-        // Note: Keep original file references for fallback, but use grayscale paths for OCR
+      // Use ML Kit as primary engine (faster and more accurate on mobile)
+      developer.log('🔍 Processing images with ML Kit...');
+      final frontInputImage = InputImage.fromFilePath(frontImagePath);
+      final RecognizedText frontRecognizedText = await _textRecognizer
+          .processImage(frontInputImage);
+      frontText = frontRecognizedText.text;
 
-        // Convert images to grayscale for better OCR extraction
-        developer.log('🖼️ Converting images to grayscale for OCR processing...');
-        String grayscaleFrontPath = frontImagePath;
-        String grayscaleBackPath = backImagePath;
+      final backInputImage = InputImage.fromFilePath(backImagePath);
+      final RecognizedText backRecognizedText = await _textRecognizer
+          .processImage(backInputImage);
+      backText = backRecognizedText.text;
+
+      developer.log(
+        '📊 ML Kit Results - Front: ${frontText.length} chars, Back: ${backText.length} chars',
+      );
+
+      // ALWAYS use Tesseract in addition to ML Kit for better accuracy
+      // Run both engines and merge results to capture more text
+      if (_useTesseract) {
+        developer.log('🔍 Running Tesseract for enhanced accuracy...');
         
         try {
-          grayscaleFrontPath = await ImagePreprocessingService.convertToGrayscale(frontImagePath);
-          grayscaleBackPath = await ImagePreprocessingService.convertToGrayscale(backImagePath);
-          developer.log('✅ Images converted to grayscale');
+          // Process both images with Tesseract
+          final ocrFront = await _ocrService.smartOcr(
+            File(frontImagePath),
+            dpi: 200, // Balanced DPI for speed and accuracy
+            saveResult: false,
+          );
+          
+          final ocrBack = await _ocrService.smartOcr(
+            File(backImagePath),
+            dpi: 200,
+            saveResult: false,
+          );
+
+          // Merge results - use whichever extracted more text
+          if (ocrFront.text.length > frontText.length * 0.8) {
+            // If Tesseract found 80% or more text, it might be better
+            frontText = ocrFront.text.length > frontText.length ? ocrFront.text : '$frontText\n${ocrFront.text}';
+            developer.log('✅ Enhanced front text with Tesseract: ${frontText.length} chars');
+          }
+          
+          if (ocrBack.text.length > backText.length * 0.8) {
+            backText = ocrBack.text.length > backText.length ? ocrBack.text : '$backText\n${ocrBack.text}';
+            developer.log('✅ Enhanced back text with Tesseract: ${backText.length} chars');
+          }
         } catch (e) {
-          developer.log('⚠️ Grayscale conversion failed, using original images: $e');
-          // Continue with original images if grayscale conversion fails
+          developer.log('⚠️ Tesseract enhancement failed: $e');
+          // Continue with ML Kit results
         }
-
-        // Use smart OCR with automatic language detection on grayscale images
-        developer.log('🔍 Processing front image with auto-detection...');
-        final ocrFront = await _ocrService.smartOcr(
-          File(grayscaleFrontPath),
-          dpi: 300,
-          saveResult: false,
-        );
-
-        developer.log('🔍 Processing back image with auto-detection...');
-        final ocrBack = await _ocrService.smartOcr(
-          File(grayscaleBackPath),
-          dpi: 300,
-          saveResult: false,
-        );
-
-        frontText = ocrFront.text;
-        backText = ocrBack.text;
-
-        developer.log(
-          '📊 Front OCR: ${ocrFront.language} - ${frontText.length} chars',
-        );
-        developer.log(
-          '📊 Back OCR: ${ocrBack.language} - ${backText.length} chars',
-        );
-
-        // If any side is too short, automatically fall back to ML Kit for that side only
-        if (frontText.trim().length < 10) {
-          // ignore: avoid_print
-          print('Front OCR too short via Tesseract; falling back to ML Kit');
-          final frontInputImage = InputImage.fromFilePath(frontImagePath);
-          final RecognizedText frontRecognizedText = await _textRecognizer
-              .processImage(frontInputImage);
-          frontText = frontRecognizedText.text;
-          // ignore: avoid_print
-          print('Front ML Kit length: ${frontText.length}');
-        }
-        if (backText.trim().length < 10) {
-          // ignore: avoid_print
-          print('Back OCR too short via Tesseract; falling back to ML Kit');
-          final backInputImage = InputImage.fromFilePath(backImagePath);
-          final RecognizedText backRecognizedText = await _textRecognizer
-              .processImage(backInputImage);
-          backText = backRecognizedText.text;
-          // ignore: avoid_print
-          print('Back ML Kit length: ${backText.length}');
-        }
-      } else {
-        // ML Kit engine for both
-        final frontInputImage = InputImage.fromFilePath(frontImagePath);
-        final RecognizedText frontRecognizedText = await _textRecognizer
-            .processImage(frontInputImage);
-        frontText = frontRecognizedText.text;
-
-        final backInputImage = InputImage.fromFilePath(backImagePath);
-        final RecognizedText backRecognizedText = await _textRecognizer
-            .processImage(backInputImage);
-        backText = backRecognizedText.text;
       }
 
-      // Upload images to Firebase immediately after OCR extraction
-      developer.log('📤 Uploading images to Firebase...');
-      try {
-        final scanId = DateTime.now().millisecondsSinceEpoch.toString();
-        final uploadResult = await FirebaseStorageService.uploadScanImages(
-          scanId: scanId,
-          frontImage: File(frontImagePath),
-          backImage: File(backImagePath),
-        );
-        
-        // Store the uploaded URLs
-        setState(() {
-          _frontImageUrl = uploadResult['frontUrl'];
-          _backImageUrl = uploadResult['backUrl'];
-        });
-        
-        developer.log('✅ Images uploaded successfully');
-        developer.log('   Front URL: $_frontImageUrl');
-        developer.log('   Back URL: $_backImageUrl');
-      } catch (uploadError) {
-        developer.log('⚠️ Image upload failed: $uploadError');
-        // Continue with OCR even if upload fails - we still have local paths
-      }
+      developer.log(
+        '📊 Final OCR Results - Front: ${frontText.length} chars, Back: ${backText.length} chars',
+      );
 
       // Combine both texts with clear labels
       String combinedText =
