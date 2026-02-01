@@ -204,10 +204,6 @@ export class CertificateApprovalService {
   ): Promise<{ approval: CertificateApproval; isFullyApproved: boolean }> {
     // Step 1: Get the message to sign (includes timestamp)
     const messageData = await this.getApprovalMessage(approvalId);
-    
-    console.log('=== Approval Message Data ===');
-    console.log('Message:', messageData.message);
-    console.log('Timestamp:', (messageData as any).timestamp);
 
     // Step 2: Sign the message with MetaMask
     const signature = await MetaMaskService.signMessage(messageData.message, walletAddress);
@@ -239,10 +235,6 @@ export class CertificateApprovalService {
   ): Promise<CertificateApproval> {
     // Step 1: Get the rejection message (includes timestamp)
     const messageData = await this.getRejectionMessage(approvalId, reason);
-    
-    console.log('=== Rejection Message Data ===');
-    console.log('Message:', messageData.message);
-    console.log('Timestamp:', (messageData as any).timestamp);
 
     // Step 2: Sign the message with MetaMask
     const signature = await MetaMaskService.signMessage(messageData.message, walletAddress);
