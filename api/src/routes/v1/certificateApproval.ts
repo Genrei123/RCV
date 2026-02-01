@@ -183,7 +183,10 @@ router.post('/archiveProduct', verifyUser, submitArchiveForProduct);
 // Submit an unarchive request for a product
 router.post('/unarchiveProduct', verifyUser, submitUnarchiveForProduct);
 
-// Get renewal timeline for a product  
+// Get renewal timeline for a product (public - no auth required)
+router.get('/public/renewal-timeline/:productId', getRenewalTimeline);
+
+// Get renewal timeline for a product (authenticated)
 router.get('/renewal-timeline/:productId', verifyUser, getRenewalTimeline);
 
 // Get detailed renewal information for an approval
