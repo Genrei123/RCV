@@ -1,0 +1,137 @@
+import { Package, X, AlertTriangle, Archive, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+interface ProductArchiveConfirmationModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  product: {
+    productName: string;
+    lotNumber?: string;
+    _id: string;
+  } | null;
+  action: "archive" | "unarchive";
+  loading?: boolean;
+}
+
+export function ProductArchiveConfirmationModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  product,
+  action,
+  loading = false
+}: ProductArchiveConfirmationModalProps) {
+  if (!isOpen || !product) return null;
+
+  const isArchiving = action === "archive";
+  const actionText = isArchiving ? "Archive" : "Restore";
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl max-w-md w-full transform transition-all">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-100">
+          <div className="flex items-center gap-4">
+            <div className={`p-3 rounded-full shadow-sm ${
+              isArchiving 
+                ? 'bg-green-50 border border-green-100' 
+                : 'bg-green-50 border border-green-100'
+            }`}>
+              <AlertTriangle className={`h-6 w-6 ${
+                isArchiving 
+                  ? 'app-text-primary' 
+                  : 'app-text-success'
+              }`} />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-gray-900">
+                {actionText} Product
+              </h3>
+              <p className="text-sm text-gray-500 mt-1">
+                {isArchiving 
+                  ? "Submit archive request for admin approval" 
+                  : "Submit restore request for admin approval"
+                }
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            disabled={loading}
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+          >
+            <X className="h-5 w-5 text-gray-400" />
+          </Button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6">
+          <div className="mb-6">
+            <p className="text-gray-700 leading-relaxed">
+              {isArchiving 
+                ? `Submit archive request for admin approval? The product "${product.productName}" will be archived after approval.`
+                : `Submit restore request for admin approval? The product "${product.productName}" will be restored after approval.`
+              }
+            </p>
+          </div>
+          
+          <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+            <div className="flex items-center gap-4">
+              <div className="p-3 app-bg-primary rounded-lg shadow-sm">
+                <Package className="h-5 w-5 text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold text-gray-900 text-lg">{product.productName}</p>
+                {product.lotNumber && (
+                  <p className="text-sm text-gray-500 font-mono mt-1">
+                    Lot Number: {product.lotNumber}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-3 p-6 bg-gray-50 rounded-b-xl border-t border-gray-100">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            disabled={loading}
+            className="flex-1 cursor-pointer border-gray-300 hover:bg-gray-100 text-gray-700 font-medium py-3"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={onConfirm}
+            disabled={loading}
+            className={`flex-1 cursor-pointer font-medium py-3 text-white shadow-sm transition-all ${
+              isArchiving 
+                ? 'app-bg-primary hover:opacity-90 focus:ring-2 focus:ring-green-200' 
+                : 'app-bg-success hover:bg-green-600 focus:ring-green-200'
+            } ${loading ? 'opacity-75' : ''}`}
+          >
+            {loading ? (
+              <div className="flex items-center justify-center gap-3">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>{isArchiving ? "Submitting..." : "Restoring..."}</span>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center gap-2">
+                {isArchiving ? (
+                  <Archive className="h-4 w-4" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
+                <span>Submit Request</span>
+              </div>
+            )}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
