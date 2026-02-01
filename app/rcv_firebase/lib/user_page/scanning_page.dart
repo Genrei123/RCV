@@ -11,7 +11,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../services/ocr_service.dart';
 import '../services/firebase_storage_service.dart';
-import '../services/image_preprocessing_service.dart';
 // import '../widgets/gradient_header_app_bar.dart';
 import '../widgets/title_logo_header_app_bar.dart';
 import '../widgets/navigation_bar.dart';
@@ -3649,12 +3648,12 @@ class _QRScannerPageState extends State<QRScannerPage>
           // Merge results - use whichever extracted more text
           if (ocrFront.text.length > frontText.length * 0.8) {
             // If Tesseract found 80% or more text, it might be better
-            frontText = ocrFront.text.length > frontText.length ? ocrFront.text : frontText + '\n' + ocrFront.text;
+            frontText = ocrFront.text.length > frontText.length ? ocrFront.text : '$frontText\n${ocrFront.text}';
             developer.log('✅ Enhanced front text with Tesseract: ${frontText.length} chars');
           }
           
           if (ocrBack.text.length > backText.length * 0.8) {
-            backText = ocrBack.text.length > backText.length ? ocrBack.text : backText + '\n' + ocrBack.text;
+            backText = ocrBack.text.length > backText.length ? ocrBack.text : '$backText\n${ocrBack.text}';
             developer.log('✅ Enhanced back text with Tesseract: ${backText.length} chars');
           }
         } catch (e) {

@@ -46,7 +46,6 @@ export function AnalyticsMapComponent() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<any>(null);
   const [resolutionStatus, setResolutionStatus] = useState<string>("COMPLIANT");
-  const [originalStatus, setOriginalStatus] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const hamburgerRef = useRef<HTMLDivElement | null>(null);
@@ -987,7 +986,7 @@ export function AnalyticsMapComponent() {
                 <div className="space-y-2 max-h-80 overflow-y-auto">
                   {apiResponse?.results?.clusters?.map((cluster) => {
                     // Filter reports based on search and status
-                    const filteredReports = cluster.reports?.filter((report: any) => {
+                    const filteredReports = cluster.points?.filter((report: any) => {
                       const reportId = report._id ?? report.report?._id;
                       const productName = report.product ?? report.report?.scannedData?.productName ?? "Unknown Product";
                       const reportStatus = report.status ?? report.report?.status ?? "NON_COMPLIANT";
@@ -1038,9 +1037,7 @@ export function AnalyticsMapComponent() {
                                       currentStatus: reportData.status,
                                       position: [lng, lat]
                                     });
-                                    setOriginalStatus(reportData.status);
                                     setResolutionStatus(reportData.status);
-                                    setChangeStatus(false);
                                   })
                                   .catch(err => {
                                     console.error('Failed to fetch report:', err);
@@ -1123,9 +1120,7 @@ export function AnalyticsMapComponent() {
                                       currentStatus: reportData.status,
                                       position: [lng, lat]
                                     });
-                                    setOriginalStatus(reportData.status);
                                     setResolutionStatus(reportData.status);
-                                    setChangeStatus(false);
                                   })
                                   .catch(err => {
                                     console.error('Failed to fetch report:', err);
