@@ -20,7 +20,6 @@ import {
   CheckCircle,
   ChevronLeft,
   ChevronRight,
-  Clock,
   Search,
 } from 'lucide-react';
 import {

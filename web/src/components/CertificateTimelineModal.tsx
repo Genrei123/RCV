@@ -186,16 +186,6 @@ export default function CertificateTimelineModal({
     });
   };
 
-  const getEventIcon = (event: TimelineEvent) => {
-    if (event.status === 'approved') {
-      return <Check className="h-5 w-5 text-green-600" />;
-    } else if (event.status === 'rejected') {
-      return <XCircle className="h-5 w-5 text-red-600" />;
-    } else {
-      return <Clock className="h-5 w-5 text-yellow-600" />;
-    }
-  };
-
   const getEventBadge = (type: string) => {
     switch (type) {
       case 'initial':
@@ -271,7 +261,7 @@ export default function CertificateTimelineModal({
             </div>
           ) : (
             <div className="space-y-3">
-              {timeline.map((event, index) => (
+              {timeline.map((event) => (
                 <div 
                   key={event.approvalId} 
                   onClick={() => setSelectedCertificateId(event.certificateId)}
