@@ -165,11 +165,20 @@
 }
 
 @layer base {
+  html {
+    overflow-y: scroll !important;
+    width: 100vw;
+  }
   * {
     @apply border-border outline-ring/50;
   }
   body {
     @apply bg-background text-foreground;
+    overflow-x: hidden;
+  }
+  body.overflow-hidden {
+    overflow-y: scroll !important;
+    padding-right: 0 !important;
   }
 }
 
@@ -285,6 +294,20 @@
       var(--app-primary-light) 70%,
       transparent
     );
+  }
+  .hover\:app-bg-error:hover {
+    background-color: var(--app-error);
+  }
+  .hover\:app-bg-secondary:hover {
+    background-color: #009b79;
+  }
+  
+  /* Cursor pointer for interactive elements */
+  button,
+  [role="button"],
+  .toggle,
+  .filter-button {
+    cursor: pointer;
   }
 }
 

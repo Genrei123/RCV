@@ -57,8 +57,6 @@ import {
   Trash2,
   RefreshCw,
   Loader2,
-  Monitor,
-  Smartphone,
   Shield,
   FileCheck,
 } from "lucide-react";
@@ -248,32 +246,6 @@ export function Dashboard(props: DashboardProps) {
       },
     },
     {
-      key: "access",
-      label: "Access",
-      render: (_, row: User) => (
-        <div className="flex items-center gap-1">
-          {/* Rejected users have no access - show disabled/none state */}
-          {row.status === "Rejected" ? (
-            <span className="text-xs text-gray-400 italic">No Access</span>
-          ) : (
-            /* All active users must have at least one access type - default to app access if somehow missing */
-            <>
-              {(row.appAccess || (!row.appAccess && !row.webAccess)) && (
-                <span title="Mobile App Access" className="inline-flex items-center justify-center w-6 h-6 rounded bg-blue-100 text-blue-600">
-                  <Smartphone className="w-3.5 h-3.5" />
-                </span>
-              )}
-              {row.webAccess && (
-                <span title="Web Dashboard Access" className="inline-flex items-center justify-center w-6 h-6 rounded bg-green-100 text-green-600">
-                  <Monitor className="w-3.5 h-3.5" />
-                </span>
-              )}
-            </>
-          )}
-        </div>
-      ),
-    },
-    {
       key: "actions",
       label: "Actions",
       render: (_, row: User) => (
@@ -329,25 +301,6 @@ export function Dashboard(props: DashboardProps) {
       key: "invitedByName",
       label: "Invited By",
       render: (value: string) => value || "System",
-    },
-    {
-      key: "access",
-      label: "Access",
-      render: (_, row: AdminInvite) => (
-        <div className="flex items-center gap-1">
-          {/* All invites must have at least one access type - default to app access if somehow missing */}
-          {(row.appAccess || (!row.appAccess && !row.webAccess)) && (
-            <span title="Mobile App Access" className="inline-flex items-center justify-center w-6 h-6 rounded bg-blue-100 text-blue-600">
-              <Smartphone className="w-3.5 h-3.5" />
-            </span>
-          )}
-          {row.webAccess && (
-            <span title="Web Dashboard Access" className="inline-flex items-center justify-center w-6 h-6 rounded bg-green-100 text-green-600">
-              <Monitor className="w-3.5 h-3.5" />
-            </span>
-          )}
-        </div>
-      ),
     },
     {
       key: "createdAt",
@@ -701,7 +654,7 @@ export function Dashboard(props: DashboardProps) {
   return (
     <>
       <PageContainer
-        className="overflow-hidden relative"
+        className="relative"
         title="Dashboard"
         description="Overview of system statistics and user management"
       >

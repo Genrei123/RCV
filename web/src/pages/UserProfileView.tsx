@@ -377,7 +377,7 @@ export function UserProfileView() {
               {isAdmin() && (
                 <Button
                   onClick={() => setShowEditModal(true)}
-                  className="flex items-center gap-2 app-bg-primary text-white hover:opacity-90"
+                  className="flex items-center gap-2 app-bg-primary text-white hover:app-bg-secondary hover:opacity-90"
                   size="sm"
                 >
                   <Pencil className="h-4 w-4" />

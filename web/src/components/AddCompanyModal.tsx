@@ -649,7 +649,7 @@ export function AddCompanyModal({
                       <Button
                         type="button"
                         onClick={() => connectWallet()}
-                        className="mt-3 app-bg-primary hover:app-bg-accent"
+                        className="mt-3 app-bg-primary hover:app-bg-secondary"
                         size="sm"
                       >
                         <Wallet className="h-4 w-4 mr-2" />
@@ -950,7 +950,7 @@ export function AddCompanyModal({
                       accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                       onChange={handleFileSelect}
                     />
-                    <div className="flex items-center gap-2 px-4 py-2 app-bg-primary text-white rounded-md hover:app-bg-accent transition-colors">
+                    <div className="flex items-center gap-2 px-4 py-2 app-bg-primary text-white rounded-md hover:app-bg-secondary transition-colors">
                       <Upload className="h-4 w-4" />
                       Upload Document
                     </div>

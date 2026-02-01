@@ -1552,7 +1552,7 @@ export function AddProductModal({
               </Button>
               <Button
                 type="submit"
-                className="app-bg-primary text-white hover:opacity-90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="app-bg-primary text-white hover:app-bg-secondary hover:opacity-90 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={loading || !isWalletConnected || !isWalletAuthorized}
                 title={!isWalletConnected ? "Connect MetaMask to create products" : !isWalletAuthorized ? "Wallet not authorized" : ""}
               >
