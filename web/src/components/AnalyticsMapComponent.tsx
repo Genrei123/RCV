@@ -356,14 +356,12 @@ export function AnalyticsMapComponent() {
               currentStatus: reportData.status,
               position: object.position // Keep the position from the map object
             });
-            setOriginalStatus(reportData.status);
             setResolutionStatus(reportData.status); // Default to current status
           } catch (err) {
             // Fallback if fetch fails
             console.error('Failed to fetch report details:', err);
             const fallbackStatus = object.status || 'NON_COMPLIANT';
             setSelectedReport({ ...object, currentStatus: fallbackStatus });
-            setOriginalStatus(fallbackStatus);
             setResolutionStatus(fallbackStatus);
           }
         }
