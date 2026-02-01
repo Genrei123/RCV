@@ -15,9 +15,7 @@ import {
   ExternalLink,
   Package,
   Building2,
-  Shield,
   Loader2,
-  CheckCircle,
   ChevronLeft,
   ChevronRight,
   Search,
@@ -132,7 +130,7 @@ export function TransparencyTables() {
 
   return (
     <div className="space-y-8 px-4 py-6">
-      {/* Tables with Tabs */
+      {/* Tables with Tabs */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'products' | 'companies')}>
           <div className="border-b border-gray-200 px-6 pt-6 pb-6">
@@ -214,7 +212,7 @@ export function TransparencyTables() {
                             className="cursor-pointer hover:bg-gray-50 transition-colors"
                             onClick={() => handleProductClick(product)}
                           >
-                          <TableCell className="font-medium py-4 px-4">
+                            <TableCell className="font-medium py-4 px-4">
                             {product.productName}
                           </TableCell>
                           <TableCell className="py-4 px-4">
@@ -243,7 +241,8 @@ export function TransparencyTables() {
                             </a>
                           </TableCell>
                         </TableRow>
-                      )))}
+                      ))
+                      )}
                     </TableBody>
                   </Table>
                 </div>
@@ -311,7 +310,7 @@ export function TransparencyTables() {
                             className="cursor-pointer hover:bg-gray-50 transition-colors"
                             onClick={() => handleCompanyClick(company)}
                           >
-                          <TableCell>
+                            <TableCell>
                             <span className="font-medium">{company.name}</span>
                           </TableCell>
                           <TableCell className="hidden md:table-cell font-mono text-sm text-gray-500">
@@ -337,7 +336,8 @@ export function TransparencyTables() {
                             </a>
                           </TableCell>
                         </TableRow>
-                      )))}
+                      ))
+                      )}
                     </TableBody>
                   </Table>
                 </div>
@@ -371,7 +371,6 @@ export function TransparencyTables() {
         </Tabs>
       </div>
 
-      {/* Certificate Timeline Modal */}
       {selectedProduct && (
         <CertificateTimelineModal
           isOpen={isTimelineModalOpen}
