@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { BarChart3, RefreshCw, MapPin, Activity, Menu, X } from "lucide-react";
+import { BarChart3, RefreshCw, MapPin, Activity, Menu, X, Search, Filter } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -46,7 +47,8 @@ export function AnalyticsMapComponent() {
   const [selectedReport, setSelectedReport] = useState<any>(null);
   const [resolutionStatus, setResolutionStatus] = useState<string>("COMPLIANT");
   const [originalStatus, setOriginalStatus] = useState<string | null>(null);
-  const [changeStatus, setChangeStatus] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const hamburgerRef = useRef<HTMLDivElement | null>(null);
   const drawerRef = useRef<HTMLDivElement | null>(null);
   const hamburgerOriginalParentRef = useRef<HTMLElement | null>(null);
@@ -72,20 +74,24 @@ export function AnalyticsMapComponent() {
 
   const handleResolveReport = async (reportId: string) => {
     try {
-      // If not changing status, use original status
-      const finalStatus = changeStatus ? resolutionStatus : originalStatus;
-      
+      // Use the selected resolution status
       const response = await apiClient.post(`/analytics/reports/${reportId}/resolve`, {
-        resolution: finalStatus,
+        resolution: resolutionStatus,
       });
 
-      // Close dialog and refresh data
-      setSelectedReport(null);
-      setResolutionStatus("COMPLIANT");
-      setOriginalStatus(null);
-      setChangeStatus(false);
-      alert(response.data.message || 'Report processed successfully!');
-      // Optionally refresh the analysis
+      // Update the selected report to reflect approval
+      if (selectedReport) {
+        setSelectedReport({
+          ...selectedReport,
+          isVerified: true,
+          currentStatus: resolutionStatus
+        });
+      }
+
+      // Show success message
+      alert(response.data.message || 'Report approved successfully!');
+      
+      // Refresh the analysis to get updated data
       callDBSCANAPI();
     } catch (err: any) {
       const errorMsg = err?.response?.data?.message || err?.message || 'Failed to resolve report';
@@ -228,6 +234,16 @@ export function AnalyticsMapComponent() {
       { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
       { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
 
+      // Hide all POI markers by default (restaurants, bars, etc.)
+      {
+        featureType: "poi",
+        elementType: "labels",
+        stylers: [{ visibility: "off" }],
+      },
+      {
+        featureType: "poi.business",
+        stylers: [{ visibility: "off" }],
+      },
       {
         featureType: "poi",
         elementType: "labels.text.fill",
@@ -331,14 +347,18 @@ export function AnalyticsMapComponent() {
       },
       onClick: async ({ object }: any) => {
         if (object && object.reportId) {
-          // Fetch full report details to get current status
+          // Fetch full report details to get current status and complete data
           try {
-            const response = await apiClient.get(`/compliance/reports/${object.reportId}`);
+            const response = await apiClient.get(`/analytics/reports/${object.reportId}`);
             const reportData = response.data.data;
-            setSelectedReport({ ...object, currentStatus: reportData.status });
+            setSelectedReport({ 
+              ...object, 
+              ...reportData,
+              currentStatus: reportData.status,
+              position: object.position // Keep the position from the map object
+            });
             setOriginalStatus(reportData.status);
             setResolutionStatus(reportData.status); // Default to current status
-            setChangeStatus(false); // Reset checkbox
           } catch (err) {
             // Fallback if fetch fails
             console.error('Failed to fetch report details:', err);
@@ -346,7 +366,6 @@ export function AnalyticsMapComponent() {
             setSelectedReport({ ...object, currentStatus: fallbackStatus });
             setOriginalStatus(fallbackStatus);
             setResolutionStatus(fallbackStatus);
-            setChangeStatus(false);
           }
         }
       },
@@ -362,6 +381,13 @@ export function AnalyticsMapComponent() {
       }
     } catch (_) {
       // safely ignore if internals differ
+    }
+  }, [mapLoaded]);
+
+  // Auto-load DBSCAN analysis when map is ready
+  useEffect(() => {
+    if (mapLoaded && !apiResponse && !loading) {
+      callDBSCANAPI();
     }
   }, [mapLoaded]);
 
@@ -713,6 +739,44 @@ export function AnalyticsMapComponent() {
           </div>
 
           <div className="p-2 sm:p-3 space-y-3 overflow-y-auto">
+            {/* Statistics Card - Now prominently at the top */}
+            {apiResponse?.results && (
+              <Card className="shadow-md p-3 sm:p-4 bg-gradient-to-br from-blue-50 to-white border-2 border-blue-200">
+                <div className="flex items-center gap-2 mb-3 min-w-0">
+                  <Activity className="h-5 w-5 text-teal-600 flex-shrink-0" />
+                  <span className="text-base font-bold break-words">
+                    Clustering Results
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-200">
+                    <p className="text-xs text-gray-500 mb-1">Total Reports</p>
+                    <p className="text-2xl font-bold text-gray-800">
+                      {apiResponse?.results?.summary?.total_points ?? 0}
+                    </p>
+                  </div>
+                  <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-200">
+                    <p className="text-xs text-gray-500 mb-1">Clusters Found</p>
+                    <p className="text-2xl font-bold text-blue-600">
+                      {apiResponse?.results?.summary?.n_clusters ?? 0}
+                    </p>
+                  </div>
+                  <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-200">
+                    <p className="text-xs text-gray-500 mb-1">Noise Points</p>
+                    <p className="text-2xl font-bold text-orange-600">
+                      {apiResponse?.results?.summary?.n_noise_points ?? 0}
+                    </p>
+                  </div>
+                  <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-200">
+                    <p className="text-xs text-gray-500 mb-1">Noise %</p>
+                    <p className="text-2xl font-bold text-red-600">
+                      {(apiResponse?.results?.summary?.noise_percentage ?? 0).toFixed(1)}%
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            )}
+
             <Card className="shadow-sm p-2 sm:p-3 bg-white border border-gray-200">
               <div className="text-left">
                 <p className="text-xs text-gray-600 mb-2">
@@ -881,6 +945,227 @@ export function AnalyticsMapComponent() {
                 </div>
               </Card>
             )}
+
+            {/* Reports List Section */}
+            {apiResponse?.results && (
+              <Card className="shadow-sm p-2 sm:p-3 bg-white border border-gray-200">
+                <div className="flex items-center gap-2 mb-2 min-w-0">
+                  <MapPin className="h-4 w-4 text-purple-600 flex-shrink-0" />
+                  <span className="text-sm font-semibold break-words">
+                    Reports List
+                  </span>
+                </div>
+                
+                {/* Search and Filter Controls */}
+                <div className="space-y-2 mb-3">
+                  <div className="relative">
+                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+                    <Input
+                      type="text"
+                      placeholder="Search by product name or ID..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-8 h-8 text-xs"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ALL">All Reports</SelectItem>
+                        <SelectItem value="COMPLIANT">Compliant</SelectItem>
+                        <SelectItem value="NON_COMPLIANT">Non-Compliant</SelectItem>
+                        <SelectItem value="FRAUDULENT">Fraudulent</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2 max-h-80 overflow-y-auto">
+                  {apiResponse?.results?.clusters?.map((cluster) => {
+                    // Filter reports based on search and status
+                    const filteredReports = cluster.reports?.filter((report: any) => {
+                      const reportId = report._id ?? report.report?._id;
+                      const productName = report.product ?? report.report?.scannedData?.productName ?? "Unknown Product";
+                      const reportStatus = report.status ?? report.report?.status ?? "NON_COMPLIANT";
+                      
+                      // Search filter
+                      const matchesSearch = searchQuery === "" || 
+                        productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        reportId?.toLowerCase().includes(searchQuery.toLowerCase());
+                      
+                      // Status filter
+                      const matchesStatus = statusFilter === "ALL" || reportStatus === statusFilter;
+                      
+                      return matchesSearch && matchesStatus;
+                    }) ?? [];
+
+                    if (filteredReports.length === 0) return null;
+
+                    return (
+                    <div key={cluster.cluster_id} className="space-y-1">
+                      <div className="text-xs font-medium text-gray-700 sticky top-0 bg-white py-1">
+                        Cluster {cluster.cluster_id} ({filteredReports.length} reports)
+                      </div>
+                      {filteredReports.map((report: any, idx: number) => {
+                        const reportId = report._id ?? report.report?._id;
+                        const productName = report.product ?? report.report?.scannedData?.productName ?? "Unknown Product";
+                        const reportStatus = report.status ?? report.report?.status ?? "NON_COMPLIANT";
+                        const lat = report.lat ?? report.latitude ?? report.coordinates?.[1];
+                        const lng = report.lng ?? report.longitude ?? report.long ?? report.coordinates?.[0];
+                        
+                        return (
+                          <button
+                            key={reportId || idx}
+                            onClick={() => {
+                              if (reportId && googleMapRef.current) {
+                                // Pan to report location on map
+                                if (lat && lng) {
+                                  googleMapRef.current.panTo({ lat: Number(lat), lng: Number(lng) });
+                                  googleMapRef.current.setZoom(15);
+                                }
+                                // Fetch and show report details
+                                apiClient.get(`/analytics/reports/${reportId}`)
+                                  .then(response => {
+                                    const reportData = response.data.data;
+                                    setSelectedReport({ 
+                                      ...report, 
+                                      ...reportData,
+                                      reportId, 
+                                      currentStatus: reportData.status,
+                                      position: [lng, lat]
+                                    });
+                                    setOriginalStatus(reportData.status);
+                                    setResolutionStatus(reportData.status);
+                                    setChangeStatus(false);
+                                  })
+                                  .catch(err => {
+                                    console.error('Failed to fetch report:', err);
+                                  });
+                              }
+                            }}
+                            className="w-full text-left p-2 rounded hover:bg-gray-50 border border-gray-200 transition-colors"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="text-xs font-medium text-gray-800 truncate">
+                                  {productName}
+                                </div>
+                                <div className="text-xs text-gray-500 truncate">
+                                  {reportId ? `ID: ${reportId.slice(0, 8)}...` : 'No ID'}
+                                </div>
+                              </div>
+                              <span className={`flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded ${
+                                reportStatus === 'COMPLIANT' ? 'bg-green-100 text-green-700' :
+                                reportStatus === 'FRAUDULENT' ? 'bg-red-100 text-red-700' :
+                                'bg-orange-100 text-orange-700'
+                              }`}>
+                                {reportStatus === 'COMPLIANT' ? 'OK' :
+                                 reportStatus === 'FRAUDULENT' ? 'FRD' : 'NC'}
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    );
+                  })}
+
+                  {/* Noise Points Section */}
+                  {(() => {
+                    const filteredNoisePoints = apiResponse?.results?.noise_points?.filter((report: any) => {
+                      const reportId = report._id ?? report.report?._id;
+                      const productName = report.product ?? report.report?.scannedData?.productName ?? "Unknown Product";
+                      const reportStatus = report.status ?? report.report?.status ?? "NON_COMPLIANT";
+                      
+                      const matchesSearch = searchQuery === "" || 
+                        productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        reportId?.toLowerCase().includes(searchQuery.toLowerCase());
+                      
+                      const matchesStatus = statusFilter === "ALL" || reportStatus === statusFilter;
+                      
+                      return matchesSearch && matchesStatus;
+                    }) ?? [];
+
+                    if (filteredNoisePoints.length === 0) return null;
+
+                    return (
+                    <div className="space-y-1 pt-2 border-t">
+                      <div className="text-xs font-medium text-gray-700 sticky top-0 bg-white py-1">
+                        Noise Points ({filteredNoisePoints.length})
+                      </div>
+                      {filteredNoisePoints.slice(0, 10).map((report: any, idx: number) => {
+                        const reportId = report._id ?? report.report?._id;
+                        const productName = report.product ?? report.report?.scannedData?.productName ?? "Unknown Product";
+                        const reportStatus = report.status ?? report.report?.status ?? "NON_COMPLIANT";
+                        const lat = report.lat ?? report.latitude ?? report.coordinates?.[1];
+                        const lng = report.lng ?? report.longitude ?? report.long ?? report.coordinates?.[0];
+                        
+                        return (
+                          <button
+                            key={reportId || idx}
+                            onClick={() => {
+                              if (reportId && googleMapRef.current) {
+                                if (lat && lng) {
+                                  googleMapRef.current.panTo({ lat: Number(lat), lng: Number(lng) });
+                                  googleMapRef.current.setZoom(15);
+                                }
+                                apiClient.get(`/analytics/reports/${reportId}`)
+                                  .then(response => {
+                                    const reportData = response.data.data;
+                                    setSelectedReport({ 
+                                      ...report, 
+                                      ...reportData,
+                                      reportId, 
+                                      currentStatus: reportData.status,
+                                      position: [lng, lat]
+                                    });
+                                    setOriginalStatus(reportData.status);
+                                    setResolutionStatus(reportData.status);
+                                    setChangeStatus(false);
+                                  })
+                                  .catch(err => {
+                                    console.error('Failed to fetch report:', err);
+                                  });
+                              }
+                            }}
+                            className="w-full text-left p-2 rounded hover:bg-gray-50 border border-gray-200 transition-colors"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="text-xs font-medium text-gray-800 truncate">
+                                  {productName}
+                                </div>
+                                <div className="text-xs text-gray-500 truncate">
+                                  {reportId ? `ID: ${reportId.slice(0, 8)}...` : 'No ID'}
+                                </div>
+                              </div>
+                              <span className={`flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded ${
+                                reportStatus === 'COMPLIANT' ? 'bg-green-100 text-green-700' :
+                                reportStatus === 'FRAUDULENT' ? 'bg-red-100 text-red-700' :
+                                'bg-orange-100 text-orange-700'
+                              }`}>
+                                {reportStatus === 'COMPLIANT' ? 'OK' :
+                                 reportStatus === 'FRAUDULENT' ? 'FRD' : 'NC'}
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                      {filteredNoisePoints.length > 10 && (
+                        <div className="text-xs text-gray-500 text-center py-1">
+                          Showing 10 of {filteredNoisePoints.length} noise points
+                        </div>
+                      )}
+                    </div>
+                    );
+                  })()}
+                </div>
+              </Card>
+            )}
           </div>
         </div>
       </div>
@@ -895,7 +1180,42 @@ export function AnalyticsMapComponent() {
           </DialogHeader>
 
           {selectedReport && (
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-[70vh] overflow-y-auto">
+              {/* Report Images */}
+              {(selectedReport.frontImageUrl || selectedReport.backImageUrl) && (
+                <div className="border-b pb-3">
+                  <p className="text-sm font-medium text-neutral-500 mb-2">
+                    Product Images
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {selectedReport.frontImageUrl && (
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Front</p>
+                        <img 
+                          src={selectedReport.frontImageUrl} 
+                          alt="Front" 
+                          className="w-full h-32 object-cover rounded border"
+                          onClick={() => window.open(selectedReport.frontImageUrl, '_blank')}
+                          style={{ cursor: 'pointer' }}
+                        />
+                      </div>
+                    )}
+                    {selectedReport.backImageUrl && (
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Back</p>
+                        <img 
+                          src={selectedReport.backImageUrl} 
+                          alt="Back" 
+                          className="w-full h-32 object-cover rounded border"
+                          onClick={() => window.open(selectedReport.backImageUrl, '_blank')}
+                          style={{ cursor: 'pointer' }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Report ID */}
               {selectedReport.reportId && (
                 <div className="border-b pb-3">
@@ -908,13 +1228,55 @@ export function AnalyticsMapComponent() {
                 </div>
               )}
 
+              {/* Reporter Info */}
+              {(selectedReport.agent || selectedReport.agentId) && (
+                <div className="border-b pb-3">
+                  <p className="text-sm font-medium text-neutral-500 mb-1">
+                    Reported By
+                  </p>
+                  <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                    {selectedReport.agent ? (
+                      <>
+                        <p className="text-base font-semibold text-blue-900 mb-1">
+                          {selectedReport.agent.firstName && selectedReport.agent.lastName
+                            ? `${selectedReport.agent.firstName} ${selectedReport.agent.lastName}`
+                            : selectedReport.agent.email}
+                        </p>
+                        <p className="text-sm text-blue-700">
+                          {selectedReport.agent.email}
+                        </p>
+                        <p className="text-xs text-blue-600 mt-1 font-mono">
+                          ID: {selectedReport.agentId}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-sm font-mono text-blue-900">
+                        Agent ID: {selectedReport.agentId}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Timestamp */}
+              {selectedReport.createdAt && (
+                <div className="border-b pb-3">
+                  <p className="text-sm font-medium text-neutral-500 mb-1">
+                    Report Time
+                  </p>
+                  <p className="text-sm text-neutral-900">
+                    {new Date(selectedReport.createdAt).toLocaleString()}
+                  </p>
+                </div>
+              )}
+
               {/* Product Name */}
               <div className="border-b pb-3">
                 <p className="text-sm font-medium text-neutral-500 mb-1">
                   Product
                 </p>
                 <p className="text-base text-neutral-900">
-                  {selectedReport.product || "N/A"}
+                  {selectedReport.product || selectedReport.scannedData?.productName || "N/A"}
                 </p>
               </div>
 
@@ -945,9 +1307,14 @@ export function AnalyticsMapComponent() {
                 <p className="text-sm font-medium text-neutral-500 mb-1">
                   Location
                 </p>
-                <p className="text-sm font-mono text-neutral-900">
-                  Lat: {selectedReport.position[1].toFixed(6)}, Lng:{" "}
-                  {selectedReport.position[0].toFixed(6)}
+                {selectedReport.location?.address && (
+                  <p className="text-sm text-neutral-900 mb-1">
+                    {selectedReport.location.address}
+                  </p>
+                )}
+                <p className="text-sm font-mono text-neutral-700">
+                  Lat: {(selectedReport.position?.[1] || selectedReport.location?.latitude || 0).toFixed(6)}, Lng:{" "}
+                  {(selectedReport.position?.[0] || selectedReport.location?.longitude || 0).toFixed(6)}
                 </p>
               </div>
 
@@ -957,47 +1324,70 @@ export function AnalyticsMapComponent() {
                   <p className="text-sm font-medium text-neutral-500 mb-1">
                     Current Status
                   </p>
-                  <p className="text-base text-neutral-900">
-                    {selectedReport.currentStatus === 'COMPLIANT' 
-                      ? 'Compliant'
-                      : selectedReport.currentStatus === 'NON_COMPLIANT'
-                      ? 'Non-Compliant'
-                      : 'Fraudulent'}
+                  <div className="flex items-center gap-2">
+                    <p className={`text-base font-medium ${
+                      selectedReport.isVerified ? 'text-red-600' : 'text-neutral-900'
+                    }`}>
+                      {selectedReport.currentStatus === 'COMPLIANT' 
+                        ? 'Compliant'
+                        : selectedReport.currentStatus === 'NON_COMPLIANT'
+                        ? 'Non-Compliant'
+                        : 'Fraudulent'}
+                    </p>
+                    {selectedReport.isVerified && (
+                      <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded">
+                        APPROVED
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Status Change Controls */}
+              {!selectedReport.isVerified && (
+                <div className="border-b pb-3">
+                  <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
+                    <p className="text-sm font-medium text-amber-900 mb-2">
+                      📋 Review & Change Status
+                    </p>
+                    <p className="text-xs text-amber-700 mb-3">
+                      Select a new status to change the report classification, or keep the current status to approve as-is.
+                    </p>
+                    <Select value={resolutionStatus} onValueChange={setResolutionStatus}>
+                      <SelectTrigger className="w-full bg-white">
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="COMPLIANT">✅ Compliant</SelectItem>
+                        <SelectItem value="NON_COMPLIANT">⚠️ Non-Compliant</SelectItem>
+                        <SelectItem value="FRAUDULENT">🚫 Fraudulent</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+
+              {/* Additional Notes if available */}
+              {selectedReport.additionalNotes && (
+                <div className="border-b pb-3">
+                  <p className="text-sm font-medium text-neutral-500 mb-1">
+                    Agent Notes
+                  </p>
+                  <p className="text-sm text-neutral-900 bg-gray-50 p-2 rounded">
+                    {selectedReport.additionalNotes}
                   </p>
                 </div>
               )}
 
-              {/* Change Status Checkbox */}
-              <div className="border-b pb-3">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={changeStatus}
-                    onChange={(e) => setChangeStatus(e.target.checked)}
-                    className="w-4 h-4 rounded border-gray-300"
-                  />
-                  <span className="text-sm font-medium text-neutral-700">
-                    Change Status (Deny)
-                  </span>
-                </label>
-              </div>
-
-              {/* Status Dropdown (only shown if checkbox is checked) */}
-              {changeStatus && (
+              {/* OCR Text if available */}
+              {selectedReport.ocrBlobText && (
                 <div className="border-b pb-3">
                   <p className="text-sm font-medium text-neutral-500 mb-1">
-                    New Status
+                    OCR Text
                   </p>
-                  <Select value={resolutionStatus} onValueChange={setResolutionStatus}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="COMPLIANT">Compliant</SelectItem>
-                      <SelectItem value="NON_COMPLIANT">Non-Compliant</SelectItem>
-                      <SelectItem value="FRAUDULENT">Fraudulent</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <p className="text-xs text-neutral-700 bg-gray-50 p-2 rounded max-h-32 overflow-y-auto font-mono">
+                    {selectedReport.ocrBlobText}
+                  </p>
                 </div>
               )}
             </div>
@@ -1008,8 +1398,10 @@ export function AnalyticsMapComponent() {
               variant="outline"
               onClick={() => {
                 if (selectedReport) {
+                  const lat = selectedReport.position?.[1] || selectedReport.location?.latitude || 0;
+                  const lng = selectedReport.position?.[0] || selectedReport.location?.longitude || 0;
                   window.open(
-                    `https://www.google.com/maps?q=${selectedReport.position[1]},${selectedReport.position[0]}`,
+                    `https://www.google.com/maps?q=${lat},${lng}`,
                     "_blank"
                   );
                 }
@@ -1024,8 +1416,10 @@ export function AnalyticsMapComponent() {
                   handleResolveReport(selectedReport.reportId);
                 }
               }}
+              disabled={selectedReport?.isVerified}
+              className={selectedReport?.isVerified ? 'bg-red-600 hover:bg-red-600 cursor-not-allowed' : ''}
             >
-              Approve
+              {selectedReport?.isVerified ? 'Already Approved' : 'Approve'}
             </Button>
           </DialogFooter>
         </DialogContent>

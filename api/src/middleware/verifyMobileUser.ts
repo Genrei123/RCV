@@ -50,6 +50,12 @@ export const verifyMobileUser = async (
       throw new CustomError(404, 'User not found', { success: false });
     }
 
+    console.log('[VerifyMobileUser] User authenticated:', {
+      userId: user._id,
+      fullName: user.fullName,
+      email: user.email
+    });
+
     // Add the user to the request object
     req.user = user;
     next();

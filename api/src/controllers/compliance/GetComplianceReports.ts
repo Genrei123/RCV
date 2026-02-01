@@ -50,7 +50,7 @@ export const getComplianceReports = async (
 };
 
 /**
- * Get a single compliance report by ID
+ * Get a single compliance report by ID (for mobile users - their own reports only)
  * GET /api/v1/mobile/compliance/reports/:id
  */
 export const getComplianceReportById = async (
@@ -75,6 +75,45 @@ export const getComplianceReportById = async (
         _id: reportId,
         agentId: userId 
       }
+    });
+
+    if (!report) {
+      return next(new CustomError(404, 'Report not found'));
+    }
+
+    res.status(200).json({
+      success: true,
+      data: report
+    });
+  } catch (error: any) {
+    console.error('Error fetching compliance report:', error);
+    return next(new CustomError(500, error.message || 'Failed to fetch compliance report'));
+  }
+};
+
+/**
+ * Get a single compliance report by ID (for administrators)
+ * GET /api/v1/analytics/reports/:id
+ */
+export const getComplianceReportByIdForAdmin = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const user = (req as any).user;
+    const reportId = req.params.id;
+    
+    if (!user || !user._id) {
+      return next(new CustomError(401, 'User not authenticated'));
+    }
+
+    const complianceRepo = DB.getRepository(ComplianceReport);
+    
+    // Admin can view any report (no agentId filter)
+    const report = await complianceRepo.findOne({
+      where: { _id: reportId },
+      relations: ['agent']
     });
 
     if (!report) {
