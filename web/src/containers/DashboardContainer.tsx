@@ -147,7 +147,7 @@ export function DashboardContainer() {
   };
 
   const handleSort = (sortBy: string) => {
-    console.log("Sort by:", sortBy);
+    return sortBy;
     // Implement sorting logic here
   };
 

@@ -5,8 +5,7 @@ export class FirestoreService {
   static async testConnection(): Promise<boolean> {
     try {
       const usersCollection = collection(db, 'users');
-      const snapshot = await getDocs(usersCollection);
-      console.log(`Connected to Firebase! Found ${snapshot.size} users.`);
+      await getDocs(usersCollection);
       return true;
     } catch (error) {
       console.error('Firebase connection failed:', error);
