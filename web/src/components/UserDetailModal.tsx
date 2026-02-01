@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   X,
   User as UserIcon,
@@ -12,12 +13,11 @@ import {
   XCircle,
   FileText,
   Image,
-  Monitor,
-  Smartphone,
   Loader2,
   Wallet,
   Copy,
   Check,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -48,9 +48,7 @@ export function UserDetailModal({
   onReject,
   onAccessUpdate,
 }: UserDetailModalProps) {
-  const [accessLoading, setAccessLoading] = useState(false);
-  const [localWebAccess, setLocalWebAccess] = useState(false);
-  const [localAppAccess, setLocalAppAccess] = useState(true);
+  const navigate = useNavigate();
   
   // Wallet management state
   const [walletAddress, setWalletAddress] = useState("");
@@ -67,12 +65,10 @@ export function UserDetailModal({
   // Update local state when user changes
   useEffect(() => {
     if (user) {
-      setLocalWebAccess(user.webAccess ?? false);
-      setLocalAppAccess(user.appAccess ?? true);
       setWalletAddress(user.walletAddress || "");
       setAuthorizeWallet(user.walletAuthorized ?? false);
     }
-  }, [user?._id, user?.webAccess, user?.appAccess, user?.walletAddress, user?.walletAuthorized]);
+  }, [user?._id, user?.walletAddress, user?.walletAuthorized]);
 
   // Disable background scroll when modal is open (match AddAgentModal behavior)
   useEffect(() => {
@@ -105,8 +101,6 @@ export function UserDetailModal({
 
   // Check if user is rejected - rejected users have no access and cannot be modified
   const isRejected = user.status === "Rejected";
-  // Check if user is admin - admins always have full access
-  const isAdmin = user.role === "ADMIN";
 
   // Copy wallet address to clipboard
   const handleCopyWallet = () => {
@@ -159,48 +153,25 @@ export function UserDetailModal({
     }
   };
 
-  const handleAccessChange = async (type: 'web' | 'app', value: boolean) => {
-    if (!user?._id) return;
-    
-    // Don't allow access changes for rejected users
-    if (isRejected) {
-      toast.error("Cannot modify access for rejected users");
+  const handleViewProfileAndActivities = () => {
+    if (!user?._id) {
+      toast.error("User ID is missing");
       return;
     }
-
-    // Don't allow access changes for admin users - they always have full access
-    if (isAdmin) {
-      toast.error("Admin users always have full access to both platforms");
-      return;
-    }
-
-    const newWebAccess = type === 'web' ? value : localWebAccess;
-    const newAppAccess = type === 'app' ? value : localAppAccess;
-
-    // Ensure at least one access type is enabled
-    if (!newWebAccess && !newAppAccess) {
-      toast.error("User must have at least one access type enabled");
-      return;
-    }
-
-    // Update local state immediately for responsiveness
-    if (type === 'web') setLocalWebAccess(value);
-    if (type === 'app') setLocalAppAccess(value);
-
-    setAccessLoading(true);
-    try {
-      await UserPageService.updateUserAccess(user._id, newWebAccess, newAppAccess);
-      toast.success("Access permissions updated");
-      // Notify parent to refresh
-      onAccessUpdate?.({ ...user, webAccess: newWebAccess, appAccess: newAppAccess });
-    } catch (error) {
-      // Revert on error
-      if (type === 'web') setLocalWebAccess(!value);
-      if (type === 'app') setLocalAppAccess(!value);
-      toast.error("Failed to update access permissions");
-    } finally {
-      setAccessLoading(false);
-    }
+    console.log("🔍 Navigating to user profile for ID:", user._id);
+    navigate(`/users/${user._id}`, {
+      state: {
+        userHint: {
+          id: user._id,
+          name: user.fullName || `${user.firstName} ${user.lastName}`.trim(),
+          email: user.email,
+          role: user.role,
+          badgeId: user.badgeId,
+          location: { address: user.location },
+        },
+      },
+    });
+    onClose();
   };
 
   // Handle promotion of agent to admin
@@ -344,7 +315,7 @@ export function UserDetailModal({
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:app-bg-neutral rounded-lg transition-colors"
+            className="p-2 hover:app-bg-error rounded-lg transition-colors"
           >
             <X className="h-5 w-5 app-text-subtle" />
           </button>
@@ -635,89 +606,6 @@ export function UserDetailModal({
               </div>
             </div>
 
-            {/* Access Permissions */}
-            <div className="border-t pt-6">
-              <h3 className="text-lg font-semibold app-text mb-4 flex items-center gap-2">
-                <Shield className="h-5 w-5" />
-                Access Permissions
-              </h3>
-              {isRejected ? (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <p className="text-sm text-red-700">
-                    This user has been rejected and has no access to any platform.
-                  </p>
-                </div>
-              ) : isAdmin ? (
-                /* Admin users always have full access */
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <p className="text-sm text-blue-700">
-                    Admin users always have full access to both the mobile app and web dashboard.
-                  </p>
-                  <div className="mt-3 flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                      <Smartphone className="h-4 w-4 text-blue-600" />
-                      <span className="text-sm font-medium text-blue-700">Mobile App</span>
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Monitor className="h-4 w-4 text-green-600" />
-                      <span className="text-sm font-medium text-blue-700">Web Dashboard</span>
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="app-bg-neutral rounded-lg p-4 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Smartphone className="h-5 w-5 text-blue-600" />
-                      <div>
-                        <Label htmlFor="app-access" className="text-sm font-medium cursor-pointer">
-                          Mobile App Access
-                        </Label>
-                        <p className="text-xs text-gray-500">
-                          Allow user to access the mobile application
-                        </p>
-                      </div>
-                    </div>
-                    <Checkbox
-                      id="app-access"
-                      checked={localAppAccess}
-                      onCheckedChange={(checked) => handleAccessChange('app', checked as boolean)}
-                      disabled={accessLoading}
-                      className="h-5 w-5"
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Monitor className="h-5 w-5 text-green-600" />
-                      <div>
-                        <Label htmlFor="web-access" className="text-sm font-medium cursor-pointer">
-                          Web Dashboard Access
-                        </Label>
-                        <p className="text-xs text-gray-500">
-                          Allow user to access the web dashboard
-                        </p>
-                      </div>
-                    </div>
-                    <Checkbox
-                      id="web-access"
-                      checked={localWebAccess}
-                      onCheckedChange={(checked) => handleAccessChange('web', checked as boolean)}
-                      disabled={accessLoading}
-                      className="h-5 w-5"
-                    />
-                  </div>
-                  {accessLoading && (
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Updating permissions...
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
             {/* Blockchain Wallet Section */}
             <div className="border-t pt-6">
               <h3 className="text-lg font-semibold app-text mb-4 flex items-center gap-2">
@@ -781,7 +669,7 @@ export function UserDetailModal({
                       onClick={handleUpdateWallet}
                       disabled={walletLoading || isRejected || !walletAddress}
                       size="sm"
-                      className="app-bg-primary hover:app-bg-accent"
+                      className="app-bg-primary hover:app-bg-secondary"
                     >
                       {walletLoading ? (
                         <>
@@ -938,7 +826,7 @@ export function UserDetailModal({
                         <Button
                           onClick={handlePromoteToAdmin}
                           disabled={promotionLoading}
-                          className="bg-blue-600 hover:bg-blue-700 text-white"
+                          className="app-bg-primary hover:app-bg-secondary text-white"
                           size="sm"
                         >
                           {promotionLoading ? (
@@ -992,11 +880,19 @@ export function UserDetailModal({
             </div>
           )}
 
-          {/* Close Button */}
-          <div className="flex justify-end pt-6 border-t mt-6">
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-3 pt-6 border-t mt-6">
+            <Button
+              onClick={handleViewProfileAndActivities}
+              className="flex items-center gap-2 app-bg-primary hover:app-bg-secondary text-white cursor-pointer"
+            >
+              <Eye className="h-4 w-4" />
+              View Profile & Activities
+            </Button>
             <Button
               onClick={onClose}
-              className="app-bg-primary hover:opacity-90 text-white cursor-pointer"
+              variant="outline"
+              className="cursor-pointer"
             >
               Close
             </Button>

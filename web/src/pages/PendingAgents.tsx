@@ -677,7 +677,7 @@ export function PendingAgents({ user }: PendingAgentsProps) {
                         setViewDetailsOpen(false);
                         setRejectDialogOpen(true);
                       }}
-                      className="flex-1"
+                      className="flex-1 hover:app-bg-error"
                     >
                       <XCircle className="w-4 h-4 mr-2" />
                       Reject
@@ -722,6 +722,7 @@ export function PendingAgents({ user }: PendingAgentsProps) {
               variant="destructive"
               onClick={handleReject}
               disabled={actionLoading || !rejectionReason.trim()}
+              className="hover:app-bg-error"
             >
               {actionLoading ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -754,6 +755,7 @@ export function PendingAgents({ user }: PendingAgentsProps) {
               variant="destructive"
               onClick={handleDelete}
               disabled={actionLoading}
+              className="hover:app-bg-error"
             >
               {actionLoading ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />

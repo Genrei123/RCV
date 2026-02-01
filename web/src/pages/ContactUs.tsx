@@ -40,7 +40,7 @@ export function Contact() {
     <PageContainer title="Contact" description="Send us a review">
       <Button
         onClick={() => navigate(-1)}
-        className="app-bg-primary hover:bg-[#009b79] app-text-white mb-8"
+        className="app-bg-primary hover:app-bg-secondary app-text-white mb-8"
       >
         <ChevronLeft className="w-4 h-4 mr-1" />
         Back to Page
@@ -133,7 +133,7 @@ export function Contact() {
 
                 <Button
                   type="submit"
-                  className="app-bg-primary hover:bg-[#009b79] app-text-white transition-colors duration-200"
+                  className="app-bg-primary hover:app-bg-secondary app-text-white transition-colors duration-200"
                 >
                   Send Message
                 </Button>

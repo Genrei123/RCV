@@ -156,7 +156,7 @@ export function LandingPage() {
               {/* Get Started Button */}
               <Button
                 onClick={() => navigate("/login")}
-                className="app-bg-primary hover:bg-[#009b79] app-text-white px-6 hover:text-white cursor-pointer"
+                className="app-bg-primary hover:app-bg-secondary app-text-white px-6 hover:text-white cursor-pointer"
               >
                 Get Started
               </Button>
