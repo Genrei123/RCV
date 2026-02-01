@@ -269,7 +269,7 @@ export class SanityService {
    * Fetch mobile app showcase
    */
   static async getMobileAppShowcase() {
-    const query = `*[_type == "mobileAppShowcase"][0] {
+    const query = `*[_type == "mobileAppShowcase"] | order(_createdAt asc) {
       _id,
       title,
       subtitle,

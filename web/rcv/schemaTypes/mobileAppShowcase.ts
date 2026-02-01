@@ -127,14 +127,16 @@ export default defineType({
           ],
           preview: {
             select: {
-              title: 'title',
               media: 'image',
               order: 'order',
+              hotspots: 'hotspots',
             },
             prepare(selection) {
-              const {title, order} = selection
+              const {order, hotspots} = selection
+              const hotspotCount = hotspots?.length || 0
               return {
-                title: `${order + 1}. ${title}`,
+                title: `Screenshot ${order + 1}`,
+                subtitle: `${hotspotCount} hotspot${hotspotCount !== 1 ? 's' : ''}`,
                 media: selection.media,
               }
             },

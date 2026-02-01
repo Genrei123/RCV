@@ -74,7 +74,7 @@ export function LandingPage() {
   const [objectives, setObjectives] = useState<any[]>(fallbackObjectives);
   const [videoSection, setVideoSection] = useState<SanityVideoSection | null>(null);
   const [featuredBlogs, setFeaturedBlogs] = useState<SanityBlogPost[]>([]);
-  const [mobileAppShowcase, setMobileAppShowcase] = useState<SanityMobileAppShowcase | null>(null);
+  const [mobileAppShowcase, setMobileAppShowcase] = useState<SanityMobileAppShowcase[]>([]);
   const [kioskShowcase, setKioskShowcase] = useState<SanityKioskShowcase | null>(null);
   const [showcaseView, setShowcaseView] = useState<'mobile' | 'kiosk'>('mobile');
 
@@ -89,7 +89,7 @@ export function LandingPage() {
           SanityService.getObjectives().catch(() => []),
           SanityService.getVideoSection().catch(() => null),
           SanityService.getFeaturedBlogPosts(3).catch(() => []),
-          SanityService.getMobileAppShowcase().catch(() => null),
+          SanityService.getMobileAppShowcase().catch(() => []),
           SanityService.getKioskShowcase().catch(() => null),
         ]);
 
@@ -388,12 +388,12 @@ export function LandingPage() {
       )}
 
       {/* Showcase Section with Toggle */}
-      {(mobileAppShowcase || kioskShowcase) && (
+      {(mobileAppShowcase.length > 0 || kioskShowcase) && (
         <section className="py-20 app-bg-neutral-soft">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             {/* Toggle Buttons */}
-            {mobileAppShowcase && kioskShowcase && (
-              <div className="flex justify-center mb-12">
+            {mobileAppShowcase.length > 0 && kioskShowcase && (
+              <div className="flex justify-center mb-8">
                 <div className="inline-flex rounded-lg bg-white p-1 shadow-md">
                   <button
                     onClick={() => setShowcaseView('mobile')}
@@ -423,7 +423,7 @@ export function LandingPage() {
           </div>
 
           {/* Mobile App Showcase */}
-          {showcaseView === 'mobile' && mobileAppShowcase && (
+          {showcaseView === 'mobile' && mobileAppShowcase.length > 0 && (
             <MobileAppShowcase data={mobileAppShowcase} />
           )}
 
@@ -437,7 +437,7 @@ export function LandingPage() {
       {/* Features Section */}
       <section id="features" className="py-20 app-bg-neutral-soft">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
+          <div className="text-center mb-8">
             <span className="inline-block px-4 py-1.5 app-bg-primary text-white rounded-full text-sm font-medium mb-4">
               Features
             </span>
