@@ -28,6 +28,14 @@ import base64
 from urllib.parse import urljoin
 import math
 
+# GPIO for Raspberry Pi LED control
+GPIO_AVAILABLE = False
+try:
+    import RPi.GPIO as GPIO
+    GPIO_AVAILABLE = True
+except ImportError:
+    print("RPi.GPIO not available. LED indicators disabled. Install with: pip install RPi.GPIO")
+
 # Load environment variables
 try:
     from dotenv import load_dotenv
@@ -101,6 +109,13 @@ class Colors:
     ACCENT = "#00BFA5"           # Teal accent
     GRADIENT_START = "#005440"   # Gradient start
     GRADIENT_END = "#00755A"     # Gradient end
+
+# GPIO Pin Configuration for Status LEDs
+class LEDPins:
+    """GPIO Pin definitions for status LEDs on Raspberry Pi"""
+    PIN_PROCESSING = 17   # GPIO 17 - Blinks during processing
+    PIN_SUCCESS = 27      # GPIO 27 - Solid when scan successful
+    PIN_ERROR = 22        # GPIO 22 - Solid when error occurs
 
 class KioskState(Enum):
     IDLE = "idle"                      # Ready to scan - camera active
@@ -486,6 +501,153 @@ class TagalogMessages:
     ERROR_OCCURRED = "May nangyaring error. Subukan muli."
 
 # ============================================================================
+# GPIO LED Control Service
+# ============================================================================
+class GPIOLEDService:
+    """Service to control status LEDs via GPIO on Raspberry Pi"""
+    
+    def __init__(self):
+        self.enabled = GPIO_AVAILABLE
+        self.blink_thread = None
+        self.is_blinking = False
+        self.blink_stop_event = threading.Event()
+        
+        if self.enabled:
+            try:
+                # Setup GPIO mode
+                GPIO.setmode(GPIO.BCM)
+                GPIO.setwarnings(False)
+                
+                # Setup pins as outputs
+                GPIO.setup(LEDPins.PIN_PROCESSING, GPIO.OUT)
+                GPIO.setup(LEDPins.PIN_SUCCESS, GPIO.OUT)
+                GPIO.setup(LEDPins.PIN_ERROR, GPIO.OUT)
+                
+                # Turn all LEDs off initially
+                self.all_off()
+                print("✅ GPIO LEDs initialized (Pins: 17, 27, 22)")
+            except Exception as e:
+                print(f"⚠️ GPIO initialization failed: {e}")
+                self.enabled = False
+    
+    def all_off(self):
+        """Turn off all LEDs"""
+        if not self.enabled:
+            return
+        try:
+            GPIO.output(LEDPins.PIN_PROCESSING, GPIO.LOW)
+            GPIO.output(LEDPins.PIN_SUCCESS, GPIO.LOW)
+            GPIO.output(LEDPins.PIN_ERROR, GPIO.LOW)
+        except Exception as e:
+            print(f"GPIO error (all_off): {e}")
+    
+    def start_processing(self):
+        """Start blinking processing LED (GPIO 17)"""
+        if not self.enabled:
+            return
+        
+        # Stop any existing blink
+        self.stop_blinking()
+        
+        # Turn off other LEDs
+        try:
+            GPIO.output(LEDPins.PIN_SUCCESS, GPIO.LOW)
+            GPIO.output(LEDPins.PIN_ERROR, GPIO.LOW)
+        except:
+            pass
+        
+        # Start blinking thread
+        self.is_blinking = True
+        self.blink_stop_event.clear()
+        self.blink_thread = threading.Thread(target=self._blink_processing, daemon=True)
+        self.blink_thread.start()
+        print("🔄 Processing LED blinking (GPIO 17)")
+    
+    def _blink_processing(self):
+        """Blink the processing LED at 2Hz (500ms on/off)"""
+        try:
+            while self.is_blinking and not self.blink_stop_event.is_set():
+                GPIO.output(LEDPins.PIN_PROCESSING, GPIO.HIGH)
+                if self.blink_stop_event.wait(0.5):  # 500ms
+                    break
+                GPIO.output(LEDPins.PIN_PROCESSING, GPIO.LOW)
+                if self.blink_stop_event.wait(0.5):  # 500ms
+                    break
+        except Exception as e:
+            print(f"GPIO blink error: {e}")
+        finally:
+            try:
+                GPIO.output(LEDPins.PIN_PROCESSING, GPIO.LOW)
+            except:
+                pass
+    
+    def stop_blinking(self):
+        """Stop blinking processing LED"""
+        if not self.enabled:
+            return
+        
+        self.is_blinking = False
+        self.blink_stop_event.set()
+        
+        if self.blink_thread and self.blink_thread.is_alive():
+            self.blink_thread.join(timeout=1.5)
+        
+        try:
+            GPIO.output(LEDPins.PIN_PROCESSING, GPIO.LOW)
+        except:
+            pass
+    
+    def show_success(self):
+        """Show success - solid green LED (GPIO 27)"""
+        if not self.enabled:
+            return
+        
+        self.stop_blinking()
+        try:
+            GPIO.output(LEDPins.PIN_PROCESSING, GPIO.LOW)
+            GPIO.output(LEDPins.PIN_SUCCESS, GPIO.HIGH)
+            GPIO.output(LEDPins.PIN_ERROR, GPIO.LOW)
+            print("✅ Success LED ON (GPIO 27)")
+        except Exception as e:
+            print(f"GPIO error (success): {e}")
+    
+    def show_error(self):
+        """Show error - solid red LED (GPIO 22)"""
+        if not self.enabled:
+            return
+        
+        self.stop_blinking()
+        try:
+            GPIO.output(LEDPins.PIN_PROCESSING, GPIO.LOW)
+            GPIO.output(LEDPins.PIN_SUCCESS, GPIO.LOW)
+            GPIO.output(LEDPins.PIN_ERROR, GPIO.HIGH)
+            print("❌ Error LED ON (GPIO 22)")
+        except Exception as e:
+            print(f"GPIO error (error): {e}")
+    
+    def show_idle(self):
+        """Show idle state - all LEDs off"""
+        if not self.enabled:
+            return
+        
+        self.stop_blinking()
+        self.all_off()
+        print("💤 All LEDs OFF (idle)")
+    
+    def cleanup(self):
+        """Cleanup GPIO on exit"""
+        if not self.enabled:
+            return
+        
+        self.stop_blinking()
+        self.all_off()
+        try:
+            GPIO.cleanup()
+            print("🧹 GPIO cleanup complete")
+        except:
+            pass
+
+# ============================================================================
 # Main Kiosk Application
 # ============================================================================
 class KioskApp:
@@ -535,6 +697,7 @@ class KioskApp:
         # Services
         self.tts = TTSService()
         self.api = RCVApiService()  # RCV API Service
+        self.gpio_led = GPIOLEDService()  # GPIO LED control for status indication
         
         # Connectivity monitoring
         self.is_online = False
@@ -1723,6 +1886,8 @@ class KioskApp:
         self.state = KioskState.PROCESSING
         self.loading_detail_label.config(text=detail_text)
         self._animate_loading_spinner()
+        # Start blinking processing LED
+        self.gpio_led.start_processing()
     
     def _show_result_screen(self):
         """Show result screen"""
@@ -1743,6 +1908,8 @@ class KioskApp:
         self.error_frame.pack(fill=tk.BOTH, expand=True)
         self.state = KioskState.ERROR
         self.start_display_timer(self.ERROR_DISPLAY_DURATION, is_error=True)
+        # Show error LED
+        self.gpio_led.show_error()
         self.tts.speak(TagalogMessages.ERROR_OCCURRED)
     
     def _show_maintenance_screen(self, message: str = "Server connection lost"):
@@ -2988,6 +3155,12 @@ class KioskApp:
         self.setup_certificate_panel(cert)
         self.log_scan("certificate", cert.__dict__)
         
+        # Update GPIO LED based on certificate status
+        if cert.status == "valid":
+            self.gpio_led.show_success()
+        else:
+            self.gpio_led.show_error()
+        
         # Show PDF panel and fetch PDF if available (2 pages)
         # Timer will start after PDF loads or if no PDF
         if cert.pdf_url:
@@ -3003,6 +3176,12 @@ class KioskApp:
         self.state = KioskState.DISPLAY_PRODUCT
         self.setup_product_panel(product)
         self.log_scan("product", product.__dict__)
+        
+        # Update GPIO LED based on product authenticity
+        if product.is_authentic:
+            self.gpio_led.show_success()
+        else:
+            self.gpio_led.show_error()
         
         # Start 30 second timer for results (no PDF to load for products)
         self.start_display_timer(self.RESULT_DISPLAY_DURATION, is_error=False)
@@ -3059,6 +3238,9 @@ class KioskApp:
         # Clear PDF cache
         self.pdf_photos = []
         self.last_scan_data = ""  # Reset last scan to allow re-scanning same QR
+        
+        # Set GPIO to idle state (all LEDs off)
+        self.gpio_led.show_idle()
         
         # Return to scan screen
         self._show_scan_screen()
@@ -3250,6 +3432,12 @@ class KioskApp:
         """Display compliance scan result"""
         is_compliant = response.get("isCompliant", False)
         found = response.get("found", False)
+        
+        # Update GPIO LED based on compliance status
+        if found and is_compliant:
+            self.gpio_led.show_success()
+        else:
+            self.gpio_led.show_error()
         
         # Update header based on result
         if not found:
@@ -3565,6 +3753,10 @@ class KioskApp:
         if self.loading_animation_id:
             self.root.after_cancel(self.loading_animation_id)
         if self.exit_timer:
+            self.root.after_cancel(self.exit_timer)
+        
+        # Cleanup GPIO
+        self.gpio_led.cleanup()
             self.root.after_cancel(self.exit_timer)
         
         # Release camera resources
