@@ -3696,7 +3696,7 @@ class _QRScannerPageState extends State<QRScannerPage>
           backImage: File(backImagePath),
         );
         
-        // Store the uploaded URLs
+        // Store the uploaded URLssss
         setState(() {
           _frontImageUrl = uploadResult['frontUrl'];
           _backImageUrl = uploadResult['backUrl'];
