@@ -759,25 +759,6 @@ export function Blockchain() {
                               <p>{txResult.certificate.version}</p>
                             </div>
                           </div>
-
-                          {/* PDF Hash */}
-                          <div className="mt-4 p-3 bg-neutral-50 rounded">
-                            <p className="text-xs text-neutral-500 mb-1">PDF Hash (SHA-256)</p>
-                            <div className="flex items-center gap-2">
-                              <code className="text-xs font-mono break-all">{txResult.certificate.pdfHash}</code>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleCopy(txResult.certificate.pdfHash, 'PDF Hash')}
-                              >
-                                {copied === 'PDF Hash' ? (
-                                  <Check className="h-3 w-3 text-green-600" />
-                                ) : (
-                                  <Copy className="h-3 w-3" />
-                                )}
-                              </Button>
-                            </div>
-                          </div>
                         </div>
 
                         {/* Verification Note */}
@@ -795,7 +776,6 @@ export function Blockchain() {
                                 entityName: txResult.certificate.entityName,
                                 entityType: txResult.certificate.entityType,
                                 certificateId: txResult.certificate.certificateId,
-                                pdfHash: txResult.certificate.pdfHash,
                                 timestamp: txResult.certificate.timestamp,
                                 blockNumber: txResult.certificate.blockNumber,
                                 blockTimestamp: txResult.certificate.blockTimestamp,
@@ -977,7 +957,6 @@ export function Blockchain() {
                             entityName: result.certificate.entityName,
                             entityType: result.certificate.entityType,
                             certificateId: result.certificate.certificateId,
-                            pdfHash: result.certificate.pdfHash,
                             timestamp: result.certificate.timestamp,
                             blockNumber: result.certificate.blockNumber,
                             blockTimestamp: result.certificate.blockTimestamp,

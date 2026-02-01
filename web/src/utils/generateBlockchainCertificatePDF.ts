@@ -4,7 +4,7 @@ export interface BlockchainCertificateData {
   entityName: string;
   entityType: 'product' | 'company';
   certificateId: string;
-  pdfHash: string;
+  pdfHash?: string; // Internal use only, not displayed to users
   timestamp: string;
   blockNumber?: number;
   blockTimestamp?: string;
@@ -241,27 +241,6 @@ export const generateBlockchainCertificatePDF = (data: BlockchainCertificateData
       { url: `https://sepolia.etherscan.io/tx/${data.previousCertificateHash}` }
     );
   }
-
-  // PDF Hash Section
-  yPos += 20;
-  doc.setDrawColor(229, 231, 235);
-  doc.line(margin, yPos, pageWidth - margin, yPos);
-
-  yPos += 10;
-  doc.setFontSize(11);
-  doc.setTextColor(...primaryColor);
-  doc.setFont('helvetica', 'bold');
-  doc.text('DOCUMENT FINGERPRINT (SHA-256)', margin, yPos);
-
-  yPos += 8;
-  doc.setFillColor(249, 250, 251); // Gray-50
-  doc.roundedRect(margin, yPos - 3, pageWidth - margin * 2, 15, 2, 2, 'F');
-  
-  yPos += 5;
-  doc.setFontSize(6);
-  doc.setFont('courier', 'normal');
-  doc.setTextColor(0, 0, 0);
-  doc.text(data.pdfHash, pageWidth / 2, yPos, { align: 'center' });
 
   // Footer note
   yPos += 20;

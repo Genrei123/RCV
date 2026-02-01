@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
-import { X, RefreshCw, Check, XCircle, Clock, ExternalLink, Loader2 } from "lucide-react";
+import { X, RefreshCw, Check, XCircle, Clock, ExternalLink, Loader2, FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { PDFGenerationService } from "@/services/pdfGenerationService";
+import type { Product } from "@/typeorm/entities/product.entity";
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
 
@@ -38,10 +40,13 @@ export default function CertificateTimelineModal({
 }: CertificateTimelineModalProps) {
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
   const [loading, setLoading] = useState(false);
+  const [productData, setProductData] = useState<Product | null>(null);
+  const [regeneratingCertId, setRegeneratingCertId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen && productId) {
       fetchTimeline();
+      fetchProductData();
     }
   }, [isOpen, productId]);
 
@@ -111,6 +116,42 @@ export default function CertificateTimelineModal({
       toast.error(error.response?.data?.message || "Failed to load timeline");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchProductData = async () => {
+    try {
+      const response = await axios.get(
+        `${API_URL}/product/${productId}`,
+        { withCredentials: true }
+      );
+      if (response.data) {
+        setProductData(response.data);
+      }
+    } catch (error: any) {
+      console.error("Error fetching product data:", error);
+    }
+  };
+
+  const handleRegenerateCertificate = async (certificateId: string) => {
+    if (!productData) {
+      toast.error("Product data not loaded");
+      return;
+    }
+
+    setRegeneratingCertId(certificateId);
+    try {
+      // Regenerate PDF with the consistent certificate ID
+      await PDFGenerationService.generateAndDownloadProductCertificate(
+        productData,
+        certificateId
+      );
+      toast.success("Certificate regenerated successfully!");
+    } catch (error: any) {
+      console.error("Error regenerating certificate:", error);
+      toast.error("Failed to regenerate certificate");
+    } finally {
+      setRegeneratingCertId(null);
     }
   };
 
@@ -266,6 +307,29 @@ export default function CertificateTimelineModal({
                         </div>
                       </div>
                     )}
+
+                    {/* Regenerate Certificate Button */}
+                    <div className="mt-3">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleRegenerateCertificate(event.certificateId)}
+                        disabled={regeneratingCertId === event.certificateId || !productData}
+                        className="w-full"
+                      >
+                        {regeneratingCertId === event.certificateId ? (
+                          <>
+                            <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                            Regenerating...
+                          </>
+                        ) : (
+                          <>
+                            <FileDown className="h-3 w-3 mr-2" />
+                            Regenerate Certificate
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}

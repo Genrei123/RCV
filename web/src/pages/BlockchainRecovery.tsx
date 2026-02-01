@@ -872,10 +872,6 @@ export function BlockchainRecovery() {
                       <span className="text-muted-foreground">Block Number:</span>
                       <p>{verificationResult.certificate.blockNumber}</p>
                     </div>
-                    <div className="col-span-2">
-                      <span className="text-muted-foreground">PDF Hash (SHA-256):</span>
-                      <p className="font-mono text-xs break-all bg-muted px-2 py-1 rounded mt-1">{verificationResult.certificate.pdfHash}</p>
-                    </div>
                     <div>
                       <span className="text-muted-foreground">Block Timestamp:</span>
                       <p>{new Date(verificationResult.certificate.blockTimestamp).toLocaleString()}</p>
@@ -1059,10 +1055,6 @@ export function BlockchainRecovery() {
                   <div className="col-span-2">
                     <Label className="text-xs text-muted-foreground">Certificate ID</Label>
                     <Input value={rebuildRecord.certificateId || 'Not available'} disabled className="bg-muted font-mono text-xs" />
-                  </div>
-                  <div className="col-span-2">
-                    <Label className="text-xs text-muted-foreground">PDF Hash (SHA-256)</Label>
-                    <Input value={rebuildRecord.pdfHash || 'Not available'} disabled className="bg-muted font-mono text-xs" />
                   </div>
                   <div>
                     <Label className="text-xs text-muted-foreground">Original Registration</Label>

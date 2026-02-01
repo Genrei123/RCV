@@ -230,11 +230,12 @@ export class PDFGenerationService {
 
   /**
    * Generate and download company certificate
+   * Note: For renewals/updates, pass the existing certificate ID to maintain QR code consistency
    */
-  static async generateAndDownloadCompanyCertificate(company: Company) {
+  static async generateAndDownloadCompanyCertificate(company: Company, existingCertificateId?: string) {
     try {
-      // Generate unique certificate ID
-      const certificateId = `CERT-COMP-${company._id}-${Date.now()}`;
+      // Use existing certificate ID if provided (for renewals), otherwise generate new one
+      const certificateId = existingCertificateId || `CERT-COMP-${company._id}-${Date.now()}`;
       
       // Generate PDF blob
       const pdfBlob = await this.generateCompanyCertificate(company, certificateId);
@@ -655,11 +656,12 @@ export class PDFGenerationService {
 
   /**
    * Generate and download product certificate
+   * Note: For renewals/updates, pass the existing certificate ID to maintain QR code consistency
    */
-  static async generateAndDownloadProductCertificate(product: Product) {
+  static async generateAndDownloadProductCertificate(product: Product, existingCertificateId?: string) {
     try {
-      // Generate unique certificate ID
-      const certificateId = `CERT-PROD-${product._id}-${Date.now()}`;
+      // Use existing certificate ID if provided (for renewals), otherwise generate new one
+      const certificateId = existingCertificateId || `CERT-PROD-${product._id}-${Date.now()}`;
       
       // Generate PDF blob
       const pdfBlob = await this.generateProductCertificate(product, certificateId);
