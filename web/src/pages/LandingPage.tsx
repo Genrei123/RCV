@@ -26,7 +26,13 @@ import {
 } from "@/components/ui/carousel";
 import { Footer } from "@/components/Footer";
 import { TransparencyTables } from "@/components/TransparencyTables";
+import { Chatbot } from "@/components/Chatbot";
 import landingData from "@/data/landinginfo.json";
+import { SanityService } from "@/services/sanityService";
+import { urlFor } from "@/lib/sanity";
+import type { SanityFeature, SanityAboutSection, SanityObjective, SanityVideoSection, SanityBlogPost, SanityMobileAppShowcase, SanityKioskShowcase } from "@/lib/sanity";
+import { MobileAppShowcase } from "@/components/MobileAppShowcase";
+import { KioskShowcase } from "@/components/KioskShowcase";
 
 // Icon map for dynamic rendering
 const iconMap: Record<string, React.ComponentType<any>> = {
@@ -40,14 +46,16 @@ const iconMap: Record<string, React.ComponentType<any>> = {
   Globe,
   Smartphone,
   Zap,
+  CheckCircle2,
 };
 
-const heroSlides = landingData.heroSlides;
-const features = landingData.features.map((feature: any) => ({
+// Fallback data from JSON
+const fallbackHeroSlides = landingData.heroSlides;
+const fallbackFeatures = landingData.features.map((feature: any) => ({
   ...feature,
   icon: iconMap[feature.icon],
 }));
-const objectives = landingData.objectives.map((objective: any) => ({
+const fallbackObjectives = landingData.objectives.map((objective: any) => ({
   ...objective,
   icon: iconMap[objective.icon],
 }));
@@ -58,6 +66,76 @@ export function LandingPage() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isSliding, setIsSliding] = useState(false);
   const [slideDirection, setSlideDirection] = useState<"left" | "right">("left");
+  
+  // Sanity CMS data with fallbacks
+  const [heroSlides, setHeroSlides] = useState<any[]>(fallbackHeroSlides);
+  const [features, setFeatures] = useState<any[]>(fallbackFeatures);
+  const [aboutSection, setAboutSection] = useState<SanityAboutSection | null>(null);
+  const [objectives, setObjectives] = useState<any[]>(fallbackObjectives);
+  const [videoSection, setVideoSection] = useState<SanityVideoSection | null>(null);
+  const [featuredBlogs, setFeaturedBlogs] = useState<SanityBlogPost[]>([]);
+  const [mobileAppShowcase, setMobileAppShowcase] = useState<SanityMobileAppShowcase | null>(null);
+  const [kioskShowcase, setKioskShowcase] = useState<SanityKioskShowcase | null>(null);
+  const [showcaseView, setShowcaseView] = useState<'mobile' | 'kiosk'>('mobile');
+
+  // Fetch data from Sanity CMS
+  useEffect(() => {
+    const fetchSanityData = async () => {
+      try {
+        const [slides, feats, about, objs, video, blogs, appShowcase, kioskData] = await Promise.all([
+          SanityService.getHeroSlides().catch(() => fallbackHeroSlides),
+          SanityService.getFeatures().catch(() => []),
+          SanityService.getAboutSection().catch(() => null),
+          SanityService.getObjectives().catch(() => []),
+          SanityService.getVideoSection().catch(() => null),
+          SanityService.getFeaturedBlogPosts(3).catch(() => []),
+          SanityService.getMobileAppShowcase().catch(() => null),
+          SanityService.getKioskShowcase().catch(() => null),
+        ]);
+
+        // Process hero slides with media URLs
+        const processedSlides = slides.length > 0 ? slides.map((slide: any) => ({
+          title: slide.title,
+          subtitle: slide.subtitle,
+          description: slide.description,
+          gradient: slide.gradient,
+          image: slide.mediaType === 'video' && slide.video?.asset?.url
+            ? slide.video.asset.url
+            : slide.image?.asset ? urlFor(slide.image).url() : '/logo_inv.svg',
+          isVideo: slide.mediaType === 'video',
+        })) : fallbackHeroSlides;
+
+        // Process features with icons
+        const processedFeatures = feats.length > 0 ? feats.map((feat: SanityFeature) => ({
+          title: feat.title,
+          description: feat.description,
+          icon: iconMap[feat.icon] || Shield,
+          color: feat.color,
+        })) : fallbackFeatures;
+
+        // Process objectives with icons
+        const processedObjectives = objs.length > 0 ? objs.map((obj: SanityObjective) => ({
+          title: obj.title,
+          description: obj.description,
+          icon: iconMap[obj.icon] || Shield,
+        })) : fallbackObjectives;
+
+        setHeroSlides(processedSlides);
+        setFeatures(processedFeatures);
+        setAboutSection(about);
+        setVideoSection(video);
+        setObjectives(processedObjectives);
+        setFeaturedBlogs(blogs);
+        setMobileAppShowcase(appShowcase);
+        setKioskShowcase(kioskData);
+      } catch (error) {
+        console.error('Error fetching Sanity data:', error);
+        // Keep fallback data
+      }
+    };
+
+    fetchSanityData();
+  }, []);
 
   // Monitor carousel slides
   useEffect(() => {
@@ -166,9 +244,9 @@ export function LandingPage() {
       </nav>
 
       {/* Hero Carousel */}
-      <section className={`pt-16 relative w-full transition-all duration-500 ${
+      <section className={`relative transition-all duration-500 ${
         isSliding 
-          ? slideDirection === "right" 
+          ? slideDirection == "right" 
             ? "translate-x-full opacity-0" 
             : "-translate-x-full opacity-0"
           : "translate-x-0 opacity-100"
@@ -184,53 +262,65 @@ export function LandingPage() {
           <CarouselContent className="m-0">
             {heroSlides.map((slide, index) => (
               <CarouselItem key={index} className="p-0">
-                <div className={`h-100 md:h-175 bg-linear-to-br ${slide.gradient}`}>
-                  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full">
-                    <div className="flex flex-col md:flex-row items-center justify-center h-full gap-8 md:gap-16">
+                <div className="relative h-100 md:h-175 overflow-hidden">
+                  {/* Background Image/Video */}
+                  <div className="absolute inset-0 z-0">
+                    {slide.isVideo ? (
+                      <video
+                        src={slide.image}
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <img
+                        src={slide.image}
+                        alt={slide.title}
+                        className="w-full h-full object-cover"
+                      />
+                    )}
+                  </div>
+                  
+                  {/* Gradient Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-transparent z-10"></div>
+                  
+                  {/* Content */}
+                  <div className="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full">
+                    <div className="flex items-center h-full">
                       {/* Text Content */}
-                      <div className="flex-1 text-center md:text-left pt-8 md:pt-0 w-full px-4 sm:px-0 md:px-20 lg:px-24">
+                      <div className="flex-1 text-center md:text-left pt-8 md:pt-0 w-full px-4 sm:px-0 md:px-20 lg:px-24 max-w-3xl">
                         <span className="inline-block px-4 py-1.5 bg-white/20 backdrop-blur-sm rounded-full text-white text-sm font-medium mb-4">
                           {slide.subtitle}
                         </span>
-                        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight max-w-lg mx-auto md:mx-0">
+                        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
                           {slide.title}
                         </h1>
-                        <p className="text-base sm:text-lg md:text-xl text-text /90 mb-8 text-white max-w-sm sm:max-w-xl mx-auto md:mx-0">
+                        <p className="text-base sm:text-lg md:text-xl text-white/90 mb-8 max-w-xl">
                           {slide.description}
                         </p>
-                        <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start max-w-sm sm:max-w-none mx-auto md:mx-0">
+                        <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
                           <Button
                             onClick={() => navigate("/login")}
                             size="lg"
-                            className="app-bg-neutral hover:app-bg-muted-90 hover:text-white border-white text-text px-8 cursor-pointer w-full sm:w-auto"
+                            className="app-bg-primary hover:app-bg-secondary text-white font-semibold px-8 shadow-lg hover:shadow-xl cursor-pointer w-full sm:w-auto transition-all"
                           >
                             Get Started Free
                             <ArrowRight className="ml-2 h-5 w-5" />
                           </Button>
-                            <Button
+                          <Button
                             variant="outline"
                             size="lg"
-                            className="border app-border-neutral bg-transparent app-text-white cursor-pointer transition-colors w-full sm:w-auto overflow-hidden hidden sm:inline-flex"
+                            className="border-2 border-white bg-transparent text-white hover:bg-white/10 cursor-pointer transition-colors w-full sm:w-auto"
                             onClick={() =>
                               document
-                              .getElementById("features")
-                              ?.scrollIntoView({ behavior: "smooth" })
+                                .getElementById("features")
+                                ?.scrollIntoView({ behavior: "smooth" })
                             }
-                            >
+                          >
                             Learn More
-                            </Button>
-                        </div>
-                      </div>
-
-                      {/* Image/Illustration */}
-                      <div className="hidden md:flex-1 justify-center  lg:flex">
-                        <div className="relative">
-                          <div className="absolute inset-0 bg-white/10 rounded-full blur-3xl scale-150" />
-                          <img
-                            src={slide.image}
-                            alt="RCV"
-                            className="relative w-48 h-48 md:w-64 md:h-64 lg:w-80 lg:h-80 object-contain drop-shadow-2xl"
-                          />
+                          </Button>
                         </div>
                       </div>
                     </div>
@@ -261,6 +351,88 @@ export function LandingPage() {
           </div>
         </Carousel>
       </section>
+
+      {/* Video Section */}
+      {videoSection && (
+        <section className="py-20 bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-12">
+              {videoSection.subtitle && (
+                <span className="inline-block px-4 py-1.5 app-bg-primary text-white rounded-full text-sm font-medium mb-4">
+                  {videoSection.subtitle}
+                </span>
+              )}
+              <h2 className="text-3xl md:text-4xl font-bold text-text mb-4">
+                {videoSection.title}
+              </h2>
+              {videoSection.description && (
+                <p className="text-lg text-text-subtle max-w-2xl mx-auto">
+                  {videoSection.description}
+                </p>
+              )}
+            </div>
+            <div className="max-w-4xl mx-auto">
+              <div className="relative aspect-video rounded-2xl overflow-hidden shadow-2xl">
+                <video
+                  src={videoSection.video.asset.url}
+                  controls
+                  poster={videoSection.thumbnail?.asset ? urlFor(videoSection.thumbnail).url() : undefined}
+                  className="w-full h-full object-cover"
+                >
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Showcase Section with Toggle */}
+      {(mobileAppShowcase || kioskShowcase) && (
+        <section className="py-20 app-bg-neutral-soft">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            {/* Toggle Buttons */}
+            {mobileAppShowcase && kioskShowcase && (
+              <div className="flex justify-center mb-12">
+                <div className="inline-flex rounded-lg bg-white p-1 shadow-md">
+                  <button
+                    onClick={() => setShowcaseView('mobile')}
+                    className={`flex items-center gap-2 px-6 py-3 rounded-md font-medium transition-all ${
+                      showcaseView === 'mobile'
+                        ? 'app-bg-primary text-white shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    <Smartphone className="w-5 h-5" />
+                    <span>Mobile App</span>
+                  </button>
+                  <button
+                    onClick={() => setShowcaseView('kiosk')}
+                    className={`flex items-center gap-2 px-6 py-3 rounded-md font-medium transition-all ${
+                      showcaseView === 'kiosk'
+                        ? 'app-bg-primary text-white shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    <Package className="w-5 h-5" />
+                    <span>Kiosk Machine</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Mobile App Showcase */}
+          {showcaseView === 'mobile' && mobileAppShowcase && (
+            <MobileAppShowcase data={mobileAppShowcase} />
+          )}
+
+          {/* Kiosk Showcase */}
+          {showcaseView === 'kiosk' && kioskShowcase && (
+            <KioskShowcase data={kioskShowcase} />
+          )}
+        </section>
+      )}
 
       {/* Features Section */}
       <section id="features" className="py-20 app-bg-neutral-soft">
@@ -325,73 +497,54 @@ export function LandingPage() {
       {/* About Section */}
       <section id="about" className="py-20 app-bg-neutral-soft">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div>
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-12">
               <span className="inline-block px-4 py-1.5 app-bg-primary text-white rounded-full text-sm font-medium mb-4">
-                About RCV
+                {aboutSection?.subtitle || 'About RCV'}
               </span>
               <h2 className="text-3xl md:text-4xl font-bold app-text-primary mb-6">
-                Revolutionizing Product Verification
+                {aboutSection?.title || 'Revolutionizing Product Verification'}
               </h2>
-              <p className="text-lg text-text -subtle mb-6 leading-relaxed">
-                The Regulatory Compliance Verification (RCV) system is a
-                cutting-edge platform designed to combat counterfeiting and
-                ensure product authenticity through blockchain technology.
-              </p>
-              <p className="text-lg text-text -subtle mb-8 leading-relaxed">
-                Our system provides businesses with the tools to register
-                products, generate tamper-proof certificates, and enable
-                consumers to verify authenticity with a simple QR code scan.
-              </p>
-
-              <div className="space-y-4 app-text-primary">
-                {[
-                  "Blockchain-secured certificates",
-                  "Real-time verification",
-                  "Comprehensive analytics",
-                  "Regulatory compliance tracking",
-                ].map((item, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-3 app-text-primary"
-                  >
-                    <div className="w-6 h-6 app-bg-primary-soft rounded-full flex items-center justify-center">
-                      <CheckCircle2 className="h-4 w-4 text-text -primary" />
-                    </div>
-                    <span className="text-text ">{item}</span>
-                  </div>
-                ))}
-              </div>
             </div>
+            
+            {aboutSection?.description ? (
+              aboutSection.description.map((para, index) => (
+                <p key={index} className="text-lg text-text-subtle mb-6 leading-relaxed text-center">
+                  {para}
+                </p>
+              ))
+            ) : (
+              <>
+                <p className="text-lg text-text-subtle mb-6 leading-relaxed text-center">
+                  The Regulatory Compliance Verification (RCV) system is a
+                  cutting-edge platform designed to combat counterfeiting and
+                  ensure product authenticity through blockchain technology.
+                </p>
+                <p className="text-lg text-text-subtle mb-8 leading-relaxed text-center">
+                  Our system provides businesses with the tools to register
+                  products, generate tamper-proof certificates, and enable
+                  consumers to verify authenticity with a simple QR code scan.
+                </p>
+              </>
+            )}
 
-            <div className="relative">
-              <div className="absolute inset-0 bg-linear-to-br from-(--app-primary)/20 to-(--app-primary-light)/20 rounded-3xl blur-3xl" />
-              <div className="relative bg-linear-to-br from-(--app-primary) to-(--app-primary-light) rounded-3xl p-8 md:p-12">
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 text-center text-white">
-                    <div className="text-4xl font-bold mb-2">100K+</div>
-                    <div className="text-text /80 text-sm">
-                      Products Verified
-                    </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12">
+              {(aboutSection?.highlights || [
+                "Blockchain-secured certificates",
+                "Real-time verification",
+                "Comprehensive analytics",
+                "Regulatory compliance tracking",
+              ]).map((item, index) => (
+                <div
+                  key={index}
+                  className="flex items-center gap-3 app-text-primary"
+                >
+                  <div className="w-6 h-6 app-bg-primary-soft rounded-full flex items-center justify-center flex-shrink-0">
+                    <CheckCircle2 className="h-4 w-4 text-primary" />
                   </div>
-                  <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 text-center text-white">
-                    <div className="text-4xl font-bold text-text mb-2">
-                      500+
-                    </div>
-                    <div className="text-text /80 text-sm">Companies</div>
-                  </div>
-                  <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 text-center text-white">
-                    <div className="text-4xl font-bold text-text mb-2">1M+</div>
-                    <div className="text-text /80 text-sm">QR Scans</div>
-                  </div>
-                  <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 text-center text-white">
-                    <div className="text-4xl font-bold text-text mb-2">
-                      99.9%
-                    </div>
-                    <div className="text-text /80 text-sm">Uptime</div>
-                  </div>
+                  <span className="text-text">{item}</span>
                 </div>
-              </div>
+              ))}
             </div>
           </div>
         </div>
@@ -435,6 +588,127 @@ export function LandingPage() {
         </div>
       </section>
 
+      {/* Featured Blogs Section */}
+      {featuredBlogs.length > 0 && (
+        <section className="py-20 app-bg-neutral-soft">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-12">
+              <span className="inline-block px-4 py-1.5 app-bg-primary text-white rounded-full text-sm font-medium mb-4">
+                Latest Insights
+              </span>
+              <h2 className="text-3xl md:text-4xl font-bold text-text mb-4">
+                Featured Blog Posts
+              </h2>
+              <p className="text-lg text-text-subtle max-w-2xl mx-auto">
+                Stay updated with the latest trends and insights in product verification and compliance.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {featuredBlogs.map((post) => (
+                <Card
+                  key={post._id}
+                  className="bg-white rounded-2xl overflow-hidden shadow-sm border app-border-neutral hover:shadow-xl transition-all duration-300 group cursor-pointer"
+                  onClick={() => navigate(`/blog/${post.slug.current}`)}
+                >
+                  {/* Blog Image/Video */}
+                  <div className="relative h-48 overflow-hidden bg-gray-100">
+                    {post.featuredVideo?.asset?.url ? (
+                      <video
+                        src={post.featuredVideo.asset.url}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        muted
+                        loop
+                        playsInline
+                      />
+                    ) : post.mainImage ? (
+                      <img
+                        src={urlFor(post.mainImage).url()}
+                        alt={post.title}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <FileCheck className="h-16 w-16 text-gray-300" />
+                      </div>
+                    )}
+                    {/* Featured Badge */}
+                    <div className="absolute top-4 right-4">
+                      <span className="px-3 py-1 app-bg-primary text-white text-xs font-semibold rounded-full">
+                        Featured
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Blog Content */}
+                  <div className="p-6">
+                    {/* Categories */}
+                    {post.categories && post.categories.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {post.categories.slice(0, 2).map((category) => (
+                          <span
+                            key={category._id}
+                            className="px-2 py-1 app-bg-primary-soft app-text-primary text-xs font-medium rounded"
+                          >
+                            {category.title}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Title */}
+                    <h3 className="text-xl font-semibold text-text mb-3 line-clamp-2 group-hover:app-text-primary transition-colors">
+                      {post.title}
+                    </h3>
+
+                    {/* Excerpt */}
+                    <p className="text-text-subtle text-sm mb-4 line-clamp-3">
+                      {post.excerpt}
+                    </p>
+
+                    {/* Author & Date */}
+                    <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                      <div className="flex items-center gap-2">
+                        {post.author.image && (
+                          <img
+                            src={urlFor(post.author.image).width(32).height(32).url()}
+                            alt={post.author.name}
+                            className="w-8 h-8 rounded-full object-cover"
+                          />
+                        )}
+                        <span className="text-sm text-text-subtle font-medium">
+                          {post.author.name}
+                        </span>
+                      </div>
+                      <span className="text-xs text-text-subtle">
+                        {new Date(post.publishedAt).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+
+            {/* View All Blogs Button */}
+            <div className="text-center mt-12">
+              <Button
+                onClick={() => navigate("/blog")}
+                variant="outline"
+                size="lg"
+                className="app-border-primary app-text-primary hover:app-bg-primary hover:text-white transition-all"
+              >
+                View All Blog Posts
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* CTA Section */}
       <section className="py-20 app-bg-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -457,7 +731,9 @@ export function LandingPage() {
           </div>
         </div>
       </section>
+
       <Footer />
+      <Chatbot />
     </div>
   );
 }
