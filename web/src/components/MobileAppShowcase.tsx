@@ -116,9 +116,7 @@ export function MobileAppShowcase({ data }: MobileAppShowcaseProps) {
   const hotspots = currentScreen?.hotspots || [];
   // Limit to maximum 4 hotspots per screen
   const limitedHotspots = hotspots.slice(0, 4);
-  const leftHotspots = limitedHotspots.filter((_, index) => index % 2 === 0);
-  const rightHotspots = limitedHotspots.filter((_, index) => index % 2 !== 0);
-
+  
   return (
     <section className="py-12 app-bg-neutral-soft">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
