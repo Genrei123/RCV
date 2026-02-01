@@ -212,7 +212,7 @@ export default function CertificateTimelineModal({
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:app-bg-neutral rounded-lg transition-colors"
+            className="p-2 hover:app-bg-error rounded-lg transition-colors"
           >
             <X className="h-5 w-5 app-text-subtle" />
           </button>

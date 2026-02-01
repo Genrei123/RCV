@@ -663,6 +663,7 @@ export function ProductStatsView() {
               variant="destructive"
               onClick={handleDeleteSubmit}
               disabled={deleteLoading || (requiresRerouting && !rerouteTarget)}
+              className="hover:app-bg-error"
             >
               {deleteLoading ? "Deleting..." : "Delete"}
             </Button>

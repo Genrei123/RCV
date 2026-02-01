@@ -524,7 +524,7 @@ const ApprovalQueue: React.FC<ApprovalQueueProps> = ({ isAdmin = false, onSucces
                     </Button>
                     <Button
                       variant="destructive"
-                      className="flex-1"
+                      className="flex-1 hover:app-bg-error"
                       onClick={() => openApprovalDialog(approval, "reject")}
                     >
                       <XCircle className="w-4 h-4 mr-2" />
@@ -668,6 +668,7 @@ const ApprovalQueue: React.FC<ApprovalQueueProps> = ({ isAdmin = false, onSucces
                 variant="destructive"
                 onClick={handleReject}
                 disabled={processing || !rejectionReason.trim()}
+                className="hover:app-bg-error"
               >
                 {processing ? (
                   <>

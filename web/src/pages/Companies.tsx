@@ -345,15 +345,8 @@ export function Companies(props: CompaniesProps) {
             emptyStateTitle="No Companies Found"
             emptyStateDescription="Try adjusting your search or add a new company to get started."
             customControls={
-              <>
-                <Button
-                  onClick={() => setShowAddModal(true)}
-                  className="whitespace-nowrap cursor-pointer"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Company
-                </Button>
-                <div className="flex bg-muted p-1 rounded-md ml-2">
+              <div className="flex flex-wrap items-center justify-between gap-3 w-full">
+                <div className="flex bg-muted p-1 rounded-md">
                   <button
                     onClick={() => setActiveTab("active")}
                     className={`px-3 py-1 text-sm rounded-sm transition-all ${
@@ -375,7 +368,14 @@ export function Companies(props: CompaniesProps) {
                     Archived
                   </button>
                 </div>
-              </>
+                <Button
+                  onClick={() => setShowAddModal(true)}
+                  className="whitespace-nowrap cursor-pointer"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Company
+                </Button>
+              </div>
             }
           />
 
