@@ -52,8 +52,8 @@ export function TransparencyTables() {
     setLoading(true);
     try {
       const [productsRes, companiesRes, statsRes] = await Promise.all([
-        PublicService.getVerifiedProducts(productPage, 5),
-        PublicService.getVerifiedCompanies(companyPage, 5),
+        PublicService.getVerifiedProducts(productPage, 10),
+        PublicService.getVerifiedCompanies(companyPage, 10),
         PublicService.getStats(),
       ]);
       setProducts(productsRes.data);
@@ -132,49 +132,7 @@ export function TransparencyTables() {
 
   return (
     <div className="space-y-8 px-4 py-6">
-      {/* Stats Cards */}
-      {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          <div className="bg-white rounded-xl p-8 border border-gray-200 shadow-sm">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-teal-100 rounded-lg">
-                <Package className="h-5 w-5 text-teal-600" />
-              </div>
-              <span className="text-sm text-gray-600">Verified Products</span>
-            </div>
-            <p className="text-3xl font-bold text-gray-900">{stats.verifiedProducts}</p>
-          </div>
-          <div className="bg-white rounded-xl p-8 border border-gray-200 shadow-sm">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Building2 className="h-5 w-5 text-blue-600" />
-              </div>
-              <span className="text-sm text-gray-600">Verified Companies</span>
-            </div>
-            <p className="text-3xl font-bold text-gray-900">{stats.verifiedCompanies}</p>
-          </div>
-          <div className="bg-white rounded-xl p-8 border border-gray-200 shadow-sm">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Shield className="h-5 w-5 text-purple-600" />
-              </div>
-              <span className="text-sm text-gray-600">Total Products</span>
-            </div>
-            <p className="text-3xl font-bold text-gray-900">{stats.totalProducts}</p>
-          </div>
-          <div className="bg-white rounded-xl p-8 border border-gray-200 shadow-sm">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <CheckCircle className="h-5 w-5 text-orange-600" />
-              </div>
-              <span className="text-sm text-gray-600">Total Companies</span>
-            </div>
-            <p className="text-3xl font-bold text-gray-900">{stats.totalCompanies}</p>
-          </div>
-        </div>
-      )}
-
-      {/* Tables with Tabs */}
+      {/* Tables with Tabs */
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'products' | 'companies')}>
           <div className="border-b border-gray-200 px-6 pt-6 pb-6">
