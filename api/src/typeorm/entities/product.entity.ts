@@ -105,7 +105,7 @@ export class Product {
   @Column()
   registeredAt!: Date;
 
-  @ManyToOne(() => Company, company => company._id)
+  @ManyToOne(() => Company, company => company.products)
   @JoinColumn({ name: 'companyId' })
   company!: Company;
 
