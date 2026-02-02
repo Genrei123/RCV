@@ -7,9 +7,6 @@ import { toast } from 'sonner';
 // Base URL - change this to your actual API URL
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api/v1';
 
-// Debug: Log the base URL being used
-console.log('[API] Base URL configured:', BASE_URL);
-
 // Create axios instance with default config
 export const apiClient: AxiosInstance = axios.create({
   baseURL: BASE_URL,

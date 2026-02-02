@@ -28,6 +28,12 @@ export function Footer() {
               <h4 className="font-semibold text-white mb-3">Explore</h4>
               <div className="space-y-2">
                 <Link
+                  to="/blog"
+                  className="block text-white/80 hover:text-white transition-colors text-sm"
+                >
+                  Blog
+                </Link>
+                <Link
                   to="/About"
                   className="block text-white/80 hover:text-white transition-colors text-sm"
                 >

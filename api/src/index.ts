@@ -4,6 +4,7 @@ import { initializeCertificateBlockchain } from './services/certificateblockchai
 import { initializeSepoliaBlockchain } from './services/sepoliaBlockchainService';
 import { redisService } from './services/redisService';
 import { recoverFromBlockchain, getRecoveryStatus } from './services/blockchainRecoveryService';
+import { FuzzySearchService } from './services/fuzzySearchService';
 
 dotenv.config();
 const { PORT, ENABLE_BLOCKCHAIN_RECOVERY } = process.env;
@@ -20,6 +21,14 @@ const initializeApp = async () => {
   // Initialize Redis connection
   // await redisService.connect();
 
+  // Initialize Fuzzy Search Service (learn patterns from database)
+  try {
+    await FuzzySearchService.initialize();
+  } catch (error) {
+    console.error('[FuzzySearch] Failed to initialize:', error);
+    console.warn('[FuzzySearch] Will initialize on first search request');
+  }
+
   // Blockchain Recovery Check on Startup
   // This demonstrates the robustness of blockchain technology:
   // Even if the database is wiped, we can recover records from the blockchain!
@@ -30,9 +39,6 @@ const initializeApp = async () => {
       const status = await getRecoveryStatus();
       
       if (status.missingRecords > 0) {
-        console.log(`⚠️  Found ${status.missingRecords} records on blockchain not in database`);
-        console.log('🔄 Starting automatic recovery...\n');
-        
         const recoveryResult = await recoverFromBlockchain();
         
         if (recoveryResult.companiesRecovered > 0 || recoveryResult.productsRecovered > 0) {

@@ -162,6 +162,68 @@ PublicRouter.get('/stats', async (req: Request, res: Response, next: NextFunctio
   }
 });
 
+/**
+ * Get a single product by ID (public - for timeline modal)
+ * This endpoint is public - no authentication required
+ */
+PublicRouter.get('/product/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+
+    const product = await ProductRepo.findOne({
+      where: { _id: id },
+      relations: ['company', 'registeredBy'],
+    });
+
+    if (!product) {
+      return next(new CustomError(404, 'Product not found'));
+    }
+
+    res.status(200).json(product);
+  } catch (error) {
+    console.error('Error fetching product:', error);
+    return next(new CustomError(500, 'Failed to retrieve product'));
+  }
+});
+
+/**
+ * Get a single company by ID with its products (public - for company modal)
+ * This endpoint is public - no authentication required
+ */
+PublicRouter.get('/company/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+
+    const company = await CompanyRepo.findOne({
+      where: { _id: id },
+    });
+
+    if (!company) {
+      return next(new CustomError(404, 'Company not found'));
+    }
+
+    // Get company's products
+    const products = await ProductRepo.find({
+      where: { companyId: id },
+      select: [
+        '_id',
+        'productName',
+        'brandName',
+        'lotNumber',
+        'productClassification',
+      ],
+    });
+
+    res.status(200).json({
+      ...company,
+      products,
+    });
+  } catch (error) {
+    console.error('Error fetching company:', error);
+    return next(new CustomError(500, 'Failed to retrieve company'));
+  }
+});
+
 PublicRouter.post('/users/sync/:firebaseUid', UserController.syncUserFromFirebase);
 
 export default PublicRouter;

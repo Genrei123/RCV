@@ -85,7 +85,6 @@ export function Sidebar({
   const location = useLocation();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [showWalletMenu, setShowWalletMenu] = useState(false);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -94,7 +93,6 @@ export function Sidebar({
   const { isConnected, walletAddress, isAuthorized, isMetaMaskInstalled, connect, disconnect, switchAccount } = useMetaMask();
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const mobileProfileMenuRef = useRef<HTMLDivElement>(null);
-  const walletMenuRef = useRef<HTMLDivElement>(null);
   
   // Close profile menu when clicking outside
   useEffect(() => {
@@ -208,8 +206,8 @@ export function Sidebar({
     { path: "/maps", label: "Maps", icon: MapPin },
     { path: "/analytics", label: "Analytics", icon: BarChart3 },
     { path: "/remote-config", label: "Mobile Config", icon: Sliders },
-    { path: "/blockchain", label: "Blockchain", icon: Verified },
-    { path: "/wallet", label: "Connect Wallet", icon: Wallet, isWallet: true },
+    // { path: "/blockchain", label: "Blockchain", icon: Verified },
+    { path: "/wallet", label: "Connect Wallet", icon: Verified, isWallet: true },
   ];
 
   const handleLogout = async () => {
@@ -315,79 +313,35 @@ export function Sidebar({
               const isActive = location.pathname === item.path;
 
               if ((item as any).isWallet) {
-                // Wallet menu item with dropdown
-                return (
-                  <div key={item.path} ref={walletMenuRef} className="relative">
-                    <button
-                      onClick={() => setShowWalletMenu(!showWalletMenu)}
-                      className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
-                        showWalletMenu
-                          ? "app-bg-primary text-white"
-                          : "text-neutral-600 hover:bg-neutral-100"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Icon size={20} />
-                        <span className="font-medium">{item.label}</span>
-                      </div>
-                      <ChevronDown
-                        size={16}
-                        className={`transition-transform ${showWalletMenu ? "rotate-180" : ""}`}
-                      />
-                    </button>
+                // Wallet menu item - directly trigger connection
+                const handleWalletClick = () => {
+                  if (!isMetaMaskInstalled) {
+                    window.open('https://metamask.io/download/', '_blank');
+                  } else if (!isConnected) {
+                    connect(true);
+                  } else {
+                    // Already connected, optionally show a toast or do nothing
+                    toast.info(`Connected: ${walletAddress?.slice(0, 8)}...${walletAddress?.slice(-6)}`);
+                  }
+                };
 
-                    {/* Wallet dropdown */}
-                    {showWalletMenu && (
-                      <div className="absolute left-4 right-4 top-full mt-2 bg-white border rounded-lg shadow-lg z-50">
-                        <div className="p-3 space-y-3">
-                          {/* Wallet Status */}
-                          <div className="text-xs">
-                            <p className="font-medium text-neutral-600 mb-2">Wallet Status</p>
-                            {isConnected && walletAddress ? (
-                              <div className="space-y-2">
-                                <div className="flex items-center gap-2">
-                                  <div className={`w-2 h-2 rounded-full ${isAuthorized ? 'bg-green-500' : 'bg-yellow-500'}`} />
-                                  <p className="font-mono text-neutral-700 truncate" title={walletAddress}>
-                                    {walletAddress.slice(0, 8)}...{walletAddress.slice(-6)}
-                                  </p>
-                                </div>
-                                <div className="flex gap-2">
-                                  <button
-                                    onClick={switchAccount}
-                                    className="flex-1 text-xs text-blue-500 hover:text-blue-700 py-1.5 border border-blue-200 rounded hover:bg-blue-50"
-                                  >
-                                    Switch
-                                  </button>
-                                  <button
-                                    onClick={disconnect}
-                                    className="flex-1 text-xs text-red-500 hover:text-red-700 py-1.5 border border-red-200 rounded hover:bg-red-50"
-                                  >
-                                    Disconnect
-                                  </button>
-                                </div>
-                              </div>
-                            ) : !isMetaMaskInstalled ? (
-                              <button
-                                onClick={() => window.open('https://metamask.io/download/', '_blank')}
-                                className="w-full text-xs text-white bg-[#f6851b] hover:bg-[#e2761b] py-1.5 px-2 rounded flex items-center justify-center gap-1"
-                              >
-                                <ExternalLink size={12} />
-                                Install MetaMask
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => connect(true)}
-                                className="w-full text-xs app-bg-primary app-text-foreground hover:opacity-80 py-1.5 px-2 rounded flex items-center justify-center gap-1 text-white"
-                              >
-                                <Wallet size={12} />
-                                Connect MetaMask
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
+                return (
+                  <button
+                    key={item.path}
+                    onClick={handleWalletClick}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-neutral-600 hover:bg-neutral-100"
+                  >
+                    <Icon size={20} />
+                    <span className="font-medium">
+                      {isConnected && walletAddress 
+                        ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
+                        : item.label
+                      }
+                    </span>
+                    {isConnected && (
+                      <div className={`ml-auto w-2 h-2 rounded-full ${isAuthorized ? 'bg-green-500' : 'bg-yellow-500'}`} />
                     )}
-                  </div>
+                  </button>
                 );
               }
 

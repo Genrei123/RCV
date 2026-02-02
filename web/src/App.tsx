@@ -33,6 +33,8 @@ import Contact from "./pages/ContactUs";
 import { PendingAgents } from "./pages/PendingAgents";
 import { AgentRegistration } from "./pages/AgentRegistration";
 import { LandingPage } from "./pages/LandingPage";
+import { BlogPage } from "./pages/BlogPage";
+import { BlogPostPage } from "./pages/BlogPostPage";
 import { MetaMaskProvider } from "./contexts/MetaMaskContext";
 import { Startup } from "./components/Startup";
 
@@ -233,6 +235,24 @@ function App() {
               <PublicRoute>
                 <LandingPage />
               </PublicRoute>
+            }
+          />
+
+          {/* Blog Routes - Public */}
+          <Route
+            path="/blog"
+            element={
+              <AccessibleRoute>
+                <BlogPage />
+              </AccessibleRoute>
+            }
+          />
+          <Route
+            path="/blog/:slug"
+            element={
+              <AccessibleRoute>
+                <BlogPostPage />
+              </AccessibleRoute>
             }
           />
 

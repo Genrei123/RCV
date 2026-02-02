@@ -229,11 +229,6 @@ export function EditProfileModal({
 
       // Upload to Firebase Storage
       if (user?._id) {
-        console.log(
-          "📤 Uploading avatar to Firebase Storage for user:",
-          user._id
-        );
-
         // Convert base64 to File
         const file = FirebaseStorageService.dataUrlToFile(
           dataUrl,
@@ -247,7 +242,6 @@ export function EditProfileModal({
         );
 
         if (firebaseUrl) {
-          console.log("✅ Avatar uploaded to Firebase:", firebaseUrl);
           // Use Firebase URL instead of base64
           setFormData((prev) => ({ ...prev, avatar: firebaseUrl }));
         } else {
