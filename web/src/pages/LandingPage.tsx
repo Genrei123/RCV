@@ -716,8 +716,7 @@ export function LandingPage() {
             Ready to Get Started?
           </h2>
           <p className="text-lg app-text-text/80 mb-8 max-w-2xl mx-auto">
-            Join thousands of businesses already using RCV to protect their
-            products and build consumer trust.
+            Start to verify your products and ensure compliance today with RCV.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button
