@@ -206,9 +206,11 @@ export function EditProductModal({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    // Truncate to 100 characters for text inputs
+    const truncatedValue = value.length > 100 ? value.substring(0, 100) : value;
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: truncatedValue,
     }));
   };
 
@@ -296,8 +298,12 @@ export function EditProductModal({
                 name="LTONumber"
                 value={formData.LTONumber}
                 onChange={handleChange}
+                maxLength={100}
                 required
               />
+              <div className="text-right text-xs text-gray-500">
+                {(formData.LTONumber || "").length}/100
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -307,8 +313,12 @@ export function EditProductModal({
                 name="CFPRNumber"
                 value={formData.CFPRNumber}
                 onChange={handleChange}
+                maxLength={100}
                 required
               />
+              <div className="text-right text-xs text-gray-500">
+                {(formData.CFPRNumber || "").length}/100
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -318,8 +328,12 @@ export function EditProductModal({
                 name="lotNumber"
                 value={formData.lotNumber}
                 onChange={handleChange}
+                maxLength={100}
                 required
               />
+              <div className="text-right text-xs text-gray-500">
+                {(formData.lotNumber || "").length}/100
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -329,8 +343,12 @@ export function EditProductModal({
                 name="brandName"
                 value={formData.brandName}
                 onChange={handleChange}
+                maxLength={100}
                 required
               />
+              <div className="text-right text-xs text-gray-500">
+                {(formData.brandName || "").length}/100
+              </div>
             </div>
 
             <div className="space-y-2 md:col-span-2">
@@ -340,8 +358,12 @@ export function EditProductModal({
                 name="productName"
                 value={formData.productName}
                 onChange={handleChange}
+                maxLength={100}
                 required
               />
+              <div className="text-right text-xs text-gray-500">
+                {(formData.productName || "").length}/100
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -351,8 +373,12 @@ export function EditProductModal({
                 name="productClassification"
                 value={formData.productClassification}
                 onChange={handleChange}
+                maxLength={100}
                 required
               />
+              <div className="text-right text-xs text-gray-500">
+                {(formData.productClassification || "").length}/100
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -362,8 +388,12 @@ export function EditProductModal({
                 name="productSubClassification"
                 value={formData.productSubClassification}
                 onChange={handleChange}
+                maxLength={100}
                 required
               />
+              <div className="text-right text-xs text-gray-500">
+                {(formData.productSubClassification || "").length}/100
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -481,7 +511,7 @@ export function EditProductModal({
                 )}
               </div>
             </div>
-          </div>
+            </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t">
             <Button
