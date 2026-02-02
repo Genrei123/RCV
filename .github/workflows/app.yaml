@@ -47,3 +47,20 @@ jobs:
       - name: Run Analyzer
         run: flutter analyze
         working-directory: ./app/rcv_firebase
+
+      # 6. Build APK (only on main branch)
+      - name: Build APK
+        if: github.ref == 'refs/heads/main'
+        run: flutter build apk --release
+        working-directory: ./app/rcv_firebase
+
+      # 7. Upload to Firebase App Distribution (only on main branch)
+      - name: Upload to Firebase App Distribution
+        if: github.ref == 'refs/heads/main'
+        uses: wzieba/Firebase-Distribution-Github-Action@v1
+        with:
+          appId: ${{ secrets.FIREBASE_APP_ID }}
+          serviceCredentialsFileContent: ${{ secrets.FIREBASE_APP_CREDENTIAL_FILE_CONTENT }}
+          groups: testers
+          file: app/rcv_firebase/build/app/outputs/flutter-apk/app-release.apk
+          releaseNotes: "Automated build from commit ${{ github.sha }}"
