@@ -231,6 +231,48 @@ export const extractPhoneNumberDigits = (phoneNumber: string): string => {
 };
 
 /**
+ * Formats phone number with +63 prefix for display
+ * @param phoneNumber - Phone number (with or without +63 prefix, 10-12 digits)
+ * @returns Formatted phone number with +63 prefix for display
+ */
+export const formatPhoneWithCountryCode = (phoneNumber: string): string => {
+  if (!phoneNumber) return "";
+
+  // Remove any non-digits except +
+  const cleaned = phoneNumber.replace(/[^\d+]/g, "");
+
+  // If already has +63, return as is
+  if (cleaned.startsWith("+63")) {
+    return cleaned;
+  }
+
+  // Remove leading + if exists
+  const digitsOnly = cleaned.replace(/\+/g, "");
+
+  // If starts with 63 (12 digits), add +
+  if (digitsOnly.startsWith("63") && digitsOnly.length >= 11) {
+    return `+${digitsOnly}`;
+  }
+
+  // If starts with 0 (like 09XX), remove 0 and add +63
+  if (digitsOnly.startsWith("0") && digitsOnly.length === 11) {
+    return `+63${digitsOnly.substring(1)}`;
+  }
+
+  // If 10 digits starting with 9, add +63
+  if (digitsOnly.startsWith("9") && digitsOnly.length === 10) {
+    return `+63${digitsOnly}`;
+  }
+
+  // Fallback: just add +63 if it looks like a valid PH number
+  if (digitsOnly.length >= 10) {
+    return `+63${digitsOnly.slice(-10)}`;
+  }
+
+  return phoneNumber;
+};
+
+/**
  * Formats phone number with dashes for display: 9994961370 -> 999-496-1370
  * @param phoneNumber - Plain 10 digits (without +63 prefix and dashes)
  * @returns Formatted phone number with dashes in format XXX-XXX-XXXX
