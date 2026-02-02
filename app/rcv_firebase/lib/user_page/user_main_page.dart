@@ -53,18 +53,47 @@ class _UserMainPageState extends State<UserMainPage> {
   Widget build(BuildContext context) {
     // Check if current tab is disabled and show feature disabled screen
     if (_selectedIndex == 0 && RemoteConfigService.isFeatureDisabled('disable_home_page')) {
-      return Scaffold(
-        body: FeatureDisabledScreen(
-          featureName: 'Home',
-          icon: Icons.home,
-          selectedNavIndex: _selectedIndex,
-          navBarRole: NavBarRole.user,
-        ),
-        bottomNavigationBar: AppBottomNavBar(
-          selectedIndex: _selectedIndex,
-          role: NavBarRole.user,
-          onTabSelected: _onTabSelected,
-        ),
+      return FeatureDisabledScreen(
+        featureName: 'Home',
+        icon: Icons.home,
+        selectedNavIndex: _selectedIndex,
+        navBarRole: NavBarRole.user,
+      );
+    }
+
+    if (_selectedIndex == 1 && RemoteConfigService.isFeatureDisabled('disable_audit_page')) {
+      return FeatureDisabledScreen(
+        featureName: 'Audit Trail',
+        icon: Icons.history,
+        selectedNavIndex: _selectedIndex,
+        navBarRole: NavBarRole.user,
+      );
+    }
+
+    if (_selectedIndex == 2 && RemoteConfigService.isFeatureDisabled('disable_scanning_page')) {
+      return FeatureDisabledScreen(
+        featureName: 'QR Code Scanning',
+        icon: Icons.qr_code_scanner,
+        selectedNavIndex: _selectedIndex,
+        navBarRole: NavBarRole.user,
+      );
+    }
+
+    if (_selectedIndex == 3 && RemoteConfigService.isFeatureDisabled('disable_reports_page')) {
+      return FeatureDisabledScreen(
+        featureName: 'Reports',
+        icon: Icons.bar_chart,
+        selectedNavIndex: _selectedIndex,
+        navBarRole: NavBarRole.user,
+      );
+    }
+
+    if (_selectedIndex == 4 && RemoteConfigService.isFeatureDisabled('disable_profile_page')) {
+      return FeatureDisabledScreen(
+        featureName: 'User Profile',
+        icon: Icons.person,
+        selectedNavIndex: _selectedIndex,
+        navBarRole: NavBarRole.user,
       );
     }
 
