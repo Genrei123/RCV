@@ -216,8 +216,8 @@ export function DataTable({
             <p className="text-gray-500 max-w-sm">{emptyStateDescription}</p>
           </div>
         ) : (
-          <div className="w-full overflow-x-auto">
-            <Table className="min-w-[640px]">
+          <div className="w-full">
+            <Table>
               <TableHeader>
                 <TableRow className="border-b border-gray-200">
                   {columns.map((column) => (

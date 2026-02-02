@@ -36,7 +36,7 @@ export function PageContainer({
       {/* Centered content wrapper for header (keeps header width constrained) */}
       <div
         className={cn(
-          "w-full mx-auto px-4 sm:px-6z  lg:px-8",
+          "w-full mx-auto px-4 sm:px-6 lg:px-8",
           maxWidthClasses[maxWidth]
         )}
       >
@@ -68,7 +68,7 @@ export function PageContainer({
           maxWidthClasses[maxWidth]
         )}
       >
-        <div className="py-4 md:py-6 space-y-4">{children}</div>
+        <div className="py-4 md:py-6 space-y-4 w-full">{children}</div>
       </main>
     </div>
   );

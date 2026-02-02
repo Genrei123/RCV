@@ -3685,7 +3685,6 @@ class _QRScannerPageState extends State<QRScannerPage>
             .processImage(backInputImage);
         backText = backRecognizedText.text;
       }
-
       // Upload images to Firebase immediately after OCR extraction
       developer.log('📤 Uploading images to Firebase...');
       try {
@@ -3708,7 +3707,11 @@ class _QRScannerPageState extends State<QRScannerPage>
       } catch (uploadError) {
         developer.log('⚠️ Image upload failed: $uploadError');
         // Continue with OCR even if upload fails - we still have local paths
-      }
+      };
+
+      developer.log(
+        '📊 Final OCR Results - Front: ${frontText.length} chars, Back: ${backText.length} chars',
+      );
 
       // Combine both texts with clear labels
       String combinedText =
