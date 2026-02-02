@@ -95,6 +95,6 @@ export class Company {
     @Column({ default: false })
     isArchived!: boolean;
 
-    @OneToMany(() => Product, product => product._id)
+    @OneToMany(() => Product, product => product.company)
     products!: Product[];
 }

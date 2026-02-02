@@ -1,11 +1,14 @@
-import { useState } from "react";
-import { MessageCircle, X, Send } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { MessageCircle, X, Send, Maximize2, Minimize2 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import { ChatService } from "@/services/chatService";
 
 interface Message {
   id: string;
   text: string;
   sender: "user" | "bot";
   timestamp: Date;
+  isStreaming?: boolean;
 }
 
 export function Chatbot() {
@@ -20,6 +23,72 @@ export function Chatbot() {
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const streamingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // Cleanup streaming interval on unmount
+  useEffect(() => {
+    return () => {
+      if (streamingIntervalRef.current) {
+        clearInterval(streamingIntervalRef.current);
+      }
+    };
+  }, []);
+
+  // Check if modal should be expanded based on content
+  useEffect(() => {
+    const totalChars = messages.reduce((sum, msg) => sum + msg.text.length, 0);
+    setIsExpanded(totalChars > 500 || messages.length > 5);
+  }, [messages]);
+
+  const streamText = (fullText: string, messageId: string) => {
+    let currentIndex = 0;
+    const charsPerInterval = 3; // Characters to show per interval
+    
+    // Add initial empty message
+    const botResponse: Message = {
+      id: messageId,
+      text: "",
+      sender: "bot",
+      timestamp: new Date(),
+      isStreaming: true,
+    };
+    setMessages((prev) => [...prev, botResponse]);
+    setIsTyping(false);
+
+    streamingIntervalRef.current = setInterval(() => {
+      currentIndex += charsPerInterval;
+      
+      if (currentIndex >= fullText.length) {
+        // Streaming complete
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === messageId
+              ? { ...msg, text: fullText, isStreaming: false }
+              : msg
+          )
+        );
+        if (streamingIntervalRef.current) {
+          clearInterval(streamingIntervalRef.current);
+        }
+      } else {
+        // Update with partial text
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === messageId
+              ? { ...msg, text: fullText.substring(0, currentIndex) }
+              : msg
+          )
+        );
+      }
+    }, 30); // Update every 30ms for smooth streaming
+  };
 
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
@@ -33,20 +102,45 @@ export function Chatbot() {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    const currentInput = inputValue;
     setInputValue("");
     setIsTyping(true);
 
-    // Simulate bot response (MVP - placeholder for knowledge base)
-    setTimeout(() => {
-      const botResponse: Message = {
+    try {
+      // Call backend API using ChatService
+      const conversationHistory = messages.slice(-10).map(m => ({
+        role: m.sender === 'user' ? 'user' as const : 'assistant' as const,
+        content: m.text
+      }));
+
+      const data = await ChatService.sendMessage(currentInput, conversationHistory);
+      
+      // Stream the response
+      if (data.success && data.response) {
+        streamText(data.response, (Date.now() + 1).toString());
+      } else {
+        // Handle error from service
+        const errorResponse: Message = {
+          id: (Date.now() + 1).toString(),
+          text: data.response || "I'm having trouble processing your request. Please try again.",
+          sender: "bot",
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, errorResponse]);
+        setIsTyping(false);
+      }
+      
+    } catch (error) {
+      console.error('Chat error:', error);
+      const errorResponse: Message = {
         id: (Date.now() + 1).toString(),
-        text: "Thank you for your question! Our AI is currently being trained with our knowledge base. For immediate assistance, please contact our support team or explore our documentation.",
+        text: "I'm having trouble connecting. Please try again or contact support.",
         sender: "bot",
         timestamp: new Date(),
       };
-      setMessages((prev) => [...prev, botResponse]);
+      setMessages((prev) => [...prev, errorResponse]);
       setIsTyping(false);
-    }, 1000);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -55,6 +149,7 @@ export function Chatbot() {
       handleSendMessage();
     }
   };
+            <div ref={messagesEndRef} />
 
   return (
     <>
@@ -72,7 +167,13 @@ export function Chatbot() {
 
       {/* Chatbot Window */}
       {isOpen && (
-        <div className="fixed bottom-6 right-6 w-96 h-[32rem] bg-white rounded-2xl shadow-2xl flex flex-col z-50 border border-gray-200">
+        <div 
+          className={`fixed bg-white rounded-2xl shadow-2xl flex flex-col z-50 border border-gray-200 transition-all duration-300 ${
+            isExpanded 
+              ? "inset-4 md:inset-8" 
+              : "bottom-6 right-6 w-96 h-[32rem]"
+          }`}
+        >
           {/* Header */}
           <div className="app-bg-primary text-white p-4 rounded-t-2xl flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -84,13 +185,22 @@ export function Chatbot() {
                 <p className="text-xs text-white/80">Always here to help</p>
               </div>
             </div>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="hover:bg-white/20 p-2 rounded-lg transition-colors"
-              aria-label="Close chat"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="hover:bg-white/20 p-2 rounded-lg transition-colors"
+                aria-label="Toggle size"
+              >
+                {isExpanded ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+              </button>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="hover:bg-white/20 p-2 rounded-lg transition-colors"
+                aria-label="Close chat"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           {/* Messages */}
@@ -109,7 +219,33 @@ export function Chatbot() {
                       : "bg-gray-100 text-gray-800"
                   }`}
                 >
-                  <p className="text-sm">{message.text}</p>
+                  <div className="text-sm prose prose-sm max-w-none">
+                    {message.sender === "bot" ? (
+                      <ReactMarkdown
+                        components={{
+                          p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                          strong: ({ children }) => <strong className="font-bold">{children}</strong>,
+                          em: ({ children }) => <em className="italic">{children}</em>,
+                          code: ({ children }) => (
+                            <code className="bg-gray-200 px-1 py-0.5 rounded text-xs">{children}</code>
+                          ),
+                          pre: ({ children }) => (
+                            <pre className="bg-gray-200 p-2 rounded text-xs overflow-x-auto my-2">{children}</pre>
+                          ),
+                          ul: ({ children }) => <ul className="list-disc ml-4 mb-2">{children}</ul>,
+                          ol: ({ children }) => <ol className="list-decimal ml-4 mb-2">{children}</ol>,
+                          li: ({ children }) => <li className="mb-1">{children}</li>,
+                        }}
+                      >
+                        {message.text}
+                      </ReactMarkdown>
+                    ) : (
+                      <p className="whitespace-pre-wrap">{message.text}</p>
+                    )}
+                    {message.isStreaming && (
+                      <span className="inline-block w-1 h-4 bg-gray-600 ml-1 animate-pulse"></span>
+                    )}
+                  </div>
                   <p
                     className={`text-xs mt-1 ${
                       message.sender === "user"
@@ -125,6 +261,7 @@ export function Chatbot() {
                 </div>
               </div>
             ))}
+            <div ref={messagesEndRef} />
 
             {/* Typing Indicator */}
             {isTyping && (

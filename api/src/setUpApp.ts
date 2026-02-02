@@ -31,6 +31,7 @@ import BrandNameRouter from "./routes/v1/brandName";
 import ProductClassificationRouter from "./routes/v1/productClassification";
 import PublicRouter from "./routes/v1/public";
 import BlockchainRecoveryRouter from "./routes/v1/blockchainRecovery";
+import ChatRouter from "./routes/v1/chat";
 import { verifyUser } from "./middleware/verifyUser";
 import { verifyMobileUser } from "./middleware/verifyMobileUser";
 import helmet from "helmet";
@@ -77,6 +78,7 @@ const setUpApp = async () => {
   app.use("/api/v1/brand-name", verifyUser, BrandNameRouter);
   app.use("/api/v1/classification", verifyUser, ProductClassificationRouter);
   app.use("/api/v1/blockchain-recovery", BlockchainRecoveryRouter); // Blockchain data recovery - some routes public
+  app.use("/api/v1/chat", ChatRouter); // AI Chatbot - no auth required for now
 
   // Serve static uploads (avatars, etc.)
   const uploadsPath = path.resolve(process.cwd(), "uploads");

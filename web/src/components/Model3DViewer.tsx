@@ -118,7 +118,7 @@ export function Model3DViewer({ modelUrl, hotspots }: Model3DViewerProps) {
       )}
 
       <Canvas>
-        <PerspectiveCamera makeDefault position={[0, 8, 0]} fov={50} />
+      <PerspectiveCamera makeDefault position={[0, 8, 8]} fov={50} />
         <OrbitControls 
           enablePan={true}
           enableZoom={true}

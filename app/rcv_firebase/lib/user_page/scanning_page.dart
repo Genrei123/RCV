@@ -3661,6 +3661,29 @@ class _QRScannerPageState extends State<QRScannerPage>
           // Continue with ML Kit results
         }
       }
+      // Upload images to Firebase immediately after OCR extraction
+      developer.log('📤 Uploading images to Firebase...');
+      try {
+        final scanId = DateTime.now().millisecondsSinceEpoch.toString();
+        final uploadResult = await FirebaseStorageService.uploadScanImages(
+          scanId: scanId,
+          frontImage: File(frontImagePath),
+          backImage: File(backImagePath),
+        );
+        
+        // Store the uploaded URLssss
+        setState(() {
+          _frontImageUrl = uploadResult['frontUrl'];
+          _backImageUrl = uploadResult['backUrl'];
+        });
+        
+        developer.log('✅ Images uploaded successfully');
+        developer.log('   Front URL: $_frontImageUrl');
+        developer.log('   Back URL: $_backImageUrl');
+      } catch (uploadError) {
+        developer.log('⚠️ Image upload failed: $uploadError');
+        // Continue with OCR even if upload fails - we still have local paths
+      }
 
       developer.log(
         '📊 Final OCR Results - Front: ${frontText.length} chars, Back: ${backText.length} chars',

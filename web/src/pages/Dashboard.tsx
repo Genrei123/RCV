@@ -835,11 +835,11 @@ export function Dashboard(props: DashboardProps) {
             emptyStateTitle="No Users Found"
             emptyStateDescription="You may try to input different keywords, check for typos, or adjust your filters."
             customControls={
-              <div className="flex flex-col lg:flex-row gap-3 w-full max-w-full overflow-hidden">
+              <div className="flex flex-col lg:flex-row gap-3 w-full">
                 {isAdmin() && (
                   <Button
                     onClick={() => setIsInviteModalOpen(true)}
-                    className="bg-green-600 hover:bg-green-700 text-white w-full lg:w-auto text-sm px-4 py-2 min-w-0 whitespace-nowrap"
+                    className="bg-green-600 hover:bg-green-700 text-white w-full lg:w-auto text-sm px-4 py-2 whitespace-nowrap"
                   >
                     <UserPlus className="w-4 h-4 mr-2 flex-shrink-0" />
                     <span className="truncate">Invite Agent</span>
