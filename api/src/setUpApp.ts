@@ -60,6 +60,7 @@ const setUpApp = async () => {
   app.use("/api/v1/public", PublicRouter); // Public endpoints - no auth required
   app.use("/api/v1/mobile", MobileRouter); // Mobile-specific routes (no cookies)
   app.use("/api/v1/scan", verifyMobileUser, ScanRouter);
+  app.use("/api/v1/kiosk-scan", ScanRouter); // Kiosk scanner - no auth required (public device)
   app.use("/api/v1/user", verifyUser, UserRouter);
   app.use("/api/v1/product", verifyUser, ProductRouter);
   app.use("/api/v1/company", verifyUser, CompanyRouter);
