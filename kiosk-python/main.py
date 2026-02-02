@@ -290,7 +290,7 @@ class RCVApiService:
     def scan_product_ocr(self, ocr_text: str, front_image_url: str = None, back_image_url: str = None) -> dict:
         """
         Process OCR text with AI to extract product information
-        POST /api/v1/scan/scanProduct
+        POST /api/v1/scan/product-ocr
         """
         data = {'blockOfText': ocr_text}
         if front_image_url:
@@ -298,7 +298,7 @@ class RCVApiService:
         if back_image_url:
             data['backImageUrl'] = back_image_url
         
-        return self._make_request('POST', '/scan/scanProduct', data)
+        return self._make_request('POST', '/scan/product-ocr', data)
     
     def search_product(self, product_name: str = None, lto_number: str = None, 
                        cfpr_number: str = None, brand_name: str = None,
@@ -526,9 +526,33 @@ class GPIOLEDService:
                 # Turn all LEDs off initially
                 self.all_off()
                 print("✅ GPIO LEDs initialized (Pins: 17, 27, 22)")
+                
+                # Test: Blink all LEDs 3 times on startup
+                self._startup_test()
             except Exception as e:
                 print(f"⚠️ GPIO initialization failed: {e}")
                 self.enabled = False
+    
+    def _startup_test(self):
+        """Test GPIO by blinking all LEDs 3 times on startup"""
+        print("🔄 Testing GPIO LEDs (3 blinks)...")
+        try:
+            for i in range(3):
+                # Turn all LEDs on
+                GPIO.output(LEDPins.PIN_PROCESSING, GPIO.HIGH)
+                GPIO.output(LEDPins.PIN_SUCCESS, GPIO.HIGH)
+                GPIO.output(LEDPins.PIN_ERROR, GPIO.HIGH)
+                time.sleep(0.3)
+                
+                # Turn all LEDs off
+                GPIO.output(LEDPins.PIN_PROCESSING, GPIO.LOW)
+                GPIO.output(LEDPins.PIN_SUCCESS, GPIO.LOW)
+                GPIO.output(LEDPins.PIN_ERROR, GPIO.LOW)
+                time.sleep(0.3)
+            
+            print("✅ GPIO LED test complete - 3 blinks successful")
+        except Exception as e:
+            print(f"⚠️ GPIO test failed: {e}")
     
     def all_off(self):
         """Turn off all LEDs"""
@@ -1171,9 +1195,9 @@ class KioskApp:
         self.ocr_header_label.pack(pady=(0, 15))
         
         # Control buttons - compact for small screens
-        self.ocr_capture_btn = tk.Button(
+        self.ocr_capture_front_btn = tk.Button(
             sidebar,
-            text="CAPTURE",
+            text="PICTURE 1\n(FRONT)",
             font=("SF Pro Text", 9, "bold"),
             bg=Colors.PRIMARY,
             fg=Colors.TEXT_WHITE,
@@ -1183,25 +1207,26 @@ class KioskApp:
             bd=0,
             width=12,
             pady=10,
-            command=self._ocr_capture_photo
+            command=self._ocr_capture_front
         )
-        self.ocr_capture_btn.pack(pady=5, padx=8, fill=tk.X)
+        self.ocr_capture_front_btn.pack(pady=5, padx=8, fill=tk.X)
         
-        self.ocr_retake_btn = tk.Button(
+        self.ocr_capture_back_btn = tk.Button(
             sidebar,
-            text="RETAKE",
+            text="PICTURE 2\n(BACK)",
             font=("SF Pro Text", 9, "bold"),
-            bg=Colors.WARNING,
+            bg=Colors.PRIMARY,
             fg=Colors.TEXT_WHITE,
-            activebackground="#F57C00",
+            activebackground=Colors.PRIMARY_LIGHT,
             activeforeground=Colors.TEXT_WHITE,
             relief=tk.FLAT,
             bd=0,
             width=12,
             pady=10,
-            command=self._ocr_retake_photo
+            command=self._ocr_capture_back,
+            state=tk.DISABLED
         )
-        self.ocr_retake_btn.pack(pady=5, padx=8, fill=tk.X)
+        self.ocr_capture_back_btn.pack(pady=5, padx=8, fill=tk.X)
         
         self.ocr_submit_btn = tk.Button(
             sidebar,
@@ -2686,10 +2711,9 @@ class KioskApp:
                 # Display frame in scan mode
                 self.display_frame(display_frame)
             
-            # Display frame in OCR capture mode (when ready to capture)
+            # Display frame in OCR capture mode - ALWAYS update preview
             elif self.state == KioskState.OCR_CAPTURE:
-                if self.ocr_step in [OCRCaptureStep.READY_FRONT, OCRCaptureStep.READY_BACK]:
-                    self._display_ocr_frame(frame)
+                self._display_ocr_frame(frame)
             
             # Frame rate limiting
             elapsed = time.time() - loop_start
@@ -3255,46 +3279,41 @@ class KioskApp:
     
     def _reset_ocr_capture(self):
         """Reset OCR capture state for a new scan"""
-        self.ocr_step = OCRCaptureStep.READY_FRONT
         self.ocr_front_image = None
         self.ocr_back_image = None
         self.ocr_front_frame = None
         self.ocr_back_frame = None
         
         # Reset thumbnails
-        self.ocr_front_thumb.config(text="Not captured", image="")
-        self.ocr_back_thumb.config(text="Not captured", image="")
+        self.ocr_front_thumb.config(text="Front: -", image="")
+        self.ocr_back_thumb.config(text="Back: -", image="")
         
-        # Enable capture button, disable submit
-        self.ocr_capture_btn.config(state=tk.NORMAL)
-        self.ocr_submit_btn.config(state=tk.DISABLED)
+        # Update UI
+        self._update_ocr_ui()
     
     def _update_ocr_ui(self):
-        """Update OCR capture screen UI based on current step"""
-        if self.ocr_step == OCRCaptureStep.READY_FRONT:
+        """Update OCR UI based on captured images"""
+        # Update button states based on what's captured
+        if self.ocr_front_frame is None:
             self.ocr_instruction_label.config(text="Position FRONT of label")
             self.ocr_instruction_sub.config(text="Ilagay ang HARAP ng label")
-            self.ocr_capture_btn.config(text="CAPTURE", state=tk.NORMAL)
-            self.ocr_retake_btn.config(state=tk.DISABLED)
+            self.ocr_capture_front_btn.config(state=tk.NORMAL)
+            self.ocr_capture_back_btn.config(state=tk.DISABLED)
+            self.ocr_submit_btn.config(state=tk.DISABLED)
         
-        elif self.ocr_step == OCRCaptureStep.PREVIEW_FRONT:
-            self.ocr_instruction_label.config(text="Front captured! Ready for BACK")
-            self.ocr_instruction_sub.config(text="Handa na para sa LIKOD")
-            self.ocr_capture_btn.config(text="CAPTURE", state=tk.NORMAL)
-            self.ocr_retake_btn.config(state=tk.NORMAL)
+        elif self.ocr_front_frame is not None and self.ocr_back_frame is None:
+            self.ocr_instruction_label.config(text="Front captured! Now BACK")
+            self.ocr_instruction_sub.config(text="Nakuha na ang HARAP! Ngayon LIKOD")
+            self.ocr_capture_front_btn.config(state=tk.NORMAL)  # Can retake
+            self.ocr_capture_back_btn.config(state=tk.NORMAL)  # Now enabled
+            self.ocr_submit_btn.config(state=tk.DISABLED)
         
-        elif self.ocr_step == OCRCaptureStep.READY_BACK:
-            self.ocr_instruction_label.config(text="Position BACK of label")
-            self.ocr_instruction_sub.config(text="Ilagay ang LIKOD ng label")
-            self.ocr_capture_btn.config(text="CAPTURE", state=tk.NORMAL)
-            self.ocr_retake_btn.config(state=tk.NORMAL)
-        
-        elif self.ocr_step == OCRCaptureStep.PREVIEW_BACK:
-            self.ocr_instruction_label.config(text="Both sides captured! Ready")
+        elif self.ocr_front_frame is not None and self.ocr_back_frame is not None:
+            self.ocr_instruction_label.config(text="Both sides captured!")
             self.ocr_instruction_sub.config(text="Nakuha ang dalawang panig!")
-            self.ocr_capture_btn.config(state=tk.DISABLED)
-            self.ocr_retake_btn.config(state=tk.NORMAL)
-            self.ocr_submit_btn.config(state=tk.NORMAL)
+            self.ocr_capture_front_btn.config(state=tk.NORMAL)  # Can retake
+            self.ocr_capture_back_btn.config(state=tk.NORMAL)  # Can retake
+            self.ocr_submit_btn.config(state=tk.NORMAL)  # Can submit
     
     def _display_ocr_frame(self, frame):
         """Display frame in OCR capture camera preview"""
@@ -3311,39 +3330,42 @@ class KioskApp:
         except Exception as e:
             pass
     
-    def _ocr_capture_photo(self):
-        """Capture current frame as photo"""
+    
+    def _ocr_capture_front(self):
+        """Capture PICTURE 1 (front of label)"""
         if self.current_frame is None:
             return
         
         # Capture the current frame
         frame_copy = self.current_frame.copy()
+        self.ocr_front_frame = frame_copy
         
-        if self.ocr_step == OCRCaptureStep.READY_FRONT:
-            self.ocr_front_frame = frame_copy
-            
-            # Create thumbnail
-            thumb = self._create_thumbnail(frame_copy, 150, 100)
-            self.ocr_front_thumb.config(image=thumb, text="")
-            self.ocr_front_thumb.image = thumb
-            
-            # Move to ready for back
-            self.ocr_step = OCRCaptureStep.PREVIEW_FRONT
-            self._update_ocr_ui()
-            self.tts.speak("Front captured. Now position the back.")
+        # Create thumbnail
+        thumb = self._create_thumbnail(frame_copy, 150, 100)
+        self.ocr_front_thumb.config(image=thumb, text="")
+        self.ocr_front_thumb.image = thumb
         
-        elif self.ocr_step in [OCRCaptureStep.PREVIEW_FRONT, OCRCaptureStep.READY_BACK]:
-            self.ocr_back_frame = frame_copy
-            
-            # Create thumbnail
-            thumb = self._create_thumbnail(frame_copy, 150, 100)
-            self.ocr_back_thumb.config(image=thumb, text="")
-            self.ocr_back_thumb.image = thumb
-            
-            # Ready to submit
-            self.ocr_step = OCRCaptureStep.PREVIEW_BACK
-            self._update_ocr_ui()
-            self.tts.speak("Back captured. Tap Submit to analyze.")
+        # Update UI
+        self._update_ocr_ui()
+        self.tts.speak("Front captured. Now capture the back.")
+    
+    def _ocr_capture_back(self):
+        """Capture PICTURE 2 (back of label)"""
+        if self.current_frame is None:
+            return
+        
+        # Capture the current frame
+        frame_copy = self.current_frame.copy()
+        self.ocr_back_frame = frame_copy
+        
+        # Create thumbnail
+        thumb = self._create_thumbnail(frame_copy, 150, 100)
+        self.ocr_back_thumb.config(image=thumb, text="")
+        self.ocr_back_thumb.image = thumb
+        
+        # Update UI
+        self._update_ocr_ui()
+        self.tts.speak("Back captured. Tap Submit to analyze.")
     
     def _create_thumbnail(self, frame, width, height):
         """Create a thumbnail from a frame"""
@@ -3351,21 +3373,6 @@ class KioskApp:
         pil_image = Image.fromarray(frame_rgb)
         pil_image.thumbnail((width, height))
         return ImageTk.PhotoImage(pil_image)
-    
-    def _ocr_retake_photo(self):
-        """Retake the last captured photo"""
-        if self.ocr_step == OCRCaptureStep.PREVIEW_FRONT:
-            # Retake front
-            self.ocr_front_frame = None
-            self.ocr_front_thumb.config(text="Not captured", image="")
-            self.ocr_step = OCRCaptureStep.READY_FRONT
-        elif self.ocr_step in [OCRCaptureStep.READY_BACK, OCRCaptureStep.PREVIEW_BACK]:
-            # Retake back
-            self.ocr_back_frame = None
-            self.ocr_back_thumb.config(text="Not captured", image="")
-            self.ocr_step = OCRCaptureStep.READY_BACK
-        
-        self._update_ocr_ui()
     
     def _ocr_cancel(self):
         """Cancel OCR capture and return to start screen"""
@@ -3406,8 +3413,8 @@ class KioskApp:
             
             self.root.after(0, lambda: self.loading_detail_label.config(text="Searching for product..."))
             
-            # Send to API - calling /scan/scanProduct endpoint
-            print(f"📡 Calling /scan/scanProduct API...")
+            # Send to API - calling /scan/product-ocr endpoint
+            print(f"📡 Calling /scan/product-ocr API...")
             response = self.api.scan_product_ocr(combined_text)
             print(f"📨 API Response: found={response.get('found')}, isCompliant={response.get('isCompliant')}")
             
