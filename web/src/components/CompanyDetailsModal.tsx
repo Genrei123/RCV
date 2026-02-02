@@ -290,13 +290,10 @@ export function CompanyDetailsModal({ isOpen, onClose, company }: CompanyDetails
                     <div className="space-y-1">
                       <label className="text-sm font-medium text-gray-500">Phone</label>
                       <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-teal-600" />
-                        <a 
-                          href={`tel:${formatPhoneWithCountryCode(company.phone)}`} 
-                          className="text-teal-600 hover:text-teal-800 hover:underline transition-colors"
-                        >
+                        <Phone className="h-4 w-4 text-gray-400" />
+                        <span className="text-gray-900">
                           {formatPhoneWithCountryCode(company.phone)}
-                        </a>
+                        </span>
                       </div>
                     </div>
                   )}
@@ -305,13 +302,10 @@ export function CompanyDetailsModal({ isOpen, onClose, company }: CompanyDetails
                     <div className="space-y-1">
                       <label className="text-sm font-medium text-gray-500">Email</label>
                       <div className="flex items-center gap-2">
-                        <Mail className="h-4 w-4 text-teal-600" />
-                        <a 
-                          href={`mailto:${company.email}`} 
-                          className="text-teal-600 hover:text-teal-800 hover:underline transition-colors"
-                        >
+                        <Mail className="h-4 w-4 text-gray-400" />
+                        <span className="text-gray-900">
                           {company.email}
-                        </a>
+                        </span>
                       </div>
                     </div>
                   )}
