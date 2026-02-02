@@ -83,6 +83,38 @@ export function LandingPage() {
   const [navbarScrolled, setNavbarScrolled] = useState(false);
   const [carouselScale, setCarouselScale] = useState(1);
   const [carouselOpacity, setCarouselOpacity] = useState(1);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Disable scroll when mobile menu is open
+  useEffect(() => {
+    const preventDefault = (e: Event) => {
+      e.preventDefault();
+    };
+
+    if (mobileMenuOpen) {
+      // Set overflow hidden on both html and body
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
+      // Prevent scroll on touch devices
+      document.addEventListener('touchmove', preventDefault, { passive: false });
+      // Prevent scroll on wheel
+      document.addEventListener('wheel', preventDefault, { passive: false });
+    } else {
+      // Reset overflow
+      document.documentElement.style.overflow = 'auto';
+      document.body.style.overflow = 'auto';
+      // Remove event listeners
+      document.removeEventListener('touchmove', preventDefault);
+      document.removeEventListener('wheel', preventDefault);
+    }
+
+    return () => {
+      document.documentElement.style.overflow = 'auto';
+      document.body.style.overflow = 'auto';
+      document.removeEventListener('touchmove', preventDefault);
+      document.removeEventListener('wheel', preventDefault);
+    };
+  }, [mobileMenuOpen]);
 
   // Track scroll position for navbar and carousel animation
   useEffect(() => {
@@ -190,8 +222,13 @@ export function LandingPage() {
           ? 'bg-white/95 backdrop-blur-sm border-b border-gray-100' 
           : 'bg-transparent'
       }`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center h-16">
+        {/* Header Backdrop Overlay when menu is open */}
+        {mobileMenuOpen && (
+          <div className="absolute inset-0 bg-black/30 md:hidden z-0 pointer-events-none" />
+        )}
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="flex items-center justify-between h-16">
             {/* Logo - Left */}
             <div className="flex items-center gap-3 flex-shrink-0">
               <img 
@@ -214,8 +251,8 @@ export function LandingPage() {
               </div>
             </div>
 
-            {/* Nav Links - Center */}
-            <div className="flex-1 flex items-center justify-center gap-8">
+            {/* Nav Links - Center (Hidden on mobile) */}
+            <div className="hidden md:flex items-center flex-1 justify-center gap-8">
               <a
                 href="#features"
                 onClick={(e) => {
@@ -266,11 +303,11 @@ export function LandingPage() {
               </a>
             </div>
 
-            {/* Get Started Button - Right */}
-            <div className="flex-shrink-0">
+            {/* Get Started Button + Hamburger - Right */}
+            <div className="flex items-center gap-4 flex-shrink-0">
               <Button
                 onClick={() => navigate("/login")}
-                className={`transition-all duration-300 ${
+                className={`hidden sm:block transition-all duration-300 ${
                   navbarScrolled
                     ? 'app-bg-primary hover:app-bg-secondary app-text-white px-6 hover:text-white cursor-pointer'
                     : 'app-bg-primary hover:app-bg-secondary app-text-white px-6 hover:text-white cursor-pointer'
@@ -278,10 +315,129 @@ export function LandingPage() {
               >
                 Get Started
               </Button>
+              
+              {/* Hamburger Menu - Mobile Only */}
+              <button 
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="md:hidden p-2"
+              >
+                <svg
+                  className={`w-6 h-6 transition-colors duration-300 ${
+                    navbarScrolled ? 'text-gray-800' : 'text-white'
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Sliding Drawer Menu */}
+          <div
+            className={`fixed top-0 right-0 h-screen w-64 bg-white shadow-2xl md:hidden z-40 transform transition-transform duration-300 ease-out overflow-y-auto ${
+              mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
+            }`}
+          >
+            {/* Header with Title and Close Button */}
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-gray-800">Menu</h3>
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <svg
+                  className="w-6 h-6 text-gray-800"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            {/* Menu Items */}
+            <div className="px-6 py-6 space-y-4">
+              <a
+                href="#features"
+                onClick={(e) => {
+                  e.preventDefault();
+                  document.getElementById("features")?.scrollIntoView({ behavior: "smooth" });
+                  setMobileMenuOpen(false);
+                }}
+                className="block py-3 text-sm uppercase tracking-wider font-medium text-gray-800 hover:text-primary transition-colors cursor-pointer"
+              >
+                Features
+              </a>
+              <a
+                href="#transparency"
+                onClick={(e) => {
+                  e.preventDefault();
+                  document.getElementById("transparency")?.scrollIntoView({ behavior: "smooth" });
+                  setMobileMenuOpen(false);
+                }}
+                className="block py-3 text-sm uppercase tracking-wider font-medium text-gray-800 hover:text-primary transition-colors cursor-pointer"
+              >
+                Transparency
+              </a>
+              <a
+                href="#about"
+                onClick={(e) => {
+                  e.preventDefault();
+                  document.getElementById("about")?.scrollIntoView({ behavior: "smooth" });
+                  setMobileMenuOpen(false);
+                }}
+                className="block py-3 text-sm uppercase tracking-wider font-medium text-gray-800 hover:text-primary transition-colors cursor-pointer"
+              >
+                About
+              </a>
+              <a
+                href="#mission"
+                onClick={(e) => {
+                  e.preventDefault();
+                  document.getElementById("mission")?.scrollIntoView({ behavior: "smooth" });
+                  setMobileMenuOpen(false);
+                }}
+                className="block py-3 text-sm uppercase tracking-wider font-medium text-gray-800 hover:text-primary transition-colors cursor-pointer"
+              >
+                Our Mission
+              </a>
+              <div className="pt-4 border-t border-gray-200">
+                <Button
+                  onClick={() => {
+                    navigate("/login");
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full transition-all duration-300 app-bg-primary hover:app-bg-secondary app-text-white hover:text-white cursor-pointer mt-2"
+                >
+                  Get Started
+                </Button>
+              </div>
             </div>
           </div>
         </div>
       </nav>
+
+      {/* Mobile Backdrop Overlay - Outside navbar for proper z-index */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/75 md:hidden z-30 pointer-events-auto"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
 
       {/* Hero Carousel - Full Width with Closing Animation */}
       <section 
