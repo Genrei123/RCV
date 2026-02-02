@@ -3,6 +3,9 @@ import 'package:rcv_firebase/themes/app_fonts.dart';
 import '../widgets/title_logo_header_app_bar.dart';
 import '../services/api_service.dart';
 import '../pages/report_detail_page.dart';
+import '../services/remote_config_service.dart';
+import '../widgets/feature_disabled_screen.dart';
+import '../widgets/navigation_bar.dart';
 
 // Simple in-memory Report model (can be moved to models folder later)
 class ReportItem {
@@ -181,6 +184,16 @@ class _UserReportsPageState extends State<UserReportsPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Check if reports feature is disabled
+    if (RemoteConfigService.isFeatureDisabled('disable_reports_page')) {
+      return FeatureDisabledScreen(
+        featureName: 'Reports',
+        icon: Icons.bar_chart,
+        selectedNavIndex: 3,
+        navBarRole: NavBarRole.user,
+      );
+    }
+
     return Column(
       children: [
         const TitleLogoHeaderAppBar(
