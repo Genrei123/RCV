@@ -34,27 +34,70 @@ jobs:
         with:
           channel: 'stable'
 
+      # 4. Create google-services.json from GitHub Secret
+      - name: Create google-services.json
+        run: |
+          echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > android/app/google-services.json
+        working-directory: ./app/rcv_firebase
+
+      # 5. Create dummy .env file
       - name: Create dummy .env file
         run: touch .env
         working-directory: ./app/rcv_firebase
 
-      # 4. Install Dependencies
+      # 6. Install Dependencies
       - name: Install Dependencies
         run: flutter pub get
         working-directory: ./app/rcv_firebase
 
-      # 5. Check for formatting and static analysis errors (Optional but recommended)
+      # 7. Check for formatting and static analysis errors (Optional but recommended)
       - name: Run Analyzer
         run: flutter analyze
         working-directory: ./app/rcv_firebase
 
-      # 6. Build APK (only on main branch)
+      # 8. Auto-increment build number (only on main branch)
+      - name: Auto-increment Build Number
+        if: github.ref == 'refs/heads/main'
+        id: increment_version
+        run: |
+          # Get current version from pubspec.yaml
+          CURRENT_VERSION=$(grep 'version:' pubspec.yaml | sed 's/version: //' | tr -d ' ')
+          
+          # Split version and build number
+          VERSION_NAME=$(echo $CURRENT_VERSION | cut -d'+' -f1)
+          BUILD_NUMBER=$(echo $CURRENT_VERSION | cut -d'+' -f2)
+          
+          # Increment build number
+          NEW_BUILD_NUMBER=$((BUILD_NUMBER + 1))
+          NEW_VERSION="${VERSION_NAME}+${NEW_BUILD_NUMBER}"
+          
+          # Update pubspec.yaml
+          sed -i "s/version: .*/version: $NEW_VERSION/" pubspec.yaml
+          
+          echo "version_name=$VERSION_NAME" >> $GITHUB_OUTPUT
+          echo "build_number=$NEW_BUILD_NUMBER" >> $GITHUB_OUTPUT
+          echo "full_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          
+          echo "📦 Version updated: $CURRENT_VERSION → $NEW_VERSION"
+        working-directory: ./app/rcv_firebase
+
+      # 9. Commit version bump back to repo
+      - name: Commit Version Bump
+        if: github.ref == 'refs/heads/main'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add app/rcv_firebase/pubspec.yaml
+          git commit -m "chore: bump version to ${{ steps.increment_version.outputs.full_version }} [skip ci]" || echo "No changes to commit"
+          git push || echo "No changes to push"
+
+      # 10. Build APK (only on main branch)
       - name: Build APK
         if: github.ref == 'refs/heads/main'
         run: flutter build apk --release
         working-directory: ./app/rcv_firebase
 
-      # 7. Upload to Firebase App Distribution (only on main branch)
+      # 11. Upload to Firebase App Distribution
       - name: Upload to Firebase App Distribution
         if: github.ref == 'refs/heads/main'
         uses: wzieba/Firebase-Distribution-Github-Action@v1
@@ -63,4 +106,65 @@ jobs:
           serviceCredentialsFileContent: ${{ secrets.FIREBASE_APP_CREDENTIAL_FILE_CONTENT }}
           groups: testers
           file: app/rcv_firebase/build/app/outputs/flutter-apk/app-release.apk
-          releaseNotes: "Automated build from commit ${{ github.sha }}"
+          releaseNotes: "Version ${{ steps.increment_version.outputs.version_name }} (Build ${{ steps.increment_version.outputs.build_number }}) - ${{ github.event.head_commit.message }}"
+
+      # 12. Update Firebase Remote Config with new version
+      - name: Update Remote Config
+        if: github.ref == 'refs/heads/main'
+        env:
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
+          FIREBASE_CLIENT_EMAIL: ${{ secrets.FIREBASE_CLIENT_EMAIL }}
+          APP_VERSION: ${{ steps.increment_version.outputs.version_name }}
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+        run: |
+          npm install firebase-admin
+          node << 'EOF'
+          const admin = require('firebase-admin');
+          
+          // Initialize Firebase Admin
+          admin.initializeApp({
+            credential: admin.credential.cert({
+              projectId: process.env.FIREBASE_PROJECT_ID,
+              privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+              clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+            }),
+          });
+          
+          async function updateRemoteConfig() {
+            try {
+              const template = await admin.remoteConfig().getTemplate();
+              const appVersion = process.env.APP_VERSION;
+              const appId = process.env.FIREBASE_APP_ID;
+              
+              // Update app distribution URL
+              const downloadUrl = `https://appdistribution.firebase.dev/i/${appId}`;
+              
+              // Update latest version
+              template.parameters['latest_app_version'] = {
+                defaultValue: { value: appVersion }
+              };
+              
+              // Update download URL
+              template.parameters['app_update_url'] = {
+                defaultValue: { value: downloadUrl }
+              };
+              
+              // You can set force_update_required to true if needed
+              // template.parameters['force_update_required'] = {
+              //   defaultValue: { value: 'false' }
+              // };
+              
+              const published = await admin.remoteConfig().publishTemplate(template);
+              console.log('✅ Remote Config updated successfully!');
+              console.log(`   Version: ${appVersion}`);
+              console.log(`   Download URL: ${downloadUrl}`);
+              console.log(`   Config version: ${published.version.versionNumber}`);
+            } catch (error) {
+              console.error('❌ Failed to update Remote Config:', error);
+              process.exit(1);
+            }
+          }
+          
+          updateRemoteConfig();
+          EOF
