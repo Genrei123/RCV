@@ -8,10 +8,16 @@ on:
       - development
       - 'feature/**' 
       - 'bugfix/**'
+    paths:
+      - 'app/rcv_firebase/**'
+      - '.github/workflows/app.yaml'
   pull_request:
     branches:
       - main
       - development
+    paths:
+      - 'app/rcv_firebase/**'
+      - '.github/workflows/app.yaml'
 
 jobs:
   build_check:
