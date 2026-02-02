@@ -181,7 +181,7 @@ export function Chatbot() {
                 <MessageCircle className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-semibold">RCV Assistant</h3>
+                <h3 className="font-semibold">Chat with Arcy!</h3>
                 <p className="text-xs text-white/80">Always here to help</p>
               </div>
             </div>
