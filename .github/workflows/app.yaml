@@ -106,7 +106,6 @@ jobs:
         with:
           appId: ${{ secrets.FIREBASE_APP_ID }}
           serviceCredentialsFileContent: ${{ secrets.FIREBASE_APP_CREDENTIAL_FILE_CONTENT }}
-          groups: testers
           file: app/rcv_firebase/build/app/outputs/flutter-apk/app-release.apk
           releaseNotes: "Version ${{ steps.increment_version.outputs.version_name }} (Build ${{ steps.increment_version.outputs.build_number }}) - ${{ github.event.head_commit.message }}"
 
