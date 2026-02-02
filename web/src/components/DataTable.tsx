@@ -216,7 +216,7 @@ export function DataTable({
             <p className="text-gray-500 max-w-sm">{emptyStateDescription}</p>
           </div>
         ) : (
-          <div className="w-full">
+          <div className="w-full overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="border-b border-gray-200">

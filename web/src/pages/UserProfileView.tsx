@@ -485,7 +485,7 @@ export function UserProfileView() {
               <h2 className="text-xl font-semibold text-neutral-900">
                 Recent Activities
               </h2>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 relative z-10">
                 <label
                   htmlFor="activity-sort"
                   className="text-sm text-neutral-600 hidden sm:block"
@@ -496,7 +496,7 @@ export function UserProfileView() {
                   id="activity-sort"
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as any)}
-                  className="h-9 rounded-md border border-neutral-300 bg-white px-2 text-sm"
+                  className="h-9 rounded-md border border-neutral-300 bg-white px-2 text-sm relative z-10"
                 >
                   <option value="all">All (default)</option>
                   <option value="action">Action (A–Z)</option>
