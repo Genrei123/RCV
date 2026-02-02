@@ -105,30 +105,51 @@ export function ProductDetailsModal({
     }
   };
 
-  // Disable background scroll when modal is open (match AddAgentModal behavior)
+  // Disable background scroll when modal is open
   useEffect(() => {
-    if (isOpen || showEditModal || showTimelineModal || showArchiveModal) {
-      const html = document.documentElement;
-      const body = document.body;
-      const previousHtmlOverflow = html.style.overflow;
-      const previousBodyOverflow = body.style.overflow;
-      const previousBodyPosition = body.style.position;
-      const scrollY = window.scrollY;
-
-      html.style.overflow = "hidden";
-      body.style.overflow = "hidden";
-      body.style.position = "fixed";
-      body.style.width = "100%";
-      body.style.top = `-${scrollY}px`;
-
-      return () => {
-        html.style.overflow = previousHtmlOverflow;
-        body.style.overflow = previousBodyOverflow;
-        body.style.position = previousBodyPosition;
-        body.style.width = "";
-        body.style.top = "";
+    const anyModalOpen = isOpen || showEditModal || showTimelineModal || showArchiveModal;
+    
+    if (anyModalOpen) {
+      // Only apply scroll lock if not already applied
+      const isAlreadyLocked = document.body.style.position === 'fixed';
+      
+      if (!isAlreadyLocked) {
+        const html = document.documentElement;
+        const body = document.body;
+        const scrollY = window.scrollY;
+        
+        // Apply scroll lock
+        html.style.overflow = 'hidden';
+        body.style.overflow = 'hidden';
+        body.style.position = 'fixed';
+        body.style.top = `-${scrollY}px`;
+        body.style.width = '100%';
+        
+        // Store that we applied the lock and the scroll position
+        body.dataset.productModalLock = 'true';
+        body.dataset.productScrollY = scrollY.toString();
+      }
+    } else {
+      // All modals are closed, restore scroll if we applied the lock
+      if (document.body.dataset.productModalLock === 'true') {
+        const html = document.documentElement;
+        const body = document.body;
+        
+        // Restore original styles
+        html.style.overflow = '';
+        body.style.overflow = '';
+        body.style.position = '';
+        body.style.top = '';
+        body.style.width = '';
+        
+        // Restore scroll position
+        const scrollY = parseInt(body.dataset.productScrollY || '0');
         window.scrollTo(0, scrollY);
-      };
+        
+        // Clean up
+        delete body.dataset.productModalLock;
+        delete body.dataset.productScrollY;
+      }
     }
   }, [isOpen, showEditModal, showTimelineModal, showArchiveModal]);
 
@@ -283,7 +304,7 @@ export function ProductDetailsModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
