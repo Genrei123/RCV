@@ -66,8 +66,6 @@ export function LandingPage() {
   const navigate = useNavigate();
   const [api, setApi] = useState<any>(null);
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [isSliding, setIsSliding] = useState(false);
-  const [slideDirection, setSlideDirection] = useState<"left" | "right">("left");
   const autoplayRef = useRef(
     Autoplay({ delay: 5000, stopOnInteraction: true })
   );
@@ -184,15 +182,6 @@ export function LandingPage() {
     };
   }, [api]);
 
-  const handleNavClick = (direction: "left" | "right") => {
-    setSlideDirection(direction);
-    setIsSliding(true);
-    // Reset animation state after transition
-    setTimeout(() => {
-      setIsSliding(false);
-    }, 500);
-  };
-
   return (
     <div className="min-h-screen bg-white overflow-hidden">
       {/* Navbar */}
@@ -231,7 +220,6 @@ export function LandingPage() {
                 href="#features"
                 onClick={(e) => {
                   e.preventDefault();
-                  handleNavClick("right");
                   document.getElementById("features")?.scrollIntoView({ behavior: "smooth" });
                 }}
                 className={`text-sm transition-colors cursor-pointer uppercase tracking-wider font-medium ${
@@ -244,7 +232,6 @@ export function LandingPage() {
                 href="#transparency"
                 onClick={(e) => {
                   e.preventDefault();
-                  handleNavClick("right");
                   document.getElementById("transparency")?.scrollIntoView({ behavior: "smooth" });
                 }}
                 className={`text-sm transition-colors cursor-pointer uppercase tracking-wider font-medium ${
@@ -257,7 +244,6 @@ export function LandingPage() {
                 href="#about"
                 onClick={(e) => {
                   e.preventDefault();
-                  handleNavClick("right");
                   document.getElementById("about")?.scrollIntoView({ behavior: "smooth" });
                 }}
                 className={`text-sm transition-colors cursor-pointer uppercase tracking-wider font-medium ${
@@ -270,7 +256,6 @@ export function LandingPage() {
                 href="#mission"
                 onClick={(e) => {
                   e.preventDefault();
-                  handleNavClick("right");
                   document.getElementById("mission")?.scrollIntoView({ behavior: "smooth" });
                 }}
                 className={`text-sm transition-colors cursor-pointer uppercase tracking-wider font-medium ${
