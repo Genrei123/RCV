@@ -8,10 +8,16 @@ on:
       - development
       - 'feature/**' 
       - 'bugfix/**'
+    paths:
+      - 'app/rcv_firebase/**'
+      - '.github/workflows/app.yaml'
   pull_request:
     branches:
       - main
       - development
+    paths:
+      - 'app/rcv_firebase/**'
+      - '.github/workflows/app.yaml'
 
 jobs:
   build_check:
@@ -141,28 +147,53 @@ jobs:
               // Update app distribution URL
               const downloadUrl = `https://appdistribution.firebase.dev/i/${appId}`;
               
+              console.log('📝 Updating Remote Config parameters...');
+              console.log(`   App Version: ${appVersion}`);
+              console.log(`   Firebase App ID: ${appId}`);
+              console.log(`   Download URL: ${downloadUrl}`);
+              
+              // Ensure all required parameters exist
+              if (!template.parameters) {
+                template.parameters = {};
+              }
+              
               // Update latest version
               template.parameters['latest_app_version'] = {
-                defaultValue: { value: appVersion }
+                defaultValue: { value: appVersion },
+                description: 'Latest available app version - Auto-updated by CI/CD'
               };
               
               // Update download URL
               template.parameters['app_update_url'] = {
-                defaultValue: { value: downloadUrl }
+                defaultValue: { value: downloadUrl },
+                description: 'Firebase App Distribution download URL - Auto-updated by CI/CD'
               };
               
-              // You can set force_update_required to true if needed
-              // template.parameters['force_update_required'] = {
-              //   defaultValue: { value: 'false' }
-              // };
+              // Ensure minimum_app_version exists (don't overwrite if already set)
+              if (!template.parameters['minimum_app_version']) {
+                template.parameters['minimum_app_version'] = {
+                  defaultValue: { value: '1.0.0' },
+                  description: 'Minimum required app version - Set manually for force updates'
+                };
+              }
+              
+              // Ensure force_update_required exists (don't overwrite if already set)
+              if (!template.parameters['force_update_required']) {
+                template.parameters['force_update_required'] = {
+                  defaultValue: { value: 'false' },
+                  description: 'Whether to force users to update - Set manually to enable'
+                };
+              }
               
               const published = await admin.remoteConfig().publishTemplate(template);
               console.log('✅ Remote Config updated successfully!');
-              console.log(`   Version: ${appVersion}`);
-              console.log(`   Download URL: ${downloadUrl}`);
-              console.log(`   Config version: ${published.version.versionNumber}`);
+              console.log(`   Config Version: ${published.version.versionNumber}`);
+              console.log(`   Parameters Updated:`);
+              console.log(`     - latest_app_version: ${appVersion}`);
+              console.log(`     - app_update_url: ${downloadUrl}`);
             } catch (error) {
               console.error('❌ Failed to update Remote Config:', error);
+              console.error('Error details:', error.message);
               process.exit(1);
             }
           }
