@@ -311,7 +311,9 @@ export function AddCompanyModal({
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value || null }));
+    // Truncate to 100 characters for text inputs
+    const truncatedValue = value.length > 100 ? value.substring(0, 100) : value;
+    setFormData((prev) => ({ ...prev, [name]: truncatedValue || null }));
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
@@ -380,9 +382,9 @@ export function AddCompanyModal({
   // === UPDATED VALIDATION LOGIC (MERGED) ===
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
-    const MAX_NAME = 50;
+    const MAX_NAME = 100;
     const MAX_ADDR = 100;
-    const MAX_LIC = 50;
+    const MAX_LIC = 100;
     const MSG_REQUIRED = 'required';
     const MSG_TOO_LONG = 'This input is a bit too long. Please shorten it.';
 
@@ -771,8 +773,12 @@ export function AddCompanyModal({
                   value={formData.description || ""}
                   onChange={handleChange}
                   placeholder="Enter company description (optional)"
+                  maxLength={100}
                   rows={3}
                 />
+                <div className="text-right text-xs text-gray-500">
+                  {(formData.description || "").length}/100
+                </div>
               </div>
             </div>
 
@@ -798,18 +804,24 @@ export function AddCompanyModal({
                 {/* Email */}
                 <div className="space-y-2">
                   <Label htmlFor="email">Email Address</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      value={formData.email || ""}
-                      onChange={handleChange}
-                      placeholder="company@example.com"
-                      // UPDATED STYLE: Red glow
-                      className={`pl-10 ${errors.email ? "!border-red-500 !ring-1 !ring-red-200" : ""}`}
-                    />
+                  <div className="space-y-1">
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        value={formData.email || ""}
+                        onChange={handleChange}
+                        placeholder="company@example.com"
+                        maxLength={100}
+                        // UPDATED STYLE: Red glow
+                        className={`pl-10 ${errors.email ? "!border-red-500 !ring-1 !ring-red-200" : ""}`}
+                      />
+                    </div>
+                    <div className="text-right text-xs text-gray-500">
+                      {(formData.email || "").length}/100
+                    </div>
                   </div>
                   {errors.email && (
                     <p className="text-xs text-red-500">{errors.email}</p>
@@ -819,17 +831,23 @@ export function AddCompanyModal({
                 {/* Website */}
                 <div className="space-y-2">
                   <Label htmlFor="website">Website</Label>
-                  <div className="relative">
-                    <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      id="website"
-                      name="website"
-                      value={formData.website || ""}
-                      onChange={handleChange}
-                      placeholder="https://www.example.com"
-                      // UPDATED STYLE: Red glow
-                      className={`pl-10 ${errors.website ? "!border-red-500 !ring-1 !ring-red-200" : ""}`}
-                    />
+                  <div className="space-y-1">
+                    <div className="relative">
+                      <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="website"
+                        name="website"
+                        value={formData.website || ""}
+                        onChange={handleChange}
+                        placeholder="https://www.example.com"
+                        maxLength={100}
+                        // UPDATED STYLE: Red glow
+                        className={`pl-10 ${errors.website ? "!border-red-500 !ring-1 !ring-red-200" : ""}`}
+                      />
+                    </div>
+                    <div className="text-right text-xs text-gray-500">
+                      {(formData.website || "").length}/100
+                    </div>
                   </div>
                   {errors.website && (
                     <p className="text-xs text-red-500">{errors.website}</p>

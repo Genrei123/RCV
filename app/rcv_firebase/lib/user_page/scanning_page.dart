@@ -3992,7 +3992,6 @@ class _QRScannerPageState extends State<QRScannerPage>
   }
 
   @override
-  @override
   Widget build(BuildContext context) {
     // Check if scanning feature is disabled
     if (RemoteConfigService.isFeatureDisabled('disable_scanning_page')) {

@@ -570,7 +570,9 @@ export function AddProductModal({
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    // Truncate to 100 characters for text inputs
+    const truncatedValue = value.length > 100 ? value.substring(0, 100) : value;
+    setFormData((prev) => ({ ...prev, [name]: truncatedValue }));
     // Clear error when user starts typing
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
@@ -580,7 +582,7 @@ export function AddProductModal({
   // === UPDATED VALIDATION LOGIC ===
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
-    const MAX_LENGTH = 50; 
+    const MAX_LENGTH = 100; 
     const MSG_REQUIRED = "required";
     const MSG_TOO_LONG = "This input is a bit too long. Please shorten it.";
 
@@ -1099,21 +1101,27 @@ export function AddProductModal({
                 <label className="block text-sm font-medium app-text-subtle mb-2">
                   Product Name *
                 </label>
-                <div className="relative">
-                  <Package className="absolute left-3 top-1/2 -translate-y-1/2 app-text-subtle h-4 w-4" />
-                  <Input
-                    name="productName"
-                    value={formData.productName}
-                    onChange={handleChange}
-                    placeholder="Enter product name"
-                    // UPDATED STYLE: Red glow
-                    className={`pl-10 ${
-                      errors.productName
-                        ? "!border-red-500 !ring-1 !ring-red-200"
-                        : ""
-                    }`}
-                    disabled={loading}
-                  />
+                <div className="space-y-1">
+                  <div className="relative">
+                    <Package className="absolute left-3 top-1/2 -translate-y-1/2 app-text-subtle h-4 w-4" />
+                    <Input
+                      name="productName"
+                      value={formData.productName}
+                      onChange={handleChange}
+                      placeholder="Enter product name"
+                      maxLength={100}
+                      // UPDATED STYLE: Red glow
+                      className={`pl-10 ${
+                        errors.productName
+                          ? "!border-red-500 !ring-1 !ring-red-200"
+                          : ""
+                      }`}
+                      disabled={loading}
+                    />
+                  </div>
+                  <div className="text-right text-xs text-gray-500">
+                    {(formData.productName || "").length}/100
+                  </div>
                 </div>
                 {errors.productName && (
                   <p className="app-text-error text-xs mt-1">
@@ -1148,20 +1156,26 @@ export function AddProductModal({
                 </div>
                 <div className="relative" ref={classificationDropdownRef}>
                   <Layers className="absolute left-3 top-1/2 -translate-y-1/2 app-text-subtle h-4 w-4 z-10" />
-                  <Input
-                    type="text"
-                    name="classificationSearch"
-                    autoComplete="off"
-                    value={classificationInputValue}
-                    onFocus={() => setClassificationDropdownOpen(true)}
-                    onChange={(e) => handleClassificationInputChange(e.target.value)}
-                    placeholder="Search or select classification"
-                    // UPDATED STYLE: Red glow
-                    className={`pl-10 ${
-                      errors.productClassification ? "!border-red-500 !ring-1 !ring-red-200" : ""
-                    }`}
-                    disabled={loading}
-                  />
+                  <div className="space-y-1">
+                    <Input
+                      type="text"
+                      name="classificationSearch"
+                      autoComplete="off"
+                      value={classificationInputValue}
+                      onFocus={() => setClassificationDropdownOpen(true)}
+                      onChange={(e) => handleClassificationInputChange(e.target.value)}
+                      placeholder="Search or select classification"
+                      maxLength={100}
+                      // UPDATED STYLE: Red glow
+                      className={`pl-10 ${
+                        errors.productClassification ? "!border-red-500 !ring-1 !ring-red-200" : ""
+                      }`}
+                      disabled={loading}
+                    />
+                    <div className="text-right text-xs text-gray-500">
+                      {(classificationInputValue || "").length}/100
+                    </div>
+                  </div>
                   {classificationDropdownOpen && (
                     <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
                       {classificationLoading ? (
@@ -1237,20 +1251,26 @@ export function AddProductModal({
                 </div>
                 <div className="relative" ref={subClassificationDropdownRef}>
                   <Layers className="absolute left-3 top-1/2 -translate-y-1/2 app-text-subtle h-4 w-4 z-10" />
-                  <Input
-                    type="text"
-                    name="subClassificationSearch"
-                    autoComplete="off"
-                    value={subClassificationInputValue}
-                    onFocus={() => selectedClassification && setSubClassificationDropdownOpen(true)}
-                    onChange={(e) => handleSubClassificationInputChange(e.target.value)}
-                    placeholder={selectedClassification ? "Search or select sub-classification" : "Select classification first"}
-                    // UPDATED STYLE: Red glow
-                    className={`pl-10 ${
-                      errors.productSubClassification ? "!border-red-500 !ring-1 !ring-red-200" : ""
-                    }`}
-                    disabled={loading || !selectedClassification}
-                  />
+                  <div className="space-y-1">
+                    <Input
+                      type="text"
+                      name="subClassificationSearch"
+                      autoComplete="off"
+                      value={subClassificationInputValue}
+                      onFocus={() => selectedClassification && setSubClassificationDropdownOpen(true)}
+                      onChange={(e) => handleSubClassificationInputChange(e.target.value)}
+                      placeholder={selectedClassification ? "Search or select sub-classification" : "Select classification first"}
+                      maxLength={100}
+                      // UPDATED STYLE: Red glow
+                      className={`pl-10 ${
+                        errors.productSubClassification ? "!border-red-500 !ring-1 !ring-red-200" : ""
+                      }`}
+                      disabled={loading || !selectedClassification}
+                    />
+                    <div className="text-right text-xs text-gray-500">
+                      {(subClassificationInputValue || "").length}/100
+                    </div>
+                  </div>
                   {subClassificationDropdownOpen && selectedClassification && (
                     <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
                       {subClassificationLoading ? (
