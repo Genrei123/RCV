@@ -298,7 +298,7 @@ class RCVApiService:
         if back_image_url:
             data['backImageUrl'] = back_image_url
         
-        return self._make_request('POST', '/kiosk-scan/scanProduct', data)
+        return self._make_request('POST', 'api/v1/kiosk-scan/scanProduct', data)
     
     def search_product(self, product_name: str = None, lto_number: str = None, 
                        cfpr_number: str = None, brand_name: str = None,
@@ -722,6 +722,7 @@ class KioskApp:
         self.ocr_front_frame = None  # Raw OpenCV frame
         self.ocr_back_frame = None   # Raw OpenCV frame
         self.current_frame = None    # Current camera frame for capture
+        self.ocr_preview_photos = []  # Keep references to preview photos
         
         # Services
         self.tts = TTSService()
@@ -3479,14 +3480,15 @@ class KioskApp:
         self.ocr_back_image = None
         self.ocr_front_frame = None
         self.ocr_back_frame = None
+        self.ocr_preview_photos = []  # Clear preview references
         
         # Reset thumbnails
         self.ocr_front_thumb.config(text="Front: -", image="")
         self.ocr_back_thumb.config(text="Back: -", image="")
         
         # Reset preview images
-        self.ocr_front_preview.config(text="Front:\nNot captured", image="")
-        self.ocr_back_preview.config(text="Back:\nNot captured", image="")
+        self.ocr_front_preview.config(text="Front:\nNot captured", image="", relief=tk.RIDGE, bg=Colors.SURFACE)
+        self.ocr_back_preview.config(text="Back:\nNot captured", image="", relief=tk.RIDGE, bg=Colors.SURFACE)
         
         # Update UI
         self._update_ocr_ui()
@@ -3550,8 +3552,13 @@ class KioskApp:
         
         # Create larger preview image
         preview = self._create_thumbnail(frame_copy, 200, 130)
-        self.ocr_front_preview.config(image=preview, text="", relief=tk.SOLID, bg=Colors.SUCCESS_LIGHT)
+        self.ocr_front_preview.config(image=preview, text="", relief=tk.SOLID, bg=Colors.SUCCESS_LIGHT, bd=3)
         self.ocr_front_preview.image = preview
+        
+        # Store in list to prevent garbage collection
+        self.ocr_preview_photos = [preview, thumb]
+        
+        print(f"✅ Front captured - Preview size: {preview.width()}x{preview.height()}")
         
         # Update UI
         self._update_ocr_ui()
@@ -3573,8 +3580,14 @@ class KioskApp:
         
         # Create larger preview image
         preview = self._create_thumbnail(frame_copy, 200, 130)
-        self.ocr_back_preview.config(image=preview, text="", relief=tk.SOLID, bg=Colors.SUCCESS_LIGHT)
+        self.ocr_back_preview.config(image=preview, text="", relief=tk.SOLID, bg=Colors.SUCCESS_LIGHT, bd=3)
         self.ocr_back_preview.image = preview
+        
+        # Add to list to prevent garbage collection (keep both previews)
+        if len(self.ocr_preview_photos) == 2:
+            self.ocr_preview_photos.extend([preview, thumb])
+        
+        print(f"✅ Back captured - Preview size: {preview.width()}x{preview.height()}")
         
         # Update UI
         self._update_ocr_ui()
@@ -3584,8 +3597,19 @@ class KioskApp:
         """Create a thumbnail from a frame"""
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         pil_image = Image.fromarray(frame_rgb)
-        pil_image.thumbnail((width, height))
-        return ImageTk.PhotoImage(pil_image)
+        
+        # Calculate aspect ratio
+        aspect = pil_image.width / pil_image.height
+        if aspect > width / height:
+            new_width = width
+            new_height = int(width / aspect)
+        else:
+            new_height = height
+            new_width = int(height * aspect)
+        
+        # Resize image
+        resized = pil_image.resize((new_width, new_height), Image.LANCZOS)
+        return ImageTk.PhotoImage(resized)
     
     def _ocr_cancel(self):
         """Cancel OCR capture and return to start screen"""
