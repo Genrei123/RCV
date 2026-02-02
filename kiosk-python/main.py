@@ -710,6 +710,11 @@ class KioskApp:
         self.timer_paused = False
         self.remaining_time = 0
         
+        # Processing timeout (60 seconds)
+        self.processing_start_time = 0
+        self.processing_timeout_id = None
+        self.PROCESSING_TIMEOUT = 60  # 60 seconds
+        
         # OCR Capture state (2-photo flow)
         self.ocr_step = OCRCaptureStep.READY_FRONT
         self.ocr_front_image = None  # PIL Image
@@ -722,6 +727,7 @@ class KioskApp:
         self.tts = TTSService()
         self.api = RCVApiService()  # RCV API Service
         self.gpio_led = GPIOLEDService()  # GPIO LED control for status indication
+        self.video_thread = None  # Video loop thread
         
         # Connectivity monitoring
         self.is_online = False
@@ -735,6 +741,10 @@ class KioskApp:
         # Data directory
         self.data_dir = os.path.expanduser("~/kiosk_data")
         os.makedirs(self.data_dir, exist_ok=True)
+        
+        # LED display state (solid for 5s, then blink)
+        self.led_solid_timer = None
+        self.led_blink_started = False
         
         # Performance optimization - cached display dimensions
         self.display_width = 640   # Camera display width (matches container)
@@ -1852,6 +1862,14 @@ class KioskApp:
         if hasattr(self, 'mute_button'):
             self.mute_button.config(text=button_text)
     
+    def restart_camera(self):
+        """Restart camera (reload button)"""
+        print("🔄 Restarting camera...")
+        self.stop_camera()
+        time.sleep(0.5)
+        self.start_camera()
+        print("✅ Camera restarted")
+    
     def start_exit_timer(self, event):
         """Start timer for exit button reveal (long press)"""
         self.exit_timer = self.root.after(3000, self.reveal_exit_button)
@@ -1875,6 +1893,15 @@ class KioskApp:
                       self.compliance_frame, self.error_frame, 
                       self.maintenance_frame]:
             frame.pack_forget()
+        
+        # Cancel any running timers
+        if self.processing_timeout_id:
+            self.root.after_cancel(self.processing_timeout_id)
+            self.processing_timeout_id = None
+        
+        if self.led_solid_timer:
+            self.root.after_cancel(self.led_solid_timer)
+            self.led_solid_timer = None
     
     def _show_start_screen(self):
         """Show start screen with touch buttons"""
@@ -1913,6 +1940,12 @@ class KioskApp:
         self._animate_loading_spinner()
         # Start blinking processing LED
         self.gpio_led.start_processing()
+        
+        # Start 60-second timeout
+        self.processing_start_time = time.time()
+        if self.processing_timeout_id:
+            self.root.after_cancel(self.processing_timeout_id)
+        self.processing_timeout_id = self.root.after(self.PROCESSING_TIMEOUT * 1000, self._processing_timeout)
     
     def _show_result_screen(self):
         """Show result screen"""
@@ -2001,6 +2034,18 @@ class KioskApp:
             self.loading_animation_id = self.root.after(50, self._animate_loading_spinner)
         except tk.TclError:
             pass
+    
+    def _processing_timeout(self):
+        """Handle 60-second processing timeout"""
+        if self.state == KioskState.PROCESSING:
+            print("⏱️ Processing timeout (60 seconds)")
+            if self.processing_timeout_id:
+                self.root.after_cancel(self.processing_timeout_id)
+                self.processing_timeout_id = None
+            self._show_error_screen(
+                "Request Timeout",
+                "Ang kahilingan ay nag-timeout. Subukan muli."
+            )
     
     def _populate_result_info(self, cert: CertificateData = None, product: ProductData = None):
         """Populate the result info panel with certificate or product data"""
@@ -2400,6 +2445,21 @@ class KioskApp:
         self.result_header.config(bg=header_color)
         self.result_status_label.config(bg=header_color, text=status_text)
         
+        # Reset LED blink state
+        self.led_blink_started = False
+        if self.led_solid_timer:
+            self.root.after_cancel(self.led_solid_timer)
+            self.led_solid_timer = None
+        
+        # Show success LED solid for 5 seconds, then start blinking
+        if is_valid:
+            self.gpio_led.show_success()
+            self.led_solid_timer = self.root.after(5000, self._start_led_blinking)
+        elif is_pending:
+            self.gpio_led.show_success()
+        else:
+            self.gpio_led.show_error()
+        
         # Populate info panel
         self._populate_result_info(cert=cert)
         
@@ -2616,15 +2676,19 @@ class KioskApp:
     def start_camera(self):
         """Initialize and start the camera automatically"""
         if self.camera and self.camera.isOpened():
+            print("📷 Camera already running")
             return  # Camera already running
         
         try:
+            print("🔍 Searching for camera...")
             # Try different camera indices
             camera_indices = [0, 1, 2, -1]
             
             for idx in camera_indices:
+                print(f"   Trying camera index {idx}...")
                 self.camera = cv2.VideoCapture(idx)
                 if self.camera.isOpened():
+                    print(f"✅ Camera found at index {idx}")
                     break
                 self.camera.release()
             
@@ -2638,13 +2702,18 @@ class KioskApp:
             # Set camera buffer size to 1 to reduce latency
             self.camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
             
+            print(f"📷 Camera configured: 640x480")
+            
             self.is_running = True
             
             # Start video thread
             self.video_thread = threading.Thread(target=self.video_loop, daemon=True)
             self.video_thread.start()
             
+            print("🎬 Video loop started")
+            
         except Exception as e:
+            print(f"❌ Camera initialization failed: {e}")
             self.state = KioskState.ERROR
             self._show_error_screen(
                 f"Camera Error: {str(e)}",
@@ -2690,11 +2759,13 @@ class KioskApp:
         target_fps = 15  # Target frame rate for smooth display
         frame_time = 1.0 / target_fps
         
-        while self.is_running and self.camera:
+        while self.is_running and self.camera and self.camera.isOpened():
             loop_start = time.time()
             
             ret, frame = self.camera.read()
             if not ret:
+                print("⚠️ Failed to read frame from camera")
+                time.sleep(0.1)
                 continue
             
             # Store current frame for OCR capture
@@ -3245,6 +3316,12 @@ class KioskApp:
         self.timer_paused = True
         pause_text = "PAUSED - Release to continue"
         
+        # Pause LED blinking too
+        if self.led_blink_started:
+            self.gpio_led.stop_blinking()
+            self.gpio_led.show_success()  # Return to solid
+            print("⏸️ LED blinking paused")
+        
         if self.state == KioskState.DISPLAY_COMPLIANCE:
             self.compliance_timer_label.config(text=pause_text)
         elif not self.is_error_timer:
@@ -3253,6 +3330,18 @@ class KioskApp:
     def _resume_timer(self, event=None):
         """Resume the countdown timer when user releases touch"""
         self.timer_paused = False
+        
+        # Resume LED blinking if it was started
+        if self.led_blink_started:
+            self.gpio_led.start_processing()
+            print("▶️ LED blinking resumed")
+    
+    def _start_led_blinking(self):
+        """Start LED blinking after 5 seconds of solid display"""
+        if not self.timer_paused and not self.led_blink_started:
+            self.led_blink_started = True
+            print("🔄 Starting LED blinking (after 5s solid)")
+            self.gpio_led.start_processing()  # Reuse blinking LED
     
     def reset_to_idle(self):
         """Reset kiosk to idle/scan state"""
@@ -3318,6 +3407,8 @@ class KioskApp:
     def _display_ocr_frame(self, frame):
         """Display frame in OCR capture camera preview"""
         try:
+            print(f"🎥 OCR frame update - State: {self.state}, Frame shape: {frame.shape if frame is not None else 'None'}")
+            
             # Resize and convert
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             frame_resized = cv2.resize(frame_rgb, (400, 300))
@@ -3328,7 +3419,8 @@ class KioskApp:
             self.ocr_camera_label.config(image=photo, text="")
             self.ocr_camera_label.image = photo
         except Exception as e:
-            pass
+            print(f"OCR frame display error: {e}")
+            self.ocr_camera_label.config(text=f"Camera error: {str(e)[:50]}")
     
     
     def _ocr_capture_front(self):
