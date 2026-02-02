@@ -290,7 +290,7 @@ class RCVApiService:
     def scan_product_ocr(self, ocr_text: str, front_image_url: str = None, back_image_url: str = None) -> dict:
         """
         Process OCR text with AI to extract product information
-        POST /api/v1/scan/scanProduct
+        POST /api/v1/kiosk-scan/scanProduct (public endpoint for kiosk)
         """
         data = {'blockOfText': ocr_text}
         if front_image_url:
@@ -298,7 +298,7 @@ class RCVApiService:
         if back_image_url:
             data['backImageUrl'] = back_image_url
         
-        return self._make_request('POST', '/scan/scanProduct', data)
+        return self._make_request('POST', '/kiosk-scan/scanProduct', data)
     
     def search_product(self, product_name: str = None, lto_number: str = None, 
                        cfpr_number: str = None, brand_name: str = None,
@@ -745,6 +745,16 @@ class KioskApp:
         # LED display state (solid for 5s, then blink)
         self.led_solid_timer = None
         self.led_blink_started = False
+        
+        # PDF zoom/expand state
+        self.pdf_zoom_overlay = None
+        self.pdf_zoom_canvas = None
+        self.pdf_zoom_scale = 1.0
+        self.pdf_zoom_offset_x = 0
+        self.pdf_zoom_offset_y = 0
+        self.pdf_current_images = []  # Store full PDF images for zooming
+        self.pdf_current_page = 0  # Current page being viewed in zoom
+        self.pdf_drag_start = None
         
         # Performance optimization - cached display dimensions
         self.display_width = 640   # Camera display width (matches container)
@@ -1305,7 +1315,7 @@ class KioskApp:
         )
         self.ocr_back_thumb.pack(pady=(3, 10), padx=8)
         
-        # RIGHT CONTENT AREA - Camera and instructions
+        # RIGHT CONTENT AREA - Camera and captured images
         content_area = tk.Frame(main_container, bg=Colors.BACKGROUND)
         content_area.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
@@ -1353,6 +1363,99 @@ class KioskApp:
             fg=Colors.TEXT_SECONDARY
         )
         self.ocr_camera_label.pack(expand=True)
+        
+        # Captured images preview (shows after capture)
+        preview_section = tk.Frame(center, bg=Colors.BACKGROUND)
+        preview_section.pack(pady=(15, 0))
+        
+        tk.Label(
+            preview_section,
+            text="👇 Captured Images - Click to review",
+            font=("SF Pro Text", 10, "bold"),
+            bg=Colors.BACKGROUND,
+            fg=Colors.TEXT_SECONDARY
+        ).pack(pady=(0, 5))
+        
+        # Preview frame for both images side by side
+        preview_images_frame = tk.Frame(preview_section, bg=Colors.BACKGROUND)
+        preview_images_frame.pack()
+        
+        # Front image preview (clickable)
+        self.ocr_front_preview = tk.Label(
+            preview_images_frame,
+            text="Front:\nNot captured",
+            font=("SF Pro Text", 9),
+            bg=Colors.SURFACE,
+            fg=Colors.TEXT_SECONDARY,
+            width=25,
+            height=10,
+            cursor="hand2",
+            relief=tk.RIDGE,
+            bd=2
+        )
+        self.ocr_front_preview.pack(side=tk.LEFT, padx=5)
+        self.ocr_front_preview.bind('<Button-1>', lambda e: self._review_ocr_capture(0))
+        
+        # Back image preview (clickable)
+        self.ocr_back_preview = tk.Label(
+            preview_images_frame,
+            text="Back:\nNot captured",
+            font=("SF Pro Text", 9),
+            bg=Colors.SURFACE,
+            fg=Colors.TEXT_SECONDARY,
+            width=25,
+            height=10,
+            cursor="hand2",
+            relief=tk.RIDGE,
+            bd=2
+        )
+        self.ocr_back_preview.pack(side=tk.LEFT, padx=5)
+        self.ocr_back_preview.bind('<Button-1>', lambda e: self._review_ocr_capture(1))
+        
+        # Captured images preview (shows after capture)
+        self.ocr_preview_container = tk.Frame(center, bg=Colors.BACKGROUND)
+        self.ocr_preview_container.pack(pady=(10, 0))
+        
+        preview_label = tk.Label(
+            self.ocr_preview_container,
+            text="Captured Images - Click to review:",
+            font=("SF Pro Text", 10, "bold"),
+            bg=Colors.BACKGROUND,
+            fg=Colors.TEXT_SECONDARY
+        )
+        preview_label.pack(pady=(5, 5))
+        
+        # Preview frame for both images side by side
+        preview_images_frame = tk.Frame(self.ocr_preview_container, bg=Colors.BACKGROUND)
+        preview_images_frame.pack()
+        
+        # Front image preview
+        self.ocr_front_preview = tk.Label(
+            preview_images_frame,
+            text="Front: Not captured",
+            font=("SF Pro Text", 9),
+            bg=Colors.SURFACE,
+            fg=Colors.TEXT_SECONDARY,
+            width=25,
+            height=15,
+            cursor="hand2"
+        )
+        self.ocr_front_preview.pack(side=tk.LEFT, padx=5)
+        self.ocr_front_preview.bind('<Button-1>', lambda e: self._review_ocr_capture(0))
+        
+        # Back image preview
+        self.ocr_back_preview = tk.Label(
+            preview_images_frame,
+            text="Back: Not captured",
+            font=("SF Pro Text", 9),
+            bg=Colors.SURFACE,
+            fg=Colors.TEXT_SECONDARY,
+            width=25,
+            height=15,
+            cursor="hand2"
+        )
+        self.ocr_back_preview.pack(side=tk.LEFT, padx=5)
+        self.ocr_back_preview.bind('<Button-1>', lambda e: self._review_ocr_capture(1))
     
     def _setup_result_screen(self):
         """Setup the result screen with responsive layout for small screens"""
@@ -1427,18 +1530,22 @@ class KioskApp:
             text="Loading PDF Page 1...",
             font=("SF Pro Text", 12),
             bg=Colors.SURFACE,
-            fg=Colors.TEXT_SECONDARY
+            fg=Colors.TEXT_SECONDARY,
+            cursor="hand2"  # Show clickable cursor
         )
         self.pdf_page1_label.pack(side=tk.TOP, fill=tk.BOTH, expand=True, pady=(0, 3))
+        self.pdf_page1_label.bind('<Button-1>', lambda e: self._open_pdf_zoom(0))  # Click to zoom
         
         self.pdf_page2_label = tk.Label(
             self.pdf_pages_frame,
             text="Loading PDF Page 2...",
             font=("SF Pro Text", 12),
             bg=Colors.SURFACE,
-            fg=Colors.TEXT_SECONDARY
+            fg=Colors.TEXT_SECONDARY,
+            cursor="hand2"  # Show clickable cursor
         )
         self.pdf_page2_label.pack(side=tk.TOP, fill=tk.BOTH, expand=True, pady=(3, 0))
+        self.pdf_page2_label.bind('<Button-1>', lambda e: self._open_pdf_zoom(1))  # Click to zoom
         
         # Footer with timer - touch to pause
         self.result_footer = tk.Frame(self.result_frame, bg=Colors.PRIMARY, height=100)
@@ -3377,6 +3484,10 @@ class KioskApp:
         self.ocr_front_thumb.config(text="Front: -", image="")
         self.ocr_back_thumb.config(text="Back: -", image="")
         
+        # Reset preview images
+        self.ocr_front_preview.config(text="Front:\nNot captured", image="")
+        self.ocr_back_preview.config(text="Back:\nNot captured", image="")
+        
         # Update UI
         self._update_ocr_ui()
     
@@ -3432,10 +3543,15 @@ class KioskApp:
         frame_copy = self.current_frame.copy()
         self.ocr_front_frame = frame_copy
         
-        # Create thumbnail
+        # Create thumbnail for sidebar
         thumb = self._create_thumbnail(frame_copy, 150, 100)
         self.ocr_front_thumb.config(image=thumb, text="")
         self.ocr_front_thumb.image = thumb
+        
+        # Create larger preview image
+        preview = self._create_thumbnail(frame_copy, 200, 130)
+        self.ocr_front_preview.config(image=preview, text="", relief=tk.SOLID, bg=Colors.SUCCESS_LIGHT)
+        self.ocr_front_preview.image = preview
         
         # Update UI
         self._update_ocr_ui()
@@ -3450,10 +3566,15 @@ class KioskApp:
         frame_copy = self.current_frame.copy()
         self.ocr_back_frame = frame_copy
         
-        # Create thumbnail
+        # Create thumbnail for sidebar
         thumb = self._create_thumbnail(frame_copy, 150, 100)
         self.ocr_back_thumb.config(image=thumb, text="")
         self.ocr_back_thumb.image = thumb
+        
+        # Create larger preview image
+        preview = self._create_thumbnail(frame_copy, 200, 130)
+        self.ocr_back_preview.config(image=preview, text="", relief=tk.SOLID, bg=Colors.SUCCESS_LIGHT)
+        self.ocr_back_preview.image = preview
         
         # Update UI
         self._update_ocr_ui()
@@ -3470,6 +3591,141 @@ class KioskApp:
         """Cancel OCR capture and return to start screen"""
         self._reset_ocr_capture()
         self._show_start_screen()
+    
+    def _review_ocr_capture(self, image_index: int):
+        """Open captured OCR image in fullscreen for review"""
+        # Get the appropriate frame
+        if image_index == 0 and self.ocr_front_frame is not None:
+            frame = self.ocr_front_frame
+            title = "Front Image - Picture 1"
+        elif image_index == 1 and self.ocr_back_frame is not None:
+            frame = self.ocr_back_frame
+            title = "Back Image - Picture 2"
+        else:
+            return  # No image captured yet
+        
+        # Convert to PIL Image
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        pil_image = Image.fromarray(rgb_frame)
+        
+        # Calculate proper scaling to fit screen
+        max_width = self.screen_width - 100
+        max_height = self.screen_height - 200
+        
+        width_ratio = max_width / pil_image.width
+        height_ratio = max_height / pil_image.height
+        scale = min(width_ratio, height_ratio, 2.0)  # Max 2x zoom
+        
+        new_width = int(pil_image.width * scale)
+        new_height = int(pil_image.height * scale)
+        
+        scaled_image = pil_image.resize((new_width, new_height), Image.LANCZOS)
+        
+        # Store in list for zoom viewer (reuse PDF zoom functionality)
+        self.pdf_current_images = [scaled_image]
+        self.pdf_current_page = 0
+        self.pdf_zoom_scale = 1.0
+        self.pdf_zoom_offset_x = 0
+        self.pdf_zoom_offset_y = 0
+        
+        # Create overlay
+        self.pdf_zoom_overlay = tk.Frame(self.root, bg="#000000")
+        self.pdf_zoom_overlay.place(x=0, y=0, relwidth=1, relheight=1)
+        
+        # Top bar
+        control_bar = tk.Frame(self.pdf_zoom_overlay, bg=Colors.PRIMARY, height=70)
+        control_bar.pack(fill=tk.X)
+        control_bar.pack_propagate(False)
+        
+        # Close button
+        tk.Button(
+            control_bar,
+            text="✕ CLOSE",
+            font=("SF Pro Display", 16, "bold"),
+            bg=Colors.ERROR,
+            fg=Colors.TEXT_WHITE,
+            activebackground="#D32F2F",
+            relief=tk.FLAT,
+            bd=0,
+            padx=25,
+            pady=12,
+            command=self._close_pdf_zoom
+        ).pack(side=tk.LEFT, padx=15, pady=10)
+        
+        # Title
+        tk.Label(
+            control_bar,
+            text=title,
+            font=("SF Pro Display", 18, "bold"),
+            bg=Colors.PRIMARY,
+            fg=Colors.TEXT_WHITE
+        ).pack(side=tk.LEFT, padx=20)
+        
+        # Zoom controls
+        zoom_frame = tk.Frame(control_bar, bg=Colors.PRIMARY)
+        zoom_frame.pack(side=tk.RIGHT, padx=15)
+        
+        tk.Button(
+            zoom_frame,
+            text="−",
+            font=("SF Pro Display", 20, "bold"),
+            bg=Colors.PRIMARY_LIGHT,
+            fg=Colors.TEXT_WHITE,
+            relief=tk.FLAT,
+            width=4,
+            command=lambda: self._zoom_pdf(-0.2)
+        ).pack(side=tk.LEFT, padx=5)
+        
+        self.zoom_label = tk.Label(
+            zoom_frame,
+            text="100%",
+            font=("SF Pro Text", 16),
+            bg=Colors.PRIMARY,
+            fg=Colors.TEXT_WHITE,
+            width=7
+        )
+        self.zoom_label.pack(side=tk.LEFT, padx=5)
+        
+        tk.Button(
+            zoom_frame,
+            text="+",
+            font=("SF Pro Display", 20, "bold"),
+            bg=Colors.PRIMARY_LIGHT,
+            fg=Colors.TEXT_WHITE,
+            relief=tk.FLAT,
+            width=4,
+            command=lambda: self._zoom_pdf(0.2)
+        ).pack(side=tk.LEFT, padx=5)
+        
+        tk.Button(
+            zoom_frame,
+            text="FIT",
+            font=("SF Pro Text", 14, "bold"),
+            bg=Colors.ACCENT,
+            fg=Colors.TEXT_WHITE,
+            relief=tk.FLAT,
+            padx=12,
+            command=lambda: self._reset_pdf_zoom()
+        ).pack(side=tk.LEFT, padx=5)
+        
+        # Canvas for image
+        self.pdf_zoom_canvas = tk.Canvas(
+            self.pdf_zoom_overlay,
+            bg="#000000",
+            highlightthickness=0
+        )
+        self.pdf_zoom_canvas.pack(fill=tk.BOTH, expand=True)
+        
+        # Bind events
+        self.pdf_zoom_canvas.bind('<ButtonPress-1>', self._start_pdf_drag)
+        self.pdf_zoom_canvas.bind('<B1-Motion>', self._drag_pdf)
+        self.pdf_zoom_canvas.bind('<ButtonRelease-1>', self._end_pdf_drag)
+        self.pdf_zoom_canvas.bind('<MouseWheel>', self._mousewheel_zoom)
+        self.pdf_zoom_overlay.bind('<Escape>', lambda e: self._close_pdf_zoom())
+        self.pdf_zoom_overlay.focus_set()
+        
+        # Render
+        self._render_pdf_zoom()
     
     def _ocr_submit_scan(self):
         """Submit captured photos for OCR processing"""
@@ -3707,6 +3963,7 @@ class KioskApp:
         """Display PDF pages in the result screen"""
         try:
             self.pdf_photos = []  # Clear old photos
+            self.pdf_current_images = images  # Store full images for zoom view
             
             # Display page 1
             if len(images) >= 1:
@@ -3722,6 +3979,16 @@ class KioskApp:
             elif len(images) == 1:
                 # Only 1 page, hide second label
                 self.pdf_page2_label.config(text="(Single page document)", image="")
+            
+            # Add hint text to click for zoom
+            if len(images) > 0:
+                tk.Label(
+                    self.pdf_pages_frame,
+                    text="👆 Click pages to zoom",
+                    font=("SF Pro Text", 10),
+                    bg=Colors.SURFACE,
+                    fg=Colors.TEXT_SECONDARY
+                ).pack(pady=(5, 0))
             
             # NOW start the countdown timer after PDF is displayed
             self.start_display_timer(self.RESULT_DISPLAY_DURATION, is_error=False)
@@ -3746,6 +4013,260 @@ class KioskApp:
         self.pdf_page2_label.config(text="", image="")
         # Start timer after PDF load attempt completes
         self.start_display_timer(self.RESULT_DISPLAY_DURATION, is_error=False)
+    
+    def _open_pdf_zoom(self, page_index: int):
+        """Open PDF page in fullscreen zoom view"""
+        if not self.pdf_current_images or page_index >= len(self.pdf_current_images):
+            return
+        
+        self.pdf_current_page = page_index
+        self.pdf_zoom_scale = 1.0
+        self.pdf_zoom_offset_x = 0
+        self.pdf_zoom_offset_y = 0
+        
+        # Create overlay frame (modal)
+        self.pdf_zoom_overlay = tk.Frame(self.root, bg="#000000")
+        self.pdf_zoom_overlay.place(x=0, y=0, relwidth=1, relheight=1)
+        
+        # Top bar with controls
+        control_bar = tk.Frame(self.pdf_zoom_overlay, bg=Colors.PRIMARY, height=60)
+        control_bar.pack(fill=tk.X)
+        control_bar.pack_propagate(False)
+        
+        # Close button
+        close_btn = tk.Button(
+            control_bar,
+            text="✕ CLOSE",
+            font=("SF Pro Display", 14, "bold"),
+            bg=Colors.ERROR,
+            fg=Colors.TEXT_WHITE,
+            activebackground="#D32F2F",
+            relief=tk.FLAT,
+            bd=0,
+            padx=20,
+            pady=10,
+            command=self._close_pdf_zoom
+        )
+        close_btn.pack(side=tk.LEFT, padx=10, pady=10)
+        
+        # Page indicator
+        page_label = tk.Label(
+            control_bar,
+            text=f"Page {page_index + 1} of {len(self.pdf_current_images)}",
+            font=("SF Pro Text", 14),
+            bg=Colors.PRIMARY,
+            fg=Colors.TEXT_WHITE
+        )
+        page_label.pack(side=tk.LEFT, padx=20)
+        
+        # Zoom controls
+        zoom_frame = tk.Frame(control_bar, bg=Colors.PRIMARY)
+        zoom_frame.pack(side=tk.RIGHT, padx=10)
+        
+        tk.Button(
+            zoom_frame,
+            text="➖",
+            font=("SF Pro Display", 18, "bold"),
+            bg=Colors.PRIMARY_LIGHT,
+            fg=Colors.TEXT_WHITE,
+            activebackground=Colors.ACCENT,
+            relief=tk.FLAT,
+            width=3,
+            command=lambda: self._zoom_pdf(-0.2)
+        ).pack(side=tk.LEFT, padx=5)
+        
+        self.zoom_label = tk.Label(
+            zoom_frame,
+            text="100%",
+            font=("SF Pro Text", 14),
+            bg=Colors.PRIMARY,
+            fg=Colors.TEXT_WHITE,
+            width=6
+        )
+        self.zoom_label.pack(side=tk.LEFT, padx=5)
+        
+        tk.Button(
+            zoom_frame,
+            text="➕",
+            font=("SF Pro Display", 18, "bold"),
+            bg=Colors.PRIMARY_LIGHT,
+            fg=Colors.TEXT_WHITE,
+            activebackground=Colors.ACCENT,
+            relief=tk.FLAT,
+            width=3,
+            command=lambda: self._zoom_pdf(0.2)
+        ).pack(side=tk.LEFT, padx=5)
+        
+        tk.Button(
+            zoom_frame,
+            text="FIT",
+            font=("SF Pro Text", 12, "bold"),
+            bg=Colors.ACCENT,
+            fg=Colors.TEXT_WHITE,
+            activebackground=Colors.PRIMARY_LIGHT,
+            relief=tk.FLAT,
+            padx=10,
+            command=lambda: self._reset_pdf_zoom()
+        ).pack(side=tk.LEFT, padx=5)
+        
+        # Page navigation if multiple pages
+        if len(self.pdf_current_images) > 1:
+            nav_frame = tk.Frame(control_bar, bg=Colors.PRIMARY)
+            nav_frame.pack(side=tk.RIGHT, padx=20)
+            
+            if page_index > 0:
+                tk.Button(
+                    nav_frame,
+                    text="◀ PREV",
+                    font=("SF Pro Text", 12, "bold"),
+                    bg=Colors.PRIMARY_LIGHT,
+                    fg=Colors.TEXT_WHITE,
+                    activebackground=Colors.ACCENT,
+                    relief=tk.FLAT,
+                    padx=15,
+                    command=lambda: self._change_pdf_page(-1)
+                ).pack(side=tk.LEFT, padx=5)
+            
+            if page_index < len(self.pdf_current_images) - 1:
+                tk.Button(
+                    nav_frame,
+                    text="NEXT ▶",
+                    font=("SF Pro Text", 12, "bold"),
+                    bg=Colors.PRIMARY_LIGHT,
+                    fg=Colors.TEXT_WHITE,
+                    activebackground=Colors.ACCENT,
+                    relief=tk.FLAT,
+                    padx=15,
+                    command=lambda: self._change_pdf_page(1)
+                ).pack(side=tk.LEFT, padx=5)
+        
+        # Canvas for PDF display with scrolling
+        self.pdf_zoom_canvas = tk.Canvas(
+            self.pdf_zoom_overlay,
+            bg="#000000",
+            highlightthickness=0
+        )
+        self.pdf_zoom_canvas.pack(fill=tk.BOTH, expand=True)
+        
+        # Bind mouse events for panning
+        self.pdf_zoom_canvas.bind('<ButtonPress-1>', self._start_pdf_drag)
+        self.pdf_zoom_canvas.bind('<B1-Motion>', self._drag_pdf)
+        self.pdf_zoom_canvas.bind('<ButtonRelease-1>', self._end_pdf_drag)
+        
+        # Bind mouse wheel for zooming
+        self.pdf_zoom_canvas.bind('<MouseWheel>', self._mousewheel_zoom)  # Windows
+        self.pdf_zoom_canvas.bind('<Button-4>', lambda e: self._zoom_pdf(0.1))  # Linux scroll up
+        self.pdf_zoom_canvas.bind('<Button-5>', lambda e: self._zoom_pdf(-0.1))  # Linux scroll down
+        
+        # Bind keyboard shortcuts
+        self.pdf_zoom_overlay.bind('<Escape>', lambda e: self._close_pdf_zoom())
+        self.pdf_zoom_overlay.bind('<plus>', lambda e: self._zoom_pdf(0.2))
+        self.pdf_zoom_overlay.bind('<minus>', lambda e: self._zoom_pdf(-0.2))
+        self.pdf_zoom_overlay.bind('<Left>', lambda e: self._change_pdf_page(-1))
+        self.pdf_zoom_overlay.bind('<Right>', lambda e: self._change_pdf_page(1))
+        self.pdf_zoom_overlay.focus_set()
+        
+        # Initial render
+        self._render_pdf_zoom()
+    
+    def _render_pdf_zoom(self):
+        """Render PDF at current zoom level"""
+        if not self.pdf_zoom_canvas or not self.pdf_current_images:
+            return
+        
+        try:
+            # Get current page image
+            original_image = self.pdf_current_images[self.pdf_current_page]
+            
+            # Calculate zoomed size
+            new_width = int(original_image.width * self.pdf_zoom_scale)
+            new_height = int(original_image.height * self.pdf_zoom_scale)
+            
+            # Resize image
+            zoomed_image = original_image.resize((new_width, new_height), Image.LANCZOS)
+            
+            # Convert to PhotoImage
+            self.pdf_zoom_photo = ImageTk.PhotoImage(zoomed_image)
+            
+            # Clear canvas
+            self.pdf_zoom_canvas.delete('all')
+            
+            # Calculate position (centered with offset)
+            canvas_width = self.pdf_zoom_canvas.winfo_width()
+            canvas_height = self.pdf_zoom_canvas.winfo_height()
+            
+            x = (canvas_width - new_width) // 2 + self.pdf_zoom_offset_x
+            y = (canvas_height - new_height) // 2 + self.pdf_zoom_offset_y
+            
+            # Display image
+            self.pdf_zoom_canvas.create_image(x, y, image=self.pdf_zoom_photo, anchor=tk.NW)
+            
+        except Exception as e:
+            print(f"Error rendering PDF zoom: {e}")
+    
+    def _zoom_pdf(self, delta: float):
+        """Zoom PDF in or out"""
+        new_scale = self.pdf_zoom_scale + delta
+        if 0.5 <= new_scale <= 5.0:  # Limit zoom range
+            self.pdf_zoom_scale = new_scale
+            self.zoom_label.config(text=f"{int(self.pdf_zoom_scale * 100)}%")
+            self._render_pdf_zoom()
+    
+    def _reset_pdf_zoom(self):
+        """Reset zoom to fit screen"""
+        self.pdf_zoom_scale = 1.0
+        self.pdf_zoom_offset_x = 0
+        self.pdf_zoom_offset_y = 0
+        self.zoom_label.config(text="100%")
+        self._render_pdf_zoom()
+    
+    def _mousewheel_zoom(self, event):
+        """Handle mouse wheel zoom"""
+        if event.delta > 0:
+            self._zoom_pdf(0.1)
+        else:
+            self._zoom_pdf(-0.1)
+    
+    def _start_pdf_drag(self, event):
+        """Start dragging PDF"""
+        self.pdf_drag_start = (event.x, event.y)
+    
+    def _drag_pdf(self, event):
+        """Drag PDF around canvas"""
+        if self.pdf_drag_start:
+            dx = event.x - self.pdf_drag_start[0]
+            dy = event.y - self.pdf_drag_start[1]
+            self.pdf_zoom_offset_x += dx
+            self.pdf_zoom_offset_y += dy
+            self.pdf_drag_start = (event.x, event.y)
+            self._render_pdf_zoom()
+    
+    def _end_pdf_drag(self, event):
+        """End dragging PDF"""
+        self.pdf_drag_start = None
+    
+    def _change_pdf_page(self, direction: int):
+        """Change to next/previous PDF page"""
+        new_page = self.pdf_current_page + direction
+        if 0 <= new_page < len(self.pdf_current_images):
+            self.pdf_current_page = new_page
+            self.pdf_zoom_offset_x = 0
+            self.pdf_zoom_offset_y = 0
+            self._render_pdf_zoom()
+            
+            # Update page label
+            for widget in self.pdf_zoom_overlay.winfo_children():
+                if isinstance(widget, tk.Frame):
+                    for child in widget.winfo_children():
+                        if isinstance(child, tk.Label) and "Page" in child.cget("text"):
+                            child.config(text=f"Page {self.pdf_current_page + 1} of {len(self.pdf_current_images)}")
+    
+    def _close_pdf_zoom(self):
+        """Close PDF zoom overlay"""
+        if self.pdf_zoom_overlay:
+            self.pdf_zoom_overlay.destroy()
+            self.pdf_zoom_overlay = None
+            self.pdf_zoom_canvas = None
     
     def display_frame(self, frame):
         """Display camera frame in UI - optimized for performance"""
