@@ -6,6 +6,7 @@ import type { Company } from '@/typeorm/entities/company.entity';
 import { PDFGenerationService } from '@/services/pdfGenerationService';
 import { toast } from 'react-toastify';
 import axios from 'axios';
+import { formatPhoneWithCountryCode } from '@/utils/phoneValidation';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
 
@@ -290,9 +291,9 @@ export function CompanyDetailsModal({ isOpen, onClose, company }: CompanyDetails
                       <label className="text-sm font-medium text-gray-500">Phone</label>
                       <div className="flex items-center gap-2">
                         <Phone className="h-4 w-4 text-gray-400" />
-                        <a href={`tel:${company.phone}`} className="text-blue-600 hover:underline">
-                          {company.phone}
-                        </a>
+                        <span className="text-gray-900">
+                          {formatPhoneWithCountryCode(company.phone)}
+                        </span>
                       </div>
                     </div>
                   )}
@@ -302,9 +303,9 @@ export function CompanyDetailsModal({ isOpen, onClose, company }: CompanyDetails
                       <label className="text-sm font-medium text-gray-500">Email</label>
                       <div className="flex items-center gap-2">
                         <Mail className="h-4 w-4 text-gray-400" />
-                        <a href={`mailto:${company.email}`} className="text-blue-600 hover:underline">
+                        <span className="text-gray-900">
                           {company.email}
-                        </a>
+                        </span>
                       </div>
                     </div>
                   )}
@@ -313,12 +314,12 @@ export function CompanyDetailsModal({ isOpen, onClose, company }: CompanyDetails
                     <div className="space-y-1">
                       <label className="text-sm font-medium text-gray-500">Website</label>
                       <div className="flex items-center gap-2">
-                        <Globe className="h-4 w-4 text-gray-400" />
+                        <Globe className="h-4 w-4 text-teal-600" />
                         <a
-                          href={company.website}
+                          href={company.website.startsWith('http') ? company.website : `https://${company.website}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline flex items-center gap-1"
+                          className="text-teal-600 hover:text-teal-800 hover:underline transition-colors flex items-center gap-1"
                         >
                           {company.website.replace(/^https?:\/\//, '')}
                           <ExternalLink className="h-3 w-3" />
