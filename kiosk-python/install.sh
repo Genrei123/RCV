@@ -112,8 +112,22 @@ chmod +x ~/Desktop/rcv_kiosk.desktop
 echo "📝 Creating run script..."
 cat > run_kiosk.sh << 'EOF'
 #!/bin/bash
+# Quick launcher for RCV Kiosk
+
+echo "🚀 Starting RCV Kiosk"
 cd "$(dirname "$0")"
-source .env
+
+# Load environment variables
+if [ -f .env ]; then
+    export $(cat .env | grep -v '^#' | xargs)
+fi
+
+# Check data directory
+if [ ! -d "$HOME/kiosk_data" ]; then
+    mkdir -p "$HOME/kiosk_data/ocr_scans"
+fi
+
+# Run the application
 python3 main.py
 EOF
 chmod +x run_kiosk.sh

@@ -125,7 +125,12 @@ class RCVApiService:
     def health_check(self) -> dict:
         """Check if API is accessible"""
         try:
-            result = self._make_request('GET', '/public/health')
-            return {"success": True, "online": True, **result}
-        except:
-            return {"success": False, "online": False}
+            # Use root endpoint which returns: {"success": true, "message": "Yaaaay! You have hit the API root."}
+            # Remove /api/v1 from base_url and hit root
+            root_url = self.base_url.replace('/api/v1', '')
+            response = requests.get(root_url, timeout=self.timeout)
+            response.raise_for_status()
+            data = response.json()
+            return {"success": data.get('success', False), "online": True, **data}
+        except Exception as e:
+            return {"success": False, "online": False, "error": str(e)}

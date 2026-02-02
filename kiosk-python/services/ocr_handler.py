@@ -136,7 +136,7 @@ class OCRCameraHandler:
         return base64.b64encode(img_bytes).decode('utf-8')
     
     def get_combined_ocr_text(self) -> str:
-        """Extract text from both images using OCR"""
+        """Extract text from both images using OCR (legacy method)"""
         try:
             import pytesseract
             
@@ -161,6 +161,83 @@ class OCRCameraHandler:
         except Exception as e:
             print(f"OCR extraction error: {e}")
             return ""
+    
+    def get_ocr_data_for_api(self) -> dict:
+        """
+        Get structured OCR data optimized for fuzzy search backend
+        Returns dictionary with extracted text, images, and metadata
+        """
+        if not self.can_submit():
+            return None
+        
+        try:
+            import pytesseract
+            import re
+            
+            # Extract text from both images
+            front_text = pytesseract.image_to_string(self.front_image) if self.front_image else ""
+            back_text = pytesseract.image_to_string(self.back_image) if self.back_image else ""
+            
+            # Combine text for main search
+            combined_text = f"FRONT:\n{front_text}\n\nBACK:\n{back_text}"
+            
+            # Extract potential product information
+            product_info = self._extract_product_info(combined_text)
+            
+            # Structure data for fuzzy search API
+            ocr_data = {
+                'blockOfText': combined_text,
+                'frontText': front_text.strip(),
+                'backText': back_text.strip(),
+                'extractedFields': product_info,
+                'frontImageBase64': self.get_front_base64(),
+                'backImageBase64': self.get_back_base64(),
+                'captureTimestamp': datetime.now().isoformat()
+            }
+            
+            print(f"📦 OCR data prepared: {len(combined_text)} chars, {len(product_info)} fields")
+            return ocr_data
+            
+        except Exception as e:
+            print(f"Error preparing OCR data: {e}")
+            return {
+                'blockOfText': f"Error: {str(e)}",
+                'error': str(e)
+            }
+    
+    def _extract_product_info(self, text: str) -> dict:
+        """
+        Extract structured fields from OCR text
+        Helps fuzzy search by pre-identifying key information
+        """
+        import re
+        
+        info = {}
+        
+        # Common patterns for FDA product labels
+        patterns = {
+            'lto_number': r'LTO[:\s#-]*([A-Z0-9-]+)',
+            'cfpr_number': r'CFPR[:\s#-]*([A-Z0-9-]+)',
+            'batch_number': r'(?:BATCH|LOT|LOTE)[:\s#-]*([A-Z0-9-]+)',
+            'expiry_date': r'(?:EXP|EXPIRY|EXPIRATION|EXPIRES)[:\s]*(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})',
+            'mfg_date': r'(?:MFG|MANUFACTURED|MFD|DOM)[:\s]*(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})',
+        }
+        
+        for key, pattern in patterns.items():
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                info[key] = match.group(1).strip()
+        
+        # Extract potential product name (first substantial line)
+        lines = [line.strip() for line in text.split('\n') if line.strip()]
+        if lines:
+            skip_words = ['front', 'back', 'label', 'warning', 'caution', 'ingredients']
+            for line in lines[:5]:
+                if len(line) > 3 and not any(word in line.lower() for word in skip_words):
+                    info['potential_product_name'] = line
+                    break
+        
+        return info
     
     def move_to_next_step(self):
         """Move to next capture step after successful preview"""

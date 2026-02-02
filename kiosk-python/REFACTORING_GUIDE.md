@@ -1,11 +1,13 @@
-# RCV Kiosk - New Modular Architecture
+# RCV Kiosk - Modular Architecture Guide
 
-## 📊 Code Size Comparison
+## 📊 Active Version
+
+✅ **This is now the active version!** The old monolithic main.py has been replaced.
 
 | File | Lines | Purpose |
 |------|-------|---------|
-| **OLD** `main.py` | **3,786** | Monolithic file with everything |
-| **NEW** `main_refactored.py` | **352** | Main orchestrator only |
+| **OLD** `main_old_backup.py` | **3,786** | Backup of monolithic file |
+| **CURRENT** `main.py` | **352** | Active orchestrator |
 | **Reduction** | **90.7%** | Much more maintainable! |
 
 ## 🎯 Benefits of New Structure
@@ -44,20 +46,21 @@ kiosk-python/
 
 ## 🚀 Quick Start
 
-### Option 1: Fresh Installation
+### Running the Kiosk
 
 ```bash
-# Use the new refactored version
-cd ~/kiosk-python
-chmod +x run_kiosk_refactored.sh
-./run_kiosk_refactored.sh
+# Standard way
+./run_kiosk.sh
+
+# Or directly
+python3 main.py
 ```
 
-### Option 2: Test New Architecture
-
+### Development
 ```bash
-# Run the refactored version directly
-python3 main_refactored.py
+# Test individual modules
+python3 -c "from ui import IdleScreen; print('UI module OK')"
+python3 -c "from services import RCVApiService; print('Services OK')"
 ```
 
 ## 🔧 Module Descriptions
@@ -143,32 +146,16 @@ Each screen is a separate class with `render()` method:
 - **ComplianceScreen** - OCR results
 - **ErrorScreen** - Error messages
 - **MaintenanceScreen** - API unavailable
+Rollback (If Needed)
 
-## 🔄 Migration from Old main.py
+If you need to go back to the old version:
 
-### Step 1: Backup Current main.py
 ```bash
-cp main.py main_old_backup.py
-```
+# Restore old version
+cp main_old_backup.py main.py
 
-### Step 2: Test New Version
-```bash
-# Run new version side-by-side
-python3 main_refactored.py
-```
-
-### Step 3: Replace When Ready
-```bash
-# Once tested and working
-mv main.py main_old.py
-mv main_refactored.py main.py
-```
-
-### Step 4: Update Run Script
-Edit `run_kiosk.sh`:
-```bash
-#!/bin/bash
-cd ~/kiosk-python
+# Run as usual
+./run_kiosk.sh
 python3 main.py  # Now points to refactored version
 ```
 

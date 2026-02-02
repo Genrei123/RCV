@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import Autoplay from "embla-carousel-autoplay";
 import {
   Shield,
   QrCode,
@@ -33,6 +34,7 @@ import { urlFor } from "@/lib/sanity";
 import type { SanityFeature, SanityAboutSection, SanityObjective, SanityVideoSection, SanityBlogPost, SanityMobileAppShowcase, SanityKioskShowcase } from "@/lib/sanity";
 import { MobileAppShowcase } from "@/components/MobileAppShowcase";
 import { KioskShowcase } from "@/components/KioskShowcase";
+import { AnimatedDiv } from "@/components/AnimatedDiv";
 
 // Icon map for dynamic rendering
 const iconMap: Record<string, React.ComponentType<any>> = {
@@ -64,8 +66,9 @@ export function LandingPage() {
   const navigate = useNavigate();
   const [api, setApi] = useState<any>(null);
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [isSliding, setIsSliding] = useState(false);
-  const [slideDirection, setSlideDirection] = useState<"left" | "right">("left");
+  const autoplayRef = useRef(
+    Autoplay({ delay: 5000, stopOnInteraction: true })
+  );
   
   // Sanity CMS data with fallbacks
   const [heroSlides, setHeroSlides] = useState<any[]>(fallbackHeroSlides);
@@ -77,6 +80,32 @@ export function LandingPage() {
   const [mobileAppShowcase, setMobileAppShowcase] = useState<SanityMobileAppShowcase[]>([]);
   const [kioskShowcase, setKioskShowcase] = useState<SanityKioskShowcase | null>(null);
   const [showcaseView, setShowcaseView] = useState<'mobile' | 'kiosk'>('mobile');
+  const [navbarScrolled, setNavbarScrolled] = useState(false);
+  const [carouselScale, setCarouselScale] = useState(1);
+  const [carouselOpacity, setCarouselOpacity] = useState(1);
+
+  // Track scroll position for navbar and carousel animation
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      // Show background when scrolled past 50px, transparent only at top
+      if (currentScrollY > 50) {
+        setNavbarScrolled(true);
+      } else {
+        setNavbarScrolled(false);
+      }
+      
+      // Carousel closing animation on scroll
+      const maxScroll = 400; // How much scroll before fully "closed"
+      const scrollProgress = Math.min(currentScrollY / maxScroll, 1);
+      setCarouselScale(1 - (scrollProgress * 0.1)); // Scale from 1 to 0.9
+      setCarouselOpacity(1 - (scrollProgress * 0.3)); // Opacity from 1 to 0.7
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Fetch data from Sanity CMS
   useEffect(() => {
@@ -153,88 +182,99 @@ export function LandingPage() {
     };
   }, [api]);
 
-  const handleNavClick = (direction: "left" | "right") => {
-    setSlideDirection(direction);
-    setIsSliding(true);
-    // Reset animation state after transition
-    setTimeout(() => {
-      setIsSliding(false);
-    }, 500);
-  };
-
   return (
     <div className="min-h-screen bg-white overflow-hidden">
       {/* Navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100">
+      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        navbarScrolled 
+          ? 'bg-white/95 backdrop-blur-sm border-b border-gray-100' 
+          : 'bg-transparent'
+      }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <div className="flex items-center gap-3">
-              <img src="/logo_inv.svg" alt="RCV Logo" className="h-10 w-10" draggable="false"/>
+          <div className="flex items-center h-16">
+            {/* Logo - Left */}
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <img 
+                src={navbarScrolled ? "/logo_inv.svg" : "/logo.png"} 
+                alt="RCV Logo" 
+                className="h-10 w-10 transition-all duration-300" 
+                draggable="false"
+              />
               <div className="flex flex-col">
-                <span className="font-bold text-lg app-text-primary leading-tight">
+                <span className={`font-bold text-lg leading-tight transition-colors duration-300 ${
+                  navbarScrolled ? 'app-text-primary' : 'text-white'
+                }`}>
                   RCV
                 </span>
-                <span className="text-[10px] app-text-primary leading-tight">
+                <span className={`text-[10px] leading-tight uppercase tracking-wider transition-colors duration-300 ${
+                  navbarScrolled ? 'app-text-primary' : 'text-white/80'
+                }`}>
                   Regulatory Compliance Verification
                 </span>
               </div>
             </div>
 
-            {/* Nav Links - Hidden on mobile */}
-            <div className="ml-0 hidden md:flex items-center gap-8">
+            {/* Nav Links - Center */}
+            <div className="flex-1 flex items-center justify-center gap-8">
               <a
                 href="#features"
                 onClick={(e) => {
                   e.preventDefault();
-                  handleNavClick("right");
                   document.getElementById("features")?.scrollIntoView({ behavior: "smooth" });
                 }}
-                className="text-sm text-text hover:text-primary transition-colors cursor-pointer group"
+                className={`text-sm transition-colors cursor-pointer uppercase tracking-wider font-medium ${
+                  navbarScrolled ? 'text-text hover:text-primary' : 'text-white/90 hover:text-white'
+                }`}
               >
                 Features
-                <span className="block h-0.5 bg-primary w-0 group-hover:w-full transition-all duration-300"></span>
               </a>
               <a
                 href="#transparency"
                 onClick={(e) => {
                   e.preventDefault();
-                  handleNavClick("right");
                   document.getElementById("transparency")?.scrollIntoView({ behavior: "smooth" });
                 }}
-                className="text-sm text-text hover:text-primary transition-colors cursor-pointer group"
+                className={`text-sm transition-colors cursor-pointer uppercase tracking-wider font-medium ${
+                  navbarScrolled ? 'text-text hover:text-primary' : 'text-white/90 hover:text-white'
+                }`}
               >
                 Transparency
-                <span className="block h-0.5 bg-primary w-0 group-hover:w-full transition-all duration-300"></span>
               </a>
               <a
                 href="#about"
                 onClick={(e) => {
                   e.preventDefault();
-                  handleNavClick("right");
                   document.getElementById("about")?.scrollIntoView({ behavior: "smooth" });
                 }}
-                className="text-sm text-text hover:text-primary transition-colors cursor-pointer group"
+                className={`text-sm transition-colors cursor-pointer uppercase tracking-wider font-medium ${
+                  navbarScrolled ? 'text-text hover:text-primary' : 'text-white/90 hover:text-white'
+                }`}
               >
                 About
-                <span className="block h-0.5 bg-primary w-0 group-hover:w-full transition-all duration-300"></span>
               </a>
               <a
                 href="#mission"
                 onClick={(e) => {
                   e.preventDefault();
-                  handleNavClick("right");
                   document.getElementById("mission")?.scrollIntoView({ behavior: "smooth" });
                 }}
-                className="text-sm text-text hover:text-primary transition-colors cursor-pointer group"
+                className={`text-sm transition-colors cursor-pointer uppercase tracking-wider font-medium ${
+                  navbarScrolled ? 'text-text hover:text-primary' : 'text-white/90 hover:text-white'
+                }`}
               >
                 Our Mission
-                <span className="block h-0.5 bg-primary w-0 group-hover:w-full transition-all duration-300"></span>
               </a>
-              {/* Get Started Button */}
+            </div>
+
+            {/* Get Started Button - Right */}
+            <div className="flex-shrink-0">
               <Button
                 onClick={() => navigate("/login")}
-                className="app-bg-primary hover:app-bg-secondary app-text-white px-6 hover:text-white cursor-pointer"
+                className={`transition-all duration-300 ${
+                  navbarScrolled
+                    ? 'app-bg-primary hover:app-bg-secondary app-text-white px-6 hover:text-white cursor-pointer'
+                    : 'app-bg-primary hover:app-bg-secondary app-text-white px-6 hover:text-white cursor-pointer'
+                }`}
               >
                 Get Started
               </Button>
@@ -243,20 +283,23 @@ export function LandingPage() {
         </div>
       </nav>
 
-      {/* Hero Carousel */}
-      <section className={`relative transition-all duration-500 ${
-        isSliding 
-          ? slideDirection == "right" 
-            ? "translate-x-full opacity-0" 
-            : "-translate-x-full opacity-0"
-          : "translate-x-0 opacity-100"
-      }`}>
+      {/* Hero Carousel - Full Width with Closing Animation */}
+      <section 
+        className="relative w-full overflow-hidden"
+        style={{
+          transform: `scale(${carouselScale})`,
+          opacity: carouselOpacity,
+          transition: 'transform 0.1s ease-out, opacity 0.1s ease-out',
+          borderRadius: `${(1 - carouselScale) * 200}px`,
+        }}
+      >
         <Carousel
           setApi={setApi}
           opts={{
             align: "start",
             loop: true,
           }}
+          plugins={[autoplayRef.current]}
           className="w-full relative"
         >
           <CarouselContent className="m-0">
@@ -371,16 +414,48 @@ export function LandingPage() {
                 </p>
               )}
             </div>
-            <div className="max-w-4xl mx-auto">
-              <div className="relative aspect-video rounded-2xl overflow-hidden shadow-2xl">
-                <video
-                  src={videoSection.video.asset.url}
-                  controls
-                  poster={videoSection.thumbnail?.asset ? urlFor(videoSection.thumbnail).url() : undefined}
-                  className="w-full h-full object-cover"
-                >
-                  Your browser does not support the video tag.
-                </video>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
+              {/* Video Player */}
+              <div className="lg:col-span-2">
+                <AnimatedDiv animationClass="animate-fade-in-left" threshold={0.2}>
+                  <div className="relative aspect-video rounded-2xl overflow-hidden shadow-2xl">
+                    <video
+                      src={videoSection.video.asset.url}
+                      controls
+                      poster={videoSection.thumbnail?.asset ? urlFor(videoSection.thumbnail).url() : undefined}
+                      className="w-full h-full object-cover"
+                    >
+                      Your browser does not support the video tag.
+                    </video>
+                  </div>
+                </AnimatedDiv>
+              </div>
+              
+              {/* Infographic Card */}
+              <div className="lg:col-span-1">
+                <AnimatedDiv animationClass="animate-fade-in-right" threshold={0.2}>
+                  <Card className="p-6 h-full bg-linear-to-br from-app-primary/10 to-app-secondary/10 border-app-primary/20 hover:shadow-lg transition-shadow flex flex-col">
+                    <h3 className="text-xl font-bold text-text mb-4 flex items-center gap-2">
+                      Inside the Trailer
+                    </h3>
+                    
+                    <p className="text-text-subtle leading-relaxed grow mb-6">
+                      The RCV trailer is equipped with cutting-edge technology designed for regulatory compliance verification. It features advanced camera systems for high-resolution document capture and OCR processing, intelligent LED displays for real-time guidance, and secure blockchain-integrated processing to ensure tamper-proof compliance records.
+                    </p>
+                    
+                    {/* Footer CTA */}
+                    <div className="pt-4 border-t border-app-primary/20">
+                      <Button 
+                        onClick={() => navigate("/login")}
+                        className="w-full app-bg-primary hover:app-bg-secondary text-white font-medium"
+                      >
+                        Explore More
+                        <ArrowRight className="w-4 h-4 ml-2" />
+                      </Button>
+                    </div>
+                  </Card>
+                </AnimatedDiv>
               </div>
             </div>
           </div>
