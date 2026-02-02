@@ -157,7 +157,7 @@ export function Chatbot() {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 w-14 h-14 app-bg-primary text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center z-50 group"
+          className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 w-14 h-14 app-bg-primary text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center z-50 group"
           aria-label="Open chat"
         >
           <MessageCircle className="w-6 h-6" />
@@ -170,8 +170,8 @@ export function Chatbot() {
         <div 
           className={`fixed bg-white rounded-2xl shadow-2xl flex flex-col z-50 border border-gray-200 transition-all duration-300 ${
             isExpanded 
-              ? "inset-4 md:inset-8" 
-              : "bottom-6 right-6 w-96 h-[32rem]"
+              ? "inset-2 sm:inset-4 md:inset-8" 
+              : "bottom-4 right-4 sm:bottom-6 sm:right-6 w-[calc(100vw-2rem)] sm:w-96 h-[calc(100vh-8rem)] sm:h-[32rem]"
           }`}
         >
           {/* Header */}
@@ -181,7 +181,7 @@ export function Chatbot() {
                 <MessageCircle className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-semibold">RCV Assistant</h3>
+                <h3 className="font-semibold">Chat with Arcy!</h3>
                 <p className="text-xs text-white/80">Always here to help</p>
               </div>
             </div>
@@ -213,7 +213,7 @@ export function Chatbot() {
                 }`}
               >
                 <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-2 ${
+                  className={`max-w-xs sm:max-w-sm rounded-2xl px-3 sm:px-4 py-2 ${
                     message.sender === "user"
                       ? "app-bg-primary text-white"
                       : "bg-gray-100 text-gray-800"
@@ -284,7 +284,7 @@ export function Chatbot() {
           </div>
 
           {/* Input */}
-          <div className="p-4 border-t border-gray-200">
+          <div className="p-2 sm:p-4 border-t border-gray-200">
             <div className="flex gap-2">
               <input
                 type="text"
@@ -292,18 +292,18 @@ export function Chatbot() {
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Type your message..."
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="flex-1 px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
               />
               <button
                 onClick={handleSendMessage}
                 disabled={!inputValue.trim()}
-                className="app-bg-primary text-white w-10 h-10 rounded-full flex items-center justify-center hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                className="app-bg-primary text-white w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                 aria-label="Send message"
               >
-                <Send className="w-5 h-5" />
+                <Send className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
             </div>
-            <p className="text-xs text-gray-500 mt-2 text-center">
+            <p className="text-xs text-gray-500 mt-2 text-center hidden sm:block">
               Press Enter to send
             </p>
           </div>
