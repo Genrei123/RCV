@@ -3757,7 +3757,6 @@ class KioskApp:
         
         # Cleanup GPIO
         self.gpio_led.cleanup()
-            self.root.after_cancel(self.exit_timer)
         
         # Release camera resources
         if self.camera:

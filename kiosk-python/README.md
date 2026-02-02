@@ -1,17 +1,46 @@
-# RCV Kiosk Machine
+# RCV Kiosk Machine - Modular Architecture
 
 Automated product verification kiosk for QR code and product scanning. Connects to RCV backend API for real-time certificate and product verification.
 
-## Features
+**New in 2.0:** Complete modular refactoring with 90.7% reduction in main file size for easier maintenance and testing.
+
+## ✨ Features
 
 - 🔍 **Automatic QR Code Scanning** - No buttons needed, continuous scanning
 - 📜 **Certificate Verification** - Validates certificates against blockchain
 - 📦 **Product Authentication** - Searches RCV database and FDA registry
-- 🔊 **Tagalog TTS** - Voice announcements in Filipino/Tagalog
+- 📸 **OCR 2-Photo Capture** - Scan product labels with front/back photos
+- 🔊 **Tagalog TTS** - Voice announcements in Filipino/Tagalog using Microsoft neural voices
+- 💡 **GPIO LED Status** - Visual indicators on Raspberry Pi
 - 🖥️ **Kiosk Mode** - Fullscreen, auto-start, no user interaction required
-- ⏱️ **Auto-reset** - Returns to scanning after 20 seconds
+- ⏱️ **Auto-reset** - Returns to scanning after display timeout
+- 🔧 **Modular Architecture** - Clean separation of concerns for easy maintenance
 
-## Quick Start (Development)
+## 📁 Project Structure
+
+```
+kiosk-python/
+├── main.py                  # Main orchestrator (352 lines - 90.7% smaller!)
+├── config.py                # Configuration and constants
+├── models.py                # Data models
+├── camera_manager.py        # Camera operations & QR detection
+│
+├── services/                # Business logic services
+│   ├── api_service.py      # RCV API communication
+│   ├── tts_service.py      # Text-to-Speech
+│   ├── gpio_service.py     # LED control
+│   └── ocr_handler.py      # OCR 2-photo capture
+│
+└── ui/                      # UI components
+    ├── state_manager.py    # State machine
+    ├── screens.py          # Base screens
+    ├── ocr_capture_screen.py
+    ├── certificate_screen.py
+    ├── product_screen.py
+    └── compliance_screen.py
+```
+
+## 🚀 Quick Start (Development)
 
 ```bash 
 # Install dependencies
@@ -22,7 +51,7 @@ cp .env.example .env
 # Edit .env with your API URL
 
 # Run the kiosk
-python main.py
+python3 main.py
 ```
 
 Press `Escape` to exit in development mode.
@@ -43,11 +72,16 @@ Press `Escape` to exit in development mode.
 
 2. Run the installation script:
 ```bash
-chmod +x install_raspberry_pi.sh
-./install_raspberry_pi.sh
+chmod +x install.sh
+./install.sh
 ```
 
-3. Reboot to start the kiosk:
+3. Run the kiosk:
+```bash
+./run_kiosk.sh
+```
+
+Or use the desktop launcher: Double-click "RCV Kiosk" on desktop
 ```bash
 sudo reboot
 ```

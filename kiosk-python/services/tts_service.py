@@ -5,7 +5,7 @@ import os
 import platform
 import threading
 import subprocess
-from config import TTSConfig
+from config import TTSConfig, Language, Messages
 
 # Check TTS availability
 TTS_AVAILABLE = False
@@ -137,3 +137,34 @@ class TTSService:
         self.is_muted = not self.is_muted
         if self.is_muted:
             self.stop()
+    
+    def speak_tagalog(self, message_key: str):
+        """
+        Legacy method for backward compatibility
+        Speaks in Filipino using message key
+        """
+        self.speak_message(message_key, Language.TAGALOG)
+    
+    def speak_message(self, message_key: str, language: Language = Language.ENGLISH):
+        """
+        Speak a predefined message in the specified language
+        Uses Messages class from config for bilingual support
+        """
+        # Get message text from Messages class
+        message_dict = getattr(Messages, message_key.upper(), None)
+        
+        if not message_dict:
+            print(f"Warning: Message key '{message_key}' not found")
+            return
+        
+        # Get text for language
+        lang_code = 'en' if language == Language.ENGLISH else 'tl'
+        text = message_dict.get(lang_code, message_dict.get('tl', ''))  # Fallback to Tagalog
+        
+        if not text:
+            print(f"Warning: No text for {lang_code} in {message_key}")
+            return
+        
+        # Select voice based on language
+        voice_lang = "fil" if language == Language.TAGALOG else "en"
+        self.speak(text, voice_lang)

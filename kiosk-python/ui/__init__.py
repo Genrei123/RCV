@@ -3,14 +3,14 @@
 from .screens import (
     IdleScreen,
     ScanningScreen,
-    OCRCaptureScreen,
     ProcessingScreen,
-    CertificateScreen,
-    ProductScreen,
-    ComplianceScreen,
     ErrorScreen,
     MaintenanceScreen
 )
+from .ocr_capture_screen import OCRCaptureScreen
+from .certificate_screen import CertificateScreen
+from .product_screen import ProductScreen
+from .compliance_screen import ComplianceScreen
 from .state_manager import KioskStateManager
 
 __all__ = [

@@ -55,6 +55,11 @@ class OCRCaptureStep(Enum):
     PREVIEW_BACK = "preview_back"      # Previewing back photo  
     SUBMITTING = "submitting"          # Sending to backend
 
+class Language(Enum):
+    """Supported languages"""
+    ENGLISH = "en"
+    TAGALOG = "tl"
+
 # Display duration in seconds
 class Timing:
     RESULT_DISPLAY_DURATION = 30   # 30 seconds for results
@@ -76,7 +81,65 @@ class CameraConfig:
     DISPLAY_HEIGHT = 480
     FRAME_SKIP_RATE = 2  # Process every Nth frame for display
 
-# Tagalog Messages
+# TTS Configuration
+class TTSConfig:
+    FILIPINO_VOICE = "fil-PH-BlessicaNeural"  # Female Filipino voice
+    FILIPINO_VOICE_MALE = "fil-PH-AngeloNeural"  # Male Filipino voice
+    ENGLISH_VOICE = "en-US-JennyNeural"  # Female English voice
+    ENGLISH_VOICE_MALE = "en-US-GuyNeural"  # Male English voice
+
+# Bilingual Messages
+class Messages:
+    WELCOME = {
+        "en": "Welcome! Kiosk is ready to scan.",
+        "tl": "Magandang araw! Handa na ang kiosk para sa pag-scan."
+    }
+    SCAN_DETECTED = {
+        "en": "Scan detected. Processing...",
+        "tl": "May na-detect na scan. Pinoproseso..."
+    }
+    SCANNING = {
+        "en": "Scanning QR code...",
+        "tl": "Nag-scan ng QR code..."
+    }
+    SUCCESS = {
+        "en": "Verification successful!",
+        "tl": "Matagumpay na pag-verify!"
+    }
+    ERROR = {
+        "en": "An error occurred. Please try again.",
+        "tl": "May nangyaring error. Subukan muli."
+    }
+    FRAUD = {
+        "en": "Warning! Fraudulent certificate detected.",
+        "tl": "Babala! May nadetektang pekeng sertipiko."
+    }
+    EXPIRED = {
+        "en": "Certificate has expired.",
+        "tl": "Ang sertipiko ay nag-expire na."
+    }
+    OCR_FRONT = {
+        "en": "Position the front of the product label.",
+        "tl": "Ilagay ang harapan ng label ng produkto."
+    }
+    OCR_BACK = {
+        "en": "Now position the back of the product label.",
+        "tl": "Ngayon ay ilagay ang likod ng label ng produkto."
+    }
+    OCR_COMPLETE = {
+        "en": "Photos captured. Processing...",
+        "tl": "Na-kunan na ang mga larawan. Pinoproseso..."
+    }
+    MAINTENANCE = {
+        "en": "System maintenance. Please wait.",
+        "tl": "Pagkukumpuni ng sistema. Mangyaring maghintay."
+    }
+    READY = {
+        "en": "System ready. You may scan now.",
+        "tl": "Handa na ang sistema. Maaari nang mag-scan."
+    }
+
+# Legacy Tagalog Messages (for backward compatibility)
 class TagalogMessages:
     WELCOME = "Magandang araw! Handa na ang kiosk para sa pag-scan."
     SCAN_DETECTED = "May na-detect na scan. Pinoproseso..."
