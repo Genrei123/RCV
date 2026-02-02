@@ -250,16 +250,22 @@ export function Dashboard(props: DashboardProps) {
       label: "Actions",
       render: (_, row: User) => (
         <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleRowClick(row);
-            }}
-          >
-            View Details
-          </Button>
+          {row.email === 'super@gmail.com' ? (
+            <span className="text-sm text-gray-500 px-3 py-1">
+              No Access 
+            </span>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleRowClick(row);
+              }}
+            >
+              View Details
+            </Button>
+          )}
         </div>
       ),
     },

@@ -338,7 +338,12 @@ export function UserDetailModal({
                 </div>
               )}
               <div>
-                <h3 className="text-xl font-semibold app-text">{getFullName()}</h3>
+                <h3 className="text-xl font-semibold app-text">
+                  {getFullName()}
+                  {currentUser && user.email === currentUser.email && (
+                    <span className="text-xl font-semibold text-gray-500 ml-2">(You)</span>
+                  )}
+                </h3>
                 <p className="text-sm app-text-subtle">{user.email}</p>
                 {user.status === "Rejected" && (
                   <Badge variant="destructive" className="mt-1">
