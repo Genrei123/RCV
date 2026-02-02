@@ -283,7 +283,6 @@ const ApprovalQueue: React.FC<ApprovalQueueProps> = ({ isAdmin = false, onSucces
       const response = await CertificateApprovalService.getApprovalById(
         SelectedCertificate._id,
       );
-      console.log("Certificate Details:", response);
 
       if (response.entityType === "product") {
         const productData = {
@@ -313,7 +312,6 @@ const ApprovalQueue: React.FC<ApprovalQueueProps> = ({ isAdmin = false, onSucces
           setCurrentProductData(null);
         }
 
-        console.log("Product details set in modal data", productData);
       } else if (response.entityType === "company") {
         setCurrentProductData(null); // Reset for company views
         const companyDetails = {
@@ -329,7 +327,6 @@ const ApprovalQueue: React.FC<ApprovalQueueProps> = ({ isAdmin = false, onSucces
           throw new Error("Company details not found");
         } else {
           setModalData(companyDetails as PendingCompanyDetails);
-          console.log("Company details set in modal data", companyDetails);
         }
       }
     } catch (error) {
@@ -527,7 +524,7 @@ const ApprovalQueue: React.FC<ApprovalQueueProps> = ({ isAdmin = false, onSucces
                     </Button>
                     <Button
                       variant="destructive"
-                      className="flex-1"
+                      className="flex-1 hover:app-bg-error"
                       onClick={() => openApprovalDialog(approval, "reject")}
                     >
                       <XCircle className="w-4 h-4 mr-2" />
@@ -671,6 +668,7 @@ const ApprovalQueue: React.FC<ApprovalQueueProps> = ({ isAdmin = false, onSucces
                 variant="destructive"
                 onClick={handleReject}
                 disabled={processing || !rejectionReason.trim()}
+                className="hover:app-bg-error"
               >
                 {processing ? (
                   <>

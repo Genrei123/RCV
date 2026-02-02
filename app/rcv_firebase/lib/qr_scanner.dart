@@ -357,6 +357,9 @@ class _QRScannerPageState extends State<QRScannerPage> {
                   padding: const EdgeInsets.all(16.0),
                   child: Center(
                     child: Container(
+                      constraints: const BoxConstraints(
+                        maxHeight: 250, // Limit image height
+                      ),
                       decoration: BoxDecoration(
                         border: Border.all(color: AppColors.primary, width: 2),
                         borderRadius: BorderRadius.circular(12),
@@ -365,7 +368,7 @@ class _QRScannerPageState extends State<QRScannerPage> {
                         borderRadius: BorderRadius.circular(12),
                         child: Image.asset(
                           _scannedItem!.productImage,
-                          fit: BoxFit.cover,
+                          fit: BoxFit.contain,
                           errorBuilder: (context, error, stackTrace) {
                             return Container(
                               height: 200,

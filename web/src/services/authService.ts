@@ -48,7 +48,6 @@ export class AuthService {
             }
             return false;
         } catch (error: any) {
-            console.log("Auth check failed:", error.response?.status || error.message);
             CookieManager.clearAuthCookies(); // Clear any client-side tracking cookies
             return false;
         }

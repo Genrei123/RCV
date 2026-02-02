@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
-import { X, RefreshCw, Check, XCircle, Clock, ExternalLink, Loader2 } from "lucide-react";
+import { X, RefreshCw, Check, ExternalLink, Loader2, FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { PDFGenerationService } from "@/services/pdfGenerationService";
+import type { Product } from "@/typeorm/entities/product.entity";
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
 
@@ -28,6 +30,7 @@ interface CertificateTimelineModalProps {
   onClose: () => void;
   productId: string;
   productName: string;
+  isPublic?: boolean; // If true, don't send credentials for authentication
 }
 
 export default function CertificateTimelineModal({
@@ -35,13 +38,18 @@ export default function CertificateTimelineModal({
   onClose,
   productId,
   productName,
+  isPublic = false,
 }: CertificateTimelineModalProps) {
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
   const [loading, setLoading] = useState(false);
+  const [productData, setProductData] = useState<Product | null>(null);
+  const [regeneratingCertId, setRegeneratingCertId] = useState<string | null>(null);
+  const [selectedCertificateId, setSelectedCertificateId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen && productId) {
       fetchTimeline();
+      fetchProductData();
     }
   }, [isOpen, productId]);
 
@@ -75,9 +83,13 @@ export default function CertificateTimelineModal({
   const fetchTimeline = async () => {
     setLoading(true);
     try {
+      const timelineEndpoint = isPublic 
+        ? `${API_URL}/certificate-approval/public/renewal-timeline/${productId}`
+        : `${API_URL}/certificate-approval/renewal-timeline/${productId}`;
+      
       const response = await axios.get(
-        `${API_URL}/certificate-approval/renewal-timeline/${productId}`,
-        { withCredentials: true }
+        timelineEndpoint,
+        isPublic ? {} : { withCredentials: true }
       );
 
       if (response.data.success) {
@@ -103,6 +115,11 @@ export default function CertificateTimelineModal({
           };
         });
         setTimeline(mappedTimeline || []);
+        
+        // Auto-select the first (most recent) certificate
+        if (mappedTimeline && mappedTimeline.length > 0) {
+          setSelectedCertificateId(mappedTimeline[0].certificateId);
+        }
       } else {
         toast.error("Failed to load timeline");
       }
@@ -114,6 +131,51 @@ export default function CertificateTimelineModal({
     }
   };
 
+  const fetchProductData = async () => {
+    try {
+      const productEndpoint = isPublic
+        ? `${API_URL}/public/product/${productId}`
+        : `${API_URL}/product/products/${productId}`;
+      
+      const response = await axios.get(
+        productEndpoint,
+        isPublic ? {} : { withCredentials: true }
+      );
+      if (response.data) {
+        setProductData(response.data);
+      }
+    } catch (error: any) {
+      console.error("Error fetching product data:", error);
+    }
+  };
+
+  const handleRegenerateCertificate = async () => {
+    if (!productData) {
+      toast.error("Product data not loaded");
+      return;
+    }
+
+    if (!selectedCertificateId) {
+      toast.error("Please select a certificate from the timeline");
+      return;
+    }
+
+    setRegeneratingCertId(selectedCertificateId);
+    try {
+      // Regenerate PDF with the consistent certificate ID
+      await PDFGenerationService.generateAndDownloadProductCertificate(
+        productData,
+        selectedCertificateId
+      );
+      toast.success(isPublic ? "Certificate downloaded successfully!" : "Certificate regenerated successfully!");
+    } catch (error: any) {
+      console.error("Error regenerating certificate:", error);
+      toast.error("Failed to regenerate certificate");
+    } finally {
+      setRegeneratingCertId(null);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
@@ -122,16 +184,6 @@ export default function CertificateTimelineModal({
       hour: "2-digit",
       minute: "2-digit",
     });
-  };
-
-  const getEventIcon = (event: TimelineEvent) => {
-    if (event.status === 'approved') {
-      return <Check className="h-5 w-5 text-green-600" />;
-    } else if (event.status === 'rejected') {
-      return <XCircle className="h-5 w-5 text-red-600" />;
-    } else {
-      return <Clock className="h-5 w-5 text-yellow-600" />;
-    }
   };
 
   const getEventBadge = (type: string) => {
@@ -162,19 +214,39 @@ export default function CertificateTimelineModal({
 
       <div className="relative bg-white rounded-lg shadow-xl w-full max-w-3xl my-8 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b sticky top-0 bg-white z-10">
-          <div>
-            <h2 className="text-xl font-bold app-text flex items-center gap-2">
-              <RefreshCw className="h-5 w-5 app-text-primary" />
+          <div className="flex-1">
+            <h2 className="text-xl font-bold app-text">
               Certificate Timeline
             </h2>
             <p className="text-sm app-text-subtle mt-1">{productName}</p>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:app-bg-neutral rounded-lg transition-colors"
-          >
-            <X className="h-5 w-5 app-text-subtle" />
-          </button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleRegenerateCertificate}
+              disabled={!selectedCertificateId || regeneratingCertId !== null || !productData}
+              className="app-bg-primary app-text-white hover:app-bg-secondary"
+            >
+              {regeneratingCertId ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  {isPublic ? 'Downloading...' : 'Generating...'}
+                </>
+              ) : (
+                <>
+                  <FileDown className="h-4 w-4 mr-2" />
+                  {isPublic ? 'Download' : 'Download'}
+                </>
+              )}
+            </Button>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <X className="h-5 w-5 text-gray-500" />
+            </button>
+          </div>
         </div>
 
         <div className="p-6">
@@ -188,22 +260,19 @@ export default function CertificateTimelineModal({
               <p className="text-gray-500">No timeline events found</p>
             </div>
           ) : (
-            <div className="space-y-6">
-              {timeline.map((event, index) => (
-                <div key={event.approvalId} className="flex gap-4">
-                  {/* Timeline indicator */}
-                  <div className="flex flex-col items-center">
-                    <div className="p-2 bg-gray-100 rounded-full">
-                      {getEventIcon(event)}
-                    </div>
-                    {index < timeline.length - 1 && (
-                      <div className="w-0.5 h-full bg-gray-200 my-2" />
-                    )}
-                  </div>
-
-                  {/* Event content */}
-                  <div className="flex-1 pb-6">
-                    <div className="flex items-center gap-2 mb-2">
+            <div className="space-y-3">
+              {timeline.map((event) => (
+                <div 
+                  key={event.approvalId} 
+                  onClick={() => setSelectedCertificateId(event.certificateId)}
+                  className={`p-4 rounded-lg border-2 transition-all cursor-pointer ${
+                    selectedCertificateId === event.certificateId 
+                      ? 'border-teal-500 bg-teal-50' 
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-2">
                       {getEventBadge(event.type)}
                       <Badge
                         variant={
@@ -217,24 +286,30 @@ export default function CertificateTimelineModal({
                         {event.status}
                       </Badge>
                     </div>
+                    {selectedCertificateId === event.certificateId && (
+                      <Check className="h-5 w-5 text-teal-600" />
+                    )}
+                  </div>
 
-                    <p className="text-sm text-gray-600 mb-2">
-                      Certificate ID: <span className="font-mono font-medium">{event.certificateId}</span>
+                  <div className="space-y-2 text-sm">
+                    <p className="text-gray-700">
+                      <span className="font-medium">Certificate ID:</span>{' '}
+                      <span className="font-mono text-xs">{event.certificateId}</span>
                     </p>
 
-                    <p className="text-sm text-gray-600 mb-2">
-                      Submitted: {formatDate(event.submittedAt)}
+                    <p className="text-gray-600">
+                      <span className="font-medium">Submitted:</span> {formatDate(event.submittedAt)}
                     </p>
 
                     {event.approvedAt && (
-                      <p className="text-sm text-gray-600 mb-2">
-                        Approved: {formatDate(event.approvedAt)}
+                      <p className="text-gray-600">
+                        <span className="font-medium">Approved:</span> {formatDate(event.approvedAt)}
                       </p>
                     )}
 
                     {event.expirationDate && (
-                      <p className="text-sm text-gray-600 mb-2">
-                        Expiration: {formatDate(event.expirationDate)}
+                      <p className="text-gray-600">
+                        <span className="font-medium">Expiration:</span> {formatDate(event.expirationDate)}
                       </p>
                     )}
 
@@ -243,7 +318,8 @@ export default function CertificateTimelineModal({
                         href={`https://sepolia.etherscan.io/tx/${event.blockchainTxHash}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 hover:underline mt-2"
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 hover:underline"
                       >
                         <ExternalLink className="h-3 w-3" />
                         View on Blockchain
@@ -251,13 +327,13 @@ export default function CertificateTimelineModal({
                     )}
 
                     {event.approvers && event.approvers.length > 0 && (
-                      <div className="mt-3 bg-gray-50 p-3 rounded-lg">
+                      <div className="mt-3 pt-3 border-t border-gray-200">
                         <p className="text-xs font-semibold text-gray-700 mb-2">
                           Approvers ({event.approvers.length})
                         </p>
-                        <div className="space-y-2">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                           {event.approvers.map((approver, idx) => (
-                            <div key={idx} className="text-xs text-gray-600">
+                            <div key={idx} className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
                               <p className="font-medium">{approver.approverName}</p>
                               <p className="font-mono text-gray-500">{approver.approverWallet.slice(0, 10)}...{approver.approverWallet.slice(-8)}</p>
                               <p className="text-gray-500">{formatDate(approver.approvalDate)}</p>

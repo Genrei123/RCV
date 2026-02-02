@@ -57,8 +57,6 @@ import {
   Trash2,
   RefreshCw,
   Loader2,
-  Monitor,
-  Smartphone,
   Shield,
   FileCheck,
 } from "lucide-react";
@@ -98,13 +96,12 @@ export function Dashboard(props: DashboardProps) {
   const [statsLoading, setStatsLoading] = useState<boolean>(true);
   const pageSize = 10;
 
-  // View mode toggle: 'users', 'rejected', 'invites', 'approvals', or 'my-submissions'
-  const [viewMode, setViewMode] = useState<"users" | "rejected" | "invites" | "approvals" | "my-submissions">("users");
+  // View mode toggle: 'users', 'invites', 'approvals', or 'my-submissions'
+  const [viewMode, setViewMode] = useState<"users" | "invites" | "approvals" | "my-submissions">("users");
   const [invites, setInvites] = useState<AdminInvite[]>([]);
   const [invitesLoading, setInvitesLoading] = useState<boolean>(false);
 
   // Pagination state for different tabs
-  const [rejectedCurrentPage, setRejectedCurrentPage] = useState<number>(1);
   const [invitesCurrentPage, setInvitesCurrentPage] = useState<number>(1);
   const [submissionsCurrentPage, setSubmissionsCurrentPage] = useState<number>(1);
 
@@ -120,8 +117,8 @@ export function Dashboard(props: DashboardProps) {
   const [rejectLoading, setRejectLoading] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
 
-  // Status filter state (Rejected users have their own tab)
-  const [statusFilter, setStatusFilter] = useState<"all" | "Pending" | "Active">("all");
+  // Status filter state
+  const [statusFilter, setStatusFilter] = useState<"all" | "Pending" | "Active" | "Rejected">("all");
 
   // Check if current user is an admin
   const isAdmin = (): boolean => {
@@ -249,32 +246,6 @@ export function Dashboard(props: DashboardProps) {
       },
     },
     {
-      key: "access",
-      label: "Access",
-      render: (_, row: User) => (
-        <div className="flex items-center gap-1">
-          {/* Rejected users have no access - show disabled/none state */}
-          {row.status === "Rejected" ? (
-            <span className="text-xs text-gray-400 italic">No Access</span>
-          ) : (
-            /* All active users must have at least one access type - default to app access if somehow missing */
-            <>
-              {(row.appAccess || (!row.appAccess && !row.webAccess)) && (
-                <span title="Mobile App Access" className="inline-flex items-center justify-center w-6 h-6 rounded bg-blue-100 text-blue-600">
-                  <Smartphone className="w-3.5 h-3.5" />
-                </span>
-              )}
-              {row.webAccess && (
-                <span title="Web Dashboard Access" className="inline-flex items-center justify-center w-6 h-6 rounded bg-green-100 text-green-600">
-                  <Monitor className="w-3.5 h-3.5" />
-                </span>
-              )}
-            </>
-          )}
-        </div>
-      ),
-    },
-    {
       key: "actions",
       label: "Actions",
       render: (_, row: User) => (
@@ -330,25 +301,6 @@ export function Dashboard(props: DashboardProps) {
       key: "invitedByName",
       label: "Invited By",
       render: (value: string) => value || "System",
-    },
-    {
-      key: "access",
-      label: "Access",
-      render: (_, row: AdminInvite) => (
-        <div className="flex items-center gap-1">
-          {/* All invites must have at least one access type - default to app access if somehow missing */}
-          {(row.appAccess || (!row.appAccess && !row.webAccess)) && (
-            <span title="Mobile App Access" className="inline-flex items-center justify-center w-6 h-6 rounded bg-blue-100 text-blue-600">
-              <Smartphone className="w-3.5 h-3.5" />
-            </span>
-          )}
-          {row.webAccess && (
-            <span title="Web Dashboard Access" className="inline-flex items-center justify-center w-6 h-6 rounded bg-green-100 text-green-600">
-              <Monitor className="w-3.5 h-3.5" />
-            </span>
-          )}
-        </div>
-      ),
     },
     {
       key: "createdAt",
@@ -702,7 +654,7 @@ export function Dashboard(props: DashboardProps) {
   return (
     <>
       <PageContainer
-        className="overflow-hidden relative"
+        className="relative"
         title="Dashboard"
         description="Overview of system statistics and user management"
       >
@@ -790,7 +742,6 @@ export function Dashboard(props: DashboardProps) {
                 <SelectValue>
                   <div className="flex items-center gap-2">
                     {viewMode === "users" && <><Users className="h-4 w-4" /> Users</>}
-                    {viewMode === "rejected" && <><XCircle className="h-4 w-4" /> Rejected</>}
                     {viewMode === "invites" && <><Mail className="h-4 w-4" /> Invites</>}
                     {viewMode === "approvals" && <><Shield className="h-4 w-4" /> Approvals</>}
                     {viewMode === "my-submissions" && <><FileCheck className="h-4 w-4" /> My Submissions</>}
@@ -805,11 +756,6 @@ export function Dashboard(props: DashboardProps) {
                 </SelectItem>
                 {isAdmin() && (
                   <>
-                    <SelectItem value="rejected">
-                      <div className="flex items-center gap-2">
-                        <XCircle className="h-4 w-4" /> Rejected
-                      </div>
-                    </SelectItem>
                     <SelectItem value="invites">
                       <div className="flex items-center gap-2">
                         <Mail className="h-4 w-4" /> Invites
@@ -844,15 +790,6 @@ export function Dashboard(props: DashboardProps) {
             </Button>
             {isAdmin() && (
               <>
-                <Button
-                  variant={viewMode === "rejected" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setViewMode("rejected")}
-                  className="rounded-none border-l cursor-pointer flex-1"
-                >
-                  <XCircle className="h-4 w-4 mr-2" />
-                  Rejected
-                </Button>
                 <Button
                   variant={viewMode === "invites" ? "default" : "ghost"}
                   size="sm"
@@ -912,7 +849,7 @@ export function Dashboard(props: DashboardProps) {
                   <Select
                     value={statusFilter}
                     onValueChange={(value) =>
-                      setStatusFilter(value as "all" | "Pending" | "Active")
+                      setStatusFilter(value as "all" | "Pending" | "Active" | "Rejected")
                     }
                   >
                     <SelectTrigger className="w-full lg:w-auto min-w-[120px]">
@@ -924,6 +861,7 @@ export function Dashboard(props: DashboardProps) {
                         <SelectItem value="all">All Users</SelectItem>
                         <SelectItem value="Pending">Pending</SelectItem>
                         <SelectItem value="Active">Active</SelectItem>
+                        <SelectItem value="Rejected">Rejected</SelectItem>
                       </SelectGroup>
                     </SelectContent>
                   </Select>
@@ -973,66 +911,7 @@ export function Dashboard(props: DashboardProps) {
         )}
 
         {/* Rejected Users Table (Admin only) */}
-        {viewMode === "rejected" && isAdmin() && (
-          <div className="w-full">
-            {/* Calculate rejected users pagination */}
-            {(() => {
-              const rejectedUsers = usersArray.filter(u => u.status === "Rejected");
-              const rejectedTotalPages = Math.max(1, Math.ceil(rejectedUsers.length / pageSize));
-              const rejectedStartIndex = (rejectedCurrentPage - 1) * pageSize;
-              const rejectedPaginatedData = rejectedUsers.slice(
-                rejectedStartIndex,
-                rejectedStartIndex + pageSize
-              );
-
-              return (
-                <>
-                  <DataTable
-                    title="Rejected Users"
-                    columns={columns}
-                    data={rejectedPaginatedData}
-                    searchPlaceholder="Search rejected users..."
-                    onSearch={(query) => onSearch(query)}
-                    loading={loading}
-                    emptyStateTitle="No Rejected Users"
-                    emptyStateDescription="There are no rejected user accounts at this time."
-                    customControls={
-                      <div className="flex items-center gap-2 w-full sm:w-auto">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => fetchPage(currentPage)}
-                          disabled={loading}
-                        >
-                          <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                          Refresh
-                        </Button>
-                      </div>
-                    }
-                  />
-                  <div className="mt-4 flex items-center justify-between w-full">
-                    <div className="text-sm text-muted-foreground">
-                      Showing {rejectedPaginatedData.length} of {rejectedUsers.length} rejected users • Page{" "}
-                      {rejectedCurrentPage} of {rejectedTotalPages}
-                    </div>
-
-                    <div>
-                      <SimplePagination
-                        currentPage={rejectedCurrentPage}
-                        totalPages={rejectedTotalPages}
-                        totalItems={rejectedUsers.length}
-                        itemsPerPage={pageSize}
-                        onPageChange={(p: number) => setRejectedCurrentPage(p)}
-                        alwaysShowControls
-                        showingText={null}
-                      />
-                    </div>
-                  </div>
-                </>
-              );
-            })()}
-          </div>
-        )}
+        {/* Removed - rejected users now filtered via status filter in Users tab */}
 
         {/* Invites Table (Admin only) */}
         {viewMode === "invites" && isAdmin() && (
@@ -1130,6 +1009,7 @@ export function Dashboard(props: DashboardProps) {
       {/* User Detail Modal */}
       <UserDetailModal
         user={selectedUser}
+        currentUser={currentUser}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onApprove={handleApprove}

@@ -269,7 +269,9 @@ export const revokeWalletAuthorization = async (
 };
 
 /**
- * Link wallet address to a user (user can link their own wallet, but only Admin can authorize)
+ * Link wallet address to a user (ADMIN ONLY OPERATION)
+ * SECURITY: This function should only be called from the controller after verifying admin privileges
+ * Only admins can bind meta-mask information to users
  * @param userId The user ID to link the wallet to
  * @param walletAddress The wallet address to link
  * @returns Object with success status and user data
@@ -313,7 +315,7 @@ export const linkUserWallet = async (
 
     return { 
       success: true, 
-      message: 'Wallet linked successfully. Please contact an administrator to authorize your wallet for blockchain operations.',
+      message: 'Wallet bound successfully by administrator. The wallet will be authorized for blockchain operations after admin verification.',
       user: {
         _id: user._id,
         fullName: user.fullName,

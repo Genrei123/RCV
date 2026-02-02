@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Grid, List, Search, Download, Package, Tag, Link2 } from "lucide-react";
+import { Plus, Grid, List, Search, Download, Link2 } from "lucide-react";
 import { PageContainer } from "@/components/PageContainer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,7 +36,7 @@ export interface ProductsProps {
 }
 
 export function Products(props: ProductsProps) {
-  const [pageTab, setPageTab] = useState<PageTab>("products");
+  const [pageTab] = useState<PageTab>("products");
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -49,7 +49,9 @@ export function Products(props: ProductsProps) {
   // Unified search term (server-side for both list & grid views)
   const [searchQuery, setSearchQuery] = useState("");
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
-  const [productStatus, setProductStatus] = useState<"active" | "archived">("active");
+  const [productStatus, setProductStatus] = useState<"active" | "archived">(
+    "active",
+  );
 
   // Disable body scroll when a modal is open
   useEffect(() => {
@@ -90,12 +92,12 @@ export function Products(props: ProductsProps) {
   // Handle PDF certificate download
   const handleDownloadCertificate = async (
     product: Product,
-    event: React.MouseEvent
+    event: React.MouseEvent,
   ) => {
     event.stopPropagation(); // Prevent row click
     if (downloadingId) return; // Prevent multiple downloads
-    
-    setDownloadingId(product._id ?? 'INVALID');
+
+    setDownloadingId(product._id ?? "INVALID");
     try {
       toast.info("Generating certificate PDF...", { autoClose: 1000 });
       await PDFGenerationService.generateAndDownloadProductCertificate(product);
@@ -108,15 +110,18 @@ export function Products(props: ProductsProps) {
     }
   };
 
-
-
   // Server-driven: fetch a page of products (uses current searchQuery state)
   const fetchProductsPage = async (page: number) => {
     setLoading(true);
     try {
       const resp = await (
         await import("@/services/productService")
-      ).ProductService.getProductsPage(page, pageSize, searchQuery, productStatus);
+      ).ProductService.getProductsPage(
+        page,
+        pageSize,
+        searchQuery,
+        productStatus,
+      );
       const items = resp.products || resp.data || [];
       setProducts(items);
       setPagination(resp.pagination || null);
@@ -216,8 +221,10 @@ export function Products(props: ProductsProps) {
             disabled={downloadingId !== null}
             className="app-text-primary hover:app-text-primary hover:app-bg-primary-soft disabled:opacity-50"
           >
-            <Download className={`h-4 w-4 mr-1 ${downloadingId === row._id ? 'animate-pulse' : ''}`} />
-            {downloadingId === row._id ? 'Downloading...' : 'Certificate'}
+            <Download
+              className={`h-4 w-4 mr-1 ${downloadingId === row._id ? "animate-pulse" : ""}`}
+            />
+            {downloadingId === row._id ? "Downloading..." : "Certificate"}
           </Button>
         </div>
       ),
@@ -234,10 +241,12 @@ export function Products(props: ProductsProps) {
     const sourceProducts = props.products || props.data;
     if (sourceProducts && sourceProducts.length > 0) {
       setProducts(sourceProducts);
-      
+
       // If we have a selected product, update it with the fresh data from the list
       if (selectedProduct) {
-        const updated = sourceProducts.find(p => p._id === selectedProduct._id);
+        const updated = sourceProducts.find(
+          (p) => p._id === selectedProduct._id,
+        );
         if (updated) setSelectedProduct(updated);
       }
     } else {
@@ -277,7 +286,7 @@ export function Products(props: ProductsProps) {
       description="Manage and view all registered products in the system."
     >
       {/* Page Tab Navigation */}
-      <div className="flex border-b mb-6">
+      {/* <div className="flex border-b mb-6">
         <button
           onClick={() => setPageTab("products")}
           className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${
@@ -300,7 +309,7 @@ export function Products(props: ProductsProps) {
           <Tag className="h-4 w-4 inline-block mr-2" />
           By Brand / Classification
         </button>
-      </div>
+      </div> */}
 
       {/* Tab Content */}
       {pageTab === "stats" ? (
@@ -319,6 +328,7 @@ export function Products(props: ProductsProps) {
                 size="sm"
                 onClick={() => setViewMode("grid")}
                 className="rounded-r-none cursor-pointer"
+                title="Grid View"
               >
                 <Grid className="h-4 w-4" />
               </Button>
@@ -327,239 +337,242 @@ export function Products(props: ProductsProps) {
                 size="sm"
                 onClick={() => setViewMode("list")}
                 className="rounded-l-none cursor-pointer"
+                title="List View"
               >
                 <List className="h-4 w-4" />
               </Button>
             </div>
           </div>
 
-      {/* Content */}
-      {viewMode === "list" ? (
-        <>
-          <DataTable
-            title="Product List"
-            columns={columns}
-            data={pagedProducts}
-            searchPlaceholder="Search products..."
-            onSearch={(v) => setSearchQuery(v)}
-            loading={loading}
-            emptyStateTitle="No Products Found"
-            emptyStateDescription="Try adjusting your search or add a new product to get started."
-            customControls={
-              <div className="flex items-center gap-3">
-                 <div className="flex bg-gray-100 p-1 rounded-lg">
-                  <button
-                    className={`px-3 py-1 text-sm font-medium rounded-md transition-all ${
-                      productStatus === "active"
-                        ? "bg-white app-text-primary shadow-sm"
-                        : "text-gray-500 hover:text-gray-900"
-                    }`}
-                    onClick={() => {
-                      setProductStatus("active");
-                      setCurrentPage(1); 
-                    }}
-                  >
-                    Active
-                  </button>
-                  <button
-                    className={`px-3 py-1 text-sm font-medium rounded-md transition-all ${
-                      productStatus === "archived"
-                        ? "bg-white app-text-archived shadow-sm"
-                        : "text-gray-500 hover:text-gray-900"
-                    }`}
-                    onClick={() => {
-                      setProductStatus("archived");
-                      setCurrentPage(1);
-                    }}
-                  >
-                    Archived
-                  </button>
-                </div>
-                <div className="h-6 w-px bg-gray-200 mx-1"></div>
-                <Button onClick={handleAddProduct} className="whitespace-nowrap cursor-pointer">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Product
-                </Button>
-              </div>
-            }
-          />
-
-          <div className="mt-4 flex items-center justify-between w-full">
-            <div className="text-sm text-muted-foreground">
-              Showing {pagedProducts.length} of {totalItems} products • Page{" "}
-              {currentPage} of {totalPages}
-            </div>
-
-            <Pagination className="mx-0 w-auto">
-              <PaginationContent className="gap-1">
-                <PaginationItem>
-                  <PaginationPrevious
-                    onClick={() =>
-                      currentPage > 1 && fetchProductsPage(currentPage - 1)
-                    }
-                    className={
-                      currentPage <= 1
-                        ? "pointer-events-none opacity-50"
-                        : "cursor-pointer"
-                    }
-                  />
-                </PaginationItem>
-
-                {currentPage > 2 && (
-                  <PaginationItem>
-                    <PaginationLink
-                      onClick={() => fetchProductsPage(1)}
-                      className="cursor-pointer"
+          {/* Content */}
+          {viewMode === "list" ? (
+            <>
+              <DataTable
+                title="Product List"
+                columns={columns}
+                data={pagedProducts}
+                searchPlaceholder="Search products..."
+                onSearch={(v) => setSearchQuery(v)}
+                loading={loading}
+                emptyStateTitle="No Products Found"
+                emptyStateDescription="Try adjusting your search or add a new product to get started."
+                customControls={
+                  <div className="flex flex-wrap items-center justify-between gap-3 w-full">
+                    <div className="flex bg-gray-100 p-1 rounded-lg">
+                      <button
+                        className={`px-3 py-1 text-sm font-medium rounded-md transition-all cursor-pointer ${
+                          productStatus === "active"
+                            ? "bg-white app-text-primary shadow-sm"
+                            : "text-gray-500 hover:text-gray-900"
+                        }`}
+                        onClick={() => {
+                          setProductStatus("active");
+                          setCurrentPage(1);
+                        }}
+                      >
+                        Active
+                      </button>
+                      <button
+                        className={`px-3 py-1 text-sm font-medium rounded-md transition-all cursor-pointer ${
+                          productStatus === "archived"
+                            ? "bg-white app-text-archived shadow-sm"
+                            : "text-gray-500 hover:text-gray-900"
+                        }`}
+                        onClick={() => {
+                          setProductStatus("archived");
+                          setCurrentPage(1);
+                        }}
+                      >
+                        Archived
+                      </button>
+                    </div>
+                    <Button
+                      onClick={handleAddProduct}
+                      className="whitespace-nowrap cursor-pointer"
                     >
-                      1
-                    </PaginationLink>
-                  </PaginationItem>
-                )}
-
-                {currentPage > 3 && (
-                  <PaginationItem>
-                    <PaginationEllipsis />
-                  </PaginationItem>
-                )}
-
-                {currentPage > 1 && (
-                  <PaginationItem>
-                    <PaginationLink
-                      onClick={() => fetchProductsPage(currentPage - 1)}
-                      className="cursor-pointer"
-                    >
-                      {currentPage - 1}
-                    </PaginationLink>
-                  </PaginationItem>
-                )}
-
-                <PaginationItem>
-                  <PaginationLink isActive className="cursor-pointer">
-                    {currentPage}
-                  </PaginationLink>
-                </PaginationItem>
-
-                {currentPage < totalPages && (
-                  <PaginationItem>
-                    <PaginationLink
-                      onClick={() => fetchProductsPage(currentPage + 1)}
-                      className="cursor-pointer"
-                    >
-                      {currentPage + 1}
-                    </PaginationLink>
-                  </PaginationItem>
-                )}
-
-                {currentPage < totalPages - 2 && (
-                  <PaginationItem>
-                    <PaginationEllipsis />
-                  </PaginationItem>
-                )}
-
-                {currentPage < totalPages - 1 && (
-                  <PaginationItem>
-                    <PaginationLink
-                      onClick={() => fetchProductsPage(totalPages)}
-                      className="cursor-pointer"
-                    >
-                      {totalPages}
-                    </PaginationLink>
-                  </PaginationItem>
-                )}
-
-                <PaginationItem>
-                  <PaginationNext
-                    onClick={() =>
-                      currentPage < totalPages &&
-                      fetchProductsPage(currentPage + 1)
-                    }
-                    className={
-                      currentPage >= totalPages
-                        ? "pointer-events-none opacity-50"
-                        : "cursor-pointer"
-                    }
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
-          </div>
-        </>
-      ) : (
-        <div className="space-y-6">
-          <div className="flex flex-row flex-nowrap items-center justify-end gap-2 sm:gap-3">
-            {/* Mobile: flexible width; Desktop: fixed width */}
-            <div className="relative flex-1 sm:flex-none max-w-[70%] min-w-[140px] sm:max-w-none sm:w-64 group rounded-md border border-gray-300 focus-within:border-black transition-colors flex items-center h-10">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4 group-focus-within:text-black transition-colors" />
-              <Input
-                type="text"
-                placeholder="Search products..."
-                className="pl-10 border-0 bg-white text-gray-800 focus:text-black placeholder:text-gray-400 focus:placeholder:text-gray-500 h-10"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Product
+                    </Button>
+                  </div>
+                }
               />
-            </div>
-            <div className="flex items-center shrink-0">
-              <Button
-                onClick={handleAddProduct}
-                className="whitespace-nowrap sm:ml-2 cursor-pointer"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Product
-              </Button>
-            </div>
-            {/* Mobile toggle group (shown only in grid view) */}
-            {viewMode === "grid" && (
-              <div className="flex border rounded-lg sm:hidden shrink-0">
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => setViewMode("grid")}
-                  className="rounded-r-none"
-                >
-                  <Grid className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setViewMode("list")}
-                  className="rounded-l-none"
-                >
-                  <List className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
-          </div>
 
-          {/* Grid Content Container */}
-          <div className="bg-white rounded-lg">
-            {pagedProducts && pagedProducts.length > 0 ? (
-              <div className="p-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {pagedProducts.map((product) => (
-                    <ProductCard
-                      key={product._id}
-                      product={product}
-                      onClick={() => handleProductClick(product)}
-                    />
-                  ))}
+              <div className="mt-4 flex items-center justify-between w-full">
+                <div className="text-sm text-muted-foreground">
+                  Showing {pagedProducts.length} of {totalItems} products • Page{" "}
+                  {currentPage} of {totalPages}
                 </div>
+
+                <Pagination className="mx-0 w-auto">
+                  <PaginationContent className="gap-1">
+                    <PaginationItem>
+                      <PaginationPrevious
+                        onClick={() =>
+                          currentPage > 1 && fetchProductsPage(currentPage - 1)
+                        }
+                        className={
+                          currentPage <= 1
+                            ? "pointer-events-none opacity-50"
+                            : "cursor-pointer"
+                        }
+                      />
+                    </PaginationItem>
+
+                    {currentPage > 2 && (
+                      <PaginationItem>
+                        <PaginationLink
+                          onClick={() => fetchProductsPage(1)}
+                          className="cursor-pointer"
+                        >
+                          1
+                        </PaginationLink>
+                      </PaginationItem>
+                    )}
+
+                    {currentPage > 3 && (
+                      <PaginationItem>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    )}
+
+                    {currentPage > 1 && (
+                      <PaginationItem>
+                        <PaginationLink
+                          onClick={() => fetchProductsPage(currentPage - 1)}
+                          className="cursor-pointer"
+                        >
+                          {currentPage - 1}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )}
+
+                    <PaginationItem>
+                      <PaginationLink isActive className="cursor-pointer">
+                        {currentPage}
+                      </PaginationLink>
+                    </PaginationItem>
+
+                    {currentPage < totalPages && (
+                      <PaginationItem>
+                        <PaginationLink
+                          onClick={() => fetchProductsPage(currentPage + 1)}
+                          className="cursor-pointer"
+                        >
+                          {currentPage + 1}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )}
+
+                    {currentPage < totalPages - 2 && (
+                      <PaginationItem>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    )}
+
+                    {currentPage < totalPages - 1 && (
+                      <PaginationItem>
+                        <PaginationLink
+                          onClick={() => fetchProductsPage(totalPages)}
+                          className="cursor-pointer"
+                        >
+                          {totalPages}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )}
+
+                    <PaginationItem>
+                      <PaginationNext
+                        onClick={() =>
+                          currentPage < totalPages &&
+                          fetchProductsPage(currentPage + 1)
+                        }
+                        className={
+                          currentPage >= totalPages
+                            ? "pointer-events-none opacity-50"
+                            : "cursor-pointer"
+                        }
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
               </div>
-            ) : !loading ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <div className="text-center">
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    No Products Found
-                  </h3>
-                  <p className="text-gray-500">
-                    Try adjusting your search or add a new product to get
-                    started.
-                  </p>
+            </>
+          ) : (
+            <div className="space-y-6">
+              <div className="flex flex-row flex-nowrap items-center justify-end gap-2 sm:gap-3">
+                {/* Mobile: flexible width; Desktop: fixed width */}
+                <div className="relative flex-1 sm:flex-none max-w-[70%] min-w-[140px] sm:max-w-none sm:w-64 group rounded-md border border-gray-300 focus-within:border-black transition-colors flex items-center h-10">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4 group-focus-within:text-black transition-colors" />
+                  <Input
+                    type="text"
+                    placeholder="Search products..."
+                    className="pl-10 border-0 bg-white text-gray-800 focus:text-black placeholder:text-gray-400 focus:placeholder:text-gray-500 h-10"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
                 </div>
+                <div className="flex items-center shrink-0">
+                  <Button
+                    onClick={handleAddProduct}
+                    className="whitespace-nowrap sm:ml-2 cursor-pointer"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Product
+                  </Button>
+                </div>
+                {/* Mobile toggle group (shown only in grid view) */}
+                {viewMode === "grid" && (
+                  <div className="flex border rounded-lg sm:hidden shrink-0">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => setViewMode("grid")}
+                      className="rounded-r-none"
+                    >
+                      <Grid className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setViewMode("list")}
+                      className="rounded-l-none"
+                    >
+                      <List className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
-            ) : null}
-          </div>
-        </div>
-      )}
+
+              {/* Grid Content Container */}
+              <div className="bg-white rounded-lg">
+                {pagedProducts && pagedProducts.length > 0 ? (
+                  <div className="p-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {pagedProducts.map((product) => (
+                        <ProductCard
+                          key={product._id}
+                          product={product}
+                          onClick={() => handleProductClick(product)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ) : !loading ? (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <div className="text-center">
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">
+                        No Products Found
+                      </h3>
+                      <p className="text-gray-500">
+                        Try adjusting your search or add a new product to get
+                        started.
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          )}
         </>
       )}
 

@@ -26,6 +26,7 @@ import axios from 'axios';
 import { EditProductModal } from "@/components/EditProductModal";
 import { Edit, Archive } from "lucide-react";
 import CertificateTimelineModal from "@/components/CertificateTimelineModal";
+import { ProductArchiveConfirmationModal } from "@/components/ProductArchiveConfirmationModal";
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
 
@@ -73,6 +74,8 @@ export function ProductDetailsModal({
   const [showTimelineModal, setShowTimelineModal] = useState(false);
   const [hasPendingApproval, setHasPendingApproval] = useState(false);
   const [checkingPending, setCheckingPending] = useState(false);
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [archiveAction, setArchiveAction] = useState<"archive" | "unarchive">("archive");
 
   // Check for pending approvals when product changes
   useEffect(() => {
@@ -104,7 +107,7 @@ export function ProductDetailsModal({
 
   // Disable background scroll when modal is open (match AddAgentModal behavior)
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen || showEditModal || showTimelineModal || showArchiveModal) {
       const html = document.documentElement;
       const body = document.body;
       const previousHtmlOverflow = html.style.overflow;
@@ -127,7 +130,7 @@ export function ProductDetailsModal({
         window.scrollTo(0, scrollY);
       };
     }
-  }, [isOpen]);
+  }, [isOpen, showEditModal, showTimelineModal, showArchiveModal]);
 
   // Check if product is expired
   const isExpired = product?.expirationDate 
@@ -197,51 +200,52 @@ export function ProductDetailsModal({
   const handleArchive = async () => {
     if (!product || isArchiving) return;
     
-    if (!window.confirm("Submit archive request for admin approval? The product will be archived after approval.")) {
-      return;
-    }
-
-    setIsArchiving(true);
-    try {
-      await axios.post(
-        `${API_URL}/certificate-approval/archiveProduct`,
-        { entityId: product._id },
-        { withCredentials: true }
-      );
-      toast.success("Archive request submitted for admin approval");
-      if (onRenewalSuccess) onRenewalSuccess();
-      onClose();
-    } catch (error: any) {
-      console.error("Error submitting archive request:", error);
-      toast.error(error.response?.data?.message || "Failed to submit archive request");
-    } finally {
-      setIsArchiving(false);
-    }
+    setArchiveAction("archive");
+    setShowArchiveModal(true);
   };
 
   const handleUnarchive = async () => {
     if (!product || isArchiving) return;
     
-    if (!window.confirm("Submit unarchive request for admin approval? The product will be restored after approval.")) {
-      return;
-    }
+    setArchiveAction("unarchive");
+    setShowArchiveModal(true);
+  };
+
+  const confirmArchiveAction = async () => {
+    if (!product || isArchiving) return;
 
     setIsArchiving(true);
     try {
+      const endpoint = archiveAction === "archive" 
+        ? `${API_URL}/certificate-approval/archiveProduct`
+        : `${API_URL}/certificate-approval/unarchiveProduct`;
+      
       await axios.post(
-        `${API_URL}/certificate-approval/unarchiveProduct`,
+        endpoint,
         { entityId: product._id },
         { withCredentials: true }
       );
-      toast.success("Unarchive request submitted for admin approval");
+      
+      const successMessage = archiveAction === "archive"
+        ? "Archive request submitted for admin approval"
+        : "Unarchive request submitted for admin approval";
+      
+      toast.success(successMessage);
       if (onRenewalSuccess) onRenewalSuccess();
       onClose();
     } catch (error: any) {
-      console.error("Error submitting unarchive request:", error);
-      toast.error(error.response?.data?.message || "Failed to submit unarchive request");
+      console.error(`Error submitting ${archiveAction} request:`, error);
+      const errorMessage = error.response?.data?.message || 
+        `Failed to submit ${archiveAction} request`;
+      toast.error(errorMessage);
     } finally {
       setIsArchiving(false);
+      setShowArchiveModal(false);
     }
+  };
+
+  const cancelArchiveAction = () => {
+    setShowArchiveModal(false);
   };
 
   if (!isOpen || !product) return null;
@@ -362,7 +366,7 @@ export function ProductDetailsModal({
             )}
             <button
               onClick={onClose}
-              className="p-2 hover:app-bg-neutral rounded-lg transition-colors"
+              className="p-2 hover:app-bg-error rounded-lg transition-colors"
             >
               <X className="h-5 w-5 app-text-subtle" />
             </button>
@@ -888,6 +892,20 @@ export function ProductDetailsModal({
         onClose={() => setShowTimelineModal(false)}
         productId={product?._id || ''}
         productName={product?.productName || ''}
+      />
+
+      {/* Archive Confirmation Modal */}
+      <ProductArchiveConfirmationModal
+        isOpen={showArchiveModal}
+        onClose={cancelArchiveAction}
+        onConfirm={confirmArchiveAction}
+        product={product && product._id ? {
+          productName: product.productName,
+          lotNumber: product.lotNumber,
+          _id: product._id
+        } : null}
+        action={archiveAction}
+        loading={isArchiving}
       />
     </div>
   );

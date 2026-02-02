@@ -16,6 +16,7 @@ import z from "zod";
 import CustomError from "../utils/CustomError";
 import { FirebaseAuthService } from "../services/firebaseAuthService";
 
+
 // Mock all dependencies
 jest.mock("../typeorm/data-source");
 jest.mock("../services/auditLogService");
@@ -41,6 +42,7 @@ const mockUser: UserInput = {
   appAccess: true,
   webAccess: false,
   walletAuthorized: false,
+  isSuperAdmin: false,
 };
 
 describe("Sign In", () => {

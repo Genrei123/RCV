@@ -33,6 +33,8 @@ import Contact from "./pages/ContactUs";
 import { PendingAgents } from "./pages/PendingAgents";
 import { AgentRegistration } from "./pages/AgentRegistration";
 import { LandingPage } from "./pages/LandingPage";
+import { BlogPage } from "./pages/BlogPage";
+import { BlogPostPage } from "./pages/BlogPostPage";
 import { MetaMaskProvider } from "./contexts/MetaMaskContext";
 import { Startup } from "./components/Startup";
 
@@ -236,6 +238,24 @@ function App() {
             }
           />
 
+          {/* Blog Routes - Public */}
+          <Route
+            path="/blog"
+            element={
+              <AccessibleRoute>
+                <BlogPage />
+              </AccessibleRoute>
+            }
+          />
+          <Route
+            path="/blog/:slug"
+            element={
+              <AccessibleRoute>
+                <BlogPostPage />
+              </AccessibleRoute>
+            }
+          />
+
           {/* Protected Routes wrapped with AppLayout */}
           <Route
             path="/dashboard"
@@ -379,21 +399,21 @@ function App() {
           <Route
             path="/about"
             element={
-              <ProtectedRoutes>
-                <AppLayout>
+              <AccessibleRoute>
+                <AppLayout hideSidebar={!isLoggedIn}>
                 <About/>
                 </AppLayout>
-              </ProtectedRoutes>
+              </AccessibleRoute>
             }
           />
           <Route
             path="/contact"
             element={
-              <ProtectedRoutes>
-                <AppLayout>
+              <AccessibleRoute>
+                <AppLayout hideSidebar={!isLoggedIn}>
                 <Contact/>
                 </AppLayout>
-              </ProtectedRoutes>
+              </AccessibleRoute>
             }
           />
           <Route

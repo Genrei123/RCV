@@ -115,8 +115,6 @@ export class UserPageService {
         backendData.avatarUrl = backendData.avatar;
         delete backendData.avatar;
       }
-
-      console.log("📤 Sending profile update to backend:", backendData);
       const response = await apiClient.patch<UserProfile>(
         "/user/profile",
         backendData
@@ -139,13 +137,43 @@ export class UserPageService {
 
   static async syncUserFromFirebase(firebaseUid: string): Promise<UserProfile> {
     try {
-      console.log(`[UserPageService] Syncing Firebase user: ${firebaseUid}`);
       const response = await apiClient.post<any>(`/public/users/sync/${firebaseUid}`);
-      console.log(`[UserPageService] Sync response:`, response.data);
       return response.data.user;
     } catch (error: any) {
       console.error(`[UserPageService] Sync error:`, error?.response?.data);
       throw error;
+    }
+  }
+
+  /**
+   * Promote an agent to admin (Admin only)
+   */
+  static async promoteAgentToAdmin(userId: string): Promise<{ success: boolean; message: string; data?: any }> {
+    try {
+      const response = await apiClient.post(`/user/promote-to-admin`, { userId });
+      return response.data;
+    } catch (error: any) {
+      console.error("Error promoting agent to admin:", error);
+      return {
+        success: false,
+        message: error.response?.data?.message || "Failed to promote agent to admin"
+      };
+    }
+  }
+
+  /**
+   * Demote an admin to agent (Super Admin only)
+   */
+  static async demoteAdminToAgent(userId: string): Promise<{ success: boolean; message: string; data?: any }> {
+    try {
+      const response = await apiClient.post(`/user/demote-to-agent`, { userId });
+      return response.data;
+    } catch (error: any) {
+      console.error("Error demoting admin to agent:", error);
+      return {
+        success: false,
+        message: error.response?.data?.message || "Failed to demote admin to agent"
+      };
     }
   }
 }
