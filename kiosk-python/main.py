@@ -290,7 +290,7 @@ class RCVApiService:
     def scan_product_ocr(self, ocr_text: str, front_image_url: str = None, back_image_url: str = None) -> dict:
         """
         Process OCR text with AI to extract product information
-        POST /api/v1/scan/product-ocr
+        POST /api/v1/scan/scanProduct
         """
         data = {'blockOfText': ocr_text}
         if front_image_url:
@@ -298,7 +298,7 @@ class RCVApiService:
         if back_image_url:
             data['backImageUrl'] = back_image_url
         
-        return self._make_request('POST', '/scan/product-ocr', data)
+        return self._make_request('POST', '/scan/scanProduct', data)
     
     def search_product(self, product_name: str = None, lto_number: str = None, 
                        cfpr_number: str = None, brand_name: str = None,
@@ -3413,8 +3413,8 @@ class KioskApp:
             
             self.root.after(0, lambda: self.loading_detail_label.config(text="Searching for product..."))
             
-            # Send to API - calling /scan/product-ocr endpoint
-            print(f"📡 Calling /scan/product-ocr API...")
+            # Send to API - calling /scan/scanProduct endpoint
+            print(f"📡 Calling /scan/scanProduct API...")
             response = self.api.scan_product_ocr(combined_text)
             print(f"📨 API Response: found={response.get('found')}, isCompliant={response.get('isCompliant')}")
             
@@ -3518,16 +3518,20 @@ class KioskApp:
         else:
             self.compliance_warnings_frame.pack_forget()
         
-        # Show thumbnails
+        # Show thumbnails of captured images
         if self.ocr_front_frame is not None:
-            thumb = self._create_thumbnail(self.ocr_front_frame, 150, 100)
+            thumb = self._create_thumbnail(self.ocr_front_frame, 200, 150)
             self.compliance_front_thumb.config(image=thumb, text="")
             self.compliance_front_thumb.image = thumb
+        else:
+            self.compliance_front_thumb.config(text="No front image", image="")
         
         if self.ocr_back_frame is not None:
-            thumb = self._create_thumbnail(self.ocr_back_frame, 150, 100)
+            thumb = self._create_thumbnail(self.ocr_back_frame, 200, 150)
             self.compliance_back_thumb.config(image=thumb, text="")
             self.compliance_back_thumb.image = thumb
+        else:
+            self.compliance_back_thumb.config(text="No back image", image="")
         
         # Show compliance screen and start timer
         self._show_compliance_screen()
