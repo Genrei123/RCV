@@ -16,6 +16,8 @@ on:
 jobs:
   build_check:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Allow pushing version bumps back to repo
 
     steps:
       # 1. Checkout the code
@@ -88,8 +90,8 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add app/rcv_firebase/pubspec.yaml
-          git commit -m "chore: bump version to ${{ steps.increment_version.outputs.full_version }} [skip ci]" || echo "No changes to commit"
-          git push || echo "No changes to push"
+          git diff --staged --quiet || git commit -m "chore: bump version to ${{ steps.increment_version.outputs.full_version }} [skip ci]"
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main || echo "No changes to push"
 
       # 10. Build APK (only on main branch)
       - name: Build APK
@@ -104,7 +106,6 @@ jobs:
         with:
           appId: ${{ secrets.FIREBASE_APP_ID }}
           serviceCredentialsFileContent: ${{ secrets.FIREBASE_APP_CREDENTIAL_FILE_CONTENT }}
-          groups: testers
           file: app/rcv_firebase/build/app/outputs/flutter-apk/app-release.apk
           releaseNotes: "Version ${{ steps.increment_version.outputs.version_name }} (Build ${{ steps.increment_version.outputs.build_number }}) - ${{ github.event.head_commit.message }}"
 
