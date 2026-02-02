@@ -3683,7 +3683,7 @@ class _QRScannerPageState extends State<QRScannerPage>
       } catch (uploadError) {
         developer.log('⚠️ Image upload failed: $uploadError');
         // Continue with OCR even if upload fails - we still have local paths
-      };
+      }
 
       developer.log(
         '📊 Final OCR Results - Front: ${frontText.length} chars, Back: ${backText.length} chars',
