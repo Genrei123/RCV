@@ -3661,7 +3661,6 @@ class _QRScannerPageState extends State<QRScannerPage>
           // Continue with ML Kit results
         }
       }
-<<<<<<< HEAD
       // Upload images to Firebase immediately after OCR extraction
       developer.log('📤 Uploading images to Firebase...');
       try {
@@ -3685,8 +3684,6 @@ class _QRScannerPageState extends State<QRScannerPage>
         developer.log('⚠️ Image upload failed: $uploadError');
         // Continue with OCR even if upload fails - we still have local paths
       };
-=======
->>>>>>> ed7ba04cd4de0173401b3db8e72aacc45f751f56
 
       developer.log(
         '📊 Final OCR Results - Front: ${frontText.length} chars, Back: ${backText.length} chars',
