@@ -122,9 +122,15 @@ class UpdateService {
     try {
       String updateUrl = RemoteConfigService.getUpdateUrl();
       
+      debugPrint('🔗 Update URL from Remote Config: "$updateUrl"');
+      
       if (updateUrl.isEmpty) {
-        updateUrl = 'https://example.com/update'; // Fallback URL
+        debugPrint('⚠️ Update URL is empty! Remote Config not set properly.');
+        // Don't open anything if URL is empty
+        return;
       }
+      
+      debugPrint('🌐 Opening update URL: $updateUrl');
       
       await launchUrl(
         Uri.parse(updateUrl),
@@ -133,7 +139,7 @@ class UpdateService {
       );
       
     } catch (e) {
-      debugPrint('Error opening update link: $e');
+      debugPrint('❌ Error opening update link: $e');
     }
   }
   
