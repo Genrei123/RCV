@@ -1,5 +1,6 @@
 import { Building2, X, AlertTriangle, Archive, RefreshCw, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useEffect } from "react";
 
 interface ArchiveConfirmationModalProps {
   isOpen: boolean;
@@ -24,14 +25,52 @@ export function ArchiveConfirmationModal({
   action,
   loading = false
 }: ArchiveConfirmationModalProps) {
+  // Disable background scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      const html = document.documentElement;
+      const body = document.body;
+      const scrollY = window.scrollY;
+      
+      // Store original styles
+      const originalHtmlOverflow = html.style.overflow;
+      const originalBodyOverflow = body.style.overflow;
+      const originalBodyPosition = body.style.position;
+      
+      // Apply scroll lock
+      html.style.overflow = 'hidden';
+      body.style.overflow = 'hidden';
+      body.style.position = 'fixed';
+      body.style.top = `-${scrollY}px`;
+      body.style.width = '100%';
+      
+      return () => {
+        // Restore original styles
+        html.style.overflow = originalHtmlOverflow;
+        body.style.overflow = originalBodyOverflow;
+        body.style.position = originalBodyPosition;
+        body.style.top = '';
+        body.style.width = '';
+        // Restore scroll position
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [isOpen]);
+
   if (!isOpen || !entity) return null;
 
   const isArchiving = action === "archive";
   const actionText = isArchiving ? "Archive" : "Restore";
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-md w-full transform transition-all">
+    <div 
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white rounded-xl shadow-2xl max-w-md w-full transform transition-all"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
           <div className="flex items-center gap-4">

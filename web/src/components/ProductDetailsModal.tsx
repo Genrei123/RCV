@@ -344,7 +344,6 @@ export function ProductDetailsModal({
               variant="outline"
               size="sm"
               onClick={() => setShowEditModal(true)}
-              disabled={hasPendingApproval || checkingPending}
               className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm"
               title={hasPendingApproval ? "Cannot edit - pending approval exists" : ""}
             >
@@ -356,7 +355,6 @@ export function ProductDetailsModal({
                 variant="outline"
                 size="sm"
                 onClick={handleArchive}
-                disabled={isArchiving || hasPendingApproval || checkingPending}
                 className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm text-red-600 hover:text-red-700 border-red-200 hover:border-red-300 hover:bg-red-50"
                 title={hasPendingApproval ? "Cannot archive - pending approval exists" : ""}
               >
@@ -373,7 +371,6 @@ export function ProductDetailsModal({
                 variant="outline"
                 size="sm"
                 onClick={handleUnarchive}
-                disabled={isArchiving || hasPendingApproval || checkingPending}
                 className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm text-green-600 hover:text-green-700 border-green-200 hover:border-green-300 hover:bg-green-50"
                 title={hasPendingApproval ? "Cannot unarchive - pending approval exists" : ""}
               >
@@ -814,7 +811,7 @@ export function ProductDetailsModal({
                       </p>
                       <Button
                         onClick={handleRenewal}
-                        disabled={isRenewing || hasPendingApproval || checkingPending}
+                        disabled={isRenewing || hasPendingApproval}
                         className="mt-3 w-full disabled:opacity-50 disabled:cursor-not-allowed"
                         variant={hasPendingApproval ? "outline" : "default"}
                         size="sm"
