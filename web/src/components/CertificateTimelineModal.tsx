@@ -43,7 +43,6 @@ export default function CertificateTimelineModal({
 }: CertificateTimelineModalProps) {
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
   const [loading, setLoading] = useState(false);
-  const [productData, setProductData] = useState<Product | null>(null);
   const [regeneratingCertId, setRegeneratingCertId] = useState<string | null>(null);
   const [selectedCertificateId, setSelectedCertificateId] = useState<string | null>(null);
 
@@ -134,23 +133,8 @@ export default function CertificateTimelineModal({
   };
 
   const fetchProductData = async () => {
-    try {
-      const productEndpoint = isPublic
-        ? `${API_URL}/public/product/${productId}`
-        : `${API_URL}/product/products/${productId}`;
-      
-      const response = await axios.get(
-        productEndpoint,
-        isPublic ? {} : { withCredentials: true }
-      );
-      if (response.data) {
-        // Extract product from response - could be response.data.product or response.data directly
-        const product = response.data.product || response.data;
-        setProductData(product);
-      }
-    } catch (error: any) {
-      console.error("Error fetching product data:", error);
-    }
+    // Placeholder for potential future use of product data
+    // Currently unused but kept for API consistency
   };
 
   const handleRegenerateCertificate = async () => {
