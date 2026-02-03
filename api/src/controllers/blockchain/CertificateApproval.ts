@@ -1163,16 +1163,40 @@ export async function submitArchiveForProduct(req: Request, res: Response, next:
       willBeArchived: true
     };
 
+    // Check if submitter is an admin with authorized wallet
+    // If so, their submission counts as the first approval
+    const isSubmitterAdmin = submitter && submitter.walletAuthorized && submitter.walletAddress && submitter.role === 'ADMIN';
+    
+    let initialApprovers: any[] = [];
+    let initialApprovalCount = 0;
+
+    if (isSubmitterAdmin) {
+      initialApprovers = [{
+        approverId: userId,
+        approverName: submitter.fullName || submitter.email,
+        approverWallet: submitter.walletAddress,
+        approvalDate: new Date().toISOString(),
+        signature: 'submission-auto-approval', // Marker for auto-approval on submission
+      }];
+      initialApprovalCount = 1;
+      console.log(`Archiver ${submitter.email} is an admin - counting as first approval (1/${requiredApprovals})`);
+    }
+
+    approval.approvers = initialApprovers;
+    approval.approvalCount = initialApprovalCount;
+
     const savedApproval = await CertificateApprovalRepo.save(approval);
 
     return res.status(201).json({
       success: true,
-      message: 'Archive request submitted successfully. Awaiting admin approval.',
+      message: `Archive request submitted successfully. (${isSubmitterAdmin ? initialApprovalCount : 0}/${requiredApprovals} approvals)`,
       data: {
         approvalId: savedApproval._id,
         certificateId: savedApproval.certificateId,
         status: savedApproval.status,
-        isArchive: true
+        isArchive: true,
+        approvalCount: savedApproval.approvalCount,
+        requiredApprovals: savedApproval.requiredApprovals,
       }
     });
 
@@ -1323,16 +1347,40 @@ export async function submitUnarchiveForProduct(req: Request, res: Response, nex
       willBeUnarchived: true
     };
 
+    // Check if submitter is an admin with authorized wallet
+    // If so, their submission counts as the first approval
+    const isSubmitterAdmin = submitter && submitter.walletAuthorized && submitter.walletAddress && submitter.role === 'ADMIN';
+    
+    let initialApprovers: any[] = [];
+    let initialApprovalCount = 0;
+
+    if (isSubmitterAdmin) {
+      initialApprovers = [{
+        approverId: userId,
+        approverName: submitter.fullName || submitter.email,
+        approverWallet: submitter.walletAddress,
+        approvalDate: new Date().toISOString(),
+        signature: 'submission-auto-approval', // Marker for auto-approval on submission
+      }];
+      initialApprovalCount = 1;
+      console.log(`Submitter ${submitter.email} is an admin - counting as first approval (1/${requiredApprovals})`);
+    }
+
+    approval.approvers = initialApprovers;
+    approval.approvalCount = initialApprovalCount;
+
     const savedApproval = await CertificateApprovalRepo.save(approval);
 
     return res.status(201).json({
       success: true,
-      message: 'Unarchive request submitted successfully. Awaiting admin approval.',
+      message: `Unarchive request submitted successfully. (${isSubmitterAdmin ? initialApprovalCount : 0}/${requiredApprovals} approvals)`,
       data: {
         approvalId: savedApproval._id,
         certificateId: savedApproval.certificateId,
         status: savedApproval.status,
-        isUnarchive: true
+        isUnarchive: true,
+        approvalCount: savedApproval.approvalCount,
+        requiredApprovals: savedApproval.requiredApprovals,
       }
     });
 

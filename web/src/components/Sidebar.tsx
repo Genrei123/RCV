@@ -13,6 +13,8 @@ import {
   ChevronDown,
   Wallet,
   ExternalLink,
+  Power,
+  Repeat2,
 } from "lucide-react";
 import { LogoutModal } from "./LogoutModal";
 import { AuthService } from "@/services/authService";
@@ -85,6 +87,7 @@ export function Sidebar({
   const location = useLocation();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showWalletMenu, setShowWalletMenu] = useState(false);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -92,6 +95,7 @@ export function Sidebar({
   const closeDrawer = () => onClose?.();
   const { isConnected, walletAddress, isAuthorized, isMetaMaskInstalled, connect, disconnect, switchAccount } = useMetaMask();
   const profileMenuRef = useRef<HTMLDivElement>(null);
+  const walletMenuRef = useRef<HTMLDivElement>(null);
   const mobileProfileMenuRef = useRef<HTMLDivElement>(null);
   
   // Close profile menu when clicking outside
@@ -101,21 +105,25 @@ export function Sidebar({
       
       const isOutsideDesktop = !profileMenuRef.current || !profileMenuRef.current.contains(target);
       const isOutsideMobile = !mobileProfileMenuRef.current || !mobileProfileMenuRef.current.contains(target);
+      const isOutsideWallet = !walletMenuRef.current || !walletMenuRef.current.contains(target);
       
-      // Close if click is outside both containers
+      // Close if click is outside all containers
       if (isOutsideDesktop && isOutsideMobile) {
         setShowProfileMenu(false);
       }
+      if (isOutsideWallet) {
+        setShowWalletMenu(false);
+      }
     };
 
-    if (showProfileMenu) {
+    if (showProfileMenu || showWalletMenu) {
       document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [showProfileMenu]);
+  }, [showProfileMenu, showWalletMenu]);
 
   useEffect(() => {
     fetchCurrentUser();
@@ -313,35 +321,72 @@ export function Sidebar({
               const isActive = location.pathname === item.path;
 
               if ((item as any).isWallet) {
-                // Wallet menu item - directly trigger connection
+                // Wallet menu item with dropdown
                 const handleWalletClick = () => {
                   if (!isMetaMaskInstalled) {
                     window.open('https://metamask.io/download/', '_blank');
                   } else if (!isConnected) {
                     connect(true);
                   } else {
-                    // Already connected, optionally show a toast or do nothing
-                    toast.info(`Connected: ${walletAddress?.slice(0, 8)}...${walletAddress?.slice(-6)}`);
+                    // Toggle dropdown menu
+                    setShowWalletMenu((prev) => !prev);
                   }
                 };
 
                 return (
-                  <button
-                    key={item.path}
-                    onClick={handleWalletClick}
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-neutral-600 hover:bg-neutral-100"
-                  >
-                    <Icon size={20} />
-                    <span className="font-medium">
-                      {isConnected && walletAddress 
-                        ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
-                        : item.label
-                      }
-                    </span>
-                    {isConnected && (
-                      <div className={`ml-auto w-2 h-2 rounded-full ${isAuthorized ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                  <div key={item.path} className="relative" ref={walletMenuRef}>
+                    <button
+                      onClick={handleWalletClick}
+                      className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-neutral-600 hover:bg-neutral-100 relative"
+                    >
+                      <Icon size={20} />
+                      <span className="font-medium flex-1 text-left">
+                        {isConnected && walletAddress 
+                          ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
+                          : item.label
+                        }
+                      </span>
+                      {isConnected && (
+                        <>
+                          <div className={`w-2 h-2 rounded-full ${isAuthorized ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                          <ChevronDown
+                            size={16}
+                            className={`transition-transform ${showWalletMenu ? 'rotate-180' : ''}`}
+                          />
+                        </>
+                      )}
+                    </button>
+
+                    {/* Wallet Dropdown Menu */}
+                    {isConnected && walletAddress && showWalletMenu && (
+                      <div className="absolute left-4 right-4 top-full mt-1 bg-white border rounded-lg shadow-lg overflow-hidden z-50">
+                        <div className="py-1">
+                          <button
+                            onClick={() => {
+                              switchAccount();
+                              setShowWalletMenu(false);
+                              toast.info('Switching to another account...');
+                            }}
+                            className="w-full flex items-center gap-2 px-4 py-2 text-slate-700 hover:bg-slate-50 text-sm"
+                          >
+                            <Repeat2 size={16} />
+                            <span>Switch Wallet</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              disconnect();
+                              setShowWalletMenu(false);
+                              toast.success('Wallet disconnected');
+                            }}
+                            className="w-full flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 text-sm"
+                          >
+                            <Power size={16} />
+                            <span>Disconnect</span>
+                          </button>
+                        </div>
+                      </div>
                     )}
-                  </button>
+                  </div>
                 );
               }
 

@@ -194,7 +194,7 @@ export function MapComponent({
       markersByIdRef.current.set(inspector.id, marker);
       marker.addListener("click", () => {
         const statusColor =
-          inspector.status === "active" ? "#10b981" : "#6b7280";
+          inspector.status === "active" ? "#10b981" : "#ef4444";
         const lastSeenText = inspector.lastSeen
           ? `<p class="my-1 text-gray-500 text-xs">Last Seen: ${new Date(
               inspector.lastSeen

@@ -16,6 +16,17 @@ export function Maps() {
 
   // Layout handles sizing/scroll; no body scroll hacks here
 
+  // Determine if a user is currently active (logged in recently) based on lastSeen timestamp
+  const isUserActive = (lastSeen?: string | Date): boolean => {
+    if (!lastSeen) return false;
+    
+    const lastSeenDate = new Date(lastSeen);
+    const now = new Date();
+    const fiveMinutesInMs = 5 * 60 * 1000; // 5 minutes in milliseconds
+    
+    return now.getTime() - lastSeenDate.getTime() < fiveMinutesInMs;
+  };
+
   useEffect(() => {
     const loadInspectors = async () => {
       try {
@@ -29,10 +40,9 @@ export function Maps() {
               name: user.fullName,
               email: user.email,
               role: user.role,
-              status:
-                user.status === "Active"
-                  ? ("active" as const)
-                  : ("inactive" as const),
+              status: isUserActive(user.updatedAt)
+                ? ("active" as const)
+                : ("inactive" as const),
               lastSeen: user.updatedAt,
               badgeId: user.badgeId,
               location: {
