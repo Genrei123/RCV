@@ -103,11 +103,8 @@ class ProductComparisonPage extends StatelessWidget {
                       scannedData['CFPRNumber'],
                       databaseProduct!['CFPRNumber'],
                     ),
-                    _buildComparisonCard(
-                      'Expiration Date',
-                      scannedData['expirationDate'],
-                      databaseProduct!['expirationDate'],
-                    ),
+                    // NOTE: Expiration date removed - database has certificate expiration, not product expiration
+                    // Physical product expiration should be verified visually by agent, not compared to database
 
                     const SizedBox(height: 16),
 
@@ -148,6 +145,11 @@ class ProductComparisonPage extends StatelessWidget {
                             _buildInfoRow(
                               'Registration Date',
                               databaseProduct!['dateOfRegistration'],
+                            ),
+                          if (databaseProduct!['expirationDate'] != null)
+                            _buildInfoRow(
+                              'Certificate Expiration',
+                              databaseProduct!['expirationDate'],
                             ),
                           if (databaseProduct!['confidence'] != null)
                             _buildInfoRow(
@@ -210,10 +212,8 @@ class ProductComparisonPage extends StatelessWidget {
                             'CFPR Number',
                             scannedData['CFPRNumber'],
                           ),
-                          _buildScanDataRow(
-                            'Expiration Date',
-                            scannedData['expirationDate'],
-                          ),
+                          // NOTE: Expiration date removed - not relevant for product verification
+                          // Physical product expiration should be checked visually by agent
                         ],
                       ),
                     ),

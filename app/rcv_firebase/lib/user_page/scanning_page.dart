@@ -2002,22 +2002,8 @@ class _QRScannerPageState extends State<QRScannerPage>
                         ),
                         const SizedBox(height: 12),
 
-                        // Expiration Date
-                        _buildComplianceField(
-                          'Expiration Date',
-                          extractedInfo['expirationDate'] ?? 'Not found',
-                          Icons.event_busy,
-                          extractedInfo['expirationDate']?.toString().contains(
-                                    'NOT FOUND',
-                                  ) ==
-                                  true
-                              ? Colors.red
-                              : Colors.green,
-                          extractedInfo['expirationDate']?.toString().contains(
-                                'NOT FOUND',
-                              ) ==
-                              true,
-                        ),
+                        // NOTE: Expiration date removed - database stores certificate expiration,
+                        // not product expiration. Physical product expiration should be checked visually.
                         const SizedBox(height: 12),
 
                         // Manufacturer
@@ -2254,11 +2240,7 @@ class _QRScannerPageState extends State<QRScannerPage>
               _buildInfoRow('LTO Number:', data['LTONumber'] ?? 'N/A'),
             if (data.containsKey('CFPRNumber'))
               _buildInfoRow('CFPR Number:', data['CFPRNumber'] ?? 'N/A'),
-            if (data.containsKey('expirationDate'))
-              _buildInfoRow(
-                'Expiration Date:',
-                data['expirationDate'] ?? 'N/A',
-              ),
+            // NOTE: Expiration date removed - certificate expiration in DB, not product expiration
             if (data.containsKey('manufacturer'))
               _buildInfoRow('Manufacturer:', data['manufacturer'] ?? 'N/A'),
 
@@ -2272,7 +2254,6 @@ class _QRScannerPageState extends State<QRScannerPage>
                     'reg_number',
                     'LTONumber',
                     'CFPRNumber',
-                    'expirationDate',
                     'manufacturer',
                     'product_image',
                   ].contains(entry.key),
@@ -2453,17 +2434,8 @@ class _QRScannerPageState extends State<QRScannerPage>
                     _buildInfoRow('CFPR Number:', entity['CFPRNumber']),
                   if (entity['manufacturer'] != null)
                     _buildInfoRow('Manufacturer:', entity['manufacturer']),
-                  if (entity['expirationDate'] != null)
-                    _buildInfoRowWithIcon(
-                      'Expiration:',
-                      _formatDate(entity['expirationDate']),
-                      _isExpired(entity['expirationDate'])
-                          ? Icons.warning_amber
-                          : Icons.event_available,
-                      _isExpired(entity['expirationDate'])
-                          ? Colors.red
-                          : Colors.green,
-                    ),
+                  // Note: expirationDate removed from entity display - database stores certificate expiration,
+                  // not product expiration. Physical product expiration should be visually verified.
                 ] else ...[
                   // Company details
                   if (entity['companyName'] != null)
@@ -3864,9 +3836,7 @@ class _QRScannerPageState extends State<QRScannerPage>
               ? (packagingCompliance['cfpr']?['required'] ??
                     'NOT FOUND ON PACKAGING')
               : 'NOT FOUND ON PACKAGING',
-          'expirationDate':
-              packagingCompliance['expirationDate']?['foundOnPackaging'] ??
-              'NOT FOUND ON PACKAGING',
+          // NOTE: Expiration date removed - database stores certificate expiration, not product expiration
           // Add compliance info
           'isCompliant': response['isCompliant'] ?? false,
           'violations': violations ?? [],
