@@ -56,6 +56,38 @@ export const getAllAuditLogs = async (
 };
 
 /**
+ * Get audit logs for a specific user by userId (admin only)
+ */
+export const getUserAuditLogs = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { userId } = req.params;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "User ID is required",
+      });
+    }
+
+    const result = await AuditLogService.getUserLogs(userId, page, limit);
+
+    return res.status(200).json({
+      success: true,
+      ...result,
+    });
+  } catch (error) {
+    next(error);
+    return CustomError.security(500, "Server Error");
+  }
+};
+
+/**
  * Get audit logs by action type
  */
 export const getAuditLogsByType = async (

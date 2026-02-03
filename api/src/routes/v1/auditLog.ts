@@ -12,6 +12,9 @@ AuditLogRouter.get('/logs/:id', AuditLogController.getAuditLogById);
 // Get all audit logs (admin only)
 AuditLogRouter.get('/logs', AuditLogController.getAllAuditLogs);
 
+// Get audit logs for a specific user by userId (admin only)
+AuditLogRouter.get('/logs/user/:userId', AuditLogController.getUserAuditLogs);
+
 // Get audit logs by type (requires authentication)
 AuditLogRouter.get('/logs/type/:actionType', AuditLogController.getAuditLogsByType);
 
