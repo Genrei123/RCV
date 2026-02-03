@@ -549,59 +549,6 @@ export function Sidebar({
               );
             })}
           </nav>
-
-          {/* MetaMask Wallet Section (Mobile) */}
-          <div className="px-4 pb-4 border-t border-neutral-200 pt-4">
-            <div className="bg-neutral-50 rounded-lg p-3">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Wallet size={16} className="text-orange-500" />
-                  <span className="text-xs font-medium text-neutral-700">Wallet</span>
-                </div>
-                {isConnected && (
-                  <div className={`w-2 h-2 rounded-full ${isAuthorized ? 'bg-green-500' : 'bg-yellow-500'}`} />
-                )}
-              </div>
-              {isConnected && walletAddress ? (
-                <div className="space-y-2">
-                  <p className="text-xs font-mono text-neutral-600 truncate" title={walletAddress}>
-                    {walletAddress.slice(0, 8)}...{walletAddress.slice(-6)}
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={switchAccount}
-                      className="flex-1 text-xs text-blue-500 hover:text-blue-700 py-1"
-                      title="Switch to another account"
-                    >
-                      Switch
-                    </button>
-                    <button
-                      onClick={disconnect}
-                      className="flex-1 text-xs text-red-500 hover:text-red-700 py-1"
-                    >
-                      Disconnect
-                    </button>
-                  </div>
-                </div>
-              ) : !isMetaMaskInstalled ? (
-                <button
-                  onClick={() => window.open('https://metamask.io/download/', '_blank')}
-                  className="w-full text-xs text-white bg-[#f6851b] hover:bg-[#e2761b] py-2 px-3 rounded flex items-center justify-center gap-1"
-                >
-                  <ExternalLink size={12} />
-                  Install MetaMask
-                </button>
-              ) : (
-                <button
-                  onClick={() => connect(true)}
-                  className="w-full text-xs app-text-primary hover:opacity-80 py-1 flex items-center justify-center gap-1"
-                >
-                  <Wallet size={12} />
-                  Connect MetaMask
-                </button>
-              )}
-            </div>
-          </div>
         </div>
       </div>
 

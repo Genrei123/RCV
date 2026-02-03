@@ -23,6 +23,7 @@ interface TimelineEvent {
   }>;
   blockchainTxHash?: string;
   expirationDate?: string;
+  historicalData?: any; // Store the full historical approval data
 }
 
 interface CertificateTimelineModalProps {
@@ -105,13 +106,14 @@ export default function CertificateTimelineModal({
           return {
             type,
             certificateId: item.certificateId,
-            approvalId: item.approvalId,
+            approvalId: item.approvalId, // Store the approval ID for fetching historical data
             status: 'approved', // Timeline only shows approved items
             submittedAt: item.createdDate,
             approvedAt: item.approvedDate,
             approvers: item.approvers || [],
             blockchainTxHash: item.transactionHash,
-            expirationDate: item.renewalMetadata?.newExpirationDate
+            expirationDate: item.renewalMetadata?.newExpirationDate,
+            historicalData: item // Store full historical context
           };
         });
         setTimeline(mappedTimeline || []);
@@ -142,7 +144,9 @@ export default function CertificateTimelineModal({
         isPublic ? {} : { withCredentials: true }
       );
       if (response.data) {
-        setProductData(response.data);
+        // Extract product from response - could be response.data.product or response.data directly
+        const product = response.data.product || response.data;
+        setProductData(product);
       }
     } catch (error: any) {
       console.error("Error fetching product data:", error);
@@ -150,27 +154,24 @@ export default function CertificateTimelineModal({
   };
 
   const handleRegenerateCertificate = async () => {
-    if (!productData) {
-      toast.error("Product data not loaded");
+    if (timeline.length === 0) {
+      toast.error("No timeline data to generate");
       return;
     }
 
-    if (!selectedCertificateId) {
-      toast.error("Please select a certificate from the timeline");
-      return;
-    }
-
-    setRegeneratingCertId(selectedCertificateId);
+    setRegeneratingCertId('downloading');
     try {
-      // Regenerate PDF with the consistent certificate ID
-      await PDFGenerationService.generateAndDownloadProductCertificate(
-        productData,
-        selectedCertificateId
+      // Generate the timeline PDF with all entries
+      await PDFGenerationService.generateAndDownloadTimelinePDF(
+        productName,
+        productId,
+        timeline
       );
-      toast.success(isPublic ? "Certificate downloaded successfully!" : "Certificate regenerated successfully!");
+      
+      toast.success("Timeline PDF downloaded successfully!");
     } catch (error: any) {
-      console.error("Error regenerating certificate:", error);
-      toast.error("Failed to regenerate certificate");
+      console.error("Error generating timeline PDF:", error);
+      toast.error("Failed to generate timeline PDF");
     } finally {
       setRegeneratingCertId(null);
     }
@@ -225,18 +226,18 @@ export default function CertificateTimelineModal({
               size="sm"
               variant="outline"
               onClick={handleRegenerateCertificate}
-              disabled={!selectedCertificateId || regeneratingCertId !== null || !productData}
-              className="app-bg-primary app-text-white hover:app-bg-secondary"
+              disabled={timeline.length === 0 || regeneratingCertId !== null}
+              className="app-bg-primary app-text-white hover:text-white hover:app-bg-secondary"
             >
               {regeneratingCertId ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  {isPublic ? 'Downloading...' : 'Generating...'}
+                  Downloading...
                 </>
               ) : (
                 <>
                   <FileDown className="h-4 w-4 mr-2" />
-                  {isPublic ? 'Download' : 'Download'}
+                  Download
                 </>
               )}
             </Button>

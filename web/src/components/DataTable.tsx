@@ -33,7 +33,9 @@ export interface DataTableProps {
   emptyStateDescription?: string;
   emptyStateIcon?: ReactNode;
   showSearch?: boolean;
-  /** Optional custom controls rendered to the right of the search bar */
+  /** Optional action button rendered next to the search bar */
+  actionButton?: ReactNode;
+  /** Optional custom controls rendered below the search bar (filters, toggles) */
   customControls?: ReactNode;
 }
 
@@ -65,6 +67,7 @@ export function DataTable({
   emptyStateDescription = "You may try to input different keywords, check for typos, or adjust your filters.",
   emptyStateIcon = defaultEmptyIcon,
   showSearch = true,
+  actionButton,
   customControls,
 }: DataTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -182,22 +185,38 @@ export function DataTable({
           <CardTitle className="text-xl font-semibold text-gray-800">
             {title}
           </CardTitle>
-          <div className="flex flex-row gap-2 w-full items-center flex-wrap">
-            {showSearch && (
-              <div className="relative group rounded-md border-2 border-gray-200 focus-within:border-gray-400 focus-within:shadow-md transition-all flex-1 min-w-[200px]">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 group-focus-within:text-gray-700 transition-colors" />
-                <Input
-                  placeholder={searchPlaceholder}
-                  className="pl-10 w-full border-0 bg-white text-gray-800 placeholder:text-gray-500 focus:text-black focus:placeholder:text-gray-600"
-                  value={searchQuery}
-                  onChange={(e) => handleSearch(e.target.value)}
-                />
-              </div>
-            )}
-            <div className="flex flex-row items-center gap-2 flex-wrap [&_button]:h-10">
-              {customControls}
+          {/* Search bar and custom controls */}
+          {(showSearch || actionButton || customControls) && (
+            <div className="flex flex-col lg:flex-row gap-2 w-full lg:items-center">
+              {/* Row 1 on mobile: Search + Action button (always horizontal) */}
+              {(showSearch || actionButton) && (
+                <div className="flex flex-row gap-2 w-full lg:w-auto items-center lg:flex-1">
+                  {showSearch && (
+                    <div className="relative group rounded-md border-2 border-gray-200 focus-within:border-gray-400 focus-within:shadow-md transition-all flex-1 min-w-0">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 group-focus-within:text-gray-700 transition-colors" />
+                      <Input
+                        placeholder={searchPlaceholder}
+                        className="pl-10 w-full border-0 bg-white text-gray-800 placeholder:text-gray-500 focus:text-black focus:placeholder:text-gray-600"
+                        value={searchQuery}
+                        onChange={(e) => handleSearch(e.target.value)}
+                      />
+                    </div>
+                  )}
+                  {actionButton && (
+                    <div className="flex-shrink-0">
+                      {actionButton}
+                    </div>
+                  )}
+                </div>
+              )}
+              {/* Row 2 on mobile, inline on lg: Custom controls (filters/toggles) */}
+              {customControls && (
+                <div className="flex flex-row items-center gap-2 flex-shrink-0 w-full lg:w-auto [&_button]:h-10 [&>*]:flex-1 lg:[&>*]:flex-none">
+                  {customControls}
+                </div>
+              )}
             </div>
-          </div>
+          )}
         </div>
       </CardHeader>
       <CardContent className="p-4">

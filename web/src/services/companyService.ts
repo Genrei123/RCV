@@ -151,4 +151,32 @@ export class CompanyService {
       throw error;
     }
   }
+
+  static async submitArchiveForApproval(id: string) {
+    try {
+      const response = await apiClient.post<{ success: boolean; message: string; data: any }>(
+        `/certificate-approval/archiveCompany`,
+        { entityId: id },
+        { withCredentials: true }
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error submitting archive request:", error);
+      throw error;
+    }
+  }
+
+  static async submitUnarchiveForApproval(id: string) {
+    try {
+      const response = await apiClient.post<{ success: boolean; message: string; data: any }>(
+        `/certificate-approval/unarchiveCompany`,
+        { entityId: id },
+        { withCredentials: true }
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error submitting unarchive request:", error);
+      throw error;
+    }
+  }
 }

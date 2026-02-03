@@ -834,58 +834,58 @@ export function Dashboard(props: DashboardProps) {
             loading={loading}
             emptyStateTitle="No Users Found"
             emptyStateDescription="You may try to input different keywords, check for typos, or adjust your filters."
+            actionButton={
+              isAdmin() ? (
+                <Button
+                  onClick={() => setIsInviteModalOpen(true)}
+                  className="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 whitespace-nowrap h-10"
+                >
+                  <UserPlus className="w-4 h-4 mr-2 flex-shrink-0" />
+                  <span>Invite Agent</span>
+                </Button>
+              ) : undefined
+            }
             customControls={
-              <div className="flex flex-col lg:flex-row gap-3 w-full">
-                {isAdmin() && (
-                  <Button
-                    onClick={() => setIsInviteModalOpen(true)}
-                    className="bg-green-600 hover:bg-green-700 text-white w-full lg:w-auto text-sm px-4 py-2 whitespace-nowrap"
-                  >
-                    <UserPlus className="w-4 h-4 mr-2 flex-shrink-0" />
-                    <span className="truncate">Invite Agent</span>
-                  </Button>
-                )}
-                <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
-                  <Select
-                    value={statusFilter}
-                    onValueChange={(value) =>
-                      setStatusFilter(value as "all" | "Pending" | "Active" | "Rejected")
-                    }
-                  >
-                    <SelectTrigger className="w-full lg:w-auto min-w-[120px]">
-                      <SelectValue placeholder="Filter status..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectLabel>Status Filter</SelectLabel>
-                        <SelectItem value="all">All Users</SelectItem>
-                        <SelectItem value="Pending">Pending</SelectItem>
-                        <SelectItem value="Active">Active</SelectItem>
-                        <SelectItem value="Rejected">Rejected</SelectItem>
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                  <Select
-                    value={sortKey}
-                    onValueChange={(value) =>
-                      setSortKey(value as "lastName" | "email" | "statusActive" | "statusPending")
-                    }
-                  >
-                    <SelectTrigger className="w-full lg:w-auto min-w-[160px]">
-                      <SelectValue placeholder="Sort by..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectLabel>Sort Options</SelectLabel>
-                        <SelectItem value="lastName">Name (A→Z)</SelectItem>
-                        <SelectItem value="email">Email (A→Z)</SelectItem>
-                        <SelectItem value="statusActive">Status (Active-↑)</SelectItem>
-                        <SelectItem value="statusPending">Status (Pending-↑)</SelectItem>                      
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+              <>
+                <Select
+                  value={statusFilter}
+                  onValueChange={(value) =>
+                    setStatusFilter(value as "all" | "Pending" | "Active" | "Rejected")
+                  }
+                >
+                  <SelectTrigger className="w-full sm:w-[140px]">
+                    <SelectValue placeholder="Filter status..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectLabel>Status Filter</SelectLabel>
+                      <SelectItem value="all">All Users</SelectItem>
+                      <SelectItem value="Pending">Pending</SelectItem>
+                      <SelectItem value="Active">Active</SelectItem>
+                      <SelectItem value="Rejected">Rejected</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={sortKey}
+                  onValueChange={(value) =>
+                    setSortKey(value as "lastName" | "email" | "statusActive" | "statusPending")
+                  }
+                >
+                  <SelectTrigger className="w-full sm:w-[160px]">
+                    <SelectValue placeholder="Sort by..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectLabel>Sort Options</SelectLabel>
+                      <SelectItem value="lastName">Name (A→Z)</SelectItem>
+                      <SelectItem value="email">Email (A→Z)</SelectItem>
+                      <SelectItem value="statusActive">Status (Active-↑)</SelectItem>
+                      <SelectItem value="statusPending">Status (Pending-↑)</SelectItem>                      
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </>
             }
           />
         <div className="mt-4 flex items-center justify-between w-full">
@@ -936,25 +936,25 @@ export function Dashboard(props: DashboardProps) {
                     loading={invitesLoading}
                     emptyStateTitle="No Invites Found"
                     emptyStateDescription="No agent invitations have been sent yet."
+                    actionButton={
+                      <Button
+                        onClick={() => setIsInviteModalOpen(true)}
+                        className="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 whitespace-nowrap h-10"
+                      >
+                        <UserPlus className="w-4 h-4 mr-2" />
+                        Invite Agent
+                      </Button>
+                    }
                     customControls={
-                      <div className="flex flex-col gap-2 w-full lg:flex-row lg:items-center lg:gap-3">
-                        <Button
-                          onClick={() => setIsInviteModalOpen(true)}
-                          className="bg-green-600 hover:bg-green-700 text-white w-full lg:w-auto"
-                        >
-                          <UserPlus className="w-4 h-4 mr-2" />
-                          Invite Agent
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={fetchInvites}
-                          disabled={invitesLoading}
-                          className="w-full lg:w-auto"
-                        >
-                          Refresh
-                        </Button>
-                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={fetchInvites}
+                        disabled={invitesLoading}
+                        className="w-auto"
+                      >
+                        Refresh
+                      </Button>
                     }
                   />
                   <div className="mt-4 flex items-center justify-between w-full">
