@@ -227,7 +227,7 @@ export function LandingPage() {
           <div className="absolute inset-0 bg-black/30 md:hidden z-0 pointer-events-none" />
         )}
         
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div className={`max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 transition-all duration-300 ${!navbarScrolled ? 'lg:mt-10' : ''}`}>
           <div className="flex items-center justify-between h-16">
             {/* Logo - Left */}
             <div className="flex items-center gap-3 flex-shrink-0">
@@ -252,7 +252,7 @@ export function LandingPage() {
             </div>
 
             {/* Nav Links - Center (Hidden on mobile) */}
-            <div className="hidden md:flex items-center flex-1 justify-center gap-8">
+            <div className="hidden lg:flex items-center flex-1 justify-center gap-8">
               <a
                 href="#features"
                 onClick={(e) => {
@@ -319,7 +319,7 @@ export function LandingPage() {
               {/* Hamburger Menu - Mobile Only */}
               <button 
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="md:hidden p-2"
+                className="lg:hidden p-2"
               >
                 <svg
                   className={`w-6 h-6 transition-colors duration-300 ${
@@ -342,7 +342,7 @@ export function LandingPage() {
 
           {/* Sliding Drawer Menu */}
           <div
-            className={`fixed top-0 right-0 h-screen w-64 bg-white shadow-2xl md:hidden z-40 transform transition-transform duration-300 ease-out overflow-y-auto ${
+            className={`fixed top-0 right-0 h-screen w-64 bg-white shadow-2xl lg:hidden z-40 transform transition-transform duration-300 ease-out overflow-y-auto ${
               mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
             }`}
           >
@@ -461,9 +461,9 @@ export function LandingPage() {
           <CarouselContent className="m-0">
             {heroSlides.map((slide, index) => (
               <CarouselItem key={index} className="p-0">
-                <div className="relative h-100 md:h-175 overflow-hidden">
+                <div className="relative h-120 md:h-200 overflow-hidden">
                   {/* Background Image/Video */}
-                  <div className="absolute inset-0 z-0">
+                  <div className="absolute inset-0 z-0" style={{ boxShadow: 'inset 0 30px 40px rgba(0,0,0,0.5)' }}>
                     {slide.isVideo ? (
                       <video
                         src={slide.image}
@@ -511,7 +511,7 @@ export function LandingPage() {
                           <Button
                             variant="outline"
                             size="lg"
-                            className="border-2 border-white bg-transparent text-white hover:bg-white/10 cursor-pointer transition-colors w-full sm:w-auto"
+                            className="hidden sm:flex border-2 border-white bg-transparent text-white hover:bg-white/10 cursor-pointer transition-colors w-full sm:w-auto"
                             onClick={() =>
                               document
                                 .getElementById("features")
