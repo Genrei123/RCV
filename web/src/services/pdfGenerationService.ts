@@ -283,6 +283,17 @@ export class PDFGenerationService {
    * Page 2: Product details table and images
    */
   static async generateProductCertificate(product: Product, certificateId?: string): Promise<Blob> {
+    // Ensure product properties are safely defined
+    const safeProduct = {
+      ...product,
+      productName: product?.productName || 'Unknown Product',
+      brandName: product?.brandName || 'Unknown Brand',
+      LTONumber: product?.LTONumber || 'N/A',
+      CFPRNumber: product?.CFPRNumber || 'N/A',
+      lotNumber: product?.lotNumber || 'N/A',
+      expirationDate: product?.expirationDate || new Date(),
+    };
+
     // Create new PDF document (A4 size: 210mm x 297mm)
     const pdf = new jsPDF({
       orientation: 'portrait',
@@ -346,23 +357,23 @@ export class PDFGenerationService {
     pdf.setFontSize(16);
     pdf.setTextColor(0, 0, 0);
     pdf.setFont('helvetica', 'bold');
-    pdf.text(product.productName.toUpperCase(), pageWidth / 2, yPosition, { align: 'center' });
+    pdf.text(safeProduct.productName.toUpperCase(), pageWidth / 2, yPosition, { align: 'center' });
     yPosition += 8;
 
     // Brand Name
     pdf.setFontSize(14);
     pdf.setTextColor(60, 60, 60);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(`Brand: ${product.brandName}`, pageWidth / 2, yPosition, { align: 'center' });
+    pdf.text(`Brand: ${safeProduct.brandName}`, pageWidth / 2, yPosition, { align: 'center' });
     yPosition += 10;
 
     // LTO and CFPR Numbers
     pdf.setFontSize(11);
     pdf.setTextColor(60, 60, 60);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(`LTO No: ${product.LTONumber}`, pageWidth / 2, yPosition, { align: 'center' });
+    pdf.text(`LTO No: ${safeProduct.LTONumber}`, pageWidth / 2, yPosition, { align: 'center' });
     yPosition += 6;
-    pdf.text(`CFPR No: ${product.CFPRNumber}`, pageWidth / 2, yPosition, { align: 'center' });
+    pdf.text(`CFPR No: ${safeProduct.CFPRNumber}`, pageWidth / 2, yPosition, { align: 'center' });
     yPosition += 15;
 
     // Certification Statement
@@ -370,8 +381,8 @@ export class PDFGenerationService {
     pdf.setTextColor(40, 40, 40);
     pdf.setFont('helvetica', 'normal');
     
-    const companyName = typeof product.company === 'object' ? product.company.name : 'the registered company';
-    const certificationText = `The Regulatory Compliance Verification System (RCV) hereby certifies that ${product.productName} by ${companyName} is officially registered and authorized for distribution under the jurisdiction of this regulatory framework. This certificate validates that the product has met all necessary compliance requirements and standards for regulatory verification.`;
+    const companyName = typeof product?.company === 'object' ? product.company.name : 'the registered company';
+    const certificationText = `The Regulatory Compliance Verification System (RCV) hereby certifies that ${safeProduct.productName} by ${companyName} is officially registered and authorized for distribution under the jurisdiction of this regulatory framework. This certificate validates that the product has met all necessary compliance requirements and standards for regulatory verification.`;
     
     const certLines = pdf.splitTextToSize(certificationText, contentWidth - 20);
     pdf.text(certLines, pageWidth / 2, yPosition, { align: 'center', maxWidth: contentWidth - 20 });
@@ -389,12 +400,12 @@ export class PDFGenerationService {
     const productData = {
       certificateId: certId,
       id: product._id,
-      ltoNumber: product.LTONumber,
-      cfprNumber: product.CFPRNumber,
-      productName: product.productName,
-      brandName: product.brandName,
-      lotNumber: product.lotNumber,
-      expirationDate: product.expirationDate,
+      ltoNumber: safeProduct.LTONumber,
+      cfprNumber: safeProduct.CFPRNumber,
+      productName: safeProduct.productName,
+      brandName: safeProduct.brandName,
+      lotNumber: safeProduct.lotNumber,
+      expirationDate: safeProduct.expirationDate?.toString ? safeProduct.expirationDate.toString() : safeProduct.expirationDate,
       certificateDate: new Date().toISOString(),
       type: 'product-certificate',
     };
@@ -483,16 +494,16 @@ export class PDFGenerationService {
 
     // Define table data
     const tableData = [
-      { label: 'Product Name', value: product.productName || 'N/A' },
-      { label: 'Brand Name', value: product.brandName || 'N/A' },
+      { label: 'Product Name', value: safeProduct.productName || 'N/A' },
+      { label: 'Brand Name', value: safeProduct.brandName || 'N/A' },
       { label: 'Company', value: companyName || 'N/A' },
-      { label: 'LTO Number', value: product.LTONumber || 'N/A' },
-      { label: 'CFPR Number', value: product.CFPRNumber || 'N/A' },
-      { label: 'Lot Number', value: product.lotNumber || 'N/A' },
-      { label: 'Classification', value: product.productClassification || 'N/A' },
-      { label: 'Sub-Classification', value: product.productSubClassification || 'N/A' },
-      { label: 'Expiration Date', value: formatDate(product.expirationDate) },
-      { label: 'Registration Date', value: formatDate(product.dateOfRegistration) },
+      { label: 'LTO Number', value: safeProduct.LTONumber || 'N/A' },
+      { label: 'CFPR Number', value: safeProduct.CFPRNumber || 'N/A' },
+      { label: 'Lot Number', value: safeProduct.lotNumber || 'N/A' },
+      { label: 'Classification', value: product?.productClassification || 'N/A' },
+      { label: 'Sub-Classification', value: product?.productSubClassification || 'N/A' },
+      { label: 'Expiration Date', value: formatDate(safeProduct.expirationDate) },
+      { label: 'Registration Date', value: formatDate(product?.dateOfRegistration) },
       { label: 'Registered By', value: registeredByName },
       { label: 'Certificate ID', value: certId },
     ];
@@ -706,5 +717,282 @@ export class PDFGenerationService {
       console.error('Error generating PDF:', error);
       throw error;
     }
+  }
+
+  /**
+   * Generate a Timeline History PDF for a product
+   * Shows all approvals, renewals, updates, etc.
+   */
+  static async generateAndDownloadTimelinePDF(
+    productName: string,
+    productId: string,
+    timeline: Array<{
+      type: string;
+      certificateId: string;
+      approvalId: string;
+      submittedAt: string;
+      approvedAt?: string;
+      approvers: Array<{
+        approverName: string;
+        approverWallet: string;
+        approvalDate: string;
+      }>;
+      blockchainTxHash?: string;
+      expirationDate?: string;
+    }>
+  ) {
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+    });
+
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 20;
+
+    // Helper function to format date
+    const formatDate = (dateStr: string) => {
+      if (!dateStr) return 'N/A';
+      return new Date(dateStr).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    };
+
+    // Helper function to truncate hash
+    const truncateHash = (hash: string) => {
+      if (!hash) return 'N/A';
+      return `${hash.substring(0, 10)}...${hash.substring(hash.length - 8)}`;
+    };
+
+    // Helper function to get badge color for type
+    const getTypeColor = (type: string): [number, number, number] => {
+      switch (type) {
+        case 'initial': return [0, 84, 64]; // Teal
+        case 'renewal': return [37, 99, 235]; // Blue
+        case 'update': return [147, 51, 234]; // Purple
+        case 'archive': return [220, 38, 38]; // Red
+        case 'unarchive': return [22, 163, 74]; // Green
+        default: return [107, 114, 128]; // Gray
+      }
+    };
+
+    // ==================== HEADER ====================
+    // Add elegant border
+    pdf.setDrawColor(0, 84, 64);
+    pdf.setLineWidth(1.5);
+    pdf.rect(10, 10, pageWidth - 20, pageHeight - 20);
+    pdf.setLineWidth(0.5);
+    pdf.rect(12, 12, pageWidth - 24, pageHeight - 24);
+
+    let yPosition = 30;
+
+    // Logo with teal background circle
+    const logoSize = 30;
+    const logoX = (pageWidth - logoSize) / 2;
+    const circleRadius = (logoSize / 2) + 5;
+    const circleCenterX = logoX + (logoSize / 2);
+    const circleCenterY = yPosition + (logoSize / 2);
+    
+    // Draw teal circle background
+    pdf.setFillColor(0, 84, 64);
+    pdf.circle(circleCenterX, circleCenterY, circleRadius, 'F');
+    
+    // Load and add logo image
+    try {
+      const logoImg = new Image();
+      logoImg.src = '/logo.png';
+      await new Promise<void>((resolve, reject) => {
+        logoImg.onload = () => {
+          try {
+            pdf.addImage(logoImg, 'PNG', logoX, yPosition, logoSize, logoSize);
+            resolve();
+          } catch (e) {
+            reject(e);
+          }
+        };
+        logoImg.onerror = () => reject(new Error('Failed to load logo'));
+      });
+    } catch (error) {
+      // Fallback to text if logo fails
+      console.warn('Logo not loaded, using text fallback');
+      pdf.setFontSize(16);
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('RCV', circleCenterX, circleCenterY + 4, { align: 'center' });
+    }
+    yPosition += logoSize + 15;
+
+    // Title
+    pdf.setFontSize(20);
+    pdf.setTextColor(0, 84, 64);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('CERTIFICATE TIMELINE', pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 10;
+
+    // Product Name
+    pdf.setFontSize(14);
+    pdf.setTextColor(60, 60, 60);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(productName, pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 8;
+
+    // Product ID
+    pdf.setFontSize(10);
+    pdf.setTextColor(100, 100, 100);
+    pdf.text(`Product ID: ${productId}`, pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 5;
+
+    // Generated date
+    pdf.setFontSize(9);
+    pdf.text(`Generated: ${formatDate(new Date().toISOString())}`, pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 15;
+
+    // Divider
+    pdf.setDrawColor(0, 186, 142);
+    pdf.setLineWidth(0.5);
+    pdf.line(margin, yPosition, pageWidth - margin, yPosition);
+    yPosition += 10;
+
+    // Summary
+    pdf.setFontSize(11);
+    pdf.setTextColor(40, 40, 40);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Timeline Summary', margin, yPosition);
+    yPosition += 6;
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    const totalEntries = timeline.length;
+    const renewals = timeline.filter(t => t.type === 'renewal').length;
+    const updates = timeline.filter(t => t.type === 'update').length;
+    pdf.text(`Total Entries: ${totalEntries} | Renewals: ${renewals} | Updates: ${updates}`, margin, yPosition);
+    yPosition += 15;
+
+    // ==================== TIMELINE ENTRIES ====================
+    for (let i = 0; i < timeline.length; i++) {
+      const entry = timeline[i];
+      
+      // Check if we need a new page
+      if (yPosition > pageHeight - 60) {
+        pdf.addPage();
+        // Add border to new page
+        pdf.setDrawColor(0, 84, 64);
+        pdf.setLineWidth(1.5);
+        pdf.rect(10, 10, pageWidth - 20, pageHeight - 20);
+        pdf.setLineWidth(0.5);
+        pdf.rect(12, 12, pageWidth - 24, pageHeight - 24);
+        yPosition = 30;
+      }
+
+      // Entry number and type badge
+      const [r, g, b] = getTypeColor(entry.type);
+      
+      // Type badge background
+      pdf.setFillColor(r, g, b);
+      const badgeText = entry.type.charAt(0).toUpperCase() + entry.type.slice(1);
+      const badgeWidth = pdf.getTextWidth(badgeText) + 8;
+      pdf.roundedRect(margin, yPosition - 4, badgeWidth, 7, 2, 2, 'F');
+      
+      // Badge text
+      pdf.setFontSize(9);
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(badgeText, margin + 4, yPosition);
+      
+      // Entry number
+      pdf.setTextColor(100, 100, 100);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`#${i + 1}`, pageWidth - margin - 10, yPosition);
+      yPosition += 8;
+
+      // Certificate ID
+      pdf.setFontSize(9);
+      pdf.setTextColor(60, 60, 60);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Certificate ID:', margin, yPosition);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(entry.certificateId || 'N/A', margin + 28, yPosition);
+      yPosition += 5;
+
+      // Submitted date
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Submitted:', margin, yPosition);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(formatDate(entry.submittedAt), margin + 22, yPosition);
+      yPosition += 5;
+
+      // Approved date
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Approved:', margin, yPosition);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(formatDate(entry.approvedAt || ''), margin + 22, yPosition);
+      yPosition += 5;
+
+      // Blockchain Tx
+      if (entry.blockchainTxHash) {
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Blockchain Tx:', margin, yPosition);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setTextColor(37, 99, 235);
+        pdf.text(truncateHash(entry.blockchainTxHash), margin + 28, yPosition);
+        pdf.setTextColor(60, 60, 60);
+        yPosition += 5;
+      }
+
+      // Approvers
+      if (entry.approvers && entry.approvers.length > 0) {
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(`Approvers (${entry.approvers.length}):`, margin, yPosition);
+        yPosition += 5;
+        
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(8);
+        entry.approvers.forEach((approver, idx) => {
+          if (yPosition > pageHeight - 30) {
+            pdf.addPage();
+            pdf.setDrawColor(0, 84, 64);
+            pdf.setLineWidth(1.5);
+            pdf.rect(10, 10, pageWidth - 20, pageHeight - 20);
+            pdf.setLineWidth(0.5);
+            pdf.rect(12, 12, pageWidth - 24, pageHeight - 24);
+            yPosition = 30;
+          }
+          pdf.text(`  ${idx + 1}. ${approver.approverName}`, margin + 5, yPosition);
+          yPosition += 4;
+          pdf.setTextColor(100, 100, 100);
+          pdf.text(`     Wallet: ${truncateHash(approver.approverWallet)}`, margin + 5, yPosition);
+          yPosition += 4;
+          pdf.text(`     Date: ${formatDate(approver.approvalDate)}`, margin + 5, yPosition);
+          pdf.setTextColor(60, 60, 60);
+          yPosition += 5;
+        });
+      }
+
+      // Divider between entries
+      if (i < timeline.length - 1) {
+        yPosition += 3;
+        pdf.setDrawColor(200, 200, 200);
+        pdf.setLineWidth(0.3);
+        pdf.line(margin, yPosition, pageWidth - margin, yPosition);
+        yPosition += 8;
+      }
+    }
+
+    // ==================== FOOTER ====================
+    const footerY = pageHeight - 20;
+    pdf.setFontSize(8);
+    pdf.setTextColor(120, 120, 120);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`© ${new Date().getFullYear()} RCV - Regulatory Compliance Verification. All rights reserved.`, pageWidth / 2, footerY, { align: 'center' });
+
+    // Generate blob and download
+    const pdfBlob = pdf.output('blob');
+    const filename = `Timeline-${productId}-${Date.now()}.pdf`;
+    this.downloadPDF(pdfBlob, filename);
   }
 }

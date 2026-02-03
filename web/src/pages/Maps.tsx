@@ -72,6 +72,11 @@ export function Maps() {
     };
 
     loadInspectors();
+
+    // Refresh inspectors every 10 seconds to update active status
+    const interval = setInterval(loadInspectors, 10000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const handleInspectorClick = (inspector: Inspector) => {
