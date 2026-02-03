@@ -584,11 +584,8 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
                           widget.scannedData['manufacturer']?.toString() ??
                               'N/A',
                         ),
-                        _buildSummaryRow(
-                          'Expiry Date',
-                          widget.scannedData['expirationDate']?.toString() ??
-                              'N/A',
-                        ),
+                        // Note: expirationDate removed - database stores certificate expiration,
+                        // not product expiration. Physical product expiration should be visually verified.
                         _buildSummaryRow(
                           'Company',
                           widget.scannedData['companyName']?.toString() ??

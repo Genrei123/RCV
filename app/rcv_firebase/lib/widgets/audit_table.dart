@@ -663,8 +663,7 @@ class _CompleteAuditWidgetState extends State<CompleteAuditWidget> {
             _buildInfoRow('CFPR Number', extractedInfo['CFPRNumber']),
           if (extractedInfo['lotNumber'] != null)
             _buildInfoRow('Lot Number', extractedInfo['lotNumber']),
-          if (extractedInfo['expirationDate'] != null)
-            _buildInfoRow('Expiration Date', extractedInfo['expirationDate']),
+          // NOTE: Expiration date removed - represents certificate expiration, not product expiration
         ],
       ),
     );

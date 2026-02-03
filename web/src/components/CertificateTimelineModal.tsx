@@ -56,27 +56,43 @@ export default function CertificateTimelineModal({
   // Disable background scroll when modal is open
   useEffect(() => {
     if (isOpen) {
-      const html = document.documentElement;
-      const body = document.body;
-      const previousHtmlOverflow = html.style.overflow;
-      const previousBodyOverflow = body.style.overflow;
-      const previousBodyPosition = body.style.position;
-      const scrollY = window.scrollY;
+      // Check if scroll is already locked by parent modal
+      const isAlreadyLocked = document.body.style.position === 'fixed';
+      
+      if (!isAlreadyLocked) {
+        const html = document.documentElement;
+        const body = document.body;
+        const scrollY = window.scrollY;
 
-      html.style.overflow = "hidden";
-      body.style.overflow = "hidden";
-      body.style.position = "fixed";
-      body.style.width = "100%";
-      body.style.top = `-${scrollY}px`;
+        html.style.overflow = "hidden";
+        body.style.overflow = "hidden";
+        body.style.position = "fixed";
+        body.style.width = "100%";
+        body.style.top = `-${scrollY}px`;
 
-      return () => {
-        html.style.overflow = previousHtmlOverflow;
-        body.style.overflow = previousBodyOverflow;
-        body.style.position = previousBodyPosition;
-        body.style.width = "";
-        body.style.top = "";
-        window.scrollTo(0, scrollY);
-      };
+        // Store cleanup info only if we applied the lock
+        body.dataset.timelineAppliedLock = "true";
+        body.dataset.timelineScrollY = scrollY.toString();
+
+        return () => {
+          // Only restore if we were the ones who applied the lock
+          if (body.dataset.timelineAppliedLock === "true") {
+            html.style.overflow = "";
+            body.style.overflow = "";
+            body.style.position = "";
+            body.style.width = "";
+            body.style.top = "";
+            
+            const scrollY = parseInt(body.dataset.timelineScrollY || '0');
+            window.scrollTo(0, scrollY);
+            
+            // Clean up
+            delete body.dataset.timelineAppliedLock;
+            delete body.dataset.timelineScrollY;
+          }
+        };
+      }
+      // If already locked, we don't need to do anything or clean up
     }
   }, [isOpen]);
 

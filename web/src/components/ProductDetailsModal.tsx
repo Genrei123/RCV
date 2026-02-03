@@ -73,7 +73,6 @@ export function ProductDetailsModal({
   const [isArchiving, setIsArchiving] = useState(false);
   const [showTimelineModal, setShowTimelineModal] = useState(false);
   const [hasPendingApproval, setHasPendingApproval] = useState(false);
-  const [checkingPending, setCheckingPending] = useState(false);
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [archiveAction, setArchiveAction] = useState<"archive" | "unarchive">("archive");
 
@@ -87,7 +86,6 @@ export function ProductDetailsModal({
   const checkPendingApproval = async () => {
     if (!product?._id) return;
     
-    setCheckingPending(true);
     try {
       const response = await axios.get(
         `${API_URL}/certificate-approval/entity/product/${product._id}`,
@@ -100,35 +98,54 @@ export function ProductDetailsModal({
     } catch (error) {
       // If no approval found or error, assume no pending approval
       setHasPendingApproval(false);
-    } finally {
-      setCheckingPending(false);
     }
   };
 
-  // Disable background scroll when modal is open (match AddAgentModal behavior)
+  // Disable background scroll when modal is open
   useEffect(() => {
-    if (isOpen || showEditModal || showTimelineModal || showArchiveModal) {
-      const html = document.documentElement;
-      const body = document.body;
-      const previousHtmlOverflow = html.style.overflow;
-      const previousBodyOverflow = body.style.overflow;
-      const previousBodyPosition = body.style.position;
-      const scrollY = window.scrollY;
-
-      html.style.overflow = "hidden";
-      body.style.overflow = "hidden";
-      body.style.position = "fixed";
-      body.style.width = "100%";
-      body.style.top = `-${scrollY}px`;
-
-      return () => {
-        html.style.overflow = previousHtmlOverflow;
-        body.style.overflow = previousBodyOverflow;
-        body.style.position = previousBodyPosition;
-        body.style.width = "";
-        body.style.top = "";
+    const anyModalOpen = isOpen || showEditModal || showTimelineModal || showArchiveModal;
+    
+    if (anyModalOpen) {
+      // Only apply scroll lock if not already applied
+      const isAlreadyLocked = document.body.style.position === 'fixed';
+      
+      if (!isAlreadyLocked) {
+        const html = document.documentElement;
+        const body = document.body;
+        const scrollY = window.scrollY;
+        
+        // Apply scroll lock
+        html.style.overflow = 'hidden';
+        body.style.overflow = 'hidden';
+        body.style.position = 'fixed';
+        body.style.top = `-${scrollY}px`;
+        body.style.width = '100%';
+        
+        // Store that we applied the lock and the scroll position
+        body.dataset.productModalLock = 'true';
+        body.dataset.productScrollY = scrollY.toString();
+      }
+    } else {
+      // All modals are closed, restore scroll if we applied the lock
+      if (document.body.dataset.productModalLock === 'true') {
+        const html = document.documentElement;
+        const body = document.body;
+        
+        // Restore original styles
+        html.style.overflow = '';
+        body.style.overflow = '';
+        body.style.position = '';
+        body.style.top = '';
+        body.style.width = '';
+        
+        // Restore scroll position
+        const scrollY = parseInt(body.dataset.productScrollY || '0');
         window.scrollTo(0, scrollY);
-      };
+        
+        // Clean up
+        delete body.dataset.productModalLock;
+        delete body.dataset.productScrollY;
+      }
     }
   }, [isOpen, showEditModal, showTimelineModal, showArchiveModal]);
 
@@ -283,7 +300,7 @@ export function ProductDetailsModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
@@ -323,7 +340,6 @@ export function ProductDetailsModal({
               variant="outline"
               size="sm"
               onClick={() => setShowEditModal(true)}
-              disabled={hasPendingApproval || checkingPending}
               className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm"
               title={hasPendingApproval ? "Cannot edit - pending approval exists" : ""}
             >
@@ -335,7 +351,6 @@ export function ProductDetailsModal({
                 variant="outline"
                 size="sm"
                 onClick={handleArchive}
-                disabled={isArchiving || hasPendingApproval || checkingPending}
                 className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm text-red-600 hover:text-red-700 border-red-200 hover:border-red-300 hover:bg-red-50"
                 title={hasPendingApproval ? "Cannot archive - pending approval exists" : ""}
               >
@@ -352,7 +367,6 @@ export function ProductDetailsModal({
                 variant="outline"
                 size="sm"
                 onClick={handleUnarchive}
-                disabled={isArchiving || hasPendingApproval || checkingPending}
                 className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm text-green-600 hover:text-green-700 border-green-200 hover:border-green-300 hover:bg-green-50"
                 title={hasPendingApproval ? "Cannot unarchive - pending approval exists" : ""}
               >
@@ -793,7 +807,7 @@ export function ProductDetailsModal({
                       </p>
                       <Button
                         onClick={handleRenewal}
-                        disabled={isRenewing || hasPendingApproval || checkingPending}
+                        disabled={isRenewing || hasPendingApproval}
                         className="mt-3 w-full disabled:opacity-50 disabled:cursor-not-allowed"
                         variant={hasPendingApproval ? "outline" : "default"}
                         size="sm"

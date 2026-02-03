@@ -541,12 +541,7 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
               'Lot Number',
               extractedInfo['lotNumber'],
             ),
-          if (extractedInfo['expirationDate'] != null)
-            _buildExtractedInfoRow(
-              Icons.calendar_today,
-              'Expiration Date',
-              extractedInfo['expirationDate'],
-            ),
+          // NOTE: Expiration date removed - represents certificate expiration, not product expiration
         ],
       ),
     );
