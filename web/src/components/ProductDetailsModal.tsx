@@ -73,7 +73,6 @@ export function ProductDetailsModal({
   const [isArchiving, setIsArchiving] = useState(false);
   const [showTimelineModal, setShowTimelineModal] = useState(false);
   const [hasPendingApproval, setHasPendingApproval] = useState(false);
-  const [checkingPending, setCheckingPending] = useState(false);
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [archiveAction, setArchiveAction] = useState<"archive" | "unarchive">("archive");
 
@@ -87,7 +86,6 @@ export function ProductDetailsModal({
   const checkPendingApproval = async () => {
     if (!product?._id) return;
     
-    setCheckingPending(true);
     try {
       const response = await axios.get(
         `${API_URL}/certificate-approval/entity/product/${product._id}`,
@@ -100,8 +98,6 @@ export function ProductDetailsModal({
     } catch (error) {
       // If no approval found or error, assume no pending approval
       setHasPendingApproval(false);
-    } finally {
-      setCheckingPending(false);
     }
   };
 
