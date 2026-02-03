@@ -31,6 +31,7 @@ import { type CreateCompanyRequest } from "@/services/companyService";
 import { FirebaseStorageService } from "@/services/firebaseStorageService";
 import { CertificateApprovalService } from "@/services/approvalService";
 import { AuthService } from "@/services/authService";
+import { DocumentValidationService } from "@/services/documentValidationService";
 import type { CompanyDocument } from "@/typeorm/entities/company.entity";
 import { toast } from "react-toastify";
 import { useMetaMask } from "@/contexts/MetaMaskContext";
@@ -89,6 +90,7 @@ export function AddCompanyModal({
 }: AddCompanyModalProps) {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [validating, setValidating] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState(false);
 
@@ -344,13 +346,74 @@ export function AddCompanyModal({
 
     if (!allowedTypes.includes(file.type)) {
       toast.error("Invalid file type. Please upload PDF, images, or documents.");
+      e.target.value = "";
       return;
     }
 
     // Validate file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
       toast.error("File size must be less than 10MB");
+      e.target.value = "";
       return;
+    }
+
+    // ========== BUSINESS PERMIT VALIDATION ==========
+    // If uploading a business permit, validate it contains DTI and TRN
+    if (selectedDocumentType === "business-permit") {
+      // Only validate image files (OCR requires images)
+      if (!file.type.startsWith("image/")) {
+        toast.error("Business permits must be uploaded as images (JPG, PNG) for validation.");
+        e.target.value = "";
+        return;
+      }
+
+      setValidating(true);
+      toast.info("Validating business permit... This may take a moment.", { autoClose: 3000 });
+
+      try {
+        const validationResult = await DocumentValidationService.validateBusinessPermit(file);
+
+        if (!validationResult.isValid) {
+          // Show detailed error message
+          const errorMessage = DocumentValidationService.formatValidationErrors(validationResult);
+          
+          toast.error(
+            <div className="space-y-2">
+              <p className="font-semibold">Business Permit Validation Failed</p>
+              <pre className="text-xs whitespace-pre-wrap">{errorMessage}</pre>
+              <p className="text-xs mt-2">
+                Please ensure your document is a valid Philippine business permit with DTI registration and TRN number clearly visible, then re-upload.
+              </p>
+            </div>,
+            { autoClose: 10000 }
+          );
+          
+          setValidating(false);
+          e.target.value = "";
+          return;
+        }
+
+        // Validation passed
+        toast.success(
+          <div className="space-y-1">
+            <p className="font-semibold">✓ Business Permit Validated</p>
+            {validationResult.foundDTI && <p className="text-xs">• DTI: {validationResult.foundDTI}</p>}
+            {validationResult.foundTRN && <p className="text-xs">• TRN: {validationResult.foundTRN}</p>}
+          </div>,
+          { autoClose: 5000 }
+        );
+      } catch (error) {
+        console.error("Validation error:", error);
+        toast.error(
+          "An error occurred while validating the business permit. Please ensure the image is clear and try again.",
+          { autoClose: 5000 }
+        );
+        setValidating(false);
+        e.target.value = "";
+        return;
+      } finally {
+        setValidating(false);
+      }
     }
 
     // Create preview for images
@@ -945,6 +1008,7 @@ export function AddCompanyModal({
                   <Select
                     value={selectedDocumentType}
                     onValueChange={setSelectedDocumentType}
+                    disabled={validating}
                   >
                     <SelectTrigger className="mt-2">
                       <SelectValue placeholder="Select document type" />
@@ -959,20 +1023,52 @@ export function AddCompanyModal({
                   </Select>
                 </div>
                 <div className="flex items-end">
-                  <label className="cursor-pointer">
+                  <label className={validating ? "cursor-not-allowed opacity-50" : "cursor-pointer"}>
                     <input
                       type="file"
                       className="hidden"
                       accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                       onChange={handleFileSelect}
+                      disabled={validating}
                     />
                     <div className="flex items-center gap-2 px-4 py-2 app-bg-primary text-white rounded-md hover:app-bg-secondary transition-colors">
-                      <Upload className="h-4 w-4" />
-                      Upload Document
+                      {validating ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Validating...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-4 w-4" />
+                          Upload Document
+                        </>
+                      )}
                     </div>
                   </label>
                 </div>
               </div>
+
+              {/* Business Permit Validation Notice */}
+              {selectedDocumentType === "business-permit" && (
+                <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                  <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-amber-900">
+                      Business Permit Validation Required
+                    </p>
+                    <p className="text-xs text-amber-700">
+                      Business permits must be uploaded as images (JPG, PNG) and will be automatically validated to ensure they contain:
+                    </p>
+                    <ul className="text-xs text-amber-700 list-disc list-inside space-y-0.5 ml-2">
+                      <li>DTI (Department of Trade and Industry) registration</li>
+                      <li>TRN (Tax Registration Number)</li>
+                    </ul>
+                    <p className="text-xs text-amber-700 mt-2">
+                      Please ensure your document is clear, well-lit, and all text is readable before uploading.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Pending Documents List */}
               {pendingDocuments.length > 0 && (
@@ -1031,18 +1127,23 @@ export function AddCompanyModal({
             type="button"
             variant="outline"
             onClick={handleClose}
-            disabled={loading || uploading}
+            disabled={loading || uploading || validating}
           >
             Cancel
           </Button>
           <Button
             type="submit"
             onClick={handleSubmit}
-            disabled={loading || uploading || !isWalletConnected || !isWalletAuthorized}
+            disabled={loading || uploading || validating || !isWalletConnected || !isWalletAuthorized}
             className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             title={!isWalletConnected ? "Connect MetaMask to create companies" : !isWalletAuthorized ? "Wallet not authorized" : ""}
           >
-            {uploading ? (
+            {validating ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Validating...
+              </>
+            ) : uploading ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 Uploading Documents...
