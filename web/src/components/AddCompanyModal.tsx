@@ -926,40 +926,30 @@ export function AddCompanyModal({
                 Location
               </h3>
 
-              {/* Address Input */}
+              {/* Address Input with Google Maps Autocomplete */}
               <div className="space-y-2">
                 <Label htmlFor="address">
                   Address <span className="text-red-500">*</span>
                 </Label>
                 <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    ref={searchInputRef}
                     id="address"
                     name="address"
+                    type="text"
                     value={formData.address || ""}
                     onChange={handleChange}
-                    placeholder="Enter company address"
-                    // UPDATED STYLE: Red glow
-                    className={`pl-10 ${errors.address ? "!border-red-500 !ring-1 !ring-red-200" : ""}`}
+                    placeholder="Search for company address or click on map..."
+                    className={`w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.address ? "!border-red-500 !ring-1 !ring-red-200" : ""}`}
                   />
                 </div>
                 {errors.address && (
                   <p className="text-xs text-red-500">{errors.address}</p>
                 )}
-              </div>
-
-              {/* Map Search */}
-              <div className="space-y-2">
-                <Label>Search Location on Map</Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    placeholder="Search for a place..."
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
+                <p className="text-xs text-gray-500">
+                  Start typing to search for an address or click on the map below to set location
+                </p>
               </div>
 
               {/* Google Map */}
