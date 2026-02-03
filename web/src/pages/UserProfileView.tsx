@@ -85,6 +85,14 @@ export function UserProfileView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
+  // Refetch logs when pagination changes
+  useEffect(() => {
+    if (user?._id && logsPagination.current_page > 1) {
+      fetchUserAuditLogs(user._id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [logsPagination.current_page]);
+
   const fetchUser = async (): Promise<UserProfile | null> => {
     try {
       if (!id) return null;
@@ -132,30 +140,21 @@ export function UserProfileView() {
   const fetchUserAuditLogs = async (userId: string) => {
     setLogsLoading(true);
     try {
-      
-      // Pull all logs then filter by userId
-      const first = await AuditLogService.getAllLogs(
-        1,
+      // Directly fetch logs for this specific user with pagination
+      const response = await AuditLogService.getUserLogs(
+        userId,
+        logsPagination.current_page,
         logsPagination.per_page
       );
-      if (!first || !first.pagination) throw new Error("Invalid response");
-      let all: AuditLog[] = [...(first.data || [])];
-      for (let p = 2; p <= (first.pagination.total_pages || 1); p++) {
-        const resp = await AuditLogService.getAllLogs(
-          p,
-          first.pagination.per_page
-        );
-        all = all.concat(resp.data || []);
+      
+      if (response && response.data) {
+        setFullAuditLogs(response.data);
+        if (response.pagination) {
+          setLogsPagination(response.pagination);
+        }
+      } else {
+        setFullAuditLogs([]);
       }
-      const filtered = all.filter((l) => l.userId === userId);
-      setFullAuditLogs(filtered);
-      setLogsPagination({
-        current_page: 1,
-        per_page: first.pagination.per_page,
-        total_pages:
-          Math.ceil(filtered.length / first.pagination.per_page) || 1,
-        total_items: filtered.length,
-      });
     } catch (e: any) {
       console.error("[UserProfileView] Error fetching audit logs:", e);
       setFullAuditLogs([]);
@@ -195,9 +194,9 @@ export function UserProfileView() {
   }, [fullAuditLogs, sortBy]);
 
   const currentPageLogs = useMemo(() => {
-    const start = (logsPagination.current_page - 1) * logsPagination.per_page;
-    return sortedFullLogs.slice(start, start + logsPagination.per_page);
-  }, [sortedFullLogs, logsPagination]);
+    // Since we're fetching paginated data from backend, just return sorted logs
+    return sortedFullLogs;
+  }, [sortedFullLogs]);
 
   const activityColumns: Column[] = [
     {
@@ -519,11 +518,7 @@ export function UserProfileView() {
             <div className="mt-2">
               <Pagination
                 currentPage={logsPagination.current_page}
-                totalPages={
-                  Math.ceil(
-                    logsPagination.total_items / logsPagination.per_page
-                  ) || 1
-                }
+                totalPages={logsPagination.total_pages || 1}
                 totalItems={logsPagination.total_items}
                 itemsPerPage={logsPagination.per_page}
                 onPageChange={(page) =>

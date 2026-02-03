@@ -74,6 +74,25 @@ export class AuditLogService {
   }
 
   /**
+   * Get audit logs for a specific user (admin only)
+   */
+  static async getUserLogs(
+    userId: string,
+    page: number = 1,
+    limit: number = 20
+  ): Promise<AuditLogApiResponse> {
+    try {
+      const response = await apiClient.get<AuditLogApiResponse>(
+        `/audit/logs/user/${userId}?page=${page}&limit=${limit}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching user audit logs:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Get audit logs by action type
    */
   static async getLogsByType(
