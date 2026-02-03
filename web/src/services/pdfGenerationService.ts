@@ -750,7 +750,6 @@ export class PDFGenerationService {
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
     const margin = 20;
-    const contentWidth = pageWidth - (margin * 2);
 
     // Helper function to format date
     const formatDate = (dateStr: string) => {

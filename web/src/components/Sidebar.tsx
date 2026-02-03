@@ -11,8 +11,6 @@ import {
   Sliders,
   Verified,
   ChevronDown,
-  Wallet,
-  ExternalLink,
   Power,
   Repeat2,
 } from "lucide-react";

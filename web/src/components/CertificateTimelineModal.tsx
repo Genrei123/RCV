@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { PDFGenerationService } from "@/services/pdfGenerationService";
-import type { Product } from "@/typeorm/entities/product.entity";
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
 
