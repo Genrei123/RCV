@@ -164,11 +164,11 @@ export function Companies(props: CompaniesProps) {
     setArchiveLoading(true);
     try {
       if (activeTab === 'active') {
-        await CompanyService.archiveCompany(companyToArchive._id);
-        toast.success("Company archived successfully");
+        await CompanyService.submitArchiveForApproval(companyToArchive._id);
+        toast.success("Archive request submitted for admin approval");
       } else {
-        await CompanyService.unarchiveCompany(companyToArchive._id);
-        toast.success("Company restored successfully");
+        await CompanyService.submitUnarchiveForApproval(companyToArchive._id);
+        toast.success("Restore request submitted for admin approval");
       }
       fetchCompaniesPage(currentPage);
     } catch (error: any) {

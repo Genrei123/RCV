@@ -24,6 +24,8 @@ import {
   submitUpdateForProduct,
   submitArchiveForProduct,
   submitUnarchiveForProduct,
+  submitArchiveForCompany,
+  submitUnarchiveForCompany,
 } from '../../controllers/blockchain/CertificateApproval';
 import { verifyUser } from '../../middleware/verifyUser';
 import { verifyAdmin } from '../../middleware/verifyAdmin';
@@ -182,6 +184,12 @@ router.post('/archiveProduct', verifyUser, submitArchiveForProduct);
 
 // Submit an unarchive request for a product
 router.post('/unarchiveProduct', verifyUser, submitUnarchiveForProduct);
+
+// Submit an archive request for a company
+router.post('/archiveCompany', verifyUser, submitArchiveForCompany);
+
+// Submit an unarchive request for a company
+router.post('/unarchiveCompany', verifyUser, submitUnarchiveForCompany);
 
 // Get renewal timeline for a product (public - no auth required)
 router.get('/public/renewal-timeline/:productId', getRenewalTimeline);

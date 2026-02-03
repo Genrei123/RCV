@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { PDFGenerationService } from "@/services/pdfGenerationService";
-import type { Product } from "@/typeorm/entities/product.entity";
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
 
@@ -23,6 +22,7 @@ interface TimelineEvent {
   }>;
   blockchainTxHash?: string;
   expirationDate?: string;
+  historicalData?: any; // Store the full historical approval data
 }
 
 interface CertificateTimelineModalProps {
@@ -42,7 +42,6 @@ export default function CertificateTimelineModal({
 }: CertificateTimelineModalProps) {
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
   const [loading, setLoading] = useState(false);
-  const [productData, setProductData] = useState<Product | null>(null);
   const [regeneratingCertId, setRegeneratingCertId] = useState<string | null>(null);
   const [selectedCertificateId, setSelectedCertificateId] = useState<string | null>(null);
 
@@ -121,13 +120,14 @@ export default function CertificateTimelineModal({
           return {
             type,
             certificateId: item.certificateId,
-            approvalId: item.approvalId,
+            approvalId: item.approvalId, // Store the approval ID for fetching historical data
             status: 'approved', // Timeline only shows approved items
             submittedAt: item.createdDate,
             approvedAt: item.approvedDate,
             approvers: item.approvers || [],
             blockchainTxHash: item.transactionHash,
-            expirationDate: item.renewalMetadata?.newExpirationDate
+            expirationDate: item.renewalMetadata?.newExpirationDate,
+            historicalData: item // Store full historical context
           };
         });
         setTimeline(mappedTimeline || []);
@@ -148,45 +148,29 @@ export default function CertificateTimelineModal({
   };
 
   const fetchProductData = async () => {
-    try {
-      const productEndpoint = isPublic
-        ? `${API_URL}/public/product/${productId}`
-        : `${API_URL}/product/products/${productId}`;
-      
-      const response = await axios.get(
-        productEndpoint,
-        isPublic ? {} : { withCredentials: true }
-      );
-      if (response.data) {
-        setProductData(response.data);
-      }
-    } catch (error: any) {
-      console.error("Error fetching product data:", error);
-    }
+    // Placeholder for potential future use of product data
+    // Currently unused but kept for API consistency
   };
 
   const handleRegenerateCertificate = async () => {
-    if (!productData) {
-      toast.error("Product data not loaded");
+    if (timeline.length === 0) {
+      toast.error("No timeline data to generate");
       return;
     }
 
-    if (!selectedCertificateId) {
-      toast.error("Please select a certificate from the timeline");
-      return;
-    }
-
-    setRegeneratingCertId(selectedCertificateId);
+    setRegeneratingCertId('downloading');
     try {
-      // Regenerate PDF with the consistent certificate ID
-      await PDFGenerationService.generateAndDownloadProductCertificate(
-        productData,
-        selectedCertificateId
+      // Generate the timeline PDF with all entries
+      await PDFGenerationService.generateAndDownloadTimelinePDF(
+        productName,
+        productId,
+        timeline
       );
-      toast.success(isPublic ? "Certificate downloaded successfully!" : "Certificate regenerated successfully!");
+      
+      toast.success("Timeline PDF downloaded successfully!");
     } catch (error: any) {
-      console.error("Error regenerating certificate:", error);
-      toast.error("Failed to regenerate certificate");
+      console.error("Error generating timeline PDF:", error);
+      toast.error("Failed to generate timeline PDF");
     } finally {
       setRegeneratingCertId(null);
     }
@@ -241,18 +225,18 @@ export default function CertificateTimelineModal({
               size="sm"
               variant="outline"
               onClick={handleRegenerateCertificate}
-              disabled={!selectedCertificateId || regeneratingCertId !== null || !productData}
-              className="app-bg-primary app-text-white hover:app-bg-secondary"
+              disabled={timeline.length === 0 || regeneratingCertId !== null}
+              className="app-bg-primary app-text-white hover:text-white hover:app-bg-secondary"
             >
               {regeneratingCertId ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  {isPublic ? 'Downloading...' : 'Generating...'}
+                  Downloading...
                 </>
               ) : (
                 <>
                   <FileDown className="h-4 w-4 mr-2" />
-                  {isPublic ? 'Download' : 'Download'}
+                  Download
                 </>
               )}
             </Button>

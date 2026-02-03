@@ -511,7 +511,7 @@ export function LandingPage() {
                           <Button
                             variant="outline"
                             size="lg"
-                            className="hidden sm:flex border-2 border-white bg-transparent text-white hover:bg-white/10 cursor-pointer transition-colors w-full sm:w-auto"
+                            className="hidden sm:flex border-2 border-white bg-transparent text-white hover:bg-white/10 cursor-pointer transition-colors w-full sm:w-auto hover:text-white"
                             onClick={() =>
                               document
                                 .getElementById("features")

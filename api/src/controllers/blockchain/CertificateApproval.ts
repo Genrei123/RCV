@@ -19,7 +19,7 @@ import {
 } from '../../services/certificateApprovalService';
 import CustomError from '../../utils/CustomError';
 import { ApprovalStatus, CertificateApproval } from '../../typeorm/entities/certificateApproval.entity';
-import { CertificateApprovalRepo, ProductRepo, UserRepo } from '../../typeorm/data-source';
+import { CertificateApprovalRepo, ProductRepo, UserRepo, CompanyRepo } from '../../typeorm/data-source';
 
 /**
  * Submit a certificate for multi-signature approval
@@ -1364,6 +1364,338 @@ export async function submitUnarchiveForProduct(req: Request, res: Response, nex
       }];
       initialApprovalCount = 1;
       console.log(`Submitter ${submitter.email} is an admin - counting as first approval (1/${requiredApprovals})`);
+    }
+
+    approval.approvers = initialApprovers;
+    approval.approvalCount = initialApprovalCount;
+
+    const savedApproval = await CertificateApprovalRepo.save(approval);
+
+    return res.status(201).json({
+      success: true,
+      message: `Unarchive request submitted successfully. (${isSubmitterAdmin ? initialApprovalCount : 0}/${requiredApprovals} approvals)`,
+      data: {
+        approvalId: savedApproval._id,
+        certificateId: savedApproval.certificateId,
+        status: savedApproval.status,
+        isUnarchive: true,
+        approvalCount: savedApproval.approvalCount,
+        requiredApprovals: savedApproval.requiredApprovals,
+      }
+    });
+
+  } catch (error) {
+    console.error('Error submitting unarchive request:', error);
+    next(error);
+  }
+}
+
+/**
+ * Submit archive request for a company (approval workflow)
+ * POST /api/v1/certificate-approval/archiveCompany
+ */
+export async function submitArchiveForCompany(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { entityId } = req.body;
+    const userId = req.user?._id;
+
+    if (!entityId) {
+      return res.status(400).json({
+        success: false,
+        message: 'entityId is required'
+      });
+    }
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not authenticated'
+      });
+    }
+
+    // Get the company
+    const company = await CompanyRepo.findOne({
+      where: { _id: entityId }
+    });
+
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        message: 'Company not found'
+      });
+    }
+
+    // Check if already archived
+    if (company.isArchived) {
+      return res.status(400).json({
+        success: false,
+        message: 'Company is already archived'
+      });
+    }
+
+    // Get the user who's submitting
+    const submitter = await UserRepo.findOne({ where: { _id: userId } });
+    if (!submitter) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Check for existing pending approvals
+    const existingApproval = await CertificateApprovalRepo.findOne({
+      where: {
+        entityId: company._id,
+        entityType: 'company',
+        status: 'pending'
+      }
+    });
+
+    if (existingApproval) {
+      return res.status(400).json({
+        success: false,
+        message: 'There is already a pending approval request for this company.'
+      });
+    }
+
+    // Get admin count for required approvals
+    const adminCount = await UserRepo.count({
+      where: {
+        role: 'ADMIN',
+        walletAuthorized: true,
+      },
+    });
+    const requiredApprovals = Math.max(adminCount, 1);
+
+    // Create an archive approval request
+    const approval = new CertificateApproval();
+    approval.certificateId = `ARCHIVE-COMPANY-${company._id}-${Date.now()}`;
+    approval.entityType = 'company';
+    approval.entityId = company._id;
+    approval.entityName = company.name;
+    approval.pdfHash = ''; // Will be generated on approval
+    approval.submittedBy = userId;
+    approval.submitterName = submitter.fullName || submitter.email;
+    approval.submitterWallet = submitter.walletAddress;
+    approval.status = 'pending';
+    approval.approvers = [];
+    approval.approvalCount = 0;
+    approval.requiredApprovals = requiredApprovals;
+    approval.entityCreated = true; // Company already exists
+
+    // Set archive tracking fields
+    approval.isRenewal = false;
+    approval.previousCertificateHash = company._id; // Use company ID as reference
+    
+    // Store complete company data with archive flag
+    approval.pendingEntityData = {
+      isArchive: true,
+      oldCertificateId: company._id,
+      archiveRequestDate: new Date().toISOString(),
+      requestedBy: userId,
+      requestedByName: submitter.fullName || submitter.email,
+      
+      // Include all company fields
+      name: company.name,
+      address: company.address,
+      licenseNumber: company.licenseNumber,
+      latitude: company.latitude,
+      longitude: company.longitude,
+      phone: company.phone,
+      email: company.email,
+      website: company.website,
+      businessType: company.businessType,
+      registrationDate: company.registrationDate?.toISOString(),
+      description: company.description,
+      sepoliaTransactionId: company.sepoliaTransactionId,
+      
+      // Archive-specific field
+      willBeArchived: true
+    };
+
+    // Check if submitter is an admin with authorized wallet
+    // If so, their submission counts as the first approval
+    const isSubmitterAdmin = submitter && submitter.walletAuthorized && submitter.walletAddress && submitter.role === 'ADMIN';
+    
+    let initialApprovers: any[] = [];
+    let initialApprovalCount = 0;
+
+    if (isSubmitterAdmin) {
+      initialApprovers = [{
+        approverId: userId,
+        approverName: submitter.fullName || submitter.email,
+        approverWallet: submitter.walletAddress,
+        approvalDate: new Date().toISOString(),
+        signature: 'submission-auto-approval', // Marker for auto-approval on submission
+      }];
+      initialApprovalCount = 1;
+      console.log(`Archiver ${submitter.email} is an admin - counting as first approval (1/${requiredApprovals})`);
+    }
+
+    approval.approvers = initialApprovers;
+    approval.approvalCount = initialApprovalCount;
+
+    const savedApproval = await CertificateApprovalRepo.save(approval);
+
+    return res.status(201).json({
+      success: true,
+      message: `Archive request submitted successfully. (${isSubmitterAdmin ? initialApprovalCount : 0}/${requiredApprovals} approvals)`,
+      data: {
+        approvalId: savedApproval._id,
+        certificateId: savedApproval.certificateId,
+        status: savedApproval.status,
+        isArchive: true,
+        approvalCount: savedApproval.approvalCount,
+        requiredApprovals: savedApproval.requiredApprovals,
+      }
+    });
+
+  } catch (error) {
+    console.error('Error submitting archive request:', error);
+    next(error);
+  }
+}
+
+/**
+ * Submit unarchive request for a company (approval workflow)
+ * POST /api/v1/certificate-approval/unarchiveCompany
+ */
+export async function submitUnarchiveForCompany(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { entityId } = req.body;
+    const userId = req.user?._id;
+
+    if (!entityId) {
+      return res.status(400).json({
+        success: false,
+        message: 'entityId is required'
+      });
+    }
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not authenticated'
+      });
+    }
+
+    // Get the company
+    const company = await CompanyRepo.findOne({
+      where: { _id: entityId }
+    });
+
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        message: 'Company not found'
+      });
+    }
+
+    // Check if actually archived
+    if (!company.isArchived) {
+      return res.status(400).json({
+        success: false,
+        message: 'Company is not archived'
+      });
+    }
+
+    // Get the user who's submitting
+    const submitter = await UserRepo.findOne({ where: { _id: userId } });
+    if (!submitter) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Check for existing pending approvals
+    const existingApproval = await CertificateApprovalRepo.findOne({
+      where: {
+        entityId: company._id,
+        entityType: 'company',
+        status: 'pending'
+      }
+    });
+
+    if (existingApproval) {
+      return res.status(400).json({
+        success: false,
+        message: 'There is already a pending approval request for this company.'
+      });
+    }
+
+    // Get admin count for required approvals
+    const adminCount = await UserRepo.count({
+      where: {
+        role: 'ADMIN',
+        walletAuthorized: true,
+      },
+    });
+    const requiredApprovals = Math.max(adminCount, 1);
+
+    // Create an unarchive approval request
+    const approval = new CertificateApproval();
+    approval.certificateId = `UNARCHIVE-COMPANY-${company._id}-${Date.now()}`;
+    approval.entityType = 'company';
+    approval.entityId = company._id;
+    approval.entityName = company.name;
+    approval.pdfHash = ''; // Will be generated on approval
+    approval.submittedBy = userId;
+    approval.submitterName = submitter.fullName || submitter.email;
+    approval.submitterWallet = submitter.walletAddress;
+    approval.status = 'pending';
+    approval.approvers = [];
+    approval.approvalCount = 0;
+    approval.requiredApprovals = requiredApprovals;
+    approval.entityCreated = true; // Company already exists
+
+    // Set unarchive tracking fields
+    approval.isRenewal = false;
+    approval.previousCertificateHash = company._id; // Use company ID as reference
+    
+    // Store complete company data with unarchive flag
+    approval.pendingEntityData = {
+      isUnarchive: true,
+      oldCertificateId: company._id,
+      unarchiveRequestDate: new Date().toISOString(),
+      requestedBy: userId,
+      requestedByName: submitter.fullName || submitter.email,
+      
+      // Include all company fields
+      name: company.name,
+      address: company.address,
+      licenseNumber: company.licenseNumber,
+      latitude: company.latitude,
+      longitude: company.longitude,
+      phone: company.phone,
+      email: company.email,
+      website: company.website,
+      businessType: company.businessType,
+      registrationDate: company.registrationDate?.toISOString(),
+      description: company.description,
+      sepoliaTransactionId: company.sepoliaTransactionId,
+      
+      // Unarchive-specific field
+      willBeUnarchived: true
+    };
+
+    // Check if submitter is an admin with authorized wallet
+    // If so, their submission counts as the first approval
+    const isSubmitterAdmin = submitter && submitter.walletAuthorized && submitter.walletAddress && submitter.role === 'ADMIN';
+    
+    let initialApprovers: any[] = [];
+    let initialApprovalCount = 0;
+
+    if (isSubmitterAdmin) {
+      initialApprovers = [{
+        approverId: userId,
+        approverName: submitter.fullName || submitter.email,
+        approverWallet: submitter.walletAddress,
+        approvalDate: new Date().toISOString(),
+        signature: 'submission-auto-approval', // Marker for auto-approval on submission
+      }];
+      initialApprovalCount = 1;
+      console.log(`Restorer ${submitter.email} is an admin - counting as first approval (1/${requiredApprovals})`);
     }
 
     approval.approvers = initialApprovers;
