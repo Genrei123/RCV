@@ -681,14 +681,21 @@ class GPIOLEDService:
 # On-Screen Keyboard for Touchscreen Kiosk
 # ============================================================================
 class OnScreenKeyboard:
-    """On-screen keyboard for touchscreen kiosk input"""
+    """On-screen keyboard for touchscreen kiosk input - mobile phone style with ABC/123 toggle"""
     
-    # Keyboard layout - uppercase letters and numbers (typical for registration codes)
-    LAYOUT = [
-        ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
+    # Keyboard layouts - switch between letters and numbers like a phone
+    # Registration codes like FR-12345 or LTO-2024-001 use letters, numbers, and hyphens
+    LAYOUT_ABC = [
         ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
         ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', '-'],
-        ['Z', 'X', 'C', 'V', 'B', 'N', 'M', 'BACK', 'CLEAR'],
+        ['Z', 'X', 'C', 'V', 'B', 'N', 'M', '⌫'],
+        ['123', 'SPACE', 'CLEAR'],
+    ]
+    
+    LAYOUT_123 = [
+        ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
+        ['-', '.', '/', '(', ')', '#', '@', '&', '*', '⌫'],
+        ['ABC', 'SPACE', 'CLEAR'],
     ]
     
     def __init__(self, parent, target_entry=None, on_submit=None, bg_color=Colors.SURFACE):
@@ -707,6 +714,8 @@ class OnScreenKeyboard:
         self.bg_color = bg_color
         self.frame = None
         self.buttons = []
+        self.current_mode = 'ABC'  # Start with letters
+        self.keyboard_container = None
         
     def set_target(self, entry_widget):
         """Set the target entry widget for keyboard input"""
@@ -721,73 +730,168 @@ class OnScreenKeyboard:
             self.frame.destroy()
             
         self.frame = tk.Frame(parent_frame, bg=self.bg_color)
-        self.frame.pack(fill=tk.X, pady=(20, 10))
+        self.frame.pack(fill=tk.X, pady=(10, 5))
         
-        self.buttons = []
+        # Instructions label
+        self.instruction_label = tk.Label(
+            self.frame,
+            text="⌨️ ABC Mode: Type letters (A-Z) and hyphen (-)",
+            font=("SF Pro Text", 11, "bold"),
+            bg=self.bg_color,
+            fg=Colors.PRIMARY
+        )
+        self.instruction_label.pack(pady=(0, 8))
         
-        # Key dimensions - responsive to screen size
-        key_width = 5
-        key_height = 2
-        key_font = ("SF Pro Display", 14, "bold")
+        # Container for keyboard rows (will be rebuilt on mode switch)
+        self.keyboard_container = tk.Frame(self.frame, bg=self.bg_color)
+        self.keyboard_container.pack()
         
-        for row_idx, row in enumerate(self.LAYOUT):
-            row_frame = tk.Frame(self.frame, bg=self.bg_color)
-            row_frame.pack(pady=3)
-            
-            for key in row:
-                if key == 'BACK':
-                    # Backspace key - wider
-                    btn = tk.Button(
-                        row_frame,
-                        text="⌫",
-                        font=key_font,
-                        width=7,
-                        height=key_height,
-                        bg=Colors.WARNING,
-                        fg=Colors.TEXT_WHITE,
-                        activebackground="#F57C00",
-                        activeforeground=Colors.TEXT_WHITE,
-                        relief=tk.RAISED,
-                        bd=2,
-                        command=self._backspace
-                    )
-                elif key == 'CLEAR':
-                    # Clear key
-                    btn = tk.Button(
-                        row_frame,
-                        text="CLR",
-                        font=key_font,
-                        width=7,
-                        height=key_height,
-                        bg=Colors.ERROR,
-                        fg=Colors.TEXT_WHITE,
-                        activebackground="#D32F2F",
-                        activeforeground=Colors.TEXT_WHITE,
-                        relief=tk.RAISED,
-                        bd=2,
-                        command=self._clear
-                    )
-                else:
-                    # Regular key
-                    btn = tk.Button(
-                        row_frame,
-                        text=key,
-                        font=key_font,
-                        width=key_width,
-                        height=key_height,
-                        bg=Colors.BACKGROUND,
-                        fg=Colors.TEXT_PRIMARY,
-                        activebackground=Colors.PRIMARY_LIGHT,
-                        activeforeground=Colors.TEXT_WHITE,
-                        relief=tk.RAISED,
-                        bd=2,
-                        command=lambda k=key: self._type_key(k)
-                    )
-                
-                btn.pack(side=tk.LEFT, padx=2)
-                self.buttons.append(btn)
+        # Build initial keyboard
+        self._build_keyboard()
         
         return self.frame
+    
+    def _build_keyboard(self):
+        """Build keyboard based on current mode"""
+        # Clear existing buttons
+        for widget in self.keyboard_container.winfo_children():
+            widget.destroy()
+        self.buttons = []
+        
+        # Select layout based on mode
+        layout = self.LAYOUT_ABC if self.current_mode == 'ABC' else self.LAYOUT_123
+        
+        # Update instruction
+        if self.current_mode == 'ABC':
+            self.instruction_label.config(
+                text="⌨️ ABC Mode: Letters and hyphen  |  Tap [123] for numbers",
+                fg=Colors.PRIMARY
+            )
+        else:
+            self.instruction_label.config(
+                text="⌨️ 123 Mode: Numbers 0-9 and symbols  |  Tap [ABC] for letters",
+                fg=Colors.WARNING
+            )
+        
+        # Key dimensions
+        key_width = 4
+        key_height = 2
+        key_font = ("SF Pro Display", 13, "bold")
+        
+        for row_idx, row in enumerate(layout):
+            row_frame = tk.Frame(self.keyboard_container, bg=self.bg_color)
+            row_frame.pack(pady=2)
+            
+            for key in row:
+                btn = self._create_key_button(row_frame, key, key_width, key_height, key_font)
+                btn.pack(side=tk.LEFT, padx=2)
+                self.buttons.append(btn)
+    
+    def _create_key_button(self, parent, key, width, height, font):
+        """Create a single key button"""
+        # Determine button properties based on key type
+        if key == '⌫':
+            # Backspace
+            return tk.Button(
+                parent,
+                text="⌫ DEL",
+                font=font,
+                width=8,
+                height=height,
+                bg=Colors.WARNING,
+                fg=Colors.TEXT_WHITE,
+                activebackground="#F57C00",
+                activeforeground=Colors.TEXT_WHITE,
+                relief=tk.RAISED,
+                bd=2,
+                command=self._backspace
+            )
+        elif key == 'CLEAR':
+            return tk.Button(
+                parent,
+                text="CLEAR ALL",
+                font=font,
+                width=10,
+                height=height,
+                bg=Colors.ERROR,
+                fg=Colors.TEXT_WHITE,
+                activebackground="#D32F2F",
+                activeforeground=Colors.TEXT_WHITE,
+                relief=tk.RAISED,
+                bd=2,
+                command=self._clear
+            )
+        elif key == 'SPACE':
+            return tk.Button(
+                parent,
+                text="SPACE",
+                font=font,
+                width=12,
+                height=height,
+                bg=Colors.SURFACE_DARK,
+                fg=Colors.TEXT_WHITE,
+                activebackground=Colors.TEXT_SECONDARY,
+                activeforeground=Colors.TEXT_WHITE,
+                relief=tk.RAISED,
+                bd=2,
+                command=lambda: self._type_key(' ')
+            )
+        elif key == '123':
+            return tk.Button(
+                parent,
+                text="123 #",
+                font=("SF Pro Display", 12, "bold"),
+                width=7,
+                height=height,
+                bg=Colors.PRIMARY,
+                fg=Colors.TEXT_WHITE,
+                activebackground=Colors.PRIMARY_LIGHT,
+                activeforeground=Colors.TEXT_WHITE,
+                relief=tk.RAISED,
+                bd=2,
+                command=self._switch_to_numbers
+            )
+        elif key == 'ABC':
+            return tk.Button(
+                parent,
+                text="ABC",
+                font=("SF Pro Display", 12, "bold"),
+                width=7,
+                height=height,
+                bg=Colors.PRIMARY,
+                fg=Colors.TEXT_WHITE,
+                activebackground=Colors.PRIMARY_LIGHT,
+                activeforeground=Colors.TEXT_WHITE,
+                relief=tk.RAISED,
+                bd=2,
+                command=self._switch_to_letters
+            )
+        else:
+            # Regular character key
+            return tk.Button(
+                parent,
+                text=key,
+                font=font,
+                width=width,
+                height=height,
+                bg=Colors.BACKGROUND,
+                fg=Colors.TEXT_PRIMARY,
+                activebackground=Colors.PRIMARY_LIGHT,
+                activeforeground=Colors.TEXT_WHITE,
+                relief=tk.RAISED,
+                bd=2,
+                command=lambda k=key: self._type_key(k)
+            )
+    
+    def _switch_to_numbers(self):
+        """Switch to number/symbol mode"""
+        self.current_mode = '123'
+        self._build_keyboard()
+    
+    def _switch_to_letters(self):
+        """Switch to letter mode"""
+        self.current_mode = 'ABC'
+        self._build_keyboard()
     
     def _type_key(self, key):
         """Type a key into the target entry"""
@@ -808,6 +912,12 @@ class OnScreenKeyboard:
         if self.target_entry:
             self.target_entry.delete(0, tk.END)
             self.target_entry.focus()
+    
+    def destroy(self):
+        """Destroy the keyboard frame"""
+        if self.frame:
+            self.frame.destroy()
+            self.frame = None
     
     def destroy(self):
         """Destroy the keyboard frame"""
@@ -1831,138 +1941,204 @@ class KioskApp:
         self.error_timer_label.pack(expand=True)
     
     def _setup_compliance_screen(self):
-        """Setup the compliance report screen for OCR scan results"""
-        # Header - dynamic based on compliance status
+        """Setup the product search results screen - shows product information"""
+        # Header - dynamic based on search result
         self.compliance_header = tk.Frame(self.compliance_frame, bg=Colors.SUCCESS, height=100)
         self.compliance_header.pack(fill=tk.X)
         self.compliance_header.pack_propagate(False)
         
         self.compliance_status_label = tk.Label(
             self.compliance_header,
-            text="PRODUCT COMPLIANT",
+            text="PRODUCT FOUND",
             font=("SF Pro Display", 32, "bold"),
             bg=Colors.SUCCESS,
             fg=Colors.TEXT_WHITE
         )
         self.compliance_status_label.pack(expand=True)
         
-        # Main content
+        # Main content - scrollable
         content = tk.Frame(self.compliance_frame, bg=Colors.BACKGROUND)
         content.pack(fill=tk.BOTH, expand=True)
         
-        # Product info section
-        self.compliance_product_frame = tk.Frame(content, bg=Colors.SURFACE, padx=20, pady=15)
-        self.compliance_product_frame.pack(fill=tk.X, padx=20, pady=10)
+        # Product info section - PROMINENT
+        self.compliance_product_frame = tk.Frame(content, bg=Colors.SURFACE, padx=25, pady=20)
+        self.compliance_product_frame.pack(fill=tk.X, padx=20, pady=15)
+        
+        # Product icon/badge
+        product_header = tk.Frame(self.compliance_product_frame, bg=Colors.SURFACE)
+        product_header.pack(fill=tk.X)
+        
+        tk.Label(
+            product_header,
+            text="📦",
+            font=("SF Pro Display", 32),
+            bg=Colors.SURFACE,
+            fg=Colors.PRIMARY
+        ).pack(side=tk.LEFT, padx=(0, 15))
+        
+        product_info_frame = tk.Frame(product_header, bg=Colors.SURFACE)
+        product_info_frame.pack(side=tk.LEFT, fill=tk.X, expand=True)
         
         self.compliance_product_name = tk.Label(
-            self.compliance_product_frame,
+            product_info_frame,
             text="Product Name",
             font=("SF Pro Display", 24, "bold"),
             bg=Colors.SURFACE,
-            fg=Colors.TEXT_PRIMARY
+            fg=Colors.TEXT_PRIMARY,
+            anchor=tk.W
         )
         self.compliance_product_name.pack(anchor=tk.W)
         
         self.compliance_brand = tk.Label(
-            self.compliance_product_frame,
+            product_info_frame,
             text="Brand / Manufacturer",
-            font=("SF Pro Text", 18),
+            font=("SF Pro Text", 16),
             bg=Colors.SURFACE,
-            fg=Colors.TEXT_SECONDARY
+            fg=Colors.TEXT_SECONDARY,
+            anchor=tk.W
         )
         self.compliance_brand.pack(anchor=tk.W)
         
-        # Compliance checklist section
-        compliance_title = tk.Label(
+        # Registration numbers section - CLEAR INFO
+        reg_title = tk.Label(
             content,
-            text="PACKAGING COMPLIANCE",
-            font=("SF Pro Display", 20, "bold"),
+            text="REGISTRATION INFORMATION",
+            font=("SF Pro Display", 18, "bold"),
             bg=Colors.BACKGROUND,
             fg=Colors.TEXT_PRIMARY
         )
-        compliance_title.pack(pady=(20, 10))
+        reg_title.pack(pady=(15, 10))
         
-        self.compliance_checklist_frame = tk.Frame(content, bg=Colors.SURFACE, padx=20, pady=15)
+        self.compliance_checklist_frame = tk.Frame(content, bg=Colors.SURFACE, padx=25, pady=15)
         self.compliance_checklist_frame.pack(fill=tk.X, padx=20)
         
-        # CFPR check
+        # CFPR info row
+        cfpr_row = tk.Frame(self.compliance_checklist_frame, bg=Colors.SURFACE)
+        cfpr_row.pack(fill=tk.X, pady=5)
+        
+        tk.Label(
+            cfpr_row,
+            text="CFPR Number:",
+            font=("SF Pro Text", 14, "bold"),
+            bg=Colors.SURFACE,
+            fg=Colors.TEXT_SECONDARY,
+            width=15,
+            anchor=tk.W
+        ).pack(side=tk.LEFT)
+        
         self.cfpr_check_label = tk.Label(
-            self.compliance_checklist_frame,
-            text="CFPR Number: Checking...",
-            font=("SF Pro Text", 18),
+            cfpr_row,
+            text="Loading...",
+            font=("SF Pro Text", 16, "bold"),
             bg=Colors.SURFACE,
-            fg=Colors.TEXT_PRIMARY
+            fg=Colors.PRIMARY
         )
-        self.cfpr_check_label.pack(anchor=tk.W, pady=5)
+        self.cfpr_check_label.pack(side=tk.LEFT, padx=10)
         
-        # LTO check
+        # LTO info row
+        lto_row = tk.Frame(self.compliance_checklist_frame, bg=Colors.SURFACE)
+        lto_row.pack(fill=tk.X, pady=5)
+        
+        tk.Label(
+            lto_row,
+            text="LTO Number:",
+            font=("SF Pro Text", 14, "bold"),
+            bg=Colors.SURFACE,
+            fg=Colors.TEXT_SECONDARY,
+            width=15,
+            anchor=tk.W
+        ).pack(side=tk.LEFT)
+        
         self.lto_check_label = tk.Label(
-            self.compliance_checklist_frame,
-            text="LTO Number: Checking...",
-            font=("SF Pro Text", 18),
+            lto_row,
+            text="Loading...",
+            font=("SF Pro Text", 16, "bold"),
             bg=Colors.SURFACE,
-            fg=Colors.TEXT_PRIMARY
+            fg=Colors.PRIMARY
         )
-        self.lto_check_label.pack(anchor=tk.W, pady=5)
+        self.lto_check_label.pack(side=tk.LEFT, padx=10)
         
-        # Warnings/Violations section
-        self.compliance_warnings_frame = tk.Frame(content, bg=Colors.WARNING_LIGHT, padx=20, pady=15)
-        # Don't pack yet - only shown if there are warnings
+        # Status info row (hidden by default)
+        self.compliance_status_row = tk.Frame(self.compliance_checklist_frame, bg=Colors.SURFACE)
+        # Don't pack initially
+        
+        tk.Label(
+            self.compliance_status_row,
+            text="Status:",
+            font=("SF Pro Text", 14, "bold"),
+            bg=Colors.SURFACE,
+            fg=Colors.TEXT_SECONDARY,
+            width=15,
+            anchor=tk.W
+        ).pack(side=tk.LEFT)
+        
+        self.compliance_status_info = tk.Label(
+            self.compliance_status_row,
+            text="Registered",
+            font=("SF Pro Text", 16, "bold"),
+            bg=Colors.SURFACE,
+            fg=Colors.SUCCESS
+        )
+        self.compliance_status_info.pack(side=tk.LEFT, padx=10)
+        
+        # Additional notes section (hidden by default)
+        self.compliance_warnings_frame = tk.Frame(content, bg=Colors.SUCCESS_LIGHT, padx=20, pady=15)
+        # Don't pack yet - only shown if there is additional info
         
         self.compliance_warnings_label = tk.Label(
             self.compliance_warnings_frame,
             text="",
-            font=("SF Pro Text", 14),
-            bg=Colors.WARNING_LIGHT,
-            fg=Colors.WARNING,
+            font=("SF Pro Text", 13),
+            bg=Colors.SUCCESS_LIGHT,
+            fg=Colors.TEXT_PRIMARY,
             justify=tk.LEFT
         )
         self.compliance_warnings_label.pack(anchor=tk.W)
         
-        # Photo thumbnails
+        # Photo thumbnails section
         photos_frame = tk.Frame(content, bg=Colors.BACKGROUND)
-        photos_frame.pack(pady=20)
+        photos_frame.pack(pady=15)
         
         tk.Label(
             photos_frame,
-            text="Captured Images:",
-            font=("SF Pro Text", 14),
+            text="Scanned Images:",
+            font=("SF Pro Text", 12),
             bg=Colors.BACKGROUND,
             fg=Colors.TEXT_SECONDARY
         ).pack()
         
         self.compliance_photos_frame = tk.Frame(photos_frame, bg=Colors.BACKGROUND)
-        self.compliance_photos_frame.pack(pady=10)
+        self.compliance_photos_frame.pack(pady=8)
         
         self.compliance_front_thumb = tk.Label(
             self.compliance_photos_frame,
             text="Front",
-            font=("SF Pro Text", 12),
+            font=("SF Pro Text", 10),
             bg=Colors.SURFACE,
-            width=20,
-            height=8
+            width=18,
+            height=6
         )
-        self.compliance_front_thumb.pack(side=tk.LEFT, padx=10)
+        self.compliance_front_thumb.pack(side=tk.LEFT, padx=8)
         
         self.compliance_back_thumb = tk.Label(
             self.compliance_photos_frame,
             text="Back",
-            font=("SF Pro Text", 12),
+            font=("SF Pro Text", 10),
             bg=Colors.SURFACE,
-            width=20,
-            height=8
+            width=18,
+            height=6
         )
-        self.compliance_back_thumb.pack(side=tk.LEFT, padx=10)
+        self.compliance_back_thumb.pack(side=tk.LEFT, padx=8)
         
         # Footer with timer
-        self.compliance_footer = tk.Frame(self.compliance_frame, bg=Colors.PRIMARY, height=100)
+        self.compliance_footer = tk.Frame(self.compliance_frame, bg=Colors.PRIMARY, height=80)
         self.compliance_footer.pack(fill=tk.X, side=tk.BOTTOM)
         self.compliance_footer.pack_propagate(False)
         
         self.compliance_timer_label = tk.Label(
             self.compliance_footer,
             text="Returning to scanner in 30s",
-            font=("SF Pro Text", 20),
+            font=("SF Pro Text", 18),
             bg=Colors.PRIMARY,
             fg=Colors.TEXT_WHITE
         )
@@ -1971,10 +2147,10 @@ class KioskApp:
         tk.Label(
             self.compliance_footer,
             text="Touch and hold to pause",
-            font=("SF Pro Text", 12),
+            font=("SF Pro Text", 11),
             bg=Colors.PRIMARY,
             fg="#CCCCCC"
-        ).pack(pady=(5, 10))
+        ).pack(pady=(3, 10))
         
         # Bind touch-to-pause
         self.compliance_frame.bind('<Button-1>', self._pause_timer)
@@ -2121,10 +2297,10 @@ class KioskApp:
         
         tk.Label(
             cfpr_frame,
-            text="e.g., FR-12345 or IM-67890",
-            font=("SF Pro Text", 9),
+            text="📝 Examples: FR-12345, IM-67890, CFPR-2024-001",
+            font=("SF Pro Text", 10),
             bg=Colors.SURFACE,
-            fg=Colors.TEXT_SECONDARY
+            fg=Colors.PRIMARY
         ).pack(anchor=tk.W)
         
         # LTO/BAI Number input (right side)
@@ -2157,10 +2333,10 @@ class KioskApp:
         
         tk.Label(
             lto_frame,
-            text="e.g., LTO-2024-001 or DR-5678",
-            font=("SF Pro Text", 9),
+            text="📝 Examples: LTO-2024-001, DR-5678, BAI-12345",
+            font=("SF Pro Text", 10),
             bg=Colors.SURFACE,
-            fg=Colors.TEXT_SECONDARY
+            fg=Colors.PRIMARY
         ).pack(anchor=tk.W)
         
         # Active field indicator
@@ -2178,13 +2354,24 @@ class KioskApp:
         self.manual_search_keyboard.create_keyboard(center)
         
         # Note at bottom
+        note_frame = tk.Frame(center, bg=Colors.BACKGROUND)
+        note_frame.pack(pady=(10, 5))
+        
         tk.Label(
-            center,
-            text="💡 Enter at least one registration number to search",
-            font=("SF Pro Text", 10),
+            note_frame,
+            text="💡 Enter registration codes WITH hyphens (e.g., FR-12345)",
+            font=("SF Pro Text", 11, "bold"),
             bg=Colors.BACKGROUND,
             fg=Colors.WARNING
-        ).pack(pady=(10, 5))
+        ).pack()
+        
+        tk.Label(
+            note_frame,
+            text="Use [123] button to type numbers, [ABC] for letters",
+            font=("SF Pro Text", 10),
+            bg=Colors.BACKGROUND,
+            fg=Colors.TEXT_SECONDARY
+        ).pack()
     
     def _set_keyboard_target(self, entry_widget):
         """Set the target entry for the on-screen keyboard"""
@@ -4263,144 +4450,293 @@ class KioskApp:
     
     def _enhanced_ocr_extraction(self, frame, label: str = "") -> str:
         """
-        Enhanced OCR extraction with multiple preprocessing techniques and passes
-        Combines results from different methods for maximum accuracy
+        Enhanced OCR extraction optimized for LOW-QUALITY CAMERAS
+        - Aggressive noise reduction to prevent random characters
+        - Multiple preprocessing techniques
+        - Smart validation to filter garbage text
+        - Focused extraction of registration codes
         """
         results = []
+        extracted_codes = []
         
         # Convert to grayscale
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         
-        # Resize image for better OCR (2x upscale helps with small text)
+        # Get image dimensions
         height, width = gray.shape
+        
+        # STEP 1: AGGRESSIVE NOISE REDUCTION for low-quality cameras
+        print(f"   Step 1: Noise reduction...")
+        
+        # Bilateral filter - preserves edges while removing noise
+        denoised = cv2.bilateralFilter(gray, 9, 75, 75)
+        
+        # Median blur - removes salt-and-pepper noise
+        denoised = cv2.medianBlur(denoised, 3)
+        
+        # STEP 2: UPSCALE for better OCR (helps with small/blurry text)
         scale = 2
-        gray_upscaled = cv2.resize(gray, (width * scale, height * scale), interpolation=cv2.INTER_CUBIC)
+        upscaled = cv2.resize(denoised, (width * scale, height * scale), interpolation=cv2.INTER_CUBIC)
         
-        # TECHNIQUE 1: Adaptive Thresholding (best for varying lighting)
+        # STEP 3: CONTRAST ENHANCEMENT
+        print(f"   Step 2: Contrast enhancement...")
+        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+        enhanced = clahe.apply(upscaled)
+        
+        # STEP 4: Multiple OCR passes with different techniques
+        
+        # TECHNIQUE 1: Adaptive threshold (best for varying lighting)
         print(f"   Pass 1: Adaptive Threshold...")
-        adaptive_thresh = cv2.adaptiveThreshold(
-            gray_upscaled, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
+        adaptive = cv2.adaptiveThreshold(
+            enhanced, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 15, 4
         )
-        text1 = pytesseract.image_to_string(
-            Image.fromarray(adaptive_thresh),
-            config='--psm 6 --oem 3'  # PSM 6: Uniform block of text
-        )
-        results.append(text1)
-        print(f"   Pass 1 extracted {len(text1)} chars")
+        # Additional morphological cleanup
+        kernel_small = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
+        adaptive = cv2.morphologyEx(adaptive, cv2.MORPH_CLOSE, kernel_small)
         
-        # TECHNIQUE 2: Otsu's Thresholding (best for bimodal images)
-        print(f"   Pass 2: Otsu's Threshold...")
-        _, otsu_thresh = cv2.threshold(gray_upscaled, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        text2 = pytesseract.image_to_string(
-            Image.fromarray(otsu_thresh),
+        text1 = pytesseract.image_to_string(
+            Image.fromarray(adaptive),
             config='--psm 6 --oem 3'
         )
-        results.append(text2)
-        print(f"   Pass 2 extracted {len(text2)} chars")
+        results.append(self._clean_ocr_text(text1))
+        print(f"   Pass 1: {len(text1)} chars -> cleaned to {len(results[-1])} chars")
         
-        # TECHNIQUE 3: Morphological operations (removes noise)
-        print(f"   Pass 3: Morphological Enhancement...")
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
-        morph = cv2.morphologyEx(gray_upscaled, cv2.MORPH_CLOSE, kernel)
+        # TECHNIQUE 2: Otsu's threshold
+        print(f"   Pass 2: Otsu's Threshold...")
+        _, otsu = cv2.threshold(enhanced, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        text2 = pytesseract.image_to_string(
+            Image.fromarray(otsu),
+            config='--psm 6 --oem 3'
+        )
+        results.append(self._clean_ocr_text(text2))
+        print(f"   Pass 2: {len(text2)} chars -> cleaned to {len(results[-1])} chars")
+        
+        # TECHNIQUE 3: Morphological enhancement (removes small noise)
+        print(f"   Pass 3: Morphological cleanup...")
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+        morph = cv2.morphologyEx(enhanced, cv2.MORPH_CLOSE, kernel)
         morph = cv2.morphologyEx(morph, cv2.MORPH_OPEN, kernel)
         _, morph_thresh = cv2.threshold(morph, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         text3 = pytesseract.image_to_string(
             Image.fromarray(morph_thresh),
             config='--psm 6 --oem 3'
         )
-        results.append(text3)
-        print(f"   Pass 3 extracted {len(text3)} chars")
+        results.append(self._clean_ocr_text(text3))
+        print(f"   Pass 3: {len(text3)} chars -> cleaned to {len(results[-1])} chars")
         
-        # TECHNIQUE 4: Contrast enhancement with CLAHE
-        print(f"   Pass 4: CLAHE Enhancement...")
-        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-        enhanced = clahe.apply(gray_upscaled)
-        _, enhanced_thresh = cv2.threshold(enhanced, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        # TECHNIQUE 4: Whitelist mode - ONLY alphanumeric for registration codes
+        print(f"   Pass 4: Alphanumeric whitelist (for codes)...")
         text4 = pytesseract.image_to_string(
-            Image.fromarray(enhanced_thresh),
-            config='--psm 6 --oem 3'
-        )
-        results.append(text4)
-        print(f"   Pass 4 extracted {len(text4)} chars")
-        
-        # TECHNIQUE 5: Different PSM mode - sparse text
-        print(f"   Pass 5: Sparse Text Mode...")
-        text5 = pytesseract.image_to_string(
-            Image.fromarray(adaptive_thresh),
-            config='--psm 11 --oem 3'  # PSM 11: Sparse text, find as much as possible
-        )
-        results.append(text5)
-        print(f"   Pass 5 extracted {len(text5)} chars")
-        
-        # TECHNIQUE 6: Sharpening filter
-        print(f"   Pass 6: Sharpened Image...")
-        kernel_sharpen = np.array([[-1,-1,-1],
-                                   [-1, 9,-1],
-                                   [-1,-1,-1]])
-        sharpened = cv2.filter2D(gray_upscaled, -1, kernel_sharpen)
-        _, sharp_thresh = cv2.threshold(sharpened, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        text6 = pytesseract.image_to_string(
-            Image.fromarray(sharp_thresh),
-            config='--psm 6 --oem 3'
-        )
-        results.append(text6)
-        print(f"   Pass 6 extracted {len(text6)} chars")
-        
-        # TECHNIQUE 7: Alphanumeric whitelist mode for registration codes
-        print(f"   Pass 7: Alphanumeric Whitelist for Codes...")
-        # This mode restricts to alphanumeric and hyphen - best for codes like FR-12345
-        text7 = pytesseract.image_to_string(
-            Image.fromarray(otsu_thresh),
+            Image.fromarray(otsu),
             config='--psm 6 --oem 3 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-'
         )
-        results.append(text7)
-        print(f"   Pass 7 extracted {len(text7)} chars")
+        results.append(text4.strip())
+        print(f"   Pass 4: {len(text4)} chars (alphanumeric only)")
         
-        # COMBINE ALL RESULTS
-        # Strategy: Use the longest result as base, then merge unique words from others
-        print(f"\n   Combining {len(results)} OCR passes...")
+        # TECHNIQUE 5: Sparse text detection (for scattered text on labels)
+        print(f"   Pass 5: Sparse text mode...")
+        text5 = pytesseract.image_to_string(
+            Image.fromarray(adaptive),
+            config='--psm 11 --oem 3'
+        )
+        results.append(self._clean_ocr_text(text5))
+        print(f"   Pass 5: {len(text5)} chars -> cleaned to {len(results[-1])} chars")
         
-        # Find the longest result (likely most comprehensive)
-        longest = max(results, key=len) if results else ""
+        # TECHNIQUE 6: Deskew and try again (for tilted images)
+        print(f"   Pass 6: With deskew correction...")
+        try:
+            coords = np.column_stack(np.where(otsu > 0))
+            if len(coords) > 100:
+                angle = cv2.minAreaRect(coords)[-1]
+                if angle < -45:
+                    angle = -(90 + angle)
+                else:
+                    angle = -angle
+                if abs(angle) > 0.5 and abs(angle) < 15:  # Only deskew if angle is reasonable
+                    (h, w) = otsu.shape
+                    center = (w // 2, h // 2)
+                    M = cv2.getRotationMatrix2D(center, angle, 1.0)
+                    deskewed = cv2.warpAffine(otsu, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+                    text6 = pytesseract.image_to_string(
+                        Image.fromarray(deskewed),
+                        config='--psm 6 --oem 3'
+                    )
+                    results.append(self._clean_ocr_text(text6))
+                    print(f"   Pass 6: Deskewed {angle:.1f}° - {len(text6)} chars")
+        except Exception as e:
+            print(f"   Pass 6: Deskew skipped - {e}")
         
-        # Extract all unique words from all passes
-        all_words = set()
+        # STEP 5: EXTRACT REGISTRATION CODES from all results
+        print(f"\n   Extracting registration codes...")
+        
+        # Patterns for Philippine product registration codes
+        code_patterns = [
+            # CFPR patterns: FR-XXXX, IM-XXXX, CFPR-XXXX
+            r'(?:FR|IM|CFPR)[-\s]?[A-Z0-9]{2,}[-\s]?[A-Z0-9]*',
+            # LTO patterns: LTO-XXXX, DR-XXXX  
+            r'(?:LTO|DR)[-\s]?[A-Z0-9]{2,}[-\s]?[A-Z0-9]*',
+            # Generic code pattern: 2-4 letters followed by hyphen and numbers
+            r'[A-Z]{2,4}[-][0-9]{2,}(?:[-][A-Z0-9]+)?',
+            # BAI pattern
+            r'BAI[-\s]?[A-Z0-9]{2,}',
+        ]
+        
+        for text in results:
+            text_upper = text.upper()
+            for pattern in code_patterns:
+                matches = re.findall(pattern, text_upper, re.IGNORECASE)
+                for match in matches:
+                    # Normalize: remove spaces, ensure uppercase
+                    code = re.sub(r'\s+', '', match.upper())
+                    # Validate: must have at least one letter and one digit
+                    if (len(code) >= 4 and 
+                        any(c.isalpha() for c in code) and 
+                        any(c.isdigit() for c in code)):
+                        extracted_codes.append(code)
+        
+        # Deduplicate and sort codes
+        unique_codes = list(set(extracted_codes))
+        print(f"   ✅ Found {len(unique_codes)} potential codes: {unique_codes}")
+        
+        # STEP 6: BUILD FINAL TEXT with validation
+        print(f"\n   Building final validated text...")
+        
+        # Collect all valid words from all passes
+        valid_words = set()
         for text in results:
             words = text.split()
-            all_words.update(words)
+            for word in words:
+                # Only keep words that pass validation
+                if self._is_valid_word(word):
+                    valid_words.add(word.upper())
         
-        # POST-PROCESS: Extract potential registration codes
-        # Look for patterns that could be CFPR or LTO numbers
-        potential_codes = []
-        code_pattern = re.compile(r'[A-Za-z]{1,4}[-\s]?[0-9]{2,}[-\s]?[A-Za-z0-9]*', re.IGNORECASE)
-        
+        # Find the longest clean result
+        longest_clean = ""
         for text in results:
-            # Clean up the text first
-            cleaned = text.replace('\n', ' ').replace('\r', ' ')
-            matches = code_pattern.findall(cleaned)
-            for match in matches:
-                # Normalize the code
-                code = match.upper().strip()
-                # Only keep codes that look like registration numbers
-                if len(code) >= 4 and any(c.isdigit() for c in code):
-                    potential_codes.append(code)
+            cleaned = self._clean_ocr_text(text)
+            if len(cleaned) > len(longest_clean):
+                longest_clean = cleaned
         
-        # Deduplicate potential codes
-        unique_codes = list(set(potential_codes))
+        # Build combined text
+        combined_parts = []
         
-        # Build the final combined text
-        # Include: longest result + unique words + extracted codes
-        combined = longest + "\n\n" + " ".join(sorted(all_words))
+        # Add longest result first
+        if longest_clean:
+            combined_parts.append(longest_clean)
         
-        # Add extracted codes at the end for the fuzzy search to find
+        # Add unique valid words
+        if valid_words:
+            combined_parts.append("\n" + " ".join(sorted(valid_words)))
+        
+        # Add extracted codes prominently
         if unique_codes:
-            combined += "\n\n" + "Extracted Registration Codes:\n" + "\n".join(unique_codes)
-            print(f"   ✅ Extracted potential codes: {unique_codes}")
+            combined_parts.append("\n\nRegistration Codes Found:")
+            for code in unique_codes:
+                combined_parts.append(code)
         
-        print(f"   ✅ Final combined text: {len(combined)} chars")
-        print(f"   ✅ Unique words found: {len(all_words)}")
+        combined = "\n".join(combined_parts)
+        
+        print(f"   ✅ Final text: {len(combined)} chars, {len(valid_words)} valid words, {len(unique_codes)} codes")
         
         return combined
+    
+    def _clean_ocr_text(self, text: str) -> str:
+        """
+        Clean OCR text by removing garbage characters from low-quality scans
+        """
+        if not text:
+            return ""
+        
+        lines = []
+        for line in text.split('\n'):
+            # Skip lines that are mostly garbage
+            line = line.strip()
+            if not line:
+                continue
+            
+            # Count valid vs invalid characters
+            valid_chars = sum(1 for c in line if c.isalnum() or c in '-./() ')
+            total_chars = len(line)
+            
+            # Skip lines with too many invalid characters (noise)
+            if total_chars > 0 and valid_chars / total_chars < 0.7:
+                continue
+            
+            # Skip very short lines (likely noise)
+            if len(line) < 2:
+                continue
+            
+            # Skip lines that are just repeated characters (artifact)
+            if len(set(line.replace(' ', ''))) < 2:
+                continue
+            
+            # Clean up the line
+            cleaned = re.sub(r'[^\w\s\-./()]', '', line)  # Remove special chars except common ones
+            cleaned = re.sub(r'\s+', ' ', cleaned)  # Normalize whitespace
+            
+            if cleaned.strip():
+                lines.append(cleaned.strip())
+        
+        return '\n'.join(lines)
+    
+    def _is_valid_word(self, word: str) -> bool:
+        """
+        Check if a word is valid (not OCR garbage from low-quality camera)
+        """
+        if not word:
+            return False
+        
+        word = word.strip()
+        
+        # Too short - likely noise
+        if len(word) < 2:
+            return False
+        
+        # Too long single "word" - likely garbage
+        if len(word) > 30:
+            return False
+        
+        # Must have at least some alphanumeric characters
+        alnum_count = sum(1 for c in word if c.isalnum())
+        if alnum_count < len(word) * 0.5:
+            return False
+        
+        # Reject if mostly repeated characters (artifact like "llllll" or ".......")
+        unique_chars = set(word.lower())
+        if len(unique_chars) < min(3, len(word) * 0.3):
+            return False
+        
+        # Reject random character sequences that don't look like words or codes
+        # Valid: "FR-12345", "Product", "LTO2024"
+        # Invalid: "xyzqwj", "|||", "```"
+        
+        # Check for reasonable character distribution
+        letters = sum(1 for c in word if c.isalpha())
+        digits = sum(1 for c in word if c.isdigit())
+        
+        # Pure symbols - reject
+        if letters == 0 and digits == 0:
+            return False
+        
+        # If it looks like a code (letters + digits), keep it
+        if letters > 0 and digits > 0:
+            return True
+        
+        # If it's pure letters, check if it could be a word (at least 2 chars, not random)
+        if letters > 0 and digits == 0:
+            # Check for vowels - real words usually have them
+            vowels = sum(1 for c in word.lower() if c in 'aeiou')
+            # Allow words with vowels OR short words (could be abbreviations like "FR", "LTO")
+            if vowels > 0 or len(word) <= 4:
+                return True
+            # Reject long strings with no vowels (likely garbage)
+            return False
+        
+        # Pure digits - could be a number, keep if reasonable length
+        if digits > 0 and letters == 0:
+            return len(word) <= 15  # Reject very long number strings
+        
+        return True
     
     def _process_ocr_scan(self):
         """Process OCR scan - extract text and send to API with enhanced OCR processing"""
@@ -4467,12 +4803,11 @@ class KioskApp:
             ))
     
     def _display_compliance_result(self, response: dict):
-        """Display compliance scan result"""
-        is_compliant = response.get("isCompliant", False)
+        """Display product search result - shows product information nicely"""
         found = response.get("found", False)
         
-        # Update GPIO LED based on compliance status
-        if found and is_compliant:
+        # Update GPIO LED based on result
+        if found:
             self.gpio_led.show_success()
         else:
             self.gpio_led.show_error()
@@ -4484,88 +4819,100 @@ class KioskApp:
                 bg=Colors.ERROR,
                 text="PRODUCT NOT FOUND"
             )
-        elif is_compliant:
+        else:
             self.compliance_header.config(bg=Colors.SUCCESS)
             self.compliance_status_label.config(
                 bg=Colors.SUCCESS,
-                text="PRODUCT COMPLIANT"
-            )
-        else:
-            self.compliance_header.config(bg=Colors.WARNING)
-            self.compliance_status_label.config(
-                bg=Colors.WARNING,
-                text="PACKAGING VIOLATIONS"
+                text="✓ PRODUCT FOUND"
             )
         
-        # Product info
+        # Product info - PROMINENT DISPLAY
         product_info = response.get("productInfo", {})
-        self.compliance_product_name.config(
-            text=product_info.get("productName", "Unknown Product")
-        )
-        self.compliance_brand.config(
-            text=f"{product_info.get('brandName', '')} / {product_info.get('manufacturer', '')}"
-        )
+        product_name = product_info.get("productName", "Unknown Product")
+        brand_name = product_info.get("brandName", "")
+        manufacturer = product_info.get("manufacturer", "")
         
-        # Compliance checklist
+        self.compliance_product_name.config(text=product_name)
+        
+        # Build brand/manufacturer string
+        brand_mfr = ""
+        if brand_name and manufacturer:
+            brand_mfr = f"by {brand_name} • {manufacturer}"
+        elif brand_name:
+            brand_mfr = f"by {brand_name}"
+        elif manufacturer:
+            brand_mfr = f"by {manufacturer}"
+        self.compliance_brand.config(text=brand_mfr)
+        
+        # Registration numbers - CLEAR INFO
         compliance = response.get("packagingCompliance", {})
         
+        # CFPR Number
         cfpr = compliance.get("cfpr", {})
-        cfpr_status = cfpr.get("status", "N/A")
-        cfpr_icon = "✓" if cfpr_status == "COMPLIANT" else ("✗" if cfpr_status == "VIOLATION" else "?")
-        cfpr_color = Colors.SUCCESS if cfpr_status == "COMPLIANT" else (Colors.ERROR if cfpr_status == "VIOLATION" else Colors.TEXT_SECONDARY)
-        self.cfpr_check_label.config(
-            text=f"{cfpr_icon} CFPR: {cfpr.get('required', 'N/A')} - {cfpr_status}",
-            fg=cfpr_color
-        )
-        
-        lto = compliance.get("lto", {})
-        lto_status = lto.get("status", "N/A")
-        lto_icon = "✓" if lto_status == "COMPLIANT" else ("✗" if lto_status == "VIOLATION" else "?")
-        lto_color = Colors.SUCCESS if lto_status == "COMPLIANT" else (Colors.ERROR if lto_status == "VIOLATION" else Colors.TEXT_SECONDARY)
-        self.lto_check_label.config(
-            text=f"{lto_icon} LTO: {lto.get('required', 'N/A')} - {lto_status}",
-            fg=lto_color
-        )
-        
-        # Warnings/Violations
-        violations = response.get("violations", [])
-        warnings = response.get("warnings", [])
-        
-        if violations or warnings:
-            all_warnings = violations + warnings
-            self.compliance_warnings_label.config(
-                text="\n".join(f"• {w}" for w in all_warnings[:5])
+        cfpr_value = cfpr.get("required", None)
+        if cfpr_value:
+            self.cfpr_check_label.config(
+                text=cfpr_value,
+                fg=Colors.PRIMARY
             )
-            self.compliance_warnings_frame.pack(fill=tk.X, padx=20, pady=10)
         else:
-            self.compliance_warnings_frame.pack_forget()
+            self.cfpr_check_label.config(
+                text="Not registered",
+                fg=Colors.TEXT_SECONDARY
+            )
         
-        # Show thumbnails of captured images
+        # LTO Number
+        lto = compliance.get("lto", {})
+        lto_value = lto.get("required", None)
+        if lto_value:
+            self.lto_check_label.config(
+                text=lto_value,
+                fg=Colors.PRIMARY
+            )
+        else:
+            self.lto_check_label.config(
+                text="Not registered",
+                fg=Colors.TEXT_SECONDARY
+            )
+        
+        # Show status row with registered status
+        if found:
+            self.compliance_status_row.pack(fill=tk.X, pady=5)
+            self.compliance_status_info.config(
+                text="✓ Registered Product",
+                fg=Colors.SUCCESS
+            )
+        else:
+            self.compliance_status_row.pack_forget()
+        
+        # Additional information (show as helpful notes, not warnings)
+        # Don't show warnings/violations - just positive info
+        self.compliance_warnings_frame.pack_forget()
+        
+        # Show thumbnails of captured images (if from OCR scan)
         if self.ocr_front_frame is not None:
-            thumb = self._create_thumbnail(self.ocr_front_frame, 200, 150)
+            thumb = self._create_thumbnail(self.ocr_front_frame, 180, 120)
             self.compliance_front_thumb.config(image=thumb, text="")
             self.compliance_front_thumb.image = thumb
         else:
-            self.compliance_front_thumb.config(text="No front image", image="")
+            self.compliance_front_thumb.config(text="Front", image="")
         
         if self.ocr_back_frame is not None:
-            thumb = self._create_thumbnail(self.ocr_back_frame, 200, 150)
+            thumb = self._create_thumbnail(self.ocr_back_frame, 180, 120)
             self.compliance_back_thumb.config(image=thumb, text="")
             self.compliance_back_thumb.image = thumb
         else:
-            self.compliance_back_thumb.config(text="No back image", image="")
+            self.compliance_back_thumb.config(text="Back", image="")
         
-        # Show compliance screen and start timer
+        # Show screen and start timer
         self._show_compliance_screen()
         self.start_display_timer(self.RESULT_DISPLAY_DURATION, is_error=False)
         
-        # TTS
+        # TTS - positive messaging
         if not found:
-            self.tts.speak("Product not found in database.")
-        elif is_compliant:
-            self.tts.speak("Product is compliant. All required information found on packaging.")
+            self.tts.speak("Product not found in database. Please try again or check the label.")
         else:
-            self.tts.speak("Warning. Packaging has violations. Please check the details.")
+            self.tts.speak(f"Product found. {product_name}. This is a registered product.")
     
     def _fetch_and_display_pdf_pages(self, pdf_url: str):
         """Fetch PDF and display 2 pages side by side"""
