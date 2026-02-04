@@ -9,7 +9,6 @@ Integrated with RCV API for real-time verification
 import cv2
 import numpy as np
 from pyzbar import pyzbar
-import pytesseract
 from datetime import datetime
 import tkinter as tk
 from tkinter import font as tkfont
@@ -27,6 +26,47 @@ from typing import Optional, Dict, Any, List
 import base64
 from urllib.parse import urljoin
 import math
+
+# ============================================================================
+# OCR Engine Setup - EasyOCR (preferred) or Tesseract (fallback)
+# ============================================================================
+EASYOCR_AVAILABLE = False
+TESSERACT_AVAILABLE = False
+easyocr_reader = None
+
+# Try EasyOCR first (pure Python, no external install needed)
+try:
+    import easyocr
+    EASYOCR_AVAILABLE = True
+    print("EasyOCR available - will initialize on first use")
+except ImportError:
+    print("EasyOCR not available. Install with: pip install easyocr")
+
+# Try Tesseract as fallback
+try:
+    import pytesseract
+    # Configure Tesseract path for Windows
+    if platform.system() == 'Windows':
+        possible_paths = [
+            r'C:\Program Files\Tesseract-OCR\tesseract.exe',
+            r'C:\Program Files (x86)\Tesseract-OCR\tesseract.exe',
+        ]
+        for path in possible_paths:
+            if os.path.exists(path):
+                pytesseract.pytesseract.tesseract_cmd = path
+                TESSERACT_AVAILABLE = True
+                print(f"Tesseract found at: {path}")
+                break
+        if not TESSERACT_AVAILABLE:
+            print("Tesseract not found in standard paths")
+    else:
+        TESSERACT_AVAILABLE = True
+        print("Tesseract available (Linux/Mac)")
+except ImportError:
+    print("pytesseract not available. Install with: pip install pytesseract")
+
+if not EASYOCR_AVAILABLE and not TESSERACT_AVAILABLE:
+    print("NO OCR ENGINE AVAILABLE! Install easyocr: pip install easyocr")
 
 # GPIO for Raspberry Pi LED control
 GPIO_AVAILABLE = False
@@ -74,17 +114,6 @@ if not TTS_AVAILABLE:
         TTS_ENGINE = "gtts"
     except ImportError:
         print("TTS not available. Install edge-tts for best Filipino voice: pip install edge-tts")
-
-# Configure Tesseract path for Windows
-if platform.system() == 'Windows':
-    possible_paths = [
-        r'C:\Program Files\Tesseract-OCR\tesseract.exe',
-        r'C:\Program Files (x86)\Tesseract-OCR\tesseract.exe',
-    ]
-    for path in possible_paths:
-        if os.path.exists(path):
-            pytesseract.pytesseract.tesseract_cmd = path
-            break
 
 # ============================================================================
 # Design Constants (matching Flutter main.dart theme)
@@ -298,7 +327,7 @@ class RCVApiService:
         if back_image_url:
             data['backImageUrl'] = back_image_url
         
-        print(f"🔍 OCR API Payload Details:")
+        print(f"OCR API Payload Details:")
         print(f"   - blockOfText: {len(ocr_text)} characters")
         print(f"   - frontImageUrl: {front_image_url if front_image_url else 'Not provided'}")
         print(f"   - backImageUrl: {back_image_url if back_image_url else 'Not provided'}")
@@ -531,17 +560,17 @@ class GPIOLEDService:
                 
                 # Turn all LEDs off initially
                 self.all_off()
-                print("✅ GPIO LEDs initialized (Pins: 17, 27, 22)")
+                print("GPIO LEDs initialized (Pins: 17, 27, 22)")
                 
                 # Test: Blink all LEDs 3 times on startup
                 self._startup_test()
             except Exception as e:
-                print(f"⚠️ GPIO initialization failed: {e}")
+                print(f"GPIO initialization failed: {e}")
                 self.enabled = False
     
     def _startup_test(self):
         """Test GPIO by blinking all LEDs 3 times on startup"""
-        print("🔄 Testing GPIO LEDs (3 blinks)...")
+        print("Testing GPIO LEDs (3 blinks)...")
         try:
             for i in range(3):
                 # Turn all LEDs on
@@ -556,9 +585,9 @@ class GPIOLEDService:
                 GPIO.output(LEDPins.PIN_ERROR, GPIO.LOW)
                 time.sleep(0.3)
             
-            print("✅ GPIO LED test complete - 3 blinks successful")
+            print("GPIO LED test complete - 3 blinks successful")
         except Exception as e:
-            print(f"⚠️ GPIO test failed: {e}")
+            print(f"GPIO test failed: {e}")
     
     def all_off(self):
         """Turn off all LEDs"""
@@ -591,7 +620,7 @@ class GPIOLEDService:
         self.blink_stop_event.clear()
         self.blink_thread = threading.Thread(target=self._blink_processing, daemon=True)
         self.blink_thread.start()
-        print("🔄 Processing LED blinking (GPIO 17)")
+        print("Processing LED blinking (GPIO 17)")
     
     def _blink_processing(self):
         """Blink the processing LED at 2Hz (500ms on/off)"""
@@ -637,7 +666,7 @@ class GPIOLEDService:
             GPIO.output(LEDPins.PIN_PROCESSING, GPIO.LOW)
             GPIO.output(LEDPins.PIN_SUCCESS, GPIO.HIGH)
             GPIO.output(LEDPins.PIN_ERROR, GPIO.LOW)
-            print("✅ Success LED ON (GPIO 27)")
+            print("Success LED ON (GPIO 27)")
         except Exception as e:
             print(f"GPIO error (success): {e}")
     
@@ -651,7 +680,7 @@ class GPIOLEDService:
             GPIO.output(LEDPins.PIN_PROCESSING, GPIO.LOW)
             GPIO.output(LEDPins.PIN_SUCCESS, GPIO.LOW)
             GPIO.output(LEDPins.PIN_ERROR, GPIO.HIGH)
-            print("❌ Error LED ON (GPIO 22)")
+            print("Error LED ON (GPIO 22)")
         except Exception as e:
             print(f"GPIO error (error): {e}")
     
@@ -662,7 +691,7 @@ class GPIOLEDService:
         
         self.stop_blinking()
         self.all_off()
-        print("💤 All LEDs OFF (idle)")
+        print("All LEDs OFF (idle)")
     
     def cleanup(self):
         """Cleanup GPIO on exit"""
@@ -673,7 +702,7 @@ class GPIOLEDService:
         self.all_off()
         try:
             GPIO.cleanup()
-            print("🧹 GPIO cleanup complete")
+            print("GPIO cleanup complete")
         except:
             pass
 
@@ -735,7 +764,7 @@ class OnScreenKeyboard:
         # Instructions label
         self.instruction_label = tk.Label(
             self.frame,
-            text="⌨️ ABC Mode: Type letters (A-Z) and hyphen (-)",
+            text="ABC Mode: Type letters (A-Z) and hyphen (-)",
             font=("SF Pro Text", 11, "bold"),
             bg=self.bg_color,
             fg=Colors.PRIMARY
@@ -764,12 +793,12 @@ class OnScreenKeyboard:
         # Update instruction
         if self.current_mode == 'ABC':
             self.instruction_label.config(
-                text="⌨️ ABC Mode: Letters and hyphen  |  Tap [123] for numbers",
+                text="ABC Mode: Letters and hyphen  |  Tap [123] for numbers",
                 fg=Colors.PRIMARY
             )
         else:
             self.instruction_label.config(
-                text="⌨️ 123 Mode: Numbers 0-9 and symbols  |  Tap [ABC] for letters",
+                text="123 Mode: Numbers 0-9 and symbols  |  Tap [ABC] for letters",
                 fg=Colors.WARNING
             )
         
@@ -964,10 +993,10 @@ class KioskApp:
         self.timer_paused = False
         self.remaining_time = 0
         
-        # Processing timeout (60 seconds)
+        # Processing timeout (300 seconds for OCR - EasyOCR can be slow)
         self.processing_start_time = 0
         self.processing_timeout_id = None
-        self.PROCESSING_TIMEOUT = 60  # 60 seconds
+        self.PROCESSING_TIMEOUT = 300  # 300 seconds (5 min) for OCR processing
         
         # OCR Capture state (2-photo flow)
         self.ocr_step = OCRCaptureStep.READY_FRONT
@@ -977,6 +1006,10 @@ class KioskApp:
         self.ocr_back_frame = None   # Raw OpenCV frame
         self.current_frame = None    # Current camera frame for capture
         self.ocr_preview_photos = []  # Keep references to preview photos
+        
+        # Current product/certificate data for OCR results
+        self.current_ocr_product = None  # Store OCR-identified product info
+        self.current_ocr_certificate_id = None  # Certificate/CFPR ID for PDF viewing
         
         # Services
         self.tts = TTSService()
@@ -1646,7 +1679,7 @@ class KioskApp:
         
         tk.Label(
             preview_section,
-            text="👇 Captured Images - Click to review",
+            text="Captured Images - Click to review",
             font=("SF Pro Text", 10, "bold"),
             bg=Colors.BACKGROUND,
             fg=Colors.TEXT_SECONDARY
@@ -1941,16 +1974,16 @@ class KioskApp:
         self.error_timer_label.pack(expand=True)
     
     def _setup_compliance_screen(self):
-        """Setup the product search results screen - shows product information"""
+        """Setup the product search results screen - shows product and certificate information"""
         # Header - dynamic based on search result
-        self.compliance_header = tk.Frame(self.compliance_frame, bg=Colors.SUCCESS, height=100)
+        self.compliance_header = tk.Frame(self.compliance_frame, bg=Colors.SUCCESS, height=90)
         self.compliance_header.pack(fill=tk.X)
         self.compliance_header.pack_propagate(False)
         
         self.compliance_status_label = tk.Label(
             self.compliance_header,
             text="PRODUCT FOUND",
-            font=("SF Pro Display", 32, "bold"),
+            font=("SF Pro Display", 28, "bold"),
             bg=Colors.SUCCESS,
             fg=Colors.TEXT_WHITE
         )
@@ -1961,8 +1994,8 @@ class KioskApp:
         content.pack(fill=tk.BOTH, expand=True)
         
         # Product info section - PROMINENT
-        self.compliance_product_frame = tk.Frame(content, bg=Colors.SURFACE, padx=25, pady=20)
-        self.compliance_product_frame.pack(fill=tk.X, padx=20, pady=15)
+        self.compliance_product_frame = tk.Frame(content, bg=Colors.SURFACE, padx=20, pady=15)
+        self.compliance_product_frame.pack(fill=tk.X, padx=15, pady=10)
         
         # Product icon/badge
         product_header = tk.Frame(self.compliance_product_frame, bg=Colors.SURFACE)
@@ -1970,11 +2003,11 @@ class KioskApp:
         
         tk.Label(
             product_header,
-            text="📦",
-            font=("SF Pro Display", 32),
+            text="",
+            font=("SF Pro Display", 28),
             bg=Colors.SURFACE,
             fg=Colors.PRIMARY
-        ).pack(side=tk.LEFT, padx=(0, 15))
+        ).pack(side=tk.LEFT, padx=(0, 12))
         
         product_info_frame = tk.Frame(product_header, bg=Colors.SURFACE)
         product_info_frame.pack(side=tk.LEFT, fill=tk.X, expand=True)
@@ -1982,153 +2015,292 @@ class KioskApp:
         self.compliance_product_name = tk.Label(
             product_info_frame,
             text="Product Name",
-            font=("SF Pro Display", 24, "bold"),
+            font=("SF Pro Display", 20, "bold"),
             bg=Colors.SURFACE,
             fg=Colors.TEXT_PRIMARY,
-            anchor=tk.W
+            anchor=tk.W,
+            wraplength=500
         )
         self.compliance_product_name.pack(anchor=tk.W)
         
         self.compliance_brand = tk.Label(
             product_info_frame,
             text="Brand / Manufacturer",
-            font=("SF Pro Text", 16),
+            font=("SF Pro Text", 14),
             bg=Colors.SURFACE,
             fg=Colors.TEXT_SECONDARY,
             anchor=tk.W
         )
         self.compliance_brand.pack(anchor=tk.W)
         
-        # Registration numbers section - CLEAR INFO
+        # REGISTRATION & CERTIFICATE DETAILS - Two columns
         reg_title = tk.Label(
             content,
-            text="REGISTRATION INFORMATION",
-            font=("SF Pro Display", 18, "bold"),
+            text="REGISTRATION & CERTIFICATE DETAILS",
+            font=("SF Pro Display", 16, "bold"),
             bg=Colors.BACKGROUND,
             fg=Colors.TEXT_PRIMARY
         )
-        reg_title.pack(pady=(15, 10))
+        reg_title.pack(pady=(10, 8))
         
-        self.compliance_checklist_frame = tk.Frame(content, bg=Colors.SURFACE, padx=25, pady=15)
-        self.compliance_checklist_frame.pack(fill=tk.X, padx=20)
+        self.compliance_checklist_frame = tk.Frame(content, bg=Colors.SURFACE, padx=20, pady=12)
+        self.compliance_checklist_frame.pack(fill=tk.X, padx=15)
         
+        # Two-column layout for registration info
+        reg_columns = tk.Frame(self.compliance_checklist_frame, bg=Colors.SURFACE)
+        reg_columns.pack(fill=tk.X)
+        
+        left_col = tk.Frame(reg_columns, bg=Colors.SURFACE)
+        left_col.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
+        
+        right_col = tk.Frame(reg_columns, bg=Colors.SURFACE)
+        right_col.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(10, 0))
+        
+        # LEFT COLUMN: CFPR and LTO
         # CFPR info row
-        cfpr_row = tk.Frame(self.compliance_checklist_frame, bg=Colors.SURFACE)
-        cfpr_row.pack(fill=tk.X, pady=5)
+        cfpr_row = tk.Frame(left_col, bg=Colors.SURFACE)
+        cfpr_row.pack(fill=tk.X, pady=4)
         
         tk.Label(
             cfpr_row,
-            text="CFPR Number:",
-            font=("SF Pro Text", 14, "bold"),
+            text="CFPR No:",
+            font=("SF Pro Text", 12, "bold"),
             bg=Colors.SURFACE,
             fg=Colors.TEXT_SECONDARY,
-            width=15,
+            width=10,
             anchor=tk.W
         ).pack(side=tk.LEFT)
         
         self.cfpr_check_label = tk.Label(
             cfpr_row,
             text="Loading...",
-            font=("SF Pro Text", 16, "bold"),
+            font=("SF Pro Text", 13, "bold"),
             bg=Colors.SURFACE,
             fg=Colors.PRIMARY
         )
-        self.cfpr_check_label.pack(side=tk.LEFT, padx=10)
+        self.cfpr_check_label.pack(side=tk.LEFT, padx=5)
         
         # LTO info row
-        lto_row = tk.Frame(self.compliance_checklist_frame, bg=Colors.SURFACE)
-        lto_row.pack(fill=tk.X, pady=5)
+        lto_row = tk.Frame(left_col, bg=Colors.SURFACE)
+        lto_row.pack(fill=tk.X, pady=4)
         
         tk.Label(
             lto_row,
-            text="LTO Number:",
-            font=("SF Pro Text", 14, "bold"),
+            text="LTO No:",
+            font=("SF Pro Text", 12, "bold"),
             bg=Colors.SURFACE,
             fg=Colors.TEXT_SECONDARY,
-            width=15,
+            width=10,
             anchor=tk.W
         ).pack(side=tk.LEFT)
         
         self.lto_check_label = tk.Label(
             lto_row,
             text="Loading...",
-            font=("SF Pro Text", 16, "bold"),
+            font=("SF Pro Text", 13, "bold"),
             bg=Colors.SURFACE,
             fg=Colors.PRIMARY
         )
-        self.lto_check_label.pack(side=tk.LEFT, padx=10)
+        self.lto_check_label.pack(side=tk.LEFT, padx=5)
         
-        # Status info row (hidden by default)
-        self.compliance_status_row = tk.Frame(self.compliance_checklist_frame, bg=Colors.SURFACE)
-        # Don't pack initially
+        # Certificate ID row - CLICKABLE
+        cert_row = tk.Frame(left_col, bg=Colors.SURFACE)
+        cert_row.pack(fill=tk.X, pady=4)
+        
+        tk.Label(
+            cert_row,
+            text="Certificate:",
+            font=("SF Pro Text", 12, "bold"),
+            bg=Colors.SURFACE,
+            fg=Colors.TEXT_SECONDARY,
+            width=10,
+            anchor=tk.W
+        ).pack(side=tk.LEFT)
+        
+        self.cert_id_label = tk.Label(
+            cert_row,
+            text="-",
+            font=("SF Pro Text", 11, "underline"),
+            bg=Colors.SURFACE,
+            fg=Colors.ACCENT,
+            cursor="hand2"
+        )
+        self.cert_id_label.pack(side=tk.LEFT, padx=5)
+        self.cert_id_label.bind('<Button-1>', self._on_certificate_click)
+        
+        # VIEW CERTIFICATE BUTTON
+        self.view_cert_btn = tk.Button(
+            cert_row,
+            text="VIEW",
+            font=("SF Pro Text", 10, "bold"),
+            bg=Colors.ACCENT,
+            fg=Colors.TEXT_WHITE,
+            activebackground=Colors.PRIMARY,
+            activeforeground=Colors.TEXT_WHITE,
+            relief=tk.FLAT,
+            padx=10,
+            pady=2,
+            command=self._view_certificate,
+            cursor="hand2"
+        )
+        self.view_cert_btn.pack(side=tk.LEFT, padx=10)
+        
+        # RIGHT COLUMN: Dates and Status
+        # Registration Date row
+        reg_date_row = tk.Frame(right_col, bg=Colors.SURFACE)
+        reg_date_row.pack(fill=tk.X, pady=4)
+        
+        tk.Label(
+            reg_date_row,
+            text="Registered:",
+            font=("SF Pro Text", 12, "bold"),
+            bg=Colors.SURFACE,
+            fg=Colors.TEXT_SECONDARY,
+            width=10,
+            anchor=tk.W
+        ).pack(side=tk.LEFT)
+        
+        self.reg_date_label = tk.Label(
+            reg_date_row,
+            text="-",
+            font=("SF Pro Text", 13),
+            bg=Colors.SURFACE,
+            fg=Colors.TEXT_PRIMARY
+        )
+        self.reg_date_label.pack(side=tk.LEFT, padx=5)
+        
+        # Expiry Date row
+        exp_date_row = tk.Frame(right_col, bg=Colors.SURFACE)
+        exp_date_row.pack(fill=tk.X, pady=4)
+        
+        tk.Label(
+            exp_date_row,
+            text="Expires:",
+            font=("SF Pro Text", 12, "bold"),
+            bg=Colors.SURFACE,
+            fg=Colors.TEXT_SECONDARY,
+            width=10,
+            anchor=tk.W
+        ).pack(side=tk.LEFT)
+        
+        self.exp_date_label = tk.Label(
+            exp_date_row,
+            text="-",
+            font=("SF Pro Text", 13),
+            bg=Colors.SURFACE,
+            fg=Colors.TEXT_PRIMARY
+        )
+        self.exp_date_label.pack(side=tk.LEFT, padx=5)
+        
+        # Status info row
+        self.compliance_status_row = tk.Frame(right_col, bg=Colors.SURFACE)
+        self.compliance_status_row.pack(fill=tk.X, pady=4)
         
         tk.Label(
             self.compliance_status_row,
             text="Status:",
-            font=("SF Pro Text", 14, "bold"),
+            font=("SF Pro Text", 12, "bold"),
             bg=Colors.SURFACE,
             fg=Colors.TEXT_SECONDARY,
-            width=15,
+            width=10,
             anchor=tk.W
         ).pack(side=tk.LEFT)
         
         self.compliance_status_info = tk.Label(
             self.compliance_status_row,
             text="Registered",
-            font=("SF Pro Text", 16, "bold"),
+            font=("SF Pro Text", 13, "bold"),
             bg=Colors.SURFACE,
             fg=Colors.SUCCESS
         )
-        self.compliance_status_info.pack(side=tk.LEFT, padx=10)
+        self.compliance_status_info.pack(side=tk.LEFT, padx=5)
         
-        # Additional notes section (hidden by default)
-        self.compliance_warnings_frame = tk.Frame(content, bg=Colors.SUCCESS_LIGHT, padx=20, pady=15)
+        # ADDITIONAL PRODUCT DETAILS section
+        self.product_details_frame = tk.Frame(content, bg=Colors.SURFACE, padx=20, pady=10)
+        self.product_details_frame.pack(fill=tk.X, padx=15, pady=(8, 0))
+        
+        tk.Label(
+            self.product_details_frame,
+            text="PRODUCT DETAILS",
+            font=("SF Pro Display", 12, "bold"),
+            bg=Colors.SURFACE,
+            fg=Colors.TEXT_PRIMARY
+        ).pack(anchor=tk.W, pady=(0, 5))
+        
+        # Details in a grid
+        details_grid = tk.Frame(self.product_details_frame, bg=Colors.SURFACE)
+        details_grid.pack(fill=tk.X)
+        
+        # Product Category
+        cat_row = tk.Frame(details_grid, bg=Colors.SURFACE)
+        cat_row.pack(fill=tk.X, pady=2)
+        tk.Label(cat_row, text="Category:", font=("SF Pro Text", 11), bg=Colors.SURFACE, fg=Colors.TEXT_SECONDARY, width=12, anchor=tk.W).pack(side=tk.LEFT)
+        self.product_category_label = tk.Label(cat_row, text="-", font=("SF Pro Text", 11), bg=Colors.SURFACE, fg=Colors.TEXT_PRIMARY)
+        self.product_category_label.pack(side=tk.LEFT)
+        
+        # Product Type
+        type_row = tk.Frame(details_grid, bg=Colors.SURFACE)
+        type_row.pack(fill=tk.X, pady=2)
+        tk.Label(type_row, text="Type:", font=("SF Pro Text", 11), bg=Colors.SURFACE, fg=Colors.TEXT_SECONDARY, width=12, anchor=tk.W).pack(side=tk.LEFT)
+        self.product_type_label = tk.Label(type_row, text="-", font=("SF Pro Text", 11), bg=Colors.SURFACE, fg=Colors.TEXT_PRIMARY)
+        self.product_type_label.pack(side=tk.LEFT)
+        
+        # Lot Number
+        lot_row = tk.Frame(details_grid, bg=Colors.SURFACE)
+        lot_row.pack(fill=tk.X, pady=2)
+        tk.Label(lot_row, text="Lot Number:", font=("SF Pro Text", 11), bg=Colors.SURFACE, fg=Colors.TEXT_SECONDARY, width=12, anchor=tk.W).pack(side=tk.LEFT)
+        self.product_lot_label = tk.Label(lot_row, text="-", font=("SF Pro Text", 11), bg=Colors.SURFACE, fg=Colors.TEXT_PRIMARY)
+        self.product_lot_label.pack(side=tk.LEFT)
+        
+        # Additional info section (for extra details)
+        self.compliance_warnings_frame = tk.Frame(content, bg=Colors.SUCCESS_LIGHT, padx=15, pady=10)
         # Don't pack yet - only shown if there is additional info
         
         self.compliance_warnings_label = tk.Label(
             self.compliance_warnings_frame,
             text="",
-            font=("SF Pro Text", 13),
+            font=("SF Pro Text", 11),
             bg=Colors.SUCCESS_LIGHT,
             fg=Colors.TEXT_PRIMARY,
-            justify=tk.LEFT
+            justify=tk.LEFT,
+            wraplength=600
         )
         self.compliance_warnings_label.pack(anchor=tk.W)
         
         # Photo thumbnails section
         photos_frame = tk.Frame(content, bg=Colors.BACKGROUND)
-        photos_frame.pack(pady=15)
+        photos_frame.pack(pady=10)
         
         tk.Label(
             photos_frame,
             text="Scanned Images:",
-            font=("SF Pro Text", 12),
+            font=("SF Pro Text", 11),
             bg=Colors.BACKGROUND,
             fg=Colors.TEXT_SECONDARY
         ).pack()
         
         self.compliance_photos_frame = tk.Frame(photos_frame, bg=Colors.BACKGROUND)
-        self.compliance_photos_frame.pack(pady=8)
+        self.compliance_photos_frame.pack(pady=5)
         
         self.compliance_front_thumb = tk.Label(
             self.compliance_photos_frame,
             text="Front",
-            font=("SF Pro Text", 10),
+            font=("SF Pro Text", 9),
             bg=Colors.SURFACE,
-            width=18,
-            height=6
+            width=16,
+            height=5
         )
-        self.compliance_front_thumb.pack(side=tk.LEFT, padx=8)
+        self.compliance_front_thumb.pack(side=tk.LEFT, padx=6)
         
         self.compliance_back_thumb = tk.Label(
             self.compliance_photos_frame,
             text="Back",
-            font=("SF Pro Text", 10),
+            font=("SF Pro Text", 9),
             bg=Colors.SURFACE,
-            width=18,
-            height=6
+            width=16,
+            height=5
         )
-        self.compliance_back_thumb.pack(side=tk.LEFT, padx=8)
+        self.compliance_back_thumb.pack(side=tk.LEFT, padx=6)
         
         # Footer with timer
         self.compliance_footer = tk.Frame(self.compliance_frame, bg=Colors.PRIMARY, height=80)
@@ -2297,7 +2469,7 @@ class KioskApp:
         
         tk.Label(
             cfpr_frame,
-            text="📝 Examples: FR-12345, IM-67890, CFPR-2024-001",
+            text="Examples: FR-12345, IM-67890, CFPR-2024-001",
             font=("SF Pro Text", 10),
             bg=Colors.SURFACE,
             fg=Colors.PRIMARY
@@ -2333,7 +2505,7 @@ class KioskApp:
         
         tk.Label(
             lto_frame,
-            text="📝 Examples: LTO-2024-001, DR-5678, BAI-12345",
+            text="Examples: LTO-2024-001, DR-5678, BAI-12345",
             font=("SF Pro Text", 10),
             bg=Colors.SURFACE,
             fg=Colors.PRIMARY
@@ -2342,7 +2514,7 @@ class KioskApp:
         # Active field indicator
         self.active_field_label = tk.Label(
             center,
-            text="👆 Tap an input field above to type",
+            text="Tap an input field above to type",
             font=("SF Pro Text", 11, "bold"),
             bg=Colors.BACKGROUND,
             fg=Colors.PRIMARY
@@ -2359,7 +2531,7 @@ class KioskApp:
         
         tk.Label(
             note_frame,
-            text="💡 Enter registration codes WITH hyphens (e.g., FR-12345)",
+            text="Enter registration codes WITH hyphens (e.g., FR-12345)",
             font=("SF Pro Text", 11, "bold"),
             bg=Colors.BACKGROUND,
             fg=Colors.WARNING
@@ -2390,9 +2562,9 @@ class KioskApp:
             
             # Update label
             if entry_widget == self.cfpr_entry:
-                self.active_field_label.config(text="✏️ Typing into: CFPR Number")
+                self.active_field_label.config(text="Typing into: CFPR Number")
             else:
-                self.active_field_label.config(text="✏️ Typing into: LTO/BAI Number")
+                self.active_field_label.config(text="Typing into: LTO/BAI Number")
     
     def _setup_maintenance_screen(self):
         """Setup the maintenance/offline mode screen - FULL SCREEN LOCKOUT"""
@@ -2541,11 +2713,11 @@ class KioskApp:
     
     def restart_camera(self):
         """Restart camera (reload button)"""
-        print("🔄 Restarting camera...")
+        print("Restarting camera...")
         self.stop_camera()
         time.sleep(0.5)
         self.start_camera()
-        print("✅ Camera restarted")
+        print("Camera restarted")
     
     def start_exit_timer(self, event):
         """Start timer for exit button reveal (long press)"""
@@ -2723,12 +2895,13 @@ class KioskApp:
             pass
     
     def _processing_timeout(self):
-        """Handle 60-second processing timeout"""
+        """Handle processing timeout"""
         if self.state == KioskState.PROCESSING:
-            print("⏱️ Processing timeout (60 seconds)")
+            print("Processing timeout")
             if self.processing_timeout_id:
                 self.root.after_cancel(self.processing_timeout_id)
                 self.processing_timeout_id = None
+            
             self._show_error_screen(
                 "Request Timeout",
                 "Ang kahilingan ay nag-timeout. Subukan muli."
@@ -2824,7 +2997,7 @@ class KioskApp:
                     if entity.get("expirationDate"):
                         exp_date = self._format_date(entity.get("expirationDate"))
                         is_expired = self._is_date_expired(entity.get("expirationDate"))
-                        details.append(("Expiration", f"{exp_date} {'⚠ EXPIRED' if is_expired else '✓'}"))
+                        details.append(("Expiration", f"{exp_date} {'EXPIRED' if is_expired else ''}"))
                 else:
                     # Company certificate
                     details.extend([
@@ -2836,7 +3009,7 @@ class KioskApp:
                     if entity.get("companyLTOExpiryDate"):
                         exp_date = self._format_date(entity.get("companyLTOExpiryDate"))
                         is_expired = self._is_date_expired(entity.get("companyLTOExpiryDate"))
-                        details.append(("LTO Expiry", f"{exp_date} {'⚠ EXPIRED' if is_expired else '✓'}"))
+                        details.append(("LTO Expiry", f"{exp_date} {'EXPIRED' if is_expired else ''}"))
                     if entity.get("companyContactNumber"):
                         details.append(("Contact", entity.get("companyContactNumber")))
                     if entity.get("companyContactEmail"):
@@ -3218,7 +3391,7 @@ class KioskApp:
         if result.get("success"):
             self.is_online = True
             self.consecutive_failures = 0
-            print(f"✓ Connected to RCV API: {self.api.base_url}")
+            print(f"Connected to RCV API: {self.api.base_url}")
             
             # Update start screen status indicator
             self.root.after(0, lambda: self._update_connection_status(True))
@@ -3229,7 +3402,7 @@ class KioskApp:
         else:
             self.is_online = False
             self.consecutive_failures += 1
-            print(f"⚠ RCV API not accessible: {self.api.base_url} (failure #{self.consecutive_failures})")
+            print(f"RCV API not accessible: {self.api.base_url} (failure #{self.consecutive_failures})")
             
             # Update start screen status indicator
             self.root.after(0, lambda: self._update_connection_status(False))
@@ -3343,7 +3516,7 @@ class KioskApp:
     
     def _recover_from_maintenance(self):
         """Recover from maintenance mode when server comes back online"""
-        print("✓ Server connection restored - recovering from maintenance mode")
+        print("Server connection restored - recovering from maintenance mode")
         
         # Cancel any pending polls
         if self.connectivity_poll_id:
@@ -3363,11 +3536,11 @@ class KioskApp:
     def start_camera(self):
         """Initialize and start the camera automatically"""
         if self.camera and self.camera.isOpened():
-            print("📷 Camera already running")
+            print("Camera already running")
             return  # Camera already running
         
         try:
-            print("🔍 Searching for camera...")
+            print("Searching for camera...")
             # Try different camera indices
             camera_indices = [0, 1, 2, -1]
             
@@ -3375,7 +3548,7 @@ class KioskApp:
                 print(f"   Trying camera index {idx}...")
                 self.camera = cv2.VideoCapture(idx)
                 if self.camera.isOpened():
-                    print(f"✅ Camera found at index {idx}")
+                    print(f"Camera found at index {idx}")
                     break
                 self.camera.release()
             
@@ -3389,7 +3562,7 @@ class KioskApp:
             # Set camera buffer size to 1 to reduce latency
             self.camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
             
-            print(f"📷 Camera configured: 640x480")
+            print(f"Camera configured: 640x480")
             
             self.is_running = True
             
@@ -3397,10 +3570,10 @@ class KioskApp:
             self.video_thread = threading.Thread(target=self.video_loop, daemon=True)
             self.video_thread.start()
             
-            print("🎬 Video loop started")
+            print("Video loop started")
             
         except Exception as e:
-            print(f"❌ Camera initialization failed: {e}")
+            print(f"Camera initialization failed: {e}")
             self.state = KioskState.ERROR
             self._show_error_screen(
                 f"Camera Error: {str(e)}",
@@ -3451,7 +3624,7 @@ class KioskApp:
             
             ret, frame = self.camera.read()
             if not ret:
-                print("⚠️ Failed to read frame from camera")
+                print("Failed to read frame from camera")
                 time.sleep(0.1)
                 continue
             
@@ -4007,7 +4180,7 @@ class KioskApp:
         if self.led_blink_started:
             self.gpio_led.stop_blinking()
             self.gpio_led.show_success()  # Return to solid
-            print("⏸️ LED blinking paused")
+            print("LED blinking paused")
         
         if self.state == KioskState.DISPLAY_COMPLIANCE:
             self.compliance_timer_label.config(text=pause_text)
@@ -4021,13 +4194,13 @@ class KioskApp:
         # Resume LED blinking if it was started
         if self.led_blink_started:
             self.gpio_led.start_processing()
-            print("▶️ LED blinking resumed")
+            print("LED blinking resumed")
     
     def _start_led_blinking(self):
         """Start LED blinking after 5 seconds of solid display"""
         if not self.timer_paused and not self.led_blink_started:
             self.led_blink_started = True
-            print("🔄 Starting LED blinking (after 5s solid)")
+            print("Starting LED blinking (after 5s solid)")
             self.gpio_led.start_processing()  # Reuse blinking LED
     
     def reset_to_idle(self):
@@ -4099,7 +4272,7 @@ class KioskApp:
     def _display_ocr_frame(self, frame):
         """Display frame in OCR capture camera preview"""
         try:
-            print(f"🎥 OCR frame update - State: {self.state}, Frame shape: {frame.shape if frame is not None else 'None'}")
+            print(f"OCR frame update - State: {self.state}, Frame shape: {frame.shape if frame is not None else 'None'}")
             
             # Resize and convert
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -4137,7 +4310,7 @@ class KioskApp:
         # Store in list to prevent garbage collection
         self.ocr_preview_photos = [preview, thumb]
         
-        print(f"✅ Front captured - Preview size: {preview.width()}x{preview.height()}")
+        print(f"Front captured - Preview size: {preview.width()}x{preview.height()}")
         
         # Update UI
         self._update_ocr_ui()
@@ -4166,7 +4339,7 @@ class KioskApp:
         if len(self.ocr_preview_photos) == 2:
             self.ocr_preview_photos.extend([preview, thumb])
         
-        print(f"✅ Back captured - Preview size: {preview.width()}x{preview.height()}")
+        print(f"Back captured - Preview size: {preview.width()}x{preview.height()}")
         
         # Update UI
         self._update_ocr_ui()
@@ -4266,7 +4439,7 @@ class KioskApp:
             combined_text = "\n".join(text_parts)
             
             print(f"\n{'='*60}")
-            print(f"🔍 MANUAL SEARCH")
+            print(f"MANUAL SEARCH")
             print(f"{'='*60}")
             print(f"CFPR Input: {cfpr if cfpr else 'Not provided'}")
             print(f"LTO/BAI Input: {lto if lto else 'Not provided'}")
@@ -4279,16 +4452,16 @@ class KioskApp:
             self.root.after(0, lambda: self.loading_detail_label.config(text="Searching database..."))
             
             # Send to API using same endpoint as OCR
-            print(f"📡 Calling POST /api/v1/kiosk-scan/scanProduct (Manual Search)")
-            print(f"📦 Payload: blockOfText={len(combined_text)} chars")
+            print(f"Calling POST /api/v1/kiosk-scan/scanProduct (Manual Search)")
+            print(f"Payload: blockOfText={len(combined_text)} chars")
             response = self.api.scan_product_ocr(combined_text)
-            print(f"📨 API Response: success={response.get('success')}, found={response.get('found')}, isCompliant={response.get('isCompliant')}")
+            print(f"API Response: success={response.get('success')}, found={response.get('found')}, isCompliant={response.get('isCompliant')}")
             
             if response.get("success"):
-                print(f"✅ Displaying compliance result to user")
+                print(f"Displaying compliance result to user")
                 self.root.after(0, lambda: self._display_compliance_result(response))
             else:
-                print(f"❌ Search failed: {response.get('message')}")
+                print(f"Search failed: {response.get('message')}")
                 self.root.after(0, lambda: self._show_error_screen(
                     "Product Not Found",
                     response.get("message", "No product found with those registration numbers")
@@ -4349,7 +4522,7 @@ class KioskApp:
         # Close button
         tk.Button(
             control_bar,
-            text="✕ CLOSE",
+            text="CLOSE",
             font=("SF Pro Display", 16, "bold"),
             bg=Colors.ERROR,
             fg=Colors.TEXT_WHITE,
@@ -4450,12 +4623,14 @@ class KioskApp:
     
     def _enhanced_ocr_extraction(self, frame, label: str = "") -> str:
         """
-        Enhanced OCR extraction optimized for LOW-QUALITY CAMERAS
-        - Aggressive noise reduction to prevent random characters
-        - Multiple preprocessing techniques
+        Enhanced OCR extraction using EasyOCR (pure Python, no external install needed)
+        - Works great on low-quality cameras
+        - Automatic noise reduction and preprocessing
         - Smart validation to filter garbage text
         - Focused extraction of registration codes
         """
+        global easyocr_reader, EASYOCR_AVAILABLE, TESSERACT_AVAILABLE
+        
         results = []
         extracted_codes = []
         
@@ -4465,7 +4640,7 @@ class KioskApp:
         # Get image dimensions
         height, width = gray.shape
         
-        # STEP 1: AGGRESSIVE NOISE REDUCTION for low-quality cameras
+        # STEP 1: NOISE REDUCTION for low-quality cameras
         print(f"   Step 1: Noise reduction...")
         
         # Bilateral filter - preserves edges while removing noise
@@ -4475,7 +4650,7 @@ class KioskApp:
         denoised = cv2.medianBlur(denoised, 3)
         
         # STEP 2: UPSCALE for better OCR (helps with small/blurry text)
-        scale = 2
+        scale = 2  # 2x upscale (EasyOCR handles lower res better than Tesseract)
         upscaled = cv2.resize(denoised, (width * scale, height * scale), interpolation=cv2.INTER_CUBIC)
         
         # STEP 3: CONTRAST ENHANCEMENT
@@ -4483,88 +4658,125 @@ class KioskApp:
         clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
         enhanced = clahe.apply(upscaled)
         
-        # STEP 4: Multiple OCR passes with different techniques
+        # STEP 4: Prepare multiple image variants for OCR
         
-        # TECHNIQUE 1: Adaptive threshold (best for varying lighting)
-        print(f"   Pass 1: Adaptive Threshold...")
+        # Adaptive threshold version
         adaptive = cv2.adaptiveThreshold(
             enhanced, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 15, 4
         )
-        # Additional morphological cleanup
         kernel_small = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
         adaptive = cv2.morphologyEx(adaptive, cv2.MORPH_CLOSE, kernel_small)
         
-        text1 = pytesseract.image_to_string(
-            Image.fromarray(adaptive),
-            config='--psm 6 --oem 3'
-        )
-        results.append(self._clean_ocr_text(text1))
-        print(f"   Pass 1: {len(text1)} chars -> cleaned to {len(results[-1])} chars")
-        
-        # TECHNIQUE 2: Otsu's threshold
-        print(f"   Pass 2: Otsu's Threshold...")
+        # Otsu's threshold version
         _, otsu = cv2.threshold(enhanced, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        text2 = pytesseract.image_to_string(
-            Image.fromarray(otsu),
-            config='--psm 6 --oem 3'
-        )
-        results.append(self._clean_ocr_text(text2))
-        print(f"   Pass 2: {len(text2)} chars -> cleaned to {len(results[-1])} chars")
         
-        # TECHNIQUE 3: Morphological enhancement (removes small noise)
-        print(f"   Pass 3: Morphological cleanup...")
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-        morph = cv2.morphologyEx(enhanced, cv2.MORPH_CLOSE, kernel)
-        morph = cv2.morphologyEx(morph, cv2.MORPH_OPEN, kernel)
-        _, morph_thresh = cv2.threshold(morph, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        text3 = pytesseract.image_to_string(
-            Image.fromarray(morph_thresh),
-            config='--psm 6 --oem 3'
-        )
-        results.append(self._clean_ocr_text(text3))
-        print(f"   Pass 3: {len(text3)} chars -> cleaned to {len(results[-1])} chars")
+        # ============================================================
+        # EasyOCR - Primary OCR Engine (Pure Python, no external install)
+        # ============================================================
+        if EASYOCR_AVAILABLE:
+            print(f"   Using EasyOCR (primary engine)...")
+            
+            # Initialize reader lazily on first use
+            if easyocr_reader is None:
+                print(f"   Initializing EasyOCR reader (first use, may take a moment)...")
+                try:
+                    easyocr_reader = easyocr.Reader(['en'], gpu=False, verbose=False)
+                    print(f"   EasyOCR reader initialized")
+                except Exception as e:
+                    print(f"   EasyOCR init failed: {e}")
+                    EASYOCR_AVAILABLE = False
+            
+            if easyocr_reader is not None:
+                # Pass 1: Original enhanced image
+                print(f"   Pass 1: Enhanced grayscale...")
+                try:
+                    ocr_result = easyocr_reader.readtext(enhanced, detail=0, paragraph=True)
+                    text1 = '\n'.join(ocr_result) if ocr_result else ""
+                    results.append(self._clean_ocr_text(text1))
+                    print(f"   Pass 1: {len(text1)} chars -> cleaned to {len(results[-1])} chars")
+                except Exception as e:
+                    print(f"   Pass 1 failed: {e}")
+                
+                # Pass 2: Adaptive threshold version
+                print(f"   Pass 2: Adaptive threshold...")
+                try:
+                    ocr_result = easyocr_reader.readtext(adaptive, detail=0, paragraph=True)
+                    text2 = '\n'.join(ocr_result) if ocr_result else ""
+                    results.append(self._clean_ocr_text(text2))
+                    print(f"   Pass 2: {len(text2)} chars -> cleaned to {len(results[-1])} chars")
+                except Exception as e:
+                    print(f"   Pass 2 failed: {e}")
+                
+                # Pass 3: Otsu threshold version
+                print(f"   Pass 3: Otsu threshold...")
+                try:
+                    ocr_result = easyocr_reader.readtext(otsu, detail=0, paragraph=True)
+                    text3 = '\n'.join(ocr_result) if ocr_result else ""
+                    results.append(self._clean_ocr_text(text3))
+                    print(f"   Pass 3: {len(text3)} chars -> cleaned to {len(results[-1])} chars")
+                except Exception as e:
+                    print(f"   Pass 3 failed: {e}")
+                
+                # Pass 4: Original frame (color) - EasyOCR can use color info
+                print(f"   Pass 4: Original color frame...")
+                try:
+                    ocr_result = easyocr_reader.readtext(frame, detail=0, paragraph=True)
+                    text4 = '\n'.join(ocr_result) if ocr_result else ""
+                    results.append(self._clean_ocr_text(text4))
+                    print(f"   Pass 4: {len(text4)} chars -> cleaned to {len(results[-1])} chars")
+                except Exception as e:
+                    print(f"   Pass 4 failed: {e}")
         
-        # TECHNIQUE 4: Whitelist mode - ONLY alphanumeric for registration codes
-        print(f"   Pass 4: Alphanumeric whitelist (for codes)...")
-        text4 = pytesseract.image_to_string(
-            Image.fromarray(otsu),
-            config='--psm 6 --oem 3 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-'
-        )
-        results.append(text4.strip())
-        print(f"   Pass 4: {len(text4)} chars (alphanumeric only)")
+        # ============================================================
+        # Tesseract - Fallback OCR Engine (requires external install)
+        # ============================================================
+        elif TESSERACT_AVAILABLE:
+            print(f"   Using Tesseract (fallback engine)...")
+            
+            # Pass 1: Adaptive threshold
+            print(f"   Pass 1: Adaptive Threshold...")
+            try:
+                text1 = pytesseract.image_to_string(
+                    Image.fromarray(adaptive),
+                    lang='eng',
+                    config='--psm 6 --oem 1'
+                )
+                results.append(self._clean_ocr_text(text1))
+                print(f"   Pass 1: {len(text1)} chars -> cleaned to {len(results[-1])} chars")
+            except Exception as e:
+                print(f"   Pass 1 failed: {e}")
+            
+            # Pass 2: Otsu's threshold
+            print(f"   Pass 2: Otsu's Threshold...")
+            try:
+                text2 = pytesseract.image_to_string(
+                    Image.fromarray(otsu),
+                    lang='eng',
+                    config='--psm 6 --oem 1'
+                )
+                results.append(self._clean_ocr_text(text2))
+                print(f"   Pass 2: {len(text2)} chars -> cleaned to {len(results[-1])} chars")
+            except Exception as e:
+                print(f"   Pass 2 failed: {e}")
+            
+            # Pass 3: Full page segmentation
+            print(f"   Pass 3: Full page segmentation...")
+            try:
+                text3 = pytesseract.image_to_string(
+                    Image.fromarray(otsu),
+                    lang='eng',
+                    config='--psm 3 --oem 1'
+                )
+                results.append(self._clean_ocr_text(text3))
+                print(f"   Pass 3: {len(text3)} chars -> cleaned to {len(results[-1])} chars")
+            except Exception as e:
+                print(f"   Pass 3 failed: {e}")
         
-        # TECHNIQUE 5: Sparse text detection (for scattered text on labels)
-        print(f"   Pass 5: Sparse text mode...")
-        text5 = pytesseract.image_to_string(
-            Image.fromarray(adaptive),
-            config='--psm 11 --oem 3'
-        )
-        results.append(self._clean_ocr_text(text5))
-        print(f"   Pass 5: {len(text5)} chars -> cleaned to {len(results[-1])} chars")
-        
-        # TECHNIQUE 6: Deskew and try again (for tilted images)
-        print(f"   Pass 6: With deskew correction...")
-        try:
-            coords = np.column_stack(np.where(otsu > 0))
-            if len(coords) > 100:
-                angle = cv2.minAreaRect(coords)[-1]
-                if angle < -45:
-                    angle = -(90 + angle)
-                else:
-                    angle = -angle
-                if abs(angle) > 0.5 and abs(angle) < 15:  # Only deskew if angle is reasonable
-                    (h, w) = otsu.shape
-                    center = (w // 2, h // 2)
-                    M = cv2.getRotationMatrix2D(center, angle, 1.0)
-                    deskewed = cv2.warpAffine(otsu, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
-                    text6 = pytesseract.image_to_string(
-                        Image.fromarray(deskewed),
-                        config='--psm 6 --oem 3'
-                    )
-                    results.append(self._clean_ocr_text(text6))
-                    print(f"   Pass 6: Deskewed {angle:.1f}° - {len(text6)} chars")
-        except Exception as e:
-            print(f"   Pass 6: Deskew skipped - {e}")
+        else:
+            # No OCR engine available
+            print(f"   ERROR: No OCR engine available!")
+            print(f"   Please install EasyOCR: pip install easyocr")
+            return "ERROR: No OCR engine available. Please install EasyOCR: pip install easyocr"
         
         # STEP 5: EXTRACT REGISTRATION CODES from all results
         print(f"\n   Extracting registration codes...")
@@ -4596,7 +4808,7 @@ class KioskApp:
         
         # Deduplicate and sort codes
         unique_codes = list(set(extracted_codes))
-        print(f"   ✅ Found {len(unique_codes)} potential codes: {unique_codes}")
+        print(f"   Found {len(unique_codes)} potential codes: {unique_codes}")
         
         # STEP 6: BUILD FINAL TEXT with validation
         print(f"\n   Building final validated text...")
@@ -4636,7 +4848,7 @@ class KioskApp:
         
         combined = "\n".join(combined_parts)
         
-        print(f"   ✅ Final text: {len(combined)} chars, {len(valid_words)} valid words, {len(unique_codes)} codes")
+        print(f"   Final text: {len(combined)} chars, {len(valid_words)} valid words, {len(unique_codes)} codes")
         
         return combined
     
@@ -4745,7 +4957,7 @@ class KioskApp:
             self.root.after(0, lambda: self.loading_detail_label.config(text="Reading front label..."))
             
             print("\n" + "="*60)
-            print("🔍 ENHANCED OCR PROCESSING - FRONT IMAGE")
+            print("ENHANCED OCR PROCESSING - FRONT IMAGE")
             print("="*60)
             
             # Process front image with multiple techniques
@@ -4759,7 +4971,7 @@ class KioskApp:
             self.root.after(0, lambda: self.loading_detail_label.config(text="Reading back label..."))
             
             print("\n" + "="*60)
-            print("🔍 ENHANCED OCR PROCESSING - BACK IMAGE")
+            print("ENHANCED OCR PROCESSING - BACK IMAGE")
             print("="*60)
             
             # Process back image with multiple techniques
@@ -4780,31 +4992,37 @@ class KioskApp:
             self.root.after(0, lambda: self.loading_detail_label.config(text="Searching for product..."))
             
             # Send to API - calling /scan/scanProduct endpoint
-            print(f"📡 Calling POST /api/v1/kiosk-scan/scanProduct")
-            print(f"📦 Payload: blockOfText={len(combined_text)} chars")
+            print(f"Calling POST /api/v1/kiosk-scan/scanProduct")
+            print(f"Payload: blockOfText={len(combined_text)} chars")
             response = self.api.scan_product_ocr(combined_text)
-            print(f"📨 API Response: success={response.get('success')}, found={response.get('found')}, isCompliant={response.get('isCompliant')}")
+            print(f"API Response: success={response.get('success')}, found={response.get('found')}, isCompliant={response.get('isCompliant')}")
             
             if response.get("success"):
-                print(f"✅ Displaying compliance result to user")
+                print(f"Displaying compliance result to user")
                 self.root.after(0, lambda: self._display_compliance_result(response))
             else:
-                print(f"❌ Scan failed: {response.get('message')}")
+                print(f"Scan failed: {response.get('message')}")
                 self.root.after(0, lambda: self._show_error_screen(
                     "Scan failed",
                     response.get("message", "Could not process the product label")
                 ))
                 
         except Exception as e:
-            print(f"OCR processing error: {e}")
-            self.root.after(0, lambda: self._show_error_screen(
-                f"Processing Error: {str(e)}",
+            error_msg = str(e)
+            print(f"OCR processing error: {error_msg}")
+            self.root.after(0, lambda msg=error_msg: self._show_error_screen(
+                f"Processing Error: {msg}",
                 "May problema sa pagproseso ng label"
             ))
     
     def _display_compliance_result(self, response: dict):
-        """Display product search result - shows product information nicely"""
+        """Display product search result - shows product and certificate information"""
         found = response.get("found", False)
+        
+        # Store current product info for certificate viewing
+        product_info = response.get("productInfo", {})
+        self.current_ocr_product = product_info
+        self.current_ocr_certificate_id = product_info.get("certificateId") or product_info.get("CFPRNumber")
         
         # Update GPIO LED based on result
         if found:
@@ -4819,15 +5037,21 @@ class KioskApp:
                 bg=Colors.ERROR,
                 text="PRODUCT NOT FOUND"
             )
+            # Hide VIEW button when no product found
+            self.view_cert_btn.pack_forget()
         else:
             self.compliance_header.config(bg=Colors.SUCCESS)
             self.compliance_status_label.config(
                 bg=Colors.SUCCESS,
-                text="✓ PRODUCT FOUND"
+                text="REGISTERED PRODUCT FOUND"
             )
+            # Show VIEW button when product is found
+            if self.current_ocr_certificate_id:
+                self.view_cert_btn.pack(side=tk.LEFT, padx=10)
+            else:
+                self.view_cert_btn.pack_forget()
         
         # Product info - PROMINENT DISPLAY
-        product_info = response.get("productInfo", {})
         product_name = product_info.get("productName", "Unknown Product")
         brand_name = product_info.get("brandName", "")
         manufacturer = product_info.get("manufacturer", "")
@@ -4849,7 +5073,7 @@ class KioskApp:
         
         # CFPR Number
         cfpr = compliance.get("cfpr", {})
-        cfpr_value = cfpr.get("required", None)
+        cfpr_value = cfpr.get("required", None) or product_info.get("CFPRNumber", None)
         if cfpr_value:
             self.cfpr_check_label.config(
                 text=cfpr_value,
@@ -4857,13 +5081,13 @@ class KioskApp:
             )
         else:
             self.cfpr_check_label.config(
-                text="Not registered",
+                text="Not available",
                 fg=Colors.TEXT_SECONDARY
             )
         
         # LTO Number
         lto = compliance.get("lto", {})
-        lto_value = lto.get("required", None)
+        lto_value = lto.get("required", None) or product_info.get("LTONumber", None)
         if lto_value:
             self.lto_check_label.config(
                 text=lto_value,
@@ -4871,15 +5095,55 @@ class KioskApp:
             )
         else:
             self.lto_check_label.config(
-                text="Not registered",
+                text="Not available",
                 fg=Colors.TEXT_SECONDARY
             )
+        
+        # Certificate ID
+        cert_id = product_info.get("certificateId", None) or product_info.get("registrationNumber", None)
+        if cert_id:
+            self.cert_id_label.config(text=cert_id, fg=Colors.ACCENT)
+        else:
+            self.cert_id_label.config(text="-", fg=Colors.TEXT_SECONDARY)
+        
+        # Registration Date
+        reg_date = product_info.get("dateOfRegistration", None) or product_info.get("issuedDate", None)
+        if reg_date:
+            self.reg_date_label.config(text=self._format_date(reg_date), fg=Colors.TEXT_PRIMARY)
+        else:
+            self.reg_date_label.config(text="-", fg=Colors.TEXT_SECONDARY)
+        
+        # Expiry Date
+        exp_date = product_info.get("expirationDate", None) or product_info.get("expiryDate", None)
+        if exp_date:
+            # Check if expired
+            if self._is_date_expired(exp_date):
+                self.exp_date_label.config(text=f"{self._format_date(exp_date)} (EXPIRED)", fg=Colors.ERROR)
+            else:
+                self.exp_date_label.config(text=self._format_date(exp_date), fg=Colors.SUCCESS)
+        else:
+            self.exp_date_label.config(text="-", fg=Colors.TEXT_SECONDARY)
+        
+        # Product Details section
+        product_category = product_info.get("productCategory", None)
+        product_type = product_info.get("productType", None)
+        lot_number = product_info.get("lotNumber", None)
+        
+        self.product_category_label.config(text=product_category or "-")
+        self.product_type_label.config(text=product_type or "-")
+        self.product_lot_label.config(text=lot_number or "-")
+        
+        # Show/hide product details frame based on whether we have any details
+        if found and (product_category or product_type or lot_number):
+            self.product_details_frame.pack(fill=tk.X, padx=15, pady=(8, 0))
+        else:
+            self.product_details_frame.pack_forget()
         
         # Show status row with registered status
         if found:
             self.compliance_status_row.pack(fill=tk.X, pady=5)
             self.compliance_status_info.config(
-                text="✓ Registered Product",
+                text="Registered Product",
                 fg=Colors.SUCCESS
             )
         else:
@@ -4891,14 +5155,14 @@ class KioskApp:
         
         # Show thumbnails of captured images (if from OCR scan)
         if self.ocr_front_frame is not None:
-            thumb = self._create_thumbnail(self.ocr_front_frame, 180, 120)
+            thumb = self._create_thumbnail(self.ocr_front_frame, 150, 100)
             self.compliance_front_thumb.config(image=thumb, text="")
             self.compliance_front_thumb.image = thumb
         else:
             self.compliance_front_thumb.config(text="Front", image="")
         
         if self.ocr_back_frame is not None:
-            thumb = self._create_thumbnail(self.ocr_back_frame, 180, 120)
+            thumb = self._create_thumbnail(self.ocr_back_frame, 150, 100)
             self.compliance_back_thumb.config(image=thumb, text="")
             self.compliance_back_thumb.image = thumb
         else:
@@ -4914,6 +5178,85 @@ class KioskApp:
         else:
             self.tts.speak(f"Product found. {product_name}. This is a registered product.")
     
+    def _on_certificate_click(self, event=None):
+        """Handle click on certificate ID - view certificate PDF"""
+        if self.current_ocr_certificate_id:
+            self._view_certificate()
+    
+    def _view_certificate(self):
+        """View certificate PDF for the OCR-identified product"""
+        if not self.current_ocr_certificate_id:
+            self.tts.speak("No certificate available")
+            return
+        
+        print(f"Viewing certificate: {self.current_ocr_certificate_id}")
+        
+        # Pause the timer while viewing certificate
+        self.timer_paused = True
+        
+        # Show loading
+        self._show_loading_screen("Loading certificate...\nNaglo-load ng sertipiko...")
+        
+        # Fetch certificate in background
+        thread = threading.Thread(
+            target=self._fetch_ocr_certificate, 
+            args=(self.current_ocr_certificate_id,), 
+            daemon=True
+        )
+        thread.start()
+    
+    def _fetch_ocr_certificate(self, certificate_id: str):
+        """Fetch and display certificate PDF for OCR result"""
+        try:
+            # Get PDF URL from API
+            pdf_response = self.api.get_certificate_pdf_url(certificate_id)
+            pdf_url = pdf_response.get("certificate", {}).get("pdfUrl") if pdf_response.get("success") else None
+            
+            if pdf_url:
+                print(f"Certificate PDF URL: {pdf_url}")
+                # Create certificate data object for display
+                cert = CertificateData(
+                    id=certificate_id,
+                    status="valid" if pdf_url else "pending",
+                    pdf_url=pdf_url,
+                    company=self.current_ocr_product.get("manufacturer", "Unknown"),
+                    issued_date=self.current_ocr_product.get("dateOfRegistration"),
+                    expiry_date=self.current_ocr_product.get("expirationDate"),
+                )
+                
+                # Switch to result screen with PDF
+                self.root.after(0, lambda: self._show_ocr_certificate_result(cert, pdf_url))
+            else:
+                print(f"No PDF available for certificate: {certificate_id}")
+                self.root.after(0, lambda: self._show_error_screen(
+                    "Certificate Not Found",
+                    f"No PDF available for {certificate_id}"
+                ))
+                
+        except Exception as e:
+            print(f"Error fetching certificate: {e}")
+            self.root.after(0, lambda: self._show_error_screen(
+                "Certificate Error",
+                str(e)
+            ))
+    
+    def _show_ocr_certificate_result(self, cert: CertificateData, pdf_url: str):
+        """Display certificate result from OCR scan - similar to QR scan result"""
+        # Setup the result panel similar to QR scan
+        self.setup_certificate_panel(cert)
+        
+        # Fetch and display PDF pages
+        self._fetch_and_display_pdf_pages(pdf_url)
+        
+        # Show result screen
+        self._show_result_screen()
+        
+        # Resume timer with extended time for viewing
+        self.timer_paused = False
+        self.start_display_timer(60, is_error=False)  # 60 seconds to view certificate
+        
+        self.tts.speak("Certificate loaded. You can view the official document.")
+
     def _fetch_and_display_pdf_pages(self, pdf_url: str):
         """Fetch PDF and display 2 pages side by side"""
         # Show loading state
@@ -5005,7 +5348,7 @@ class KioskApp:
             if len(images) > 0:
                 tk.Label(
                     self.pdf_pages_frame,
-                    text="👆 Click pages to zoom",
+                    text="Click pages to zoom",
                     font=("SF Pro Text", 10),
                     bg=Colors.SURFACE,
                     fg=Colors.TEXT_SECONDARY
@@ -5057,7 +5400,7 @@ class KioskApp:
         # Close button
         close_btn = tk.Button(
             control_bar,
-            text="✕ CLOSE",
+            text="CLOSE",
             font=("SF Pro Display", 14, "bold"),
             bg=Colors.ERROR,
             fg=Colors.TEXT_WHITE,
@@ -5086,7 +5429,7 @@ class KioskApp:
         
         tk.Button(
             zoom_frame,
-            text="➖",
+            text="-",
             font=("SF Pro Display", 18, "bold"),
             bg=Colors.PRIMARY_LIGHT,
             fg=Colors.TEXT_WHITE,
@@ -5108,7 +5451,7 @@ class KioskApp:
         
         tk.Button(
             zoom_frame,
-            text="➕",
+            text="+",
             font=("SF Pro Display", 18, "bold"),
             bg=Colors.PRIMARY_LIGHT,
             fg=Colors.TEXT_WHITE,
@@ -5138,7 +5481,7 @@ class KioskApp:
             if page_index > 0:
                 tk.Button(
                     nav_frame,
-                    text="◀ PREV",
+                    text="PREV",
                     font=("SF Pro Text", 12, "bold"),
                     bg=Colors.PRIMARY_LIGHT,
                     fg=Colors.TEXT_WHITE,
@@ -5151,7 +5494,7 @@ class KioskApp:
             if page_index < len(self.pdf_current_images) - 1:
                 tk.Button(
                     nav_frame,
-                    text="NEXT ▶",
+                    text="NEXT",
                     font=("SF Pro Text", 12, "bold"),
                     bg=Colors.PRIMARY_LIGHT,
                     fg=Colors.TEXT_WHITE,
@@ -5369,7 +5712,7 @@ class KioskApp:
     def toggle_sound(self):
         """Toggle sound on/off - touch friendly"""
         self.tts.toggle_mute()
-        button_text = "🔇 SOUND OFF" if self.tts.is_muted else "🔊 SOUND ON"
+        button_text = "SOUND\nOFF" if self.tts.is_muted else "SOUND\nON"
         self.mute_button.config(text=button_text)
     
     def start_exit_timer(self, event):
