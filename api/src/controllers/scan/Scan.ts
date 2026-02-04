@@ -150,12 +150,12 @@ export const scanProduct = async (
           registrationNumber: identifiedProduct.CFPRNumber || null,
           dateOfRegistration: identifiedProduct.dateOfRegistration || null,
           expirationDate: identifiedProduct.expirationDate || null,
-          // Additional product details
-          productCategory: identifiedProduct.productCategory || null,
-          productType: identifiedProduct.productType || null,
-          countryOfOrigin: identifiedProduct.countryOfOrigin || null,
-          companyId: identifiedProduct.company?.id || null,
-          productId: identifiedProduct.id,
+          // Additional product details (using actual entity fields)
+          productCategory: identifiedProduct.productClassification || null,
+          productType: identifiedProduct.productSubClassification || null,
+          lotNumber: identifiedProduct.lotNumber || null,
+          companyId: identifiedProduct.company?._id || null,
+          productId: identifiedProduct._id,
         },
         
         // COMPLIANCE REPORT - what's on the packaging vs what should be
