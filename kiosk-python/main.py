@@ -298,6 +298,12 @@ class RCVApiService:
         if back_image_url:
             data['backImageUrl'] = back_image_url
         
+        print(f"🔍 OCR API Payload Details:")
+        print(f"   - blockOfText: {len(ocr_text)} characters")
+        print(f"   - frontImageUrl: {front_image_url if front_image_url else 'Not provided'}")
+        print(f"   - backImageUrl: {back_image_url if back_image_url else 'Not provided'}")
+        print(f"   - First 100 chars: {ocr_text[:100]}...")
+        
         return self._make_request('POST', 'api/v1/kiosk-scan/scanProduct', data)
     
     def search_product(self, product_name: str = None, lto_number: str = None, 
@@ -1739,16 +1745,6 @@ class KioskApp:
             fg=Colors.TEXT_PRIMARY
         )
         self.lto_check_label.pack(anchor=tk.W, pady=5)
-        
-        # Expiry check
-        self.expiry_check_label = tk.Label(
-            self.compliance_checklist_frame,
-            text="Expiration Date: Checking...",
-            font=("SF Pro Text", 18),
-            bg=Colors.SURFACE,
-            fg=Colors.TEXT_PRIMARY
-        )
-        self.expiry_check_label.pack(anchor=tk.W, pady=5)
         
         # Warnings/Violations section
         self.compliance_warnings_frame = tk.Frame(content, bg=Colors.WARNING_LIGHT, padx=20, pady=15)
@@ -3769,26 +3765,62 @@ class KioskApp:
             # Extract text from both images using Tesseract
             self.root.after(0, lambda: self.loading_detail_label.config(text="Reading front label..."))
             
+            # Preprocess front image for better OCR accuracy
             front_rgb = cv2.cvtColor(self.ocr_front_frame, cv2.COLOR_BGR2RGB)
-            front_pil = Image.fromarray(front_rgb)
-            front_text = pytesseract.image_to_string(front_pil)
+            front_gray = cv2.cvtColor(self.ocr_front_frame, cv2.COLOR_BGR2GRAY)
+            # Apply adaptive thresholding to handle varying lighting
+            front_thresh = cv2.adaptiveThreshold(
+                front_gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
+            )
+            front_pil = Image.fromarray(front_thresh)
+            
+            # OCR with configuration for better accuracy
+            front_text = pytesseract.image_to_string(
+                front_pil, 
+                config='--psm 6 --oem 3'  # PSM 6: Assume uniform block of text, OEM 3: Default OCR Engine
+            )
+            
+            print(f"=== OCR FRONT IMAGE ===")
+            print(f"Extracted text length: {len(front_text)} chars")
+            print(f"Front text preview: {front_text[:200] if len(front_text) > 200 else front_text}")
+            print(f"=======================\n")
             
             self.root.after(0, lambda: self.loading_detail_label.config(text="Reading back label..."))
             
+            # Preprocess back image for better OCR accuracy
             back_rgb = cv2.cvtColor(self.ocr_back_frame, cv2.COLOR_BGR2RGB)
-            back_pil = Image.fromarray(back_rgb)
-            back_text = pytesseract.image_to_string(back_pil)
+            back_gray = cv2.cvtColor(self.ocr_back_frame, cv2.COLOR_BGR2GRAY)
+            # Apply adaptive thresholding to handle varying lighting
+            back_thresh = cv2.adaptiveThreshold(
+                back_gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
+            )
+            back_pil = Image.fromarray(back_thresh)
+            
+            # OCR with configuration for better accuracy
+            back_text = pytesseract.image_to_string(
+                back_pil,
+                config='--psm 6 --oem 3'  # PSM 6: Assume uniform block of text, OEM 3: Default OCR Engine
+            )
+            
+            print(f"=== OCR BACK IMAGE ===")
+            print(f"Extracted text length: {len(back_text)} chars")
+            print(f"Back text preview: {back_text[:200] if len(back_text) > 200 else back_text}")
+            print(f"======================\n")
             
             # Combine text
             combined_text = f"{front_text}\n\n{back_text}"
-            print(f"OCR Text extracted ({len(combined_text)} chars)")
+            print(f"=== COMBINED OCR TEXT ===")
+            print(f"Total characters: {len(combined_text)}")
+            print(f"Combined text preview:\n{combined_text[:300] if len(combined_text) > 300 else combined_text}")
+            print(f"=========================\n")
             
             self.root.after(0, lambda: self.loading_detail_label.config(text="Searching for product..."))
             
             # Send to API - calling /scan/scanProduct endpoint
-            print(f"📡 Calling /scan/scanProduct API...")
+            print(f"📡 Calling POST /api/v1/kiosk-scan/scanProduct")
+            print(f"📦 Payload: blockOfText={len(combined_text)} chars")
             response = self.api.scan_product_ocr(combined_text)
-            print(f"📨 API Response: found={response.get('found')}, isCompliant={response.get('isCompliant')}")
+            print(f"📨 API Response: success={response.get('success')}, found={response.get('found')}, isCompliant={response.get('isCompliant')}")
             
             if response.get("success"):
                 print(f"✅ Displaying compliance result to user")
@@ -3866,15 +3898,6 @@ class KioskApp:
         self.lto_check_label.config(
             text=f"{lto_icon} LTO: {lto.get('required', 'N/A')} - {lto_status}",
             fg=lto_color
-        )
-        
-        expiry = compliance.get("expirationDate", {})
-        expiry_status = expiry.get("status", "N/A")
-        expiry_icon = "✓" if expiry_status == "COMPLIANT" else "✗"
-        expiry_color = Colors.SUCCESS if expiry_status == "COMPLIANT" else Colors.ERROR
-        self.expiry_check_label.config(
-            text=f"{expiry_icon} Expiry: {expiry.get('foundOnPackaging', 'Not found')} - {expiry_status}",
-            fg=expiry_color
         )
         
         # Warnings/Violations
