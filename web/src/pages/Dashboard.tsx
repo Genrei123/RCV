@@ -63,6 +63,9 @@ import {
 import ApprovalQueue from "@/components/ApprovalQueue";
 import MySubmissions from "@/components/MySubmissions";
 import { Pagination as SimplePagination } from '@/components/Pagination';
+import { RevokeConfirmationModal } from "@/components/RevokeConfirmationModal";
+import { ArchiveInviteConfirmationModal } from "@/components/ArchiveInviteConfirmationModal";
+import { DeleteInviteConfirmationModal } from "@/components/DeleteInviteConfirmationModal";
 
 export interface DashboardProps {
   success?: boolean;
@@ -110,6 +113,21 @@ export function Dashboard(props: DashboardProps) {
   const [selectedInvite, setSelectedInvite] = useState<AdminInvite | null>(null);
   const [editFormData, setEditFormData] = useState({ badgeId: "", email: "", personalMessage: "" });
   const [editLoading, setEditLoading] = useState(false);
+
+  // Revoke invite modal state
+  const [revokeModalOpen, setRevokeModalOpen] = useState(false);
+  const [inviteToRevoke, setInviteToRevoke] = useState<AdminInvite | null>(null);
+  const [revokeLoading, setRevokeLoading] = useState(false);
+
+  // Archive invite modal state
+  const [archiveModalOpen, setArchiveModalOpen] = useState(false);
+  const [inviteToArchive, setInviteToArchive] = useState<AdminInvite | null>(null);
+  const [archiveLoading, setArchiveLoading] = useState(false);
+
+  // Delete invite modal state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [inviteToDelete, setInviteToDelete] = useState<AdminInvite | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // Reject confirmation dialog state
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
@@ -357,7 +375,7 @@ export function Dashboard(props: DashboardProps) {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
                   onClick={() => handleRevokeInvite(row._id)}
-                  className="text-orange-600"
+                  className="text-black"
                 >
                   <XCircle className="h-4 w-4 mr-2" />
                   Revoke
@@ -423,34 +441,80 @@ export function Dashboard(props: DashboardProps) {
   };
 
   const handleRevokeInvite = async (inviteId: string) => {
-    if (!confirm("Are you sure you want to revoke this invitation? The agent will no longer be able to register.")) return;
+    // Find the invite to show in the modal
+    const invite = invites.find(inv => inv._id === inviteId);
+    if (invite) {
+      setInviteToRevoke(invite);
+      setRevokeModalOpen(true);
+    }
+  };
+
+  const confirmRevokeInvite = async () => {
+    if (!inviteToRevoke) return;
+    
+    setRevokeLoading(true);
     try {
-      await AdminInviteService.revokeInvite(inviteId);
+      await AdminInviteService.revokeInvite(inviteToRevoke._id);
       toast.success("Invitation revoked");
+      setRevokeModalOpen(false);
+      setInviteToRevoke(null);
       fetchInvites();
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to revoke invitation");
+    } finally {
+      setRevokeLoading(false);
     }
   };
 
   const handleArchiveInvite = async (inviteId: string) => {
+    // Find the invite to show in the modal
+    const invite = invites.find(inv => inv._id === inviteId);
+    if (invite) {
+      setInviteToArchive(invite);
+      setArchiveModalOpen(true);
+    }
+  };
+
+  const confirmArchiveInvite = async () => {
+    if (!inviteToArchive) return;
+    
+    setArchiveLoading(true);
     try {
-      await AdminInviteService.archiveInvite(inviteId);
+      await AdminInviteService.archiveInvite(inviteToArchive._id);
       toast.success("Invitation archived");
+      setArchiveModalOpen(false);
+      setInviteToArchive(null);
       fetchInvites();
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to archive invitation");
+    } finally {
+      setArchiveLoading(false);
     }
   };
 
   const handleDeleteInvite = async (inviteId: string) => {
-    if (!confirm("Are you sure you want to permanently delete this invitation? This action cannot be undone.")) return;
+    // Find the invite to show in the modal
+    const invite = invites.find(inv => inv._id === inviteId);
+    if (invite) {
+      setInviteToDelete(invite);
+      setDeleteModalOpen(true);
+    }
+  };
+
+  const confirmDeleteInvite = async () => {
+    if (!inviteToDelete) return;
+    
+    setDeleteLoading(true);
     try {
-      await AdminInviteService.deleteInvite(inviteId);
+      await AdminInviteService.deleteInvite(inviteToDelete._id);
       toast.success("Invitation deleted");
+      setDeleteModalOpen(false);
+      setInviteToDelete(null);
       fetchInvites();
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to delete invitation");
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -1193,6 +1257,42 @@ export function Dashboard(props: DashboardProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Revoke Invitation Confirmation Modal */}
+      <RevokeConfirmationModal
+        isOpen={revokeModalOpen}
+        onClose={() => {
+          setRevokeModalOpen(false);
+          setInviteToRevoke(null);
+        }}
+        onConfirm={confirmRevokeInvite}
+        invite={inviteToRevoke}
+        loading={revokeLoading}
+      />
+
+      {/* Archive Invitation Confirmation Modal */}
+      <ArchiveInviteConfirmationModal
+        isOpen={archiveModalOpen}
+        onClose={() => {
+          setArchiveModalOpen(false);
+          setInviteToArchive(null);
+        }}
+        onConfirm={confirmArchiveInvite}
+        invite={inviteToArchive}
+        loading={archiveLoading}
+      />
+
+      {/* Delete Invitation Confirmation Modal */}
+      <DeleteInviteConfirmationModal
+        isOpen={deleteModalOpen}
+        onClose={() => {
+          setDeleteModalOpen(false);
+          setInviteToDelete(null);
+        }}
+        onConfirm={confirmDeleteInvite}
+        invite={inviteToDelete}
+        loading={deleteLoading}
+      />
     </>
   );
 }
