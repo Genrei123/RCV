@@ -192,24 +192,45 @@ export class FuzzySearchService {
    * Returns null if not found
    */
   private static extractCFPRNumber(text: string): string | null {
-    if (!this.learnedPatterns?.cfprPattern) {
-      return null;
-    }
-
-    // First try with normalized text
-    const normalizedText = this.normalizeOCRCharacters(text);
+    const upperText = text.toUpperCase();
     
-    let match = normalizedText.match(this.learnedPatterns.cfprPattern);
-    if (match && match[0]) {
-      const cleaned = match[0].replace(/\s+/g, '-').toUpperCase();
-      return cleaned;
+    // FALLBACK PATTERNS - Common CFPR formats (catches codes even if prefix not in database)
+    // These patterns are more generic and will catch most CFPR-style codes
+    const fallbackPatterns = [
+      // Pattern: 2-4 letters + hyphen + 2 digits + hyphen + 4+ digits (e.g., DFI-21-5913, FR-12-3456)
+      /\b([A-Z]{2,4})-(\d{2})-(\d{4,})\b/g,
+      // Pattern: 2-4 letters + hyphen + digits (e.g., IM-603, CFPR-12345)
+      /\b([A-Z]{2,4})-(\d{3,})\b/g,
+      // Pattern: Letters followed by numbers with optional hyphen (e.g., FR123456, IM603)
+      /\b([A-Z]{2,4})[\s-]?(\d{3,})\b/g,
+    ];
+    
+    // Try fallback patterns first (more reliable)
+    for (const pattern of fallbackPatterns) {
+      const matches = upperText.match(pattern);
+      if (matches && matches.length > 0) {
+        // Return the first match, cleaned up
+        const cleaned = matches[0].replace(/\s+/g, '-').toUpperCase();
+        console.log(`[FuzzySearch] CFPR extracted via fallback pattern: ${cleaned}`);
+        return cleaned;
+      }
     }
+    
+    // Then try learned patterns
+    if (this.learnedPatterns?.cfprPattern) {
+      const normalizedText = this.normalizeOCRCharacters(text);
+      
+      let match = normalizedText.match(this.learnedPatterns.cfprPattern);
+      if (match && match[0]) {
+        const cleaned = match[0].replace(/\s+/g, '-').toUpperCase();
+        return cleaned;
+      }
 
-    // Also try original text
-    match = text.match(this.learnedPatterns.cfprPattern);
-    if (match && match[0]) {
-      const cleaned = match[0].replace(/\s+/g, '-').toUpperCase();
-      return cleaned;
+      match = text.match(this.learnedPatterns.cfprPattern);
+      if (match && match[0]) {
+        const cleaned = match[0].replace(/\s+/g, '-').toUpperCase();
+        return cleaned;
+      }
     }
 
     return null;
@@ -394,27 +415,33 @@ export class FuzzySearchService {
     // Extract specific codes from OCR using LEARNED patterns
     const extractedCFPR = this.extractCFPRNumber(ocrText);
     const extractedLTO = this.extractLTONumber(ocrText);
+    
+    console.log(`[FuzzySearch] Extracted codes - CFPR: ${extractedCFPR || 'none'}, LTO: ${extractedLTO || 'none'}`);
 
-    // FAST PATH: Try cache lookup first (O(1) instead of database query)
+    // FAST PATH: Try CFPR cache lookup first (CFPR is UNIQUE - highest priority)
     if (extractedCFPR && this.learnedPatterns?.productCache) {
       const normalized = this.normalizeOCRCharacters(extractedCFPR.replace(/[-\s]/g, '').toUpperCase());
       const cached = this.learnedPatterns.productCache.get(`CFPR:${normalized}`);
       if (cached) {
+        console.log(`[FuzzySearch] ✅ CFPR cache hit: ${cached.productName}`);
         const validation = this.validateMatchAgainstOCR(cached, ocrText);
         if (validation.valid) {
           return { 
             product: cached, 
-            searchDetails: { matchType: 'cfpr-cache', matchedOn: extractedCFPR, confidence: validation.confidence },
+            searchDetails: { matchType: 'cfpr-cache', matchedOn: extractedCFPR, confidence: 'high' },
             warnings: validation.warnings
           };
         }
       }
     }
 
-    if (extractedLTO && this.learnedPatterns?.productCache) {
+    // LTO cache - ONLY use if no CFPR was extracted (LTO is NOT unique)
+    // If we have a CFPR, we should use database search to ensure correct product
+    if (extractedLTO && !extractedCFPR && this.learnedPatterns?.productCache) {
       const normalized = this.normalizeOCRCharacters(extractedLTO.replace(/[-\s]/g, '').toUpperCase());
       const cached = this.learnedPatterns.productCache.get(`LTO:${normalized}`);
       if (cached) {
+        console.log(`[FuzzySearch] LTO cache hit (no CFPR available): ${cached.productName}`);
         const validation = this.validateMatchAgainstOCR(cached, ocrText);
         if (validation.valid) {
           return { 
@@ -477,20 +504,52 @@ export class FuzzySearchService {
       if (ltoMatches.length > 0) {
         console.log(`[FuzzySearch] LTO ${extractedLTO} matched ${ltoMatches.length} products`);
         
-        // If multiple products match LTO, disambiguate using CFPR or product name
+        // CRITICAL: If we have an extracted CFPR, find the product that matches it EXACTLY
+        // CFPR is UNIQUE - if it matches, that IS the product, no scoring needed
+        if (extractedCFPR) {
+          const ocrCFPR = extractedCFPR.replace(/[-\s]/g, '').toUpperCase();
+          
+          for (const product of ltoMatches) {
+            if (product.CFPRNumber) {
+              const productCFPR = product.CFPRNumber.replace(/[-\s]/g, '').toUpperCase();
+              
+              // Exact match or contains match on CFPR
+              if (productCFPR === ocrCFPR || productCFPR.includes(ocrCFPR) || ocrCFPR.includes(productCFPR)) {
+                console.log(`[FuzzySearch] ✅ CFPR EXACT MATCH: ${product.CFPRNumber} === ${extractedCFPR}`);
+                console.log(`[FuzzySearch] Selected: ${product.productName} (CFPR match is definitive)`);
+                
+                const validation = this.validateMatchAgainstOCR(product, ocrText);
+                return { 
+                  product: product, 
+                  searchDetails: { 
+                    matchType: 'LTO+CFPR', 
+                    matchedOn: `LTO:${extractedLTO}, CFPR:${extractedCFPR}`, 
+                    confidence: 'high',
+                    candidatesCount: ltoMatches.length,
+                    cfprMatched: true
+                  },
+                  warnings: validation.warnings
+                };
+              }
+            }
+          }
+          console.log(`[FuzzySearch] ⚠️ CFPR ${extractedCFPR} not found among LTO matches, falling back to scoring`);
+        }
+        
+        // Fallback: If no CFPR match, use scoring to disambiguate
         let bestMatch: Product | null = null;
         let bestScore = 0;
         
         for (const product of ltoMatches) {
           let score = 0;
           
-          // HIGH PRIORITY: Check if CFPR matches
+          // HIGHEST PRIORITY: Check if CFPR matches (1000 points - virtually guarantees selection)
           if (product.CFPRNumber && extractedCFPR) {
             const productCFPR = product.CFPRNumber.replace(/[-\s]/g, '').toUpperCase();
             const ocrCFPR = extractedCFPR.replace(/[-\s]/g, '').toUpperCase();
             if (productCFPR === ocrCFPR || productCFPR.includes(ocrCFPR) || ocrCFPR.includes(productCFPR)) {
-              score += 100;  // Strong match on CFPR
-              console.log(`   - ${product.productName}: CFPR match (+100)`);
+              score += 1000;  // CFPR is unique identifier - this should be definitive
+              console.log(`   - ${product.productName}: CFPR match (+1000) - DEFINITIVE`);
             }
           }
           
