@@ -21,6 +21,7 @@ export const ComplianceReportValidation = z.object({
   additionalNotes: z.string().max(500).optional().nullable(),
   frontImageUrl: z.string().url(), // Required - always must have front image
   backImageUrl: z.string().url(), // Required - always must have back image
+  additionalImageUrls: z.array(z.string().url()).optional().nullable(), // Optional additional images (for box products with 6 sides)
   ocrBlobText: z.string().optional().nullable(), // Raw OCR text blob
   location: z.object({
     latitude: z.number().optional(),
@@ -83,6 +84,10 @@ export class ComplianceReport {
 
   @Column({ type: 'varchar', length: 500 })
   backImageUrl!: string;
+
+  // Additional images for box products (up to 4 more: top, bottom, left, right)
+  @Column({ type: 'json', nullable: true })
+  additionalImageUrls?: string[] | null;
 
   // Location where scan was performed
   @Column({ type: 'json', nullable: true })
