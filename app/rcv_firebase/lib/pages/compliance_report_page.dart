@@ -12,11 +12,13 @@ class ComplianceReportPage extends StatefulWidget {
   final Map<String, dynamic>? productSearchResult;
   final String? frontImageUrl;
   final String? backImageUrl;
+  final List<String>? additionalImageUrls; // Additional images for box products
   final String initialStatus; // 'COMPLIANT' or 'NON_COMPLIANT'
   final String? ocrBlobText; // Raw OCR text blob
 
   final String? localFrontPath;
   final String? localBackPath;
+  final List<String>? localAdditionalPaths; // Local paths for additional images
   final String? draftId;
   final String? initialReason;
   final String? initialNotes;
@@ -27,8 +29,10 @@ class ComplianceReportPage extends StatefulWidget {
     this.productSearchResult,
     this.frontImageUrl,
     this.backImageUrl,
+    this.additionalImageUrls,
     this.localFrontPath,
     this.localBackPath,
+    this.localAdditionalPaths,
     this.draftId,
     this.initialReason,
     this.initialNotes,
@@ -70,6 +74,12 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
       'Front Image URL received: ${widget.frontImageUrl ?? "NULL"}',
     );
     developer.log('Back Image URL received: ${widget.backImageUrl ?? "NULL"}');
+    developer.log(
+      'Additional Image URLs: ${widget.additionalImageUrls?.length ?? 0}',
+    );
+    developer.log(
+      'Local Additional Paths: ${widget.localAdditionalPaths?.length ?? 0}',
+    );
     developer.log(
       'OCR Blob Text received: ${widget.ocrBlobText != null ? "${widget.ocrBlobText!.length} chars" : "NULL"}',
     );
@@ -115,6 +125,7 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
       // 1. Handle Deferred Upload if needed
       String? finalFrontUrl = widget.frontImageUrl;
       String? finalBackUrl = widget.backImageUrl;
+      List<String>? finalAdditionalUrls = widget.additionalImageUrls;
 
       if ((finalFrontUrl == null || finalBackUrl == null) &&
           (widget.localFrontPath != null && widget.localBackPath != null)) {
@@ -133,6 +144,27 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
 
         finalFrontUrl = uploadResults['frontUrl'];
         finalBackUrl = uploadResults['backUrl'];
+      }
+
+      // Upload additional images if they exist as local paths
+      if (widget.localAdditionalPaths != null && 
+          widget.localAdditionalPaths!.isNotEmpty &&
+          (finalAdditionalUrls == null || finalAdditionalUrls.isEmpty)) {
+        developer.log('🚀 Uploading ${widget.localAdditionalPaths!.length} additional images...');
+        finalAdditionalUrls = [];
+        for (int i = 0; i < widget.localAdditionalPaths!.length; i++) {
+          final path = widget.localAdditionalPaths![i];
+          final additionalScanId = 'scan_additional_${i}_${DateTime.now().millisecondsSinceEpoch}';
+          final uploadResult = await FirebaseStorageService.uploadSingleImage(
+            scanId: additionalScanId,
+            image: File(path),
+            imageName: 'side_$i',
+          );
+          if (uploadResult != null) {
+            finalAdditionalUrls.add(uploadResult);
+          }
+        }
+        developer.log('✅ Uploaded ${finalAdditionalUrls.length} additional images');
       }
 
       // Get current location
@@ -176,6 +208,7 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
             : null,
         frontImageUrl: finalFrontUrl,
         backImageUrl: finalBackUrl,
+        additionalImageUrls: finalAdditionalUrls,
         location: locationJson,
         ocrBlobText: widget.ocrBlobText, // Pass OCR blob text to backend
       );
@@ -762,6 +795,84 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
                                 ),
                             ],
                           ),
+                          // Additional Images Section (for box products)
+                          if ((widget.additionalImageUrls != null && widget.additionalImageUrls!.isNotEmpty) ||
+                              (widget.localAdditionalPaths != null && widget.localAdditionalPaths!.isNotEmpty)) ...[
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Additional Views',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            GridView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                crossAxisSpacing: 8,
+                                mainAxisSpacing: 8,
+                                childAspectRatio: 1.2,
+                              ),
+                              itemCount: (widget.additionalImageUrls?.length ?? 0) > 0
+                                  ? widget.additionalImageUrls!.length
+                                  : (widget.localAdditionalPaths?.length ?? 0),
+                              itemBuilder: (context, index) {
+                                final sideNames = ['Top', 'Bottom', 'Left', 'Right'];
+                                final sideName = index < sideNames.length ? sideNames[index] : 'Side ${index + 1}';
+                                
+                                // Check if we have URLs or local paths
+                                final hasUrl = widget.additionalImageUrls != null && 
+                                    widget.additionalImageUrls!.length > index;
+                                final hasLocalPath = widget.localAdditionalPaths != null && 
+                                    widget.localAdditionalPaths!.length > index;
+                                
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      sideName,
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Expanded(
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: hasUrl
+                                            ? Image.network(
+                                                widget.additionalImageUrls![index],
+                                                width: double.infinity,
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (context, error, stackTrace) {
+                                                  return Container(
+                                                    color: Colors.grey[300],
+                                                    child: const Center(child: Icon(Icons.error)),
+                                                  );
+                                                },
+                                              )
+                                            : hasLocalPath
+                                                ? Image.file(
+                                                    File(widget.localAdditionalPaths![index]),
+                                                    width: double.infinity,
+                                                    fit: BoxFit.cover,
+                                                  )
+                                                : Container(
+                                                    color: Colors.grey[200],
+                                                  ),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
+                          ],
                         ],
                       ),
                     ),

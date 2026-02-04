@@ -4,6 +4,11 @@ import 'package:flutter/material.dart';
 import 'remote_config_service.dart';
 
 class UpdateService {
+  /// Initialize Update Service
+  static Future<void> initialize() async {
+    debugPrint('✅ Update Service initialized');
+  }
+  
   /// Check for updates and show appropriate dialog
   static Future<void> checkAndShowUpdateDialog(BuildContext context) async {
     try {

@@ -196,6 +196,75 @@ class FirebaseStorageService {
     }
   }
 
+  /// Upload a single scan image to Firebase Storage
+  /// 
+  /// Automatically detects file type and uses correct extension
+  /// Returns the download URL on success, null on failure
+  static Future<String?> uploadSingleImage({
+    required String scanId,
+    required File image,
+    required String imageName,
+  }) async {
+    try {
+      developer.log('📤 [Storage] Uploading single image: $imageName for scan: $scanId');
+      developer.log('📁 [Storage] Image: ${image.path}');
+      await _logAuthStatus();
+      
+      // Validate file exists
+      if (!await image.exists()) {
+        throw Exception('Image does not exist: ${image.path}');
+      }
+      
+      // Check file size (max 30MB)
+      final fileSize = await image.length();
+      const maxSize = 30 * 1024 * 1024; // 30MB
+      
+      if (fileSize > maxSize) {
+        throw Exception('Image size (${(fileSize / 1024 / 1024).toStringAsFixed(2)}MB) exceeds maximum allowed size (30MB)');
+      }
+      
+      // Get file info
+      final fileInfo = _getFileInfo(image);
+      
+      // Sanitize scanId and imageName
+      final safeScanId = _sanitizeScanId(scanId);
+      final safeImageName = _sanitizeScanId(imageName);
+      
+      // Create reference with proper extension
+      final ref = _storage.ref().child('scans/$safeScanId/$safeImageName${fileInfo['extension']}');
+      
+      developer.log('☁️ [Storage] Path: scans/$safeScanId/$safeImageName${fileInfo['extension']}');
+      
+      // Create metadata
+      final metadata = SettableMetadata(
+        contentType: fileInfo['contentType']!,
+        customMetadata: {
+          'scanId': safeScanId,
+          'imageName': safeImageName,
+          'originalName': path.basename(image.path),
+          'uploadedAt': DateTime.now().toIso8601String(),
+        },
+      );
+      
+      // Upload image
+      final result = await ref.putFile(image, metadata);
+      
+      // Get download URL
+      final url = await result.ref.getDownloadURL();
+      
+      developer.log('✅ [Storage] Single image uploaded successfully');
+      developer.log('🔗 [Storage] URL: $url');
+      
+      return url;
+    } catch (e, stackTrace) {
+      developer.log('❌ [Storage] Single image upload failed: $e');
+      developer.log('📍 Stack trace: $stackTrace');
+      await _logAuthStatus();
+      await _logStorageDebugInfo();
+      return null;
+    }
+  }
+
   /// Delete user's avatar from Firebase Storage
   static Future<bool> deleteAvatar(String userId) async {
     try {
