@@ -21,23 +21,41 @@ import { FuzzySearchService } from "../../services/fuzzySearchService";
 /**
  * Helper function to verify if required fields are present in OCR text
  * This checks PACKAGING COMPLIANCE - not database records
+ * 
+ * IMPROVED: More robust matching to handle OCR variations
  */
 function verifyFieldInOCR(fieldValue: string | null | undefined, ocrText: string): boolean {
   if (!fieldValue) return false;
   
-  const upperOCR = ocrText.toUpperCase().replace(/[-\s]/g, '');
-  const cleanValue = fieldValue.toUpperCase().replace(/[-\s]/g, '');
+  // Normalize both values - remove ALL non-alphanumeric characters
+  const cleanOCR = ocrText.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const cleanValue = fieldValue.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  
+  // Also keep original with just spaces/hyphens removed
+  const upperOCRNoSpaces = ocrText.toUpperCase().replace(/[-\s]/g, '');
+  
+  // Log for debugging
+  console.log(`   Verifying field in OCR:`);
+  console.log(`     Expected value: "${fieldValue}"`);
+  console.log(`     Clean value: "${cleanValue}"`);
   
   // Check multiple variants
   const variants = [
-    fieldValue.toUpperCase(),
-    cleanValue,
+    fieldValue.toUpperCase(),                    // Original with case
+    cleanValue,                                   // Fully cleaned (alphanumeric only)
+    fieldValue.toUpperCase().replace(/[-\s]/g, ''), // Just spaces/hyphens removed
   ];
   
-  return variants.some(variant => 
-    upperOCR.includes(variant) || 
-    ocrText.toUpperCase().includes(variant)
+  // Check if any variant appears in OCR
+  const found = variants.some(variant => 
+    cleanOCR.includes(variant) ||                // Check in fully cleaned OCR
+    upperOCRNoSpaces.includes(variant) ||        // Check in OCR with spaces removed
+    ocrText.toUpperCase().includes(variant)      // Check in original upper OCR
   );
+  
+  console.log(`     Found in OCR: ${found ? 'YES' : 'NO'}`);
+  
+  return found;
 }
 
 /**
@@ -268,7 +286,7 @@ export const searchScannedProduct = async (
       );
     }
 
-    console.log("🔍 Step 1: Searching for product in OUR database with criteria:", { 
+    console.log("🔍 Step 1: Searching for product using FuzzySearchService with criteria:", { 
       productName, 
       LTONumber, 
       CFPRNumber,
@@ -278,7 +296,42 @@ export const searchScannedProduct = async (
 
     const { page, limit, skip } = parsePageParams(req, 10);
     
-    // Build search criteria for database
+    // STEP 1: Use FuzzySearchService for better matching (same as main scan endpoint)
+    // Build a search text from the provided criteria
+    const searchParts: string[] = [];
+    if (CFPRNumber) searchParts.push(`CFPR: ${CFPRNumber}`);
+    if (LTONumber) searchParts.push(`LTO: ${LTONumber}`);
+    if (productName) searchParts.push(`Product: ${productName}`);
+    if (brandName) searchParts.push(`Brand: ${brandName}`);
+    if (manufacturer) searchParts.push(`Manufacturer: ${manufacturer}`);
+    
+    const searchText = searchParts.join('\n');
+    console.log("   Constructed search text:", searchText);
+    
+    // Use FuzzySearchService for intelligent matching
+    const { product: identifiedProduct, searchDetails, warnings } = 
+      await FuzzySearchService.searchProductsFuzzy(searchText);
+    
+    // If product found via fuzzy search, return it
+    if (identifiedProduct) {
+      console.log("✅ Product found via FuzzySearchService:", identifiedProduct.productName);
+      console.log("   Match type:", searchDetails.matchType, "on:", searchDetails.matchedOn);
+
+      return res.status(200).json({
+        success: true,
+        found: true,
+        message: "Product found in database",
+        source: "fuzzy_search",
+        data: [identifiedProduct],
+        matchDetails: searchDetails,
+        warnings: warnings,
+        Product: [identifiedProduct], // Keep this for compatibility with Flutter app
+      });
+    }
+    
+    // STEP 1b: Fallback to exact database search if fuzzy search found nothing
+    console.log("⚠️ FuzzySearch found nothing, trying exact database match...");
+    
     const searchCriteria: any = {};
     if (productName) {
       searchCriteria.productName = ILike(`%${productName}%`);
@@ -290,7 +343,6 @@ export const searchScannedProduct = async (
       searchCriteria.CFPRNumber = CFPRNumber;
     }
 
-    // STEP 1: Try to find in OUR database first
     const [products, total] = await ProductRepo.findAndCount({
       where: searchCriteria,
       skip,
@@ -301,7 +353,7 @@ export const searchScannedProduct = async (
 
     // If product found in OUR database, return it immediately
     if (products && products.length > 0) {
-      console.log("✅ Product found in OUR database:", products.length, "results");
+      console.log("✅ Product found via exact match:", products.length, "results");
 
       const meta = buildPaginationMeta(page, limit, total);
       const links = buildLinks(req, page, limit, meta.total_pages);
@@ -310,7 +362,7 @@ export const searchScannedProduct = async (
         success: true,
         found: true,
         message: "Product found in database",
-        source: "internal_database",
+        source: "exact_match",
         data: products,
         pagination: meta,
         links,
