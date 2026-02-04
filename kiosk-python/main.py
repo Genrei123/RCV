@@ -1,22 +1,176 @@
 #!/usr/bin/env python3
 """
-RCV Kiosk Machine - QR Code & Product Scanner
-Automated kiosk for certificate verification and product authenticity checking
-No user interaction required - fully automated scanning flow
-Integrated with RCV API for real-time verification
+================================================================================
+RCV KIOSK MACHINE - QR Code & Product Scanner
+================================================================================
+Automated kiosk for certificate verification and product authenticity checking.
+Integrated with RCV API for real-time verification against FDA Philippines database.
+
+================================================================================
+HOW TO USE THIS KIOSK
+================================================================================
+
+FOR END USERS (Kiosk Operators):
+--------------------------------
+1. QR CODE SCANNING (Automatic)
+   - Simply hold a product QR code in front of the camera
+   - The kiosk will automatically detect and scan the QR code
+   - Results will display within 2-3 seconds
+   - GREEN = Valid/Authentic | RED = Not Found/Invalid
+
+2. PRODUCT LABEL SCANNING (OCR)
+   - Tap "Scan Product Label" on the start screen
+   - Position the FRONT of the product label and tap "Capture Front"
+   - Position the BACK of the product label and tap "Capture Back"  
+   - Tap "Submit" to analyze the label text
+   - The system will extract registration codes (LTO, CFPR) and verify
+
+3. MANUAL SEARCH
+   - Tap "Manual Search" on the start screen
+   - Enter the CFPR number (e.g., FR-4A-1234) and/or LTO number
+   - Tap "Search" to find the product in the database
+
+4. VIEWING CERTIFICATES
+   - After a successful scan, tap "VIEW CERTIFICATE" to see the official PDF
+   - Pinch to zoom, drag to pan the certificate document
+   - Tap "CLOSE" to return to results
+
+UNDERSTANDING THE RESULTS:
+--------------------------
+✅ GREEN HEADER = Product/Certificate is REGISTERED and VALID
+❌ RED HEADER = Product NOT FOUND in database (may be counterfeit/unregistered)
+
+Information displayed:
+- Product Name & Brand
+- CFPR Number (FDA Product Registration)
+- LTO Number (License to Operate)
+- Certificate ID
+- Registration & Expiry Dates
+
+================================================================================
+FOR DEVELOPERS / SYSTEM ADMINISTRATORS
+================================================================================
+
+INSTALLATION (Raspberry Pi 4):
+------------------------------
+1. Install system dependencies:
+   ```bash
+   sudo apt-get update
+   sudo apt-get install -y python3-pip python3-tk python3-pil python3-pil.imagetk
+   sudo apt-get install -y libzbar0 tesseract-ocr tesseract-ocr-eng
+   sudo apt-get install -y libatlas-base-dev  # For numpy
+   ```
+
+2. Install Python packages:
+   ```bash
+   pip3 install opencv-python-headless pillow pyzbar numpy requests
+   pip3 install pytesseract python-dotenv
+   pip3 install RPi.GPIO  # For LED indicators (Raspberry Pi only)
+   pip3 install edge-tts  # For text-to-speech (optional, requires internet)
+   ```
+
+3. Configure environment:
+   ```bash
+   cp .env.example .env
+   nano .env  # Set API_BASE_URL to your RCV API server
+   ```
+
+4. Run the kiosk:
+   ```bash
+   python3 main.py
+   ```
+
+INSTALLATION (Windows/Desktop - Development):
+---------------------------------------------
+1. Install Python 3.8+ from python.org
+2. Install Tesseract OCR from: https://github.com/UB-Mannheim/tesseract/wiki
+3. Install packages:
+   ```bash
+   pip install opencv-python pillow pyzbar numpy requests
+   pip install pytesseract python-dotenv
+   ```
+4. Run: `python main.py`
+
+ENVIRONMENT VARIABLES (.env file):
+----------------------------------
+API_BASE_URL=https://your-api-server.com/api/v1
+# or for local development:
+API_BASE_URL=http://localhost:5500/api/v1
+
+HARDWARE SETUP (Raspberry Pi):
+------------------------------
+- Camera: USB webcam or Raspberry Pi Camera Module
+- Display: HDMI touchscreen (7" or larger recommended)
+- LEDs (optional): Connect to GPIO pins for status indicators
+  - Green LED: GPIO 17 (Success)
+  - Red LED: GPIO 27 (Error)  
+  - Yellow LED: GPIO 22 (Processing)
+  See GPIO_LED_WIRING_GUIDE.md for detailed wiring instructions.
+
+OCR ENGINE:
+-----------
+- Uses Tesseract OCR (works on all platforms including Raspberry Pi)
+- Install: sudo apt-get install tesseract-ocr tesseract-ocr-eng
+- Python: pip install pytesseract
+
+TROUBLESHOOTING:
+----------------
+1. OCR not working:
+   - Make sure Tesseract is installed: sudo apt-get install tesseract-ocr
+   - Check: tesseract --version
+
+2. Camera not working:
+   - Check camera connection: ls /dev/video*
+   - Test with: python3 -c "import cv2; print(cv2.VideoCapture(0).isOpened())"
+
+3. API connection failed:
+   - Verify API_BASE_URL in .env file
+   - Check network connectivity
+   - Ensure API server is running
+
+4. No OCR text extracted:
+   - Ensure good lighting on the product label
+   - Hold the label steady and in focus
+   - Try different angles if text is reflective
+
+================================================================================
+API ENDPOINTS USED
+================================================================================
+POST /kiosk-scan/scanProduct     - OCR text analysis and product search
+GET  /certificate/:id            - Fetch certificate details
+GET  /certificate/:id/pdf-url    - Get certificate PDF URL
+POST /product/search             - Search products by name/codes
+
+================================================================================
 """
 
-import cv2
-import numpy as np
-from pyzbar import pyzbar
-from datetime import datetime
-import tkinter as tk
-from tkinter import font as tkfont
-from PIL import Image, ImageTk, ImageDraw, ImageFont
-import threading
-import json
+# ============================================================================
+# SAFE IMPORTS - Handle "illegal instruction" errors on Raspberry Pi
+# ============================================================================
 import os
 import platform
+import sys
+
+# Detect architecture FIRST before importing heavy libraries
+IS_RASPBERRY_PI = platform.machine().startswith('arm') or platform.machine().startswith('aarch')
+IS_ARM64 = platform.machine() == 'aarch64'
+
+print(f"Platform: {platform.system()} / {platform.machine()}")
+print(f"Python: {sys.version}")
+print(f"Is Raspberry Pi (ARM): {IS_RASPBERRY_PI}")
+
+# Set environment variables to avoid illegal instruction errors on Raspberry Pi
+if IS_RASPBERRY_PI:
+    # Disable OpenBLAS multi-threading which can cause issues on some ARM chips
+    os.environ['OPENBLAS_NUM_THREADS'] = '1'
+    os.environ['OMP_NUM_THREADS'] = '1'
+    # Disable NumPy optimizations that may use unsupported instructions
+    os.environ['NPY_DISABLE_CPU_FEATURES'] = 'AVX,AVX2,AVX512,FMA'
+    print("ARM mode: Disabled advanced CPU features to prevent illegal instruction errors")
+
+# Now import the rest
+import threading
+import json
 import time
 import re
 import requests
@@ -26,23 +180,53 @@ from typing import Optional, Dict, Any, List
 import base64
 from urllib.parse import urljoin
 import math
+from datetime import datetime
 
-# ============================================================================
-# OCR Engine Setup - EasyOCR (preferred) or Tesseract (fallback)
-# ============================================================================
-EASYOCR_AVAILABLE = False
-TESSERACT_AVAILABLE = False
-easyocr_reader = None
-
-# Try EasyOCR first (pure Python, no external install needed)
+# Import numpy with error handling
 try:
-    import easyocr
-    EASYOCR_AVAILABLE = True
-    print("EasyOCR available - will initialize on first use")
-except ImportError:
-    print("EasyOCR not available. Install with: pip install easyocr")
+    import numpy as np
+    print(f"NumPy {np.__version__} loaded successfully")
+except Exception as e:
+    print(f"ERROR loading NumPy: {e}")
+    print("Try: pip install numpy --no-binary numpy")
+    sys.exit(1)
 
-# Try Tesseract as fallback
+# Import OpenCV with error handling  
+try:
+    import cv2
+    print(f"OpenCV {cv2.__version__} loaded successfully")
+except Exception as e:
+    print(f"ERROR loading OpenCV: {e}")
+    print("Try: pip install opencv-python-headless")
+    sys.exit(1)
+
+# Import pyzbar for QR codes
+try:
+    from pyzbar import pyzbar
+    print("pyzbar loaded successfully")
+except Exception as e:
+    print(f"ERROR loading pyzbar: {e}")
+    print("Try: sudo apt-get install libzbar0 && pip install pyzbar")
+    sys.exit(1)
+
+# Import Tkinter
+import tkinter as tk
+from tkinter import font as tkfont
+
+# Import PIL
+try:
+    from PIL import Image, ImageTk, ImageDraw, ImageFont
+    print("PIL/Pillow loaded successfully")
+except Exception as e:
+    print(f"ERROR loading PIL: {e}")
+    sys.exit(1)
+
+# ============================================================================
+# ============================================================================
+# OCR Engine Setup - Tesseract OCR (cross-platform, works on Raspberry Pi)
+# ============================================================================
+TESSERACT_AVAILABLE = False
+
 try:
     import pytesseract
     # Configure Tesseract path for Windows
@@ -55,18 +239,25 @@ try:
             if os.path.exists(path):
                 pytesseract.pytesseract.tesseract_cmd = path
                 TESSERACT_AVAILABLE = True
-                print(f"Tesseract found at: {path}")
+                print(f"Tesseract OCR found at: {path}")
                 break
         if not TESSERACT_AVAILABLE:
-            print("Tesseract not found in standard paths")
+            print("WARNING: Tesseract not found in standard Windows paths")
+            print("Install from: https://github.com/UB-Mannheim/tesseract/wiki")
     else:
+        # Linux/Mac - tesseract should be in PATH
         TESSERACT_AVAILABLE = True
-        print("Tesseract available (Linux/Mac)")
+        print("Tesseract OCR available (Linux/Mac)")
 except ImportError:
-    print("pytesseract not available. Install with: pip install pytesseract")
+    print("ERROR: pytesseract not installed. Install with: pip install pytesseract")
+    print("Also install Tesseract OCR: sudo apt-get install tesseract-ocr")
 
-if not EASYOCR_AVAILABLE and not TESSERACT_AVAILABLE:
-    print("NO OCR ENGINE AVAILABLE! Install easyocr: pip install easyocr")
+if not TESSERACT_AVAILABLE:
+    print("="*60)
+    print("WARNING: OCR functionality will not work!")
+    print("Install Tesseract: sudo apt-get install tesseract-ocr tesseract-ocr-eng")
+    print("Install pytesseract: pip install pytesseract")
+    print("="*60)
 
 # GPIO for Raspberry Pi LED control
 GPIO_AVAILABLE = False
@@ -4623,13 +4814,13 @@ class KioskApp:
     
     def _enhanced_ocr_extraction(self, frame, label: str = "") -> str:
         """
-        Enhanced OCR extraction using EasyOCR (pure Python, no external install needed)
-        - Works great on low-quality cameras
+        Enhanced OCR extraction using Tesseract OCR
+        - Works on Raspberry Pi and all platforms
         - Automatic noise reduction and preprocessing
         - Smart validation to filter garbage text
         - Focused extraction of registration codes
         """
-        global easyocr_reader, EASYOCR_AVAILABLE, TESSERACT_AVAILABLE
+        global TESSERACT_AVAILABLE
         
         results = []
         extracted_codes = []
@@ -4650,7 +4841,7 @@ class KioskApp:
         denoised = cv2.medianBlur(denoised, 3)
         
         # STEP 2: UPSCALE for better OCR (helps with small/blurry text)
-        scale = 2  # 2x upscale (EasyOCR handles lower res better than Tesseract)
+        scale = 2  # 2x upscale for better Tesseract accuracy
         upscaled = cv2.resize(denoised, (width * scale, height * scale), interpolation=cv2.INTER_CUBIC)
         
         # STEP 3: CONTRAST ENHANCEMENT
@@ -4671,67 +4862,10 @@ class KioskApp:
         _, otsu = cv2.threshold(enhanced, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         
         # ============================================================
-        # EasyOCR - Primary OCR Engine (Pure Python, no external install)
+        # Tesseract OCR Engine
         # ============================================================
-        if EASYOCR_AVAILABLE:
-            print(f"   Using EasyOCR (primary engine)...")
-            
-            # Initialize reader lazily on first use
-            if easyocr_reader is None:
-                print(f"   Initializing EasyOCR reader (first use, may take a moment)...")
-                try:
-                    easyocr_reader = easyocr.Reader(['en'], gpu=False, verbose=False)
-                    print(f"   EasyOCR reader initialized")
-                except Exception as e:
-                    print(f"   EasyOCR init failed: {e}")
-                    EASYOCR_AVAILABLE = False
-            
-            if easyocr_reader is not None:
-                # Pass 1: Original enhanced image
-                print(f"   Pass 1: Enhanced grayscale...")
-                try:
-                    ocr_result = easyocr_reader.readtext(enhanced, detail=0, paragraph=True)
-                    text1 = '\n'.join(ocr_result) if ocr_result else ""
-                    results.append(self._clean_ocr_text(text1))
-                    print(f"   Pass 1: {len(text1)} chars -> cleaned to {len(results[-1])} chars")
-                except Exception as e:
-                    print(f"   Pass 1 failed: {e}")
-                
-                # Pass 2: Adaptive threshold version
-                print(f"   Pass 2: Adaptive threshold...")
-                try:
-                    ocr_result = easyocr_reader.readtext(adaptive, detail=0, paragraph=True)
-                    text2 = '\n'.join(ocr_result) if ocr_result else ""
-                    results.append(self._clean_ocr_text(text2))
-                    print(f"   Pass 2: {len(text2)} chars -> cleaned to {len(results[-1])} chars")
-                except Exception as e:
-                    print(f"   Pass 2 failed: {e}")
-                
-                # Pass 3: Otsu threshold version
-                print(f"   Pass 3: Otsu threshold...")
-                try:
-                    ocr_result = easyocr_reader.readtext(otsu, detail=0, paragraph=True)
-                    text3 = '\n'.join(ocr_result) if ocr_result else ""
-                    results.append(self._clean_ocr_text(text3))
-                    print(f"   Pass 3: {len(text3)} chars -> cleaned to {len(results[-1])} chars")
-                except Exception as e:
-                    print(f"   Pass 3 failed: {e}")
-                
-                # Pass 4: Original frame (color) - EasyOCR can use color info
-                print(f"   Pass 4: Original color frame...")
-                try:
-                    ocr_result = easyocr_reader.readtext(frame, detail=0, paragraph=True)
-                    text4 = '\n'.join(ocr_result) if ocr_result else ""
-                    results.append(self._clean_ocr_text(text4))
-                    print(f"   Pass 4: {len(text4)} chars -> cleaned to {len(results[-1])} chars")
-                except Exception as e:
-                    print(f"   Pass 4 failed: {e}")
-        
-        # ============================================================
-        # Tesseract - Fallback OCR Engine (requires external install)
-        # ============================================================
-        elif TESSERACT_AVAILABLE:
-            print(f"   Using Tesseract (fallback engine)...")
+        if TESSERACT_AVAILABLE:
+            print(f"   Using Tesseract OCR...")
             
             # Pass 1: Adaptive threshold
             print(f"   Pass 1: Adaptive Threshold...")
@@ -4771,12 +4905,26 @@ class KioskApp:
                 print(f"   Pass 3: {len(text3)} chars -> cleaned to {len(results[-1])} chars")
             except Exception as e:
                 print(f"   Pass 3 failed: {e}")
+            
+            # Pass 4: Enhanced grayscale with sparse text mode (good for labels)
+            print(f"   Pass 4: Enhanced grayscale (sparse text)...")
+            try:
+                text4 = pytesseract.image_to_string(
+                    Image.fromarray(enhanced),
+                    lang='eng',
+                    config='--psm 11 --oem 1'  # Sparse text mode
+                )
+                results.append(self._clean_ocr_text(text4))
+                print(f"   Pass 4: {len(text4)} chars -> cleaned to {len(results[-1])} chars")
+            except Exception as e:
+                print(f"   Pass 4 failed: {e}")
         
         else:
             # No OCR engine available
-            print(f"   ERROR: No OCR engine available!")
-            print(f"   Please install EasyOCR: pip install easyocr")
-            return "ERROR: No OCR engine available. Please install EasyOCR: pip install easyocr"
+            print(f"   ERROR: Tesseract OCR not available!")
+            print(f"   Install: sudo apt-get install tesseract-ocr tesseract-ocr-eng")
+            print(f"   Install: pip install pytesseract")
+            return "ERROR: Tesseract OCR not installed. Run: sudo apt-get install tesseract-ocr"
         
         # STEP 5: EXTRACT REGISTRATION CODES from all results
         print(f"\n   Extracting registration codes...")
