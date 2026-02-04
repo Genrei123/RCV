@@ -22,40 +22,100 @@ import { FuzzySearchService } from "../../services/fuzzySearchService";
  * Helper function to verify if required fields are present in OCR text
  * This checks PACKAGING COMPLIANCE - not database records
  * 
- * IMPROVED: More robust matching to handle OCR variations
+ * ENHANCED: Uses fuzzy matching with Levenshtein distance for OCR error tolerance
+ * Example: "DF1-21-5913" in OCR matches "DFI-21-5913" expected (I→1 OCR error)
  */
 function verifyFieldInOCR(fieldValue: string | null | undefined, ocrText: string): boolean {
   if (!fieldValue) return false;
   
-  // Normalize both values - remove ALL non-alphanumeric characters
-  const cleanOCR = ocrText.toUpperCase().replace(/[^A-Z0-9]/g, '');
-  const cleanValue = fieldValue.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  // Normalize function for OCR character mistakes
+  const normalizeOCR = (text: string): string => {
+    return text.toUpperCase()
+      .replace(/[I|l!]/g, '1')   // I, |, l, ! → 1
+      .replace(/[O]/g, '0')       // O → 0
+      .replace(/[S$]/g, '5')      // S, $ → 5
+      .replace(/[Z]/g, '2')       // Z → 2
+      .replace(/[B]/g, '8')       // B → 8
+      .replace(/[G]/g, '6')       // G → 6
+      .replace(/[T]/g, '7')       // T → 7
+      .replace(/[A@]/g, 'A')      // @ → A
+      .replace(/[E€3]/g, 'E')     // €, 3 → E
+      .replace(/[^A-Z0-9]/g, ''); // Remove all non-alphanumeric
+  };
   
-  // Also keep original with just spaces/hyphens removed
-  const upperOCRNoSpaces = ocrText.toUpperCase().replace(/[-\s]/g, '');
+  // Levenshtein distance for fuzzy matching
+  const levenshteinDistance = (str1: string, str2: string): number => {
+    const m = str1.length, n = str2.length;
+    const dp: number[][] = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+    for (let i = 0; i <= m; i++) dp[i][0] = i;
+    for (let j = 0; j <= n; j++) dp[0][j] = j;
+    for (let i = 1; i <= m; i++) {
+      for (let j = 1; j <= n; j++) {
+        if (str1[i - 1] === str2[j - 1]) dp[i][j] = dp[i - 1][j - 1];
+        else dp[i][j] = 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+      }
+    }
+    return dp[m][n];
+  };
+  
+  const calculateSimilarity = (str1: string, str2: string): number => {
+    const norm1 = normalizeOCR(str1);
+    const norm2 = normalizeOCR(str2);
+    if (norm1 === norm2) return 1;
+    const distance = levenshteinDistance(norm1, norm2);
+    const maxLen = Math.max(norm1.length, norm2.length);
+    return maxLen === 0 ? 1 : 1 - (distance / maxLen);
+  };
+  
+  // Normalize for comparison
+  const normalizedValue = normalizeOCR(fieldValue);
+  const normalizedOCR = normalizeOCR(ocrText);
   
   // Log for debugging
   console.log(`   Verifying field in OCR:`);
-  console.log(`     Expected value: "${fieldValue}"`);
-  console.log(`     Clean value: "${cleanValue}"`);
+  console.log(`     Expected value: "${fieldValue}" → normalized: "${normalizedValue}"`);
   
-  // Check multiple variants
-  const variants = [
-    fieldValue.toUpperCase(),                    // Original with case
-    cleanValue,                                   // Fully cleaned (alphanumeric only)
-    fieldValue.toUpperCase().replace(/[-\s]/g, ''), // Just spaces/hyphens removed
-  ];
+  // METHOD 1: Check if normalized value is a substring of normalized OCR
+  if (normalizedOCR.includes(normalizedValue)) {
+    console.log(`     ✅ Found via normalized substring match`);
+    return true;
+  }
   
-  // Check if any variant appears in OCR
-  const found = variants.some(variant => 
-    cleanOCR.includes(variant) ||                // Check in fully cleaned OCR
-    upperOCRNoSpaces.includes(variant) ||        // Check in OCR with spaces removed
-    ocrText.toUpperCase().includes(variant)      // Check in original upper OCR
-  );
+  // METHOD 2: Extract potential codes from OCR and check similarity
+  const codePattern = /[A-Z0-9]{2,4}[-\s]?\d{2,}[-\s]?\d*/gi;
+  const potentialCodes = ocrText.match(codePattern) || [];
   
-  console.log(`     Found in OCR: ${found ? 'YES' : 'NO'}`);
+  for (const code of potentialCodes) {
+    const similarity = calculateSimilarity(code, fieldValue);
+    if (similarity >= 0.70) {  // 70% similar = match
+      console.log(`     ✅ Found via fuzzy match: "${code}" ≈ "${fieldValue}" (${(similarity * 100).toFixed(0)}%)`);
+      return true;
+    }
+  }
   
-  return found;
+  // METHOD 3: Sliding window - check chunks of OCR text
+  const chunks: string[] = [];
+  const cleanOCR = ocrText.replace(/\s+/g, ' ');
+  const words = cleanOCR.split(/\s+/);
+  
+  // Single words
+  chunks.push(...words.filter(w => w.length >= 5));
+  
+  // Word pairs
+  for (let i = 0; i < words.length - 1; i++) {
+    chunks.push(words[i] + words[i + 1]);
+  }
+  
+  for (const chunk of chunks) {
+    const similarity = calculateSimilarity(chunk, fieldValue);
+    if (similarity >= 0.70) {
+      console.log(`     ✅ Found via chunk fuzzy match: "${chunk}" ≈ "${fieldValue}" (${(similarity * 100).toFixed(0)}%)`);
+      return true;
+    }
+  }
+  
+  console.log(`     ❌ Not found in OCR (best match was below 70% similarity)`);
+  return false;
 }
 
 /**

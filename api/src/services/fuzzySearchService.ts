@@ -356,8 +356,8 @@ export class FuzzySearchService {
 
   /**
    * Validates that the matched product's critical codes are present in the OCR text
-   * NEW: Accepts products even if CFPR is missing (flags as warning)
-   * Prioritizes LTO/CFPR verification over product name matches
+   * ENHANCED: Uses fuzzy matching with Levenshtein distance for OCR error tolerance
+   * Example: "DF1-21-5913" in OCR matches "DFI-21-5913" in database (I→1 OCR error)
    */
   private static validateMatchAgainstOCR(product: Product, ocrText: string): { 
     valid: boolean; 
@@ -373,21 +373,45 @@ export class FuzzySearchService {
     let productHasCFPR = false;
     let productHasLTO = false;
     
+    // Extract all potential codes from OCR text for fuzzy matching
+    const potentialCodes = this.extractPotentialCodes(ocrText);
+    const extractedCFPR = this.extractCFPRNumber(ocrText);
+    const extractedLTO = this.extractLTONumber(ocrText);
+    
     // Check if product HAS CFPR in database
     if (product.CFPRNumber) {
       productHasCFPR = true;
-      const cfprClean = product.CFPRNumber.replace(/[-\s]/g, '').toUpperCase();
-      const cfprVariants = [
-        product.CFPRNumber.toUpperCase(),
-        cfprClean,
-        cfprClean.replace(/^FR/, 'FR-'),
-        cfprClean.replace(/^CFPR/, 'CFPR-'),
-      ];
       
-      cfprFound = cfprVariants.some(variant => 
-        upperText.includes(variant) || 
-        upperText.replace(/[-\s]/g, '').includes(variant)
-      );
+      // METHOD 1: Check extracted CFPR with fuzzy matching
+      if (extractedCFPR) {
+        const similarity = this.calculateSimilarity(extractedCFPR, product.CFPRNumber);
+        if (similarity >= 0.70) {
+          cfprFound = true;
+          console.log(`   [Validation] CFPR fuzzy match: "${extractedCFPR}" ≈ "${product.CFPRNumber}" (${(similarity * 100).toFixed(0)}%)`);
+        }
+      }
+      
+      // METHOD 2: Check all potential codes with fuzzy matching
+      if (!cfprFound) {
+        for (const code of potentialCodes) {
+          const similarity = this.calculateSimilarity(code, product.CFPRNumber);
+          if (similarity >= 0.70) {
+            cfprFound = true;
+            console.log(`   [Validation] CFPR found in potential codes: "${code}" ≈ "${product.CFPRNumber}" (${(similarity * 100).toFixed(0)}%)`);
+            break;
+          }
+        }
+      }
+      
+      // METHOD 3: Fallback - check normalized substring match
+      if (!cfprFound) {
+        const normalizedDB = this.normalizeOCRCharacters(product.CFPRNumber);
+        const normalizedOCR = this.normalizeOCRCharacters(upperText);
+        if (normalizedOCR.includes(normalizedDB)) {
+          cfprFound = true;
+          console.log(`   [Validation] CFPR normalized substring match found`);
+        }
+      }
       
       if (!cfprFound) {
         missingFields.push('CFPRNumber');
@@ -401,16 +425,37 @@ export class FuzzySearchService {
     // Check if product HAS LTO in database
     if (product.LTONumber) {
       productHasLTO = true;
-      const ltoClean = product.LTONumber.replace(/[-\s]/g, '').toUpperCase();
-      const ltoVariants = [
-        product.LTONumber.toUpperCase(),
-        ltoClean,
-      ];
       
-      ltoFound = ltoVariants.some(variant => 
-        upperText.includes(variant) || 
-        upperText.replace(/[-\s]/g, '').includes(variant)
-      );
+      // METHOD 1: Check extracted LTO with fuzzy matching
+      if (extractedLTO) {
+        const similarity = this.calculateSimilarity(extractedLTO, product.LTONumber);
+        if (similarity >= 0.70) {
+          ltoFound = true;
+          console.log(`   [Validation] LTO fuzzy match: "${extractedLTO}" ≈ "${product.LTONumber}" (${(similarity * 100).toFixed(0)}%)`);
+        }
+      }
+      
+      // METHOD 2: Check all potential codes with fuzzy matching
+      if (!ltoFound) {
+        for (const code of potentialCodes) {
+          const similarity = this.calculateSimilarity(code, product.LTONumber);
+          if (similarity >= 0.70) {
+            ltoFound = true;
+            console.log(`   [Validation] LTO found in potential codes: "${code}" ≈ "${product.LTONumber}" (${(similarity * 100).toFixed(0)}%)`);
+            break;
+          }
+        }
+      }
+      
+      // METHOD 3: Fallback - check normalized substring match
+      if (!ltoFound) {
+        const normalizedDB = this.normalizeOCRCharacters(product.LTONumber);
+        const normalizedOCR = this.normalizeOCRCharacters(upperText);
+        if (normalizedOCR.includes(normalizedDB)) {
+          ltoFound = true;
+          console.log(`   [Validation] LTO normalized substring match found`);
+        }
+      }
       
       if (!ltoFound) {
         missingFields.push('LTONumber');
@@ -419,9 +464,8 @@ export class FuzzySearchService {
       warnings.push('Product is missing LTO number');
     }
 
-    // NEW VALIDATION LOGIC - MORE LENIENT for product identification:
+    // VALIDATION LOGIC - MORE LENIENT for product identification:
     // We want to IDENTIFY the product, compliance checking happens separately
-    // Priority: LTO/CFPR codes are MORE IMPORTANT than product names
     let confidence: 'high' | 'medium' | 'low';
     let valid: boolean;
     
@@ -435,7 +479,6 @@ export class FuzzySearchService {
       valid = true;
     } else if (!productHasCFPR && !productHasLTO) {
       // ACCEPT: Product has no codes in database (name match only)
-      // This is OK for identification, compliance check happens later
       confidence = 'low';
       valid = true;
       warnings.push('Product identified by name only - no registration codes to verify');
