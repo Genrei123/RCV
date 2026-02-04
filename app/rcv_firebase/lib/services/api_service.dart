@@ -478,6 +478,7 @@ class ApiService {
     String? additionalNotes,
     String? frontImageUrl,
     String? backImageUrl,
+    List<String>? additionalImageUrls, // Additional images for box products
     Map<String, dynamic>? location,
     String? ocrBlobText, // Add OCR blob text parameter
   }) async {
@@ -485,6 +486,7 @@ class ApiService {
       developer.log('Submitting compliance report...');
       developer.log('Front Image URL: $frontImageUrl');
       developer.log('Back Image URL: $backImageUrl');
+      developer.log('Additional Image URLs: ${additionalImageUrls?.length ?? 0}');
 
       final body = {
         'status': status,
@@ -496,6 +498,8 @@ class ApiService {
         if (additionalNotes != null) 'additionalNotes': additionalNotes,
         if (frontImageUrl != null) 'frontImageUrl': frontImageUrl,
         if (backImageUrl != null) 'backImageUrl': backImageUrl,
+        if (additionalImageUrls != null && additionalImageUrls.isNotEmpty) 
+          'additionalImageUrls': additionalImageUrls,
         if (location != null) 'location': location,
         if (ocrBlobText != null) 'ocrBlobText': ocrBlobText, // Include OCR text
       };

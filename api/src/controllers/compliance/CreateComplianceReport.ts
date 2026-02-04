@@ -86,6 +86,8 @@ export const createComplianceReport = async (
         productName: validatedData.scannedData?.productName,
         ...(validatedData.frontImageUrl && { frontImageUrl: validatedData.frontImageUrl }),
         ...(validatedData.backImageUrl && { backImageUrl: validatedData.backImageUrl }),
+        ...(validatedData.additionalImageUrls && { additionalImageUrls: validatedData.additionalImageUrls }),
+        totalImages: 2 + (validatedData.additionalImageUrls?.length || 0),
       },
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),

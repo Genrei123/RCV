@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'config/firebase_config.dart';
 import 'services/remote_config_service.dart';
 import 'services/update_modal_service.dart';
+import 'services/update_service.dart';
 
 // Import all your pages
 import 'auth/landing_page.dart';
@@ -44,6 +45,9 @@ Future<void> main() async {
 
       // Initialize Remote Config
       await RemoteConfigService.initialize();
+      
+      // Initialize Update Service for Firebase App Distribution
+      await UpdateService.initialize();
     } catch (e) {
       debugPrint('Initialization error: $e');
       // If Firebase fails, treat as no connection

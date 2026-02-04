@@ -203,7 +203,7 @@ export function Products(props: ProductsProps) {
       key: "actions",
       label: "Actions",
       render: (_: any, row: Product) => (
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-nowrap whitespace-nowrap">
           <Button
             size="sm"
             variant="outline"
@@ -224,7 +224,7 @@ export function Products(props: ProductsProps) {
             <Download
               className={`h-4 w-4 mr-1 ${downloadingId === row._id ? "animate-pulse" : ""}`}
             />
-            {downloadingId === row._id ? "Downloading..." : "Certificate"}
+            {downloadingId === row._id ? "..." : "Certificate"}
           </Button>
         </div>
       ),

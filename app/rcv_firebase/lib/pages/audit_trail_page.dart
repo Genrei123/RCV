@@ -32,10 +32,9 @@ class AuditLog {
   });
 
   factory AuditLog.fromJson(Map<String, dynamic> json) {
-    
     final utcDate = DateTime.parse(json['createdAt']);
     final utc8Date = utcDate.add(const Duration(hours: 8));
-    
+
     return AuditLog(
       id: json['_id'] ?? '',
       action: json['action'] ?? '',
@@ -301,24 +300,25 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
                                 width: double.infinity,
                                 loadingBuilder:
                                     (context, child, loadingProgress) {
-                                  if (loadingProgress == null) return child;
-                                  return Container(
-                                    height: 200,
-                                    color: Colors.grey[200],
-                                    child: Center(
-                                      child: CircularProgressIndicator(
-                                        value: loadingProgress
-                                                    .expectedTotalBytes !=
-                                                null
-                                            ? loadingProgress
-                                                    .cumulativeBytesLoaded /
+                                      if (loadingProgress == null) return child;
+                                      return Container(
+                                        height: 200,
+                                        color: Colors.grey[200],
+                                        child: Center(
+                                          child: CircularProgressIndicator(
+                                            value:
                                                 loadingProgress
-                                                    .expectedTotalBytes!
-                                            : null,
-                                      ),
-                                    ),
-                                  );
-                                },
+                                                        .expectedTotalBytes !=
+                                                    null
+                                                ? loadingProgress
+                                                          .cumulativeBytesLoaded /
+                                                      loadingProgress
+                                                          .expectedTotalBytes!
+                                                : null,
+                                          ),
+                                        ),
+                                      );
+                                    },
                                 errorBuilder: (context, error, stackTrace) {
                                   return Container(
                                     height: 200,
@@ -328,8 +328,11 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
                                         mainAxisAlignment:
                                             MainAxisAlignment.center,
                                         children: [
-                                          Icon(Icons.error,
-                                              color: Colors.red, size: 40),
+                                          Icon(
+                                            Icons.error,
+                                            color: Colors.red,
+                                            size: 40,
+                                          ),
                                           SizedBox(height: 8),
                                           Text(
                                             'Failed to load image',
@@ -365,24 +368,25 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
                                 width: double.infinity,
                                 loadingBuilder:
                                     (context, child, loadingProgress) {
-                                  if (loadingProgress == null) return child;
-                                  return Container(
-                                    height: 200,
-                                    color: Colors.grey[200],
-                                    child: Center(
-                                      child: CircularProgressIndicator(
-                                        value: loadingProgress
-                                                    .expectedTotalBytes !=
-                                                null
-                                            ? loadingProgress
-                                                    .cumulativeBytesLoaded /
+                                      if (loadingProgress == null) return child;
+                                      return Container(
+                                        height: 200,
+                                        color: Colors.grey[200],
+                                        child: Center(
+                                          child: CircularProgressIndicator(
+                                            value:
                                                 loadingProgress
-                                                    .expectedTotalBytes!
-                                            : null,
-                                      ),
-                                    ),
-                                  );
-                                },
+                                                        .expectedTotalBytes !=
+                                                    null
+                                                ? loadingProgress
+                                                          .cumulativeBytesLoaded /
+                                                      loadingProgress
+                                                          .expectedTotalBytes!
+                                                : null,
+                                          ),
+                                        ),
+                                      );
+                                    },
                                 errorBuilder: (context, error, stackTrace) {
                                   return Container(
                                     height: 200,
@@ -392,8 +396,11 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
                                         mainAxisAlignment:
                                             MainAxisAlignment.center,
                                         children: [
-                                          Icon(Icons.error,
-                                              color: Colors.red, size: 40),
+                                          Icon(
+                                            Icons.error,
+                                            color: Colors.red,
+                                            size: 40,
+                                          ),
                                           SizedBox(height: 8),
                                           Text(
                                             'Failed to load image',
@@ -410,6 +417,100 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
                               ),
                             ),
                             const SizedBox(height: 16),
+                          ],
+                          // Additional Images (for box products with multiple sides)
+                          if (log.metadata!['additionalImageUrls'] != null &&
+                              (log.metadata!['additionalImageUrls'] as List)
+                                  .isNotEmpty) ...[
+                            const Text(
+                              'Additional Images:',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black54,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            ...(log.metadata!['additionalImageUrls'] as List).asMap().entries.map((
+                              entry,
+                            ) {
+                              final index = entry.key;
+                              final imageUrl = entry.value as String;
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Side ${index + 1}:',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.black45,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Image.network(
+                                        imageUrl,
+                                        fit: BoxFit.cover,
+                                        width: double.infinity,
+                                        loadingBuilder: (context, child, loadingProgress) {
+                                          if (loadingProgress == null)
+                                            return child;
+                                          return Container(
+                                            height: 200,
+                                            color: Colors.grey[200],
+                                            child: Center(
+                                              child: CircularProgressIndicator(
+                                                value:
+                                                    loadingProgress
+                                                            .expectedTotalBytes !=
+                                                        null
+                                                    ? loadingProgress
+                                                              .cumulativeBytesLoaded /
+                                                          loadingProgress
+                                                              .expectedTotalBytes!
+                                                    : null,
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                        errorBuilder:
+                                            (context, error, stackTrace) {
+                                              return Container(
+                                                height: 200,
+                                                color: Colors.grey[200],
+                                                child: const Center(
+                                                  child: Column(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .center,
+                                                    children: [
+                                                      Icon(
+                                                        Icons.error,
+                                                        color: Colors.red,
+                                                        size: 40,
+                                                      ),
+                                                      SizedBox(height: 8),
+                                                      Text(
+                                                        'Failed to load image',
+                                                        style: TextStyle(
+                                                          color: Colors.red,
+                                                          fontSize: 12,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }),
                           ],
                         ],
                         // Show extracted OCR information if available
@@ -553,11 +654,7 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            icon,
-            size: 20,
-            color: app_colors.AppColors.primary,
-          ),
+          Icon(icon, size: 20, color: app_colors.AppColors.primary),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -590,7 +687,7 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
 
   List<Widget> _buildMetadataItems(Map<String, dynamic> metadata) {
     final List<Widget> items = [];
-    
+
     // Filter out keys we've already displayed or don't need to show
     final filteredMetadata = Map<String, dynamic>.from(metadata);
     filteredMetadata.remove('frontImageUrl');
@@ -599,7 +696,7 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
     filteredMetadata.remove('scanType'); // Internal field
     filteredMetadata.remove('extractionSuccess'); // Internal field
     filteredMetadata.remove('scannedText'); // Already shown in extractedInfo
-    
+
     if (filteredMetadata.isEmpty) {
       return [];
     }

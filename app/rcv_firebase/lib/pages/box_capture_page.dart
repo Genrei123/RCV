@@ -308,7 +308,8 @@ class _BoxCapturePageState extends State<BoxCapturePage> {
                       onPressed: () {
                         widget.onImagesSelected(capturedImages);
                         widget.onComplete();
-                        Navigator.pop(context);
+                        // Return the captured images when popping
+                        Navigator.pop(context, capturedImages);
                       },
                       icon: const Icon(Icons.check),
                       label: const Text('All Sides Captured - Continue'),
