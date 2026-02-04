@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { X, Package, Hash, Calendar, Building2, Plus, ImagePlus, Camera, Tag, Layers, Wallet, AlertTriangle } from "lucide-react";
+import { X, Package, Hash, Calendar, Building2, Plus, ImagePlus, Camera, FolderOpen, Grid3x3, Tag, Wallet, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { CreateProductRequest } from "@/services/productService";
@@ -1155,7 +1155,7 @@ export function AddProductModal({
                   </Button>
                 </div>
                 <div className="relative" ref={classificationDropdownRef}>
-                  <Layers className="absolute left-3 top-1/2 -translate-y-1/2 app-text-subtle h-4 w-4 z-10" />
+                  <FolderOpen className="absolute left-3 top-5 -translate-y-1/2 app-text-subtle h-4 w-4 z-10" />
                   <div className="space-y-1">
                     <Input
                       type="text"
@@ -1250,7 +1250,7 @@ export function AddProductModal({
                   )}
                 </div>
                 <div className="relative" ref={subClassificationDropdownRef}>
-                  <Layers className="absolute left-3 top-1/2 -translate-y-1/2 app-text-subtle h-4 w-4 z-10" />
+                  <Grid3x3 className="absolute left-3 top-5 -translate-y-1/2 app-text-subtle h-4 w-4 z-10" />
                   <div className="space-y-1">
                     <Input
                       type="text"

@@ -32,14 +32,16 @@ class ReportItem {
   });
 
   factory ReportItem.fromJson(Map<String, dynamic> json) {
-    final isVerified = json['isVerified'];
+    // Get the compliance status (COMPLIANT or NON_COMPLIANT)
+    final String? complianceStatus = json['status'];
+    final bool isCompliant = complianceStatus == 'COMPLIANT';
+
+    // Determine category based on compliance status
     ReportCategory category;
-    if (isVerified == true) {
-      category = ReportCategory.verified;
-    } else if (isVerified == false) {
-      category = ReportCategory.notVerified;
+    if (isCompliant) {
+      category = ReportCategory.verified; // Compliant = green check
     } else {
-      category = ReportCategory.inReview;
+      category = ReportCategory.notVerified; // Non-compliant = red X
     }
 
     // Map category to UI status
@@ -57,8 +59,11 @@ class ReportItem {
         json['scannedData']?['productName'] ?? 'Unknown Product';
     final brandName = json['scannedData']?['brandName'] ?? 'Unknown Brand';
     final title = '$productName - $brandName';
-    final description =
-        json['nonComplianceReason'] ?? 'Compliance report submitted';
+
+    // For compliant reports, show "Compliant", for non-compliant show the reason
+    final description = isCompliant
+        ? 'Compliant product'
+        : (json['nonComplianceReason'] ?? 'Non-compliant');
 
     return ReportItem(
       id: json['_id'] ?? '',
@@ -381,9 +386,9 @@ class _UserReportsPageState extends State<UserReportsPage> {
   String _categoryLabel(ReportCategory c) {
     switch (c) {
       case ReportCategory.verified:
-        return 'Verified';
+        return 'Compliant';
       case ReportCategory.notVerified:
-        return 'Not Verified';
+        return 'Non-Compliant';
       case ReportCategory.inReview:
         return 'In Review';
     }

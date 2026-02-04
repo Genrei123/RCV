@@ -4262,17 +4262,23 @@ class _QRScannerPageState extends State<QRScannerPage>
     if (result == null) return;
 
     // Process the captured images from can rotation
-    // For now, use front and right as front/back for OCR processing
     final front = result[CanSide.front];
-    final back = result[CanSide.back]; // Use back side as back image
+    final back = result[CanSide.back];
+    final left = result[CanSide.left];
+    final right = result[CanSide.right];
 
     if (front != null && back != null) {
       setState(() {
         _frontImagePath = front;
         _backImagePath = back;
+        // Store left and right as additional images for canned products
+        _additionalImagePaths = [
+          if (left != null) left,
+          if (right != null) right,
+        ];
       });
 
-      // Start OCR processing with all 4 images
+      // Start OCR processing with front and back images
       await _performDualOCR(front, back);
     }
   }

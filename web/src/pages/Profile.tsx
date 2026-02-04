@@ -1062,7 +1062,8 @@ export function Profile({
 
               {/* Scan Images */}
               {selectedLog.metadata?.frontImageUrl ||
-              selectedLog.metadata?.backImageUrl ? (
+              selectedLog.metadata?.backImageUrl ||
+              (selectedLog.metadata?.additionalImageUrls && selectedLog.metadata.additionalImageUrls.length > 0) ? (
                 <div className="border-b pb-3">
                   <p className="text-sm font-medium text-neutral-500 mb-3">
                     Scan Images
@@ -1107,6 +1108,43 @@ export function Profile({
                       </div>
                     )}
                   </div>
+                  {/* Additional Images (for canned/box products) */}
+                  {selectedLog.metadata.additionalImageUrls &&
+                    Array.isArray(selectedLog.metadata.additionalImageUrls) &&
+                    selectedLog.metadata.additionalImageUrls.length > 0 && (
+                      <div className="mt-4">
+                        <p className="text-xs font-medium text-neutral-600 mb-2">
+                          Additional Images ({selectedLog.metadata.additionalImageUrls.length})
+                        </p>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          {selectedLog.metadata.additionalImageUrls.map(
+                            (url: string, index: number) => {
+                              const sideNames = selectedLog.metadata?.additionalImageUrls?.length === 2 
+                                ? ['Left', 'Right'] 
+                                : ['Top', 'Bottom', 'Left', 'Right'];
+                              const sideName = index < sideNames.length ? sideNames[index] : `Side ${index + 1}`;
+                              return (
+                                <div key={index} className="space-y-1">
+                                  <p className="text-xs text-neutral-500">{sideName}</p>
+                                  <a
+                                    href={url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="block border rounded-lg overflow-hidden hover:opacity-80 transition-opacity"
+                                  >
+                                    <img
+                                      src={url}
+                                      alt={sideName}
+                                      className="w-full h-32 object-cover"
+                                    />
+                                  </a>
+                                </div>
+                              );
+                            }
+                          )}
+                        </div>
+                      </div>
+                    )}
                 </div>
               ) : null}
 
@@ -1209,6 +1247,7 @@ export function Profile({
                           ([key]) =>
                             key !== "frontImageUrl" &&
                             key !== "backImageUrl" &&
+                            key !== "additionalImageUrls" &&
                             key !== "extractedInfo" &&
                             key !== "scanType" &&
                             key !== "extractionSuccess" &&
