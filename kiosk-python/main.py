@@ -804,6 +804,9 @@ class KioskApp:
         # ============ COMPLIANCE SCREEN (OCR results) ============
         self.compliance_frame = tk.Frame(self.main_frame, bg=Colors.BACKGROUND)
         
+        # ============ MANUAL SEARCH SCREEN ============
+        self.manual_search_frame = tk.Frame(self.main_frame, bg=Colors.BACKGROUND)
+        
         # ============ ERROR SCREEN ============
         self.error_frame = tk.Frame(self.main_frame, bg=Colors.BACKGROUND)
         
@@ -817,6 +820,7 @@ class KioskApp:
         self._setup_loading_screen()
         self._setup_result_screen()
         self._setup_compliance_screen()
+        self._setup_manual_search_screen()
         self._setup_error_screen()
         self._setup_maintenance_screen()
         
@@ -885,6 +889,23 @@ class KioskApp:
             cursor="hand2"
         )
         self.start_ocr_btn.pack(pady=8, padx=10, fill=tk.X)
+        
+        self.manual_search_btn = tk.Button(
+            sidebar,
+            text="MANUAL\nSEARCH",
+            font=("SF Pro Display", 11, "bold"),
+            bg=Colors.WARNING,
+            fg=Colors.TEXT_WHITE,
+            activebackground="#F57C00",
+            activeforeground=Colors.TEXT_WHITE,
+            relief=tk.FLAT,
+            bd=0,
+            width=14,
+            pady=15,
+            command=self._show_manual_search_screen,
+            cursor="hand2"
+        )
+        self.manual_search_btn.pack(pady=8, padx=10, fill=tk.X)
         
         # Spacer
         tk.Frame(sidebar, bg=Colors.PRIMARY).pack(fill=tk.BOTH, expand=True)
@@ -1821,6 +1842,182 @@ class KioskApp:
         self.compliance_frame.bind('<Button-1>', self._pause_timer)
         self.compliance_frame.bind('<ButtonRelease-1>', self._resume_timer)
     
+    def _setup_manual_search_screen(self):
+        """Setup manual search screen for typing CFPR and LTO numbers"""
+        # Main horizontal layout
+        main_container = tk.Frame(self.manual_search_frame, bg=Colors.BACKGROUND)
+        main_container.pack(fill=tk.BOTH, expand=True)
+        
+        # LEFT SIDEBAR
+        sidebar = tk.Frame(main_container, bg=Colors.WARNING, width=140)
+        sidebar.pack(side=tk.LEFT, fill=tk.Y)
+        sidebar.pack_propagate(False)
+        
+        # Sidebar header
+        tk.Label(
+            sidebar,
+            text="MANUAL",
+            font=("SF Pro Display", 14, "bold"),
+            bg=Colors.WARNING,
+            fg=Colors.TEXT_WHITE
+        ).pack(pady=(10, 3))
+        
+        tk.Label(
+            sidebar,
+            text="SEARCH",
+            font=("SF Pro Text", 10),
+            bg=Colors.WARNING,
+            fg="#FFFFFF"
+        ).pack(pady=(0, 15))
+        
+        # Search button
+        self.manual_search_submit_btn = tk.Button(
+            sidebar,
+            text="SEARCH",
+            font=("SF Pro Text", 9, "bold"),
+            bg=Colors.SUCCESS,
+            fg=Colors.TEXT_WHITE,
+            activebackground="#43A047",
+            activeforeground=Colors.TEXT_WHITE,
+            relief=tk.FLAT,
+            bd=0,
+            width=12,
+            pady=10,
+            command=self._manual_search_submit
+        )
+        self.manual_search_submit_btn.pack(pady=5, padx=8, fill=tk.X)
+        
+        # Clear button
+        self.manual_search_clear_btn = tk.Button(
+            sidebar,
+            text="CLEAR",
+            font=("SF Pro Text", 9, "bold"),
+            bg=Colors.TEXT_SECONDARY,
+            fg=Colors.TEXT_WHITE,
+            activebackground="#555555",
+            activeforeground=Colors.TEXT_WHITE,
+            relief=tk.FLAT,
+            bd=0,
+            width=12,
+            pady=10,
+            command=self._manual_search_clear
+        )
+        self.manual_search_clear_btn.pack(pady=5, padx=8, fill=tk.X)
+        
+        # Back button
+        self.manual_search_back_btn = tk.Button(
+            sidebar,
+            text="BACK",
+            font=("SF Pro Text", 9, "bold"),
+            bg=Colors.ERROR,
+            fg=Colors.TEXT_WHITE,
+            activebackground="#D32F2F",
+            activeforeground=Colors.TEXT_WHITE,
+            relief=tk.FLAT,
+            bd=0,
+            width=12,
+            pady=10,
+            command=self._show_start_screen
+        )
+        self.manual_search_back_btn.pack(pady=5, padx=8, fill=tk.X)
+        
+        # Spacer
+        tk.Frame(sidebar, bg=Colors.WARNING).pack(fill=tk.BOTH, expand=True)
+        
+        # RIGHT CONTENT AREA
+        content_area = tk.Frame(main_container, bg=Colors.BACKGROUND)
+        content_area.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        # Center content
+        center = tk.Frame(content_area, bg=Colors.BACKGROUND)
+        center.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+        
+        # Title
+        tk.Label(
+            center,
+            text="Manual Product Search",
+            font=("SF Pro Display", 20, "bold"),
+            bg=Colors.BACKGROUND,
+            fg=Colors.TEXT_PRIMARY
+        ).pack(pady=(0, 5))
+        
+        tk.Label(
+            center,
+            text="Enter product registration numbers",
+            font=("SF Pro Text", 12),
+            bg=Colors.BACKGROUND,
+            fg=Colors.TEXT_SECONDARY
+        ).pack(pady=(0, 30))
+        
+        # Input fields frame
+        fields_frame = tk.Frame(center, bg=Colors.SURFACE, padx=30, pady=30)
+        fields_frame.pack()
+        
+        # CFPR Number input
+        tk.Label(
+            fields_frame,
+            text="CFPR Number:",
+            font=("SF Pro Text", 14, "bold"),
+            bg=Colors.SURFACE,
+            fg=Colors.TEXT_PRIMARY
+        ).grid(row=0, column=0, sticky=tk.W, pady=(0, 5))
+        
+        self.cfpr_entry = tk.Entry(
+            fields_frame,
+            font=("SF Pro Text", 16),
+            width=25,
+            bg=Colors.BACKGROUND,
+            fg=Colors.TEXT_PRIMARY,
+            relief=tk.SOLID,
+            bd=2
+        )
+        self.cfpr_entry.grid(row=1, column=0, pady=(0, 20))
+        
+        tk.Label(
+            fields_frame,
+            text="Example: FR-12345 or IM-67890",
+            font=("SF Pro Text", 10),
+            bg=Colors.SURFACE,
+            fg=Colors.TEXT_SECONDARY
+        ).grid(row=2, column=0, sticky=tk.W, pady=(0, 20))
+        
+        # LTO/BAI Number input
+        tk.Label(
+            fields_frame,
+            text="LTO/BAI Registration Number:",
+            font=("SF Pro Text", 14, "bold"),
+            bg=Colors.SURFACE,
+            fg=Colors.TEXT_PRIMARY
+        ).grid(row=3, column=0, sticky=tk.W, pady=(0, 5))
+        
+        self.lto_entry = tk.Entry(
+            fields_frame,
+            font=("SF Pro Text", 16),
+            width=25,
+            bg=Colors.BACKGROUND,
+            fg=Colors.TEXT_PRIMARY,
+            relief=tk.SOLID,
+            bd=2
+        )
+        self.lto_entry.grid(row=4, column=0, pady=(0, 20))
+        
+        tk.Label(
+            fields_frame,
+            text="Example: LTO-2024-001 or DR-5678",
+            font=("SF Pro Text", 10),
+            bg=Colors.SURFACE,
+            fg=Colors.TEXT_SECONDARY
+        ).grid(row=5, column=0, sticky=tk.W)
+        
+        # Note
+        tk.Label(
+            center,
+            text="💡 Enter at least one registration number to search",
+            font=("SF Pro Text", 11),
+            bg=Colors.BACKGROUND,
+            fg=Colors.WARNING
+        ).pack(pady=(20, 0))
+    
     def _setup_maintenance_screen(self):
         """Setup the maintenance/offline mode screen - FULL SCREEN LOCKOUT"""
         # FULL SCREEN RED BACKGROUND for maximum visibility
@@ -1994,8 +2191,8 @@ class KioskApp:
         """Hide all screen frames"""
         for frame in [self.start_frame, self.scan_frame, self.ocr_frame,
                       self.loading_frame, self.result_frame, 
-                      self.compliance_frame, self.error_frame, 
-                      self.maintenance_frame]:
+                      self.compliance_frame, self.manual_search_frame,
+                      self.error_frame, self.maintenance_frame]:
             frame.pack_forget()
         
         # Cancel any running timers
@@ -2061,6 +2258,16 @@ class KioskApp:
         self._hide_all_screens()
         self.compliance_frame.pack(fill=tk.BOTH, expand=True)
         self.state = KioskState.DISPLAY_COMPLIANCE
+    
+    def _show_manual_search_screen(self):
+        """Show manual search screen"""
+        self._hide_all_screens()
+        self.manual_search_frame.pack(fill=tk.BOTH, expand=True)
+        # Clear previous entries
+        self.cfpr_entry.delete(0, tk.END)
+        self.lto_entry.delete(0, tk.END)
+        # Focus on first field
+        self.cfpr_entry.focus()
     
     def _show_error_screen(self, message: str, detail: str = "May nangyaring problema"):
         """Show error screen"""
@@ -3611,6 +3818,88 @@ class KioskApp:
         """Cancel OCR capture and return to start screen"""
         self._reset_ocr_capture()
         self._show_start_screen()
+    
+    # ============ Manual Search Methods ============
+    
+    def _manual_search_clear(self):
+        """Clear manual search input fields"""
+        self.cfpr_entry.delete(0, tk.END)
+        self.lto_entry.delete(0, tk.END)
+        self.cfpr_entry.focus()
+    
+    def _manual_search_submit(self):
+        """Submit manual search with entered codes"""
+        cfpr = self.cfpr_entry.get().strip().upper()
+        lto = self.lto_entry.get().strip().upper()
+        
+        # Validate at least one field is filled
+        if not cfpr and not lto:
+            self._show_error_screen(
+                "Missing Information",
+                "Please enter at least CFPR or LTO/BAI number\nPakipasok ang kahit CFPR o LTO/BAI number"
+            )
+            return
+        
+        # Show loading screen
+        self._show_loading_screen("Searching for product...\nHinahanap ang produkto...")
+        
+        # Process in background
+        thread = threading.Thread(target=self._process_manual_search, args=(cfpr, lto), daemon=True)
+        thread.start()
+    
+    def _process_manual_search(self, cfpr: str, lto: str):
+        """Process manual search by constructing OCR-like text"""
+        try:
+            # Construct text block similar to OCR output
+            # This mimics what OCR would extract from a label
+            text_parts = []
+            
+            if cfpr:
+                text_parts.append(f"CFPR: {cfpr}")
+                text_parts.append(f"CFPR Number: {cfpr}")
+                text_parts.append(cfpr)
+            
+            if lto:
+                text_parts.append(f"LTO: {lto}")
+                text_parts.append(f"LTO Number: {lto}")
+                text_parts.append(f"BAI Registration: {lto}")
+                text_parts.append(lto)
+            
+            # Combine into searchable text
+            combined_text = "\n".join(text_parts)
+            
+            print(f"\n{'='*60}")
+            print(f"🔍 MANUAL SEARCH")
+            print(f"{'='*60}")
+            print(f"CFPR: {cfpr if cfpr else 'Not provided'}")
+            print(f"LTO/BAI: {lto if lto else 'Not provided'}")
+            print(f"Constructed text: {combined_text}")
+            print(f"{'='*60}\n")
+            
+            self.root.after(0, lambda: self.loading_detail_label.config(text="Searching database..."))
+            
+            # Send to API using same endpoint as OCR
+            print(f"📡 Calling POST /api/v1/kiosk-scan/scanProduct (Manual Search)")
+            print(f"📦 Payload: blockOfText={len(combined_text)} chars")
+            response = self.api.scan_product_ocr(combined_text)
+            print(f"📨 API Response: success={response.get('success')}, found={response.get('found')}, isCompliant={response.get('isCompliant')}")
+            
+            if response.get("success"):
+                print(f"✅ Displaying compliance result to user")
+                self.root.after(0, lambda: self._display_compliance_result(response))
+            else:
+                print(f"❌ Search failed: {response.get('message')}")
+                self.root.after(0, lambda: self._show_error_screen(
+                    "Product Not Found",
+                    response.get("message", "No product found with those registration numbers")
+                ))
+                
+        except Exception as e:
+            print(f"Manual search error: {e}")
+            self.root.after(0, lambda: self._show_error_screen(
+                f"Search Error: {str(e)}",
+                "May problema sa paghahanap ng produkto"
+            ))
     
     def _review_ocr_capture(self, image_index: int):
         """Open captured OCR image in fullscreen for review"""
