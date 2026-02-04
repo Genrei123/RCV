@@ -1246,6 +1246,20 @@ class KioskApp:
         self.logo_photo = None  # Cache for logo
         self.camera_photo = None  # Persistent camera photo reference
         
+        # Slideshow state (idle screensaver)
+        self.slideshow_overlay = None
+        self.slideshow_images = []  # List of PIL Images
+        self.slideshow_photos = []  # Keep PhotoImage references
+        self.slideshow_current_index = 0
+        self.slideshow_timer_id = None
+        self.slideshow_active = False
+        self.idle_timer_id = None
+        self.SLIDESHOW_INTERVAL = 5000  # 5 seconds between slides
+        self.IDLE_TIMEOUT = 30000  # 30 seconds of inactivity before slideshow
+        
+        # Load slideshow images
+        self._load_slideshow_images()
+        
         # Setup UI
         self.setup_ui()
         
@@ -2954,6 +2968,9 @@ class KioskApp:
             self.is_running = False
             self.camera.release()
             self.camera = None
+        
+        # Start idle timer for slideshow
+        self._start_idle_timer()
     
     def _show_scan_screen(self):
         """Show scanning screen"""
@@ -3000,6 +3017,11 @@ class KioskApp:
     
     def _show_manual_search_screen(self):
         """Show manual search screen"""
+        # Cancel idle timer - user is interacting
+        if self.idle_timer_id:
+            self.root.after_cancel(self.idle_timer_id)
+            self.idle_timer_id = None
+        
         self._hide_all_screens()
         self.manual_search_frame.pack(fill=tk.BOTH, expand=True)
         # Clear previous entries
@@ -3791,12 +3813,22 @@ class KioskApp:
     
     def _start_camera_and_scan(self):
         """Start camera and switch to QR scan mode"""
+        # Cancel idle timer - user is interacting
+        if self.idle_timer_id:
+            self.root.after_cancel(self.idle_timer_id)
+            self.idle_timer_id = None
+        
         self._show_scan_screen()
         self.start_camera()
         self.tts.speak("Camera started. Ready to scan.")
     
     def _start_ocr_capture(self):
         """Start OCR product label capture flow"""
+        # Cancel idle timer - user is interacting
+        if self.idle_timer_id:
+            self.root.after_cancel(self.idle_timer_id)
+            self.idle_timer_id = None
+        
         # Start camera if not running
         if not self.camera or not self.camera.isOpened():
             self.start_camera()
@@ -5878,6 +5910,181 @@ class KioskApp:
         self.exit_button.pack(side=tk.LEFT, padx=20)
         self.root.after(5000, lambda: self.exit_button.pack_forget())  # Hide after 5 seconds
     
+    # ============ SLIDESHOW / SCREENSAVER ============
+    
+    def _load_slideshow_images(self):
+        """Load PNG images from assets/slideshow folder"""
+        slideshow_dir = os.path.join(os.path.dirname(__file__), "assets", "slideshow")
+        
+        # Create the folder if it doesn't exist
+        os.makedirs(slideshow_dir, exist_ok=True)
+        
+        self.slideshow_images = []
+        
+        # Look for PNG, JPG, JPEG images
+        extensions = ['.png', '.jpg', '.jpeg', '.PNG', '.JPG', '.JPEG']
+        
+        if os.path.exists(slideshow_dir):
+            files = sorted(os.listdir(slideshow_dir))
+            for filename in files:
+                if any(filename.endswith(ext) for ext in extensions):
+                    filepath = os.path.join(slideshow_dir, filename)
+                    try:
+                        img = Image.open(filepath)
+                        self.slideshow_images.append(img)
+                        print(f"Loaded slideshow image: {filename}")
+                    except Exception as e:
+                        print(f"Failed to load slideshow image {filename}: {e}")
+        
+        if self.slideshow_images:
+            print(f"Loaded {len(self.slideshow_images)} slideshow images")
+        else:
+            print(f"No slideshow images found in {slideshow_dir}")
+            print("Add PNG/JPG images to assets/slideshow/ folder for screensaver")
+    
+    def _start_idle_timer(self):
+        """Start/reset the idle timer for slideshow"""
+        # Cancel existing timer
+        if self.idle_timer_id:
+            self.root.after_cancel(self.idle_timer_id)
+            self.idle_timer_id = None
+        
+        # Only start idle timer if we have slideshow images and on start screen
+        if self.slideshow_images and self.state == KioskState.CAMERA_OFF:
+            self.idle_timer_id = self.root.after(self.IDLE_TIMEOUT, self._start_slideshow)
+    
+    def _reset_idle_timer(self, event=None):
+        """Reset idle timer on any user interaction"""
+        # If slideshow is active, dismiss it
+        if self.slideshow_active:
+            self._stop_slideshow()
+            return
+        
+        # Reset the idle timer
+        self._start_idle_timer()
+    
+    def _start_slideshow(self):
+        """Start the fullscreen slideshow overlay"""
+        if not self.slideshow_images or self.slideshow_active:
+            return
+        
+        # Only show slideshow on start screen (camera off)
+        if self.state != KioskState.CAMERA_OFF:
+            return
+        
+        print("Starting slideshow screensaver...")
+        self.slideshow_active = True
+        self.slideshow_current_index = 0
+        
+        # Create fullscreen overlay
+        self.slideshow_overlay = tk.Frame(self.root, bg="#000000")
+        self.slideshow_overlay.place(x=0, y=0, relwidth=1, relheight=1)
+        
+        # Create label to display images
+        self.slideshow_label = tk.Label(
+            self.slideshow_overlay,
+            bg="#000000",
+            cursor="hand2"
+        )
+        self.slideshow_label.pack(fill=tk.BOTH, expand=True)
+        
+        # Small hint text at bottom
+        self.slideshow_hint = tk.Label(
+            self.slideshow_overlay,
+            text="Tap anywhere to start",
+            font=("SF Pro Text", 14),
+            bg="#000000",
+            fg="#666666"
+        )
+        self.slideshow_hint.place(relx=0.5, rely=0.95, anchor=tk.CENTER)
+        
+        # Bind click/tap to dismiss
+        self.slideshow_overlay.bind('<Button-1>', self._stop_slideshow)
+        self.slideshow_label.bind('<Button-1>', self._stop_slideshow)
+        
+        # Show first image
+        self._show_slideshow_image()
+        
+        # Start cycling
+        self._cycle_slideshow()
+    
+    def _show_slideshow_image(self):
+        """Display current slideshow image scaled to fullscreen"""
+        if not self.slideshow_images or not self.slideshow_active:
+            return
+        
+        try:
+            # Get current image
+            img = self.slideshow_images[self.slideshow_current_index]
+            
+            # Scale to fit screen while maintaining aspect ratio
+            screen_w = self.screen_width
+            screen_h = self.screen_height
+            
+            img_w, img_h = img.size
+            
+            # Calculate scale to fit
+            scale_w = screen_w / img_w
+            scale_h = screen_h / img_h
+            scale = min(scale_w, scale_h)
+            
+            new_w = int(img_w * scale)
+            new_h = int(img_h * scale)
+            
+            # Resize image
+            resized = img.resize((new_w, new_h), Image.LANCZOS)
+            
+            # Convert to PhotoImage
+            photo = ImageTk.PhotoImage(resized)
+            
+            # Keep reference to prevent garbage collection
+            self.slideshow_photos = [photo]
+            
+            # Display
+            self.slideshow_label.config(image=photo)
+            
+        except Exception as e:
+            print(f"Slideshow display error: {e}")
+    
+    def _cycle_slideshow(self):
+        """Cycle to next slideshow image"""
+        if not self.slideshow_active:
+            return
+        
+        # Move to next image
+        self.slideshow_current_index = (self.slideshow_current_index + 1) % len(self.slideshow_images)
+        self._show_slideshow_image()
+        
+        # Schedule next cycle
+        self.slideshow_timer_id = self.root.after(self.SLIDESHOW_INTERVAL, self._cycle_slideshow)
+    
+    def _stop_slideshow(self, event=None):
+        """Stop slideshow and return to main menu"""
+        if not self.slideshow_active:
+            return
+        
+        print("Stopping slideshow - returning to main menu")
+        self.slideshow_active = False
+        
+        # Cancel cycling timer
+        if self.slideshow_timer_id:
+            self.root.after_cancel(self.slideshow_timer_id)
+            self.slideshow_timer_id = None
+        
+        # Destroy overlay
+        if self.slideshow_overlay:
+            self.slideshow_overlay.destroy()
+            self.slideshow_overlay = None
+        
+        # Clear photo references
+        self.slideshow_photos = []
+        
+        # Show start screen
+        self._show_start_screen()
+        
+        # Restart idle timer
+        self._start_idle_timer()
+    
     def on_closing(self):
         """Handle application closing"""
         self.is_running = False
@@ -5890,6 +6097,10 @@ class KioskApp:
             self.root.after_cancel(self.loading_animation_id)
         if self.exit_timer:
             self.root.after_cancel(self.exit_timer)
+        if self.slideshow_timer_id:
+            self.root.after_cancel(self.slideshow_timer_id)
+        if self.idle_timer_id:
+            self.root.after_cancel(self.idle_timer_id)
         
         # Cleanup GPIO
         self.gpio_led.cleanup()
@@ -5902,6 +6113,7 @@ class KioskApp:
         self.camera_photo = None
         self.pdf_photos = []
         self.last_photo = None
+        self.slideshow_photos = []
         
         self.root.destroy()
 
