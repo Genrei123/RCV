@@ -458,13 +458,13 @@ export class FuzzySearchService {
       }
     }
 
-    // STRATEGY 2: Direct LTO match
+    // STRATEGY 2: Direct LTO match - HANDLE MULTIPLE PRODUCTS WITH SAME LTO
     if (extractedLTO) {
       const ltoClean = extractedLTO.replace(/[-\s]/g, '');
       const ltoNormalized = this.normalizeOCRCharacters(ltoClean);
       
-      // Search with both original and normalized versions
-      const ltoMatch = await ProductRepo.createQueryBuilder("product")
+      // Get ALL products matching this LTO (same company can have multiple products)
+      const ltoMatches = await ProductRepo.createQueryBuilder("product")
         .leftJoinAndSelect("product.company", "company")
         .where(
           new Brackets(qb => {
@@ -472,16 +472,75 @@ export class FuzzySearchService {
               .orWhere("REPLACE(REPLACE(product.LTONumber, '-', ''), ' ', '') ILIKE :ltoNorm", { ltoNorm: `%${ltoNormalized}%` });
           })
         )
-        .getOne();
+        .getMany();  // Get ALL matches, not just one
       
-      if (ltoMatch) {
-        // Validate match - either CFPR or LTO must be in OCR
-        const validation = this.validateMatchAgainstOCR(ltoMatch, ocrText);
+      if (ltoMatches.length > 0) {
+        console.log(`[FuzzySearch] LTO ${extractedLTO} matched ${ltoMatches.length} products`);
+        
+        // If multiple products match LTO, disambiguate using CFPR or product name
+        let bestMatch: Product | null = null;
+        let bestScore = 0;
+        
+        for (const product of ltoMatches) {
+          let score = 0;
+          
+          // HIGH PRIORITY: Check if CFPR matches
+          if (product.CFPRNumber && extractedCFPR) {
+            const productCFPR = product.CFPRNumber.replace(/[-\s]/g, '').toUpperCase();
+            const ocrCFPR = extractedCFPR.replace(/[-\s]/g, '').toUpperCase();
+            if (productCFPR === ocrCFPR || productCFPR.includes(ocrCFPR) || ocrCFPR.includes(productCFPR)) {
+              score += 100;  // Strong match on CFPR
+              console.log(`   - ${product.productName}: CFPR match (+100)`);
+            }
+          }
+          
+          // MEDIUM PRIORITY: Check product name in OCR text
+          const productNameUpper = product.productName.toUpperCase();
+          const ocrTextUpper = ocrText.toUpperCase();
+          
+          // Split product name into words and check if they appear in OCR
+          const productWords = productNameUpper.split(/\s+/).filter(w => w.length >= 4);
+          let wordMatches = 0;
+          for (const word of productWords) {
+            if (ocrTextUpper.includes(word)) {
+              wordMatches++;
+              score += 10;  // Each matching word adds score
+            }
+          }
+          console.log(`   - ${product.productName}: ${wordMatches}/${productWords.length} name words matched (+${wordMatches * 10})`);
+          
+          // Check brand name
+          if (product.brandName) {
+            const brandUpper = product.brandName.toUpperCase();
+            if (ocrTextUpper.includes(brandUpper)) {
+              score += 15;
+              console.log(`   - ${product.productName}: Brand "${product.brandName}" matched (+15)`);
+            }
+          }
+          
+          // Update best match
+          if (score > bestScore) {
+            bestScore = score;
+            bestMatch = product;
+          }
+        }
+        
+        // Use best match if found, otherwise use first match
+        const selectedProduct = bestMatch || ltoMatches[0];
+        console.log(`[FuzzySearch] Selected: ${selectedProduct.productName} (score: ${bestScore})`);
+        
+        const validation = this.validateMatchAgainstOCR(selectedProduct, ocrText);
         
         if (validation.valid) {
           return { 
-            product: ltoMatch, 
-            searchDetails: { matchType: 'LTO', matchedOn: extractedLTO, confidence: validation.confidence },
+            product: selectedProduct, 
+            searchDetails: { 
+              matchType: 'LTO', 
+              matchedOn: extractedLTO, 
+              confidence: validation.confidence,
+              candidatesCount: ltoMatches.length,
+              selectedByScore: bestScore
+            },
             warnings: validation.warnings
           };
         } else {

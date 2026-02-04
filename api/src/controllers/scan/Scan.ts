@@ -138,11 +138,24 @@ export const scanProduct = async (
           ? "Product identified - Packaging is compliant" 
           : "Product identified - Packaging has violations",
         
-        // Product identity (minimal info)
+        // Product identity (includes certificate info for detailed view)
         productInfo: {
           productName: identifiedProduct.productName,
           brandName: identifiedProduct.brandName || null,
           manufacturer: identifiedProduct.company?.name || "Unknown",
+          // Certificate/Registration details
+          CFPRNumber: identifiedProduct.CFPRNumber || null,
+          LTONumber: identifiedProduct.LTONumber || null,
+          certificateId: identifiedProduct.CFPRNumber || null,  // Use CFPR as certificate ID
+          registrationNumber: identifiedProduct.CFPRNumber || null,
+          dateOfRegistration: identifiedProduct.dateOfRegistration || null,
+          expirationDate: identifiedProduct.expirationDate || null,
+          // Additional product details
+          productCategory: identifiedProduct.productCategory || null,
+          productType: identifiedProduct.productType || null,
+          countryOfOrigin: identifiedProduct.countryOfOrigin || null,
+          companyId: identifiedProduct.company?.id || null,
+          productId: identifiedProduct.id,
         },
         
         // COMPLIANCE REPORT - what's on the packaging vs what should be
