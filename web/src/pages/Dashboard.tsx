@@ -54,6 +54,7 @@ import {
   Pencil, 
   XCircle, 
   Archive, 
+  ArchiveRestore,
   Trash2,
   RefreshCw,
   Loader2,
@@ -354,7 +355,7 @@ export function Dashboard(props: DashboardProps) {
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="overflow-visible">
             {/* Edit - only for pending/badge_verified */}
             {['pending', 'badge_verified'].includes(row.status) && (
               <DropdownMenuItem onClick={() => handleEditInvite(row)}>
@@ -387,6 +388,13 @@ export function Dashboard(props: DashboardProps) {
               <DropdownMenuItem onClick={() => handleArchiveInvite(row._id)}>
                 <Archive className="h-4 w-4 mr-2" />
                 Archive
+              </DropdownMenuItem>
+            )}
+            {/* Unarchive - only for archived */}
+            {row.status === 'archived' && (
+              <DropdownMenuItem onClick={() => handleUnarchiveInvite(row._id)}>
+                <ArchiveRestore className="h-4 w-4 mr-2" />
+                Unarchive
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
@@ -489,6 +497,16 @@ export function Dashboard(props: DashboardProps) {
       toast.error(error.response?.data?.message || "Failed to archive invitation");
     } finally {
       setArchiveLoading(false);
+    }
+  };
+
+  const handleUnarchiveInvite = async (inviteId: string) => {
+    try {
+      await AdminInviteService.unarchiveInvite(inviteId);
+      toast.success("Invitation unarchived");
+      fetchInvites();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to unarchive invitation");
     }
   };
 

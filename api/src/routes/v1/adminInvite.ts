@@ -12,6 +12,7 @@ import {
   deleteInvite,
   revokeInvite,
   archiveInvite,
+  unarchiveInvite,
   updateInvite
 } from '../../controllers/admin/AdminInvite';
 import { verifyUser } from '../../middleware/verifyUser';
@@ -33,6 +34,7 @@ AdminInviteRouter.post('/reject/:inviteId', verifyUser, verifyAdmin, rejectAgent
 AdminInviteRouter.post('/resend/:inviteId', verifyUser, verifyAdmin, resendInvite);
 AdminInviteRouter.post('/revoke/:inviteId', verifyUser, verifyAdmin, revokeInvite);
 AdminInviteRouter.post('/archive/:inviteId', verifyUser, verifyAdmin, archiveInvite);
+AdminInviteRouter.post('/unarchive/:inviteId', verifyUser, verifyAdmin, unarchiveInvite);
 AdminInviteRouter.put('/:inviteId', verifyUser, verifyAdmin, updateInvite);
 AdminInviteRouter.delete('/:inviteId', verifyUser, verifyAdmin, deleteInvite);
 

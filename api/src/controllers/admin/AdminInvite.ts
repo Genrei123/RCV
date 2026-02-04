@@ -920,6 +920,56 @@ export const archiveInvite = async (req: Request, res: Response) => {
 };
 
 /**
+ * Unarchive an invitation (restore to pending so it can be acted on again)
+ * POST /api/v1/admin-invite/unarchive/:inviteId
+ */
+export const unarchiveInvite = async (req: Request, res: Response) => {
+  try {
+    const { inviteId } = req.params;
+    const adminUser = (req as any).user;
+
+    if (adminUser.role !== 'ADMIN' && !adminUser.isSuperAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied',
+      });
+    }
+
+    const invite = await AdminInviteRepo.findOne({
+      where: { _id: inviteId },
+    });
+
+    if (!invite) {
+      return res.status(404).json({
+        success: false,
+        message: 'Invitation not found',
+      });
+    }
+
+    if (invite.status !== 'archived') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invitation is not archived',
+      });
+    }
+
+    invite.status = 'pending';
+    await AdminInviteRepo.save(invite);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Invitation unarchived successfully',
+    });
+  } catch (error: any) {
+    console.error('Unarchive invite error:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to unarchive invitation',
+    });
+  }
+};
+
+/**
  * Update invitation details (badge ID, email)
  * PUT /api/v1/admin-invite/:inviteId
  */
