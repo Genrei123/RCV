@@ -1175,7 +1175,7 @@ export function AnalyticsMapComponent() {
           {selectedReport && (
             <div className="space-y-4 max-h-[70vh] overflow-y-auto">
               {/* Report Images */}
-              {(selectedReport.frontImageUrl || selectedReport.backImageUrl) && (
+              {(selectedReport.frontImageUrl || selectedReport.backImageUrl || (selectedReport.additionalImageUrls && selectedReport.additionalImageUrls.length > 0)) && (
                 <div className="border-b pb-3">
                   <p className="text-sm font-medium text-neutral-500 mb-2">
                     Product Images
@@ -1206,6 +1206,33 @@ export function AnalyticsMapComponent() {
                       </div>
                     )}
                   </div>
+                  {/* Additional Images */}
+                  {selectedReport.additionalImageUrls && selectedReport.additionalImageUrls.length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-xs font-medium text-gray-500 mb-2">
+                        Additional Views ({selectedReport.additionalImageUrls.length})
+                      </p>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {selectedReport.additionalImageUrls.map((url: string, index: number) => {
+                          const sideNames = selectedReport.additionalImageUrls.length === 2 
+                            ? ['Left', 'Right'] 
+                            : ['Top', 'Bottom', 'Left', 'Right'];
+                          const sideName = index < sideNames.length ? sideNames[index] : `Side ${index + 1}`;
+                          return (
+                            <div key={index}>
+                              <p className="text-xs text-gray-500 mb-1">{sideName}</p>
+                              <img 
+                                src={url} 
+                                alt={sideName} 
+                                className="w-full h-24 object-cover rounded border cursor-pointer hover:opacity-80"
+                                onClick={() => window.open(url, '_blank')}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

@@ -12,7 +12,8 @@ class ComplianceReportPage extends StatefulWidget {
   final Map<String, dynamic>? productSearchResult;
   final String? frontImageUrl;
   final String? backImageUrl;
-  final List<String>? additionalImageUrls; // Additional images for box products
+  final List<String>?
+  additionalImageUrls; // Additional images for box/can products
   final String initialStatus; // 'COMPLIANT' or 'NON_COMPLIANT'
   final String? ocrBlobText; // Raw OCR text blob
 
@@ -147,14 +148,17 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
       }
 
       // Upload additional images if they exist as local paths
-      if (widget.localAdditionalPaths != null && 
+      if (widget.localAdditionalPaths != null &&
           widget.localAdditionalPaths!.isNotEmpty &&
           (finalAdditionalUrls == null || finalAdditionalUrls.isEmpty)) {
-        developer.log('🚀 Uploading ${widget.localAdditionalPaths!.length} additional images...');
+        developer.log(
+          '🚀 Uploading ${widget.localAdditionalPaths!.length} additional images...',
+        );
         finalAdditionalUrls = [];
         for (int i = 0; i < widget.localAdditionalPaths!.length; i++) {
           final path = widget.localAdditionalPaths![i];
-          final additionalScanId = 'scan_additional_${i}_${DateTime.now().millisecondsSinceEpoch}';
+          final additionalScanId =
+              'scan_additional_${i}_${DateTime.now().millisecondsSinceEpoch}';
           final uploadResult = await FirebaseStorageService.uploadSingleImage(
             scanId: additionalScanId,
             image: File(path),
@@ -164,7 +168,9 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
             finalAdditionalUrls.add(uploadResult);
           }
         }
-        developer.log('✅ Uploaded ${finalAdditionalUrls.length} additional images');
+        developer.log(
+          '✅ Uploaded ${finalAdditionalUrls.length} additional images',
+        );
       }
 
       // Get current location
@@ -293,18 +299,19 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
       canPop: false,
       onPopInvokedWithResult: (bool didPop, dynamic result) async {
         if (didPop) return;
-        
+
         // Check if there's any content written (status changed or notes added)
-        final hasChanges = selectedStatus != widget.initialStatus ||
+        final hasChanges =
+            selectedStatus != widget.initialStatus ||
             notesController.text.trim().isNotEmpty ||
             selectedReason != null;
-        
+
         if (!hasChanges) {
           // No changes, just pop
           Navigator.of(context).pop();
           return;
         }
-        
+
         // Show confirmation dialog
         final shouldDiscard = await showDialog<bool>(
           context: context,
@@ -337,123 +344,32 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
             );
           },
         );
-        
+
         if (shouldDiscard == true && context.mounted) {
           Navigator.of(context).pop();
         }
       },
       child: Scaffold(
-      appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+        appBar: AppBar(
+          backgroundColor: AppColors.primary,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: const Text(
+            'Compliance Report',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
         ),
-        title: const Text(
-          'Compliance Report',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-      ),
-      body: Stack(
-        children: [
-          SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Status Selection
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withValues(alpha: 0.2),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Compliance Status',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        RadioListTile<String>(
-                          value: 'COMPLIANT',
-                          // ignore: deprecated_member_use
-                          groupValue: selectedStatus,
-                          // ignore: deprecated_member_use
-                          onChanged: (value) {
-                            setState(() {
-                              selectedStatus = value!;
-                              selectedReason = null;
-                            });
-                          },
-                          title: const Row(
-                            children: [
-                              Icon(Icons.check_circle, color: Colors.green),
-                              SizedBox(width: 8),
-                              Text('Compliant'),
-                            ],
-                          ),
-                          activeColor: Colors.green,
-                        ),
-                        RadioListTile<String>(
-                          value: 'NON_COMPLIANT',
-                          // ignore: deprecated_member_use
-                          groupValue: selectedStatus,
-                          // ignore: deprecated_member_use
-                          onChanged: (value) {
-                            setState(() {
-                              selectedStatus = value!;
-                            });
-                          },
-                          title: const Row(
-                            children: [
-                              Icon(Icons.report_problem, color: Colors.orange),
-                              SizedBox(width: 8),
-                              Text('Non-Compliant'),
-                            ],
-                          ),
-                          activeColor: Colors.orange,
-                        ),
-                        RadioListTile<String>(
-                          value: 'FRAUDULENT',
-                          // ignore: deprecated_member_use
-                          groupValue: selectedStatus,
-                          // ignore: deprecated_member_use
-                          onChanged: (value) {
-                            setState(() {
-                              selectedStatus = value!;
-                            });
-                          },
-                          title: const Row(
-                            children: [
-                              Icon(Icons.dangerous, color: Colors.red),
-                              SizedBox(width: 8),
-                              Text('Fraudulent'),
-                            ],
-                          ),
-                          activeColor: Colors.red,
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Non-Compliance Reason (only show if not compliant)
-                  if (selectedStatus != 'COMPLIANT') ...[
+        body: Stack(
+          children: [
+            SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Status Selection
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -470,171 +386,149 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              const Text(
-                                'Reason',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              const Text(
-                                '*',
-                                style: TextStyle(color: Colors.red),
-                              ),
-                            ],
+                          const Text(
+                            'Compliance Status',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
+                            ),
                           ),
                           const SizedBox(height: 12),
-                          DropdownButtonFormField<String>(
-                            initialValue: selectedReason,
-                            decoration: InputDecoration(
-                              hintText: 'Select a reason',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 16,
-                              ),
-                            ),
-                            items: nonComplianceReasons.map((reason) {
-                              return DropdownMenuItem(
-                                value: reason['value'],
-                                child: Text(reason['label']!),
-                              );
-                            }).toList(),
+                          RadioListTile<String>(
+                            value: 'COMPLIANT',
+                            // ignore: deprecated_member_use
+                            groupValue: selectedStatus,
+                            // ignore: deprecated_member_use
                             onChanged: (value) {
                               setState(() {
-                                selectedReason = value;
+                                selectedStatus = value!;
+                                selectedReason = null;
                               });
                             },
+                            title: const Row(
+                              children: [
+                                Icon(Icons.check_circle, color: Colors.green),
+                                SizedBox(width: 8),
+                                Text('Compliant'),
+                              ],
+                            ),
+                            activeColor: Colors.green,
+                          ),
+                          RadioListTile<String>(
+                            value: 'NON_COMPLIANT',
+                            // ignore: deprecated_member_use
+                            groupValue: selectedStatus,
+                            // ignore: deprecated_member_use
+                            onChanged: (value) {
+                              setState(() {
+                                selectedStatus = value!;
+                              });
+                            },
+                            title: const Row(
+                              children: [
+                                Icon(
+                                  Icons.report_problem,
+                                  color: Colors.orange,
+                                ),
+                                SizedBox(width: 8),
+                                Text('Non-Compliant'),
+                              ],
+                            ),
+                            activeColor: Colors.orange,
+                          ),
+                          RadioListTile<String>(
+                            value: 'FRAUDULENT',
+                            // ignore: deprecated_member_use
+                            groupValue: selectedStatus,
+                            // ignore: deprecated_member_use
+                            onChanged: (value) {
+                              setState(() {
+                                selectedStatus = value!;
+                              });
+                            },
+                            title: const Row(
+                              children: [
+                                Icon(Icons.dangerous, color: Colors.red),
+                                SizedBox(width: 8),
+                                Text('Fraudulent'),
+                              ],
+                            ),
+                            activeColor: Colors.red,
                           ),
                         ],
                       ),
                     ),
+
                     const SizedBox(height: 16),
-                  ],
 
-                  // Additional Notes
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withValues(alpha: 0.2),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Agent Notes',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'Optional - Add your observations or comments (OCR text is saved automatically)',
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
-                        ),
-                        const SizedBox(height: 12),
-                        TextField(
-                          controller: notesController,
-                          maxLines: 5,
-                          maxLength: 500,
-                          decoration: InputDecoration(
-                            hintText: 'Enter your observations or notes...',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            contentPadding: const EdgeInsets.all(12),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Product Summary
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: AppColors.primary.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Row(
-                          children: [
-                            Icon(Icons.info_outline, color: AppColors.primary),
-                            SizedBox(width: 8),
-                            Text(
-                              'Scanned Product Summary',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primary,
-                              ),
+                    // Non-Compliance Reason (only show if not compliant)
+                    if (selectedStatus != 'COMPLIANT') ...[
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withValues(alpha: 0.2),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
-                        _buildSummaryRow(
-                          'Product',
-                          widget.scannedData['productName']?.toString() ??
-                              'N/A',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Text(
+                                  'Reason',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Text(
+                                  '*',
+                                  style: TextStyle(color: Colors.red),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            DropdownButtonFormField<String>(
+                              initialValue: selectedReason,
+                              decoration: InputDecoration(
+                                hintText: 'Select a reason',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 16,
+                                ),
+                              ),
+                              items: nonComplianceReasons.map((reason) {
+                                return DropdownMenuItem(
+                                  value: reason['value'],
+                                  child: Text(reason['label']!),
+                                );
+                              }).toList(),
+                              onChanged: (value) {
+                                setState(() {
+                                  selectedReason = value;
+                                });
+                              },
+                            ),
+                          ],
                         ),
-                        _buildSummaryRow(
-                          'Brand',
-                          widget.scannedData['brandName']?.toString() ?? 'N/A',
-                        ),
-                        _buildSummaryRow(
-                          'LTO',
-                          widget.scannedData['LTONumber']?.toString() ?? 'N/A',
-                        ),
-                        _buildSummaryRow(
-                          'CFPR',
-                          widget.scannedData['CFPRNumber']?.toString() ?? 'N/A',
-                        ),
-                        _buildSummaryRow(
-                          'Manufacturer',
-                          widget.scannedData['manufacturer']?.toString() ??
-                              'N/A',
-                        ),
-                        // Note: expirationDate removed - database stores certificate expiration,
-                        // not product expiration. Physical product expiration should be visually verified.
-                        _buildSummaryRow(
-                          'Company',
-                          widget.scannedData['companyName']?.toString() ??
-                              'N/A',
-                        ),
-                      ],
-                    ),
-                  ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
 
-                  const SizedBox(height: 16),
-
-                  // Captured Product Images
-                  if (widget.frontImageUrl != null ||
-                      widget.backImageUrl != null ||
-                      widget.localFrontPath != null ||
-                      widget.localBackPath != null)
+                    // Additional Notes
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -647,6 +541,51 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
                             offset: const Offset(0, 2),
                           ),
                         ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Agent Notes',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Optional - Add your observations or comments (OCR text is saved automatically)',
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: notesController,
+                            maxLines: 5,
+                            maxLength: 500,
+                            decoration: InputDecoration(
+                              hintText: 'Enter your observations or notes...',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              contentPadding: const EdgeInsets.all(12),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Product Summary
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: AppColors.primary.withValues(alpha: 0.3),
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -654,15 +593,14 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
                           const Row(
                             children: [
                               Icon(
-                                Icons.camera_alt,
+                                Icons.info_outline,
                                 color: AppColors.primary,
-                                size: 20,
                               ),
                               SizedBox(width: 8),
                               Text(
-                                'Captured Product',
+                                'Scanned Product Summary',
                                 style: TextStyle(
-                                  fontSize: 16,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.bold,
                                   color: AppColors.primary,
                                 ),
@@ -670,295 +608,434 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
                             ],
                           ),
                           const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              if (widget.frontImageUrl != null ||
-                                  widget.localFrontPath != null)
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      const Text(
-                                        'Front',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.grey,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 6),
-                                      ClipRRect(
-                                        borderRadius: BorderRadius.circular(8),
-                                        child: widget.frontImageUrl != null
-                                            ? Image.network(
-                                                widget.frontImageUrl!,
-                                                height: 150,
-                                                width: double.infinity,
-                                                fit: BoxFit.cover,
-                                                errorBuilder:
-                                                    (
-                                                      context,
-                                                      error,
-                                                      stackTrace,
-                                                    ) {
-                                                      return Container(
-                                                        height: 150,
-                                                        color: Colors.grey[300],
-                                                        child: const Center(
-                                                          child: Icon(
-                                                            Icons.error,
-                                                          ),
-                                                        ),
-                                                      );
-                                                    },
-                                              )
-                                            : (widget.localFrontPath != null
-                                                  ? Image.file(
-                                                      File(
-                                                        widget.localFrontPath!,
-                                                      ),
-                                                      height: 150,
-                                                      width: double.infinity,
-                                                      fit: BoxFit.cover,
-                                                    )
-                                                  : Container(
-                                                      height: 150,
-                                                      color: Colors.grey[200],
-                                                    )),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              if ((widget.frontImageUrl != null ||
-                                      widget.localFrontPath != null) &&
-                                  (widget.backImageUrl != null ||
-                                      widget.localBackPath != null))
-                                const SizedBox(width: 12),
-                              if (widget.backImageUrl != null ||
-                                  widget.localBackPath != null)
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      const Text(
-                                        'Back',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.grey,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 6),
-                                      ClipRRect(
-                                        borderRadius: BorderRadius.circular(8),
-                                        child: widget.backImageUrl != null
-                                            ? Image.network(
-                                                widget.backImageUrl!,
-                                                height: 150,
-                                                width: double.infinity,
-                                                fit: BoxFit.cover,
-                                                errorBuilder:
-                                                    (
-                                                      context,
-                                                      error,
-                                                      stackTrace,
-                                                    ) {
-                                                      return Container(
-                                                        height: 150,
-                                                        color: Colors.grey[300],
-                                                        child: const Center(
-                                                          child: Icon(
-                                                            Icons.error,
-                                                          ),
-                                                        ),
-                                                      );
-                                                    },
-                                              )
-                                            : (widget.localBackPath != null
-                                                  ? Image.file(
-                                                      File(
-                                                        widget.localBackPath!,
-                                                      ),
-                                                      height: 150,
-                                                      width: double.infinity,
-                                                      fit: BoxFit.cover,
-                                                    )
-                                                  : Container(
-                                                      height: 150,
-                                                      color: Colors.grey[200],
-                                                    )),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                            ],
+                          _buildSummaryRow(
+                            'Product',
+                            widget.scannedData['productName']?.toString() ??
+                                'N/A',
                           ),
-                          // Additional Images Section (for box products)
-                          if ((widget.additionalImageUrls != null && widget.additionalImageUrls!.isNotEmpty) ||
-                              (widget.localAdditionalPaths != null && widget.localAdditionalPaths!.isNotEmpty)) ...[
-                            const SizedBox(height: 16),
-                            const Text(
-                              'Additional Views',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.grey,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            GridView.builder(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                crossAxisSpacing: 8,
-                                mainAxisSpacing: 8,
-                                childAspectRatio: 1.2,
-                              ),
-                              itemCount: (widget.additionalImageUrls?.length ?? 0) > 0
-                                  ? widget.additionalImageUrls!.length
-                                  : (widget.localAdditionalPaths?.length ?? 0),
-                              itemBuilder: (context, index) {
-                                final sideNames = ['Top', 'Bottom', 'Left', 'Right'];
-                                final sideName = index < sideNames.length ? sideNames[index] : 'Side ${index + 1}';
-                                
-                                // Check if we have URLs or local paths
-                                final hasUrl = widget.additionalImageUrls != null && 
-                                    widget.additionalImageUrls!.length > index;
-                                final hasLocalPath = widget.localAdditionalPaths != null && 
-                                    widget.localAdditionalPaths!.length > index;
-                                
-                                return Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      sideName,
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Expanded(
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(8),
-                                        child: hasUrl
-                                            ? Image.network(
-                                                widget.additionalImageUrls![index],
-                                                width: double.infinity,
-                                                fit: BoxFit.cover,
-                                                errorBuilder: (context, error, stackTrace) {
-                                                  return Container(
-                                                    color: Colors.grey[300],
-                                                    child: const Center(child: Icon(Icons.error)),
-                                                  );
-                                                },
-                                              )
-                                            : hasLocalPath
-                                                ? Image.file(
-                                                    File(widget.localAdditionalPaths![index]),
-                                                    width: double.infinity,
-                                                    fit: BoxFit.cover,
-                                                  )
-                                                : Container(
-                                                    color: Colors.grey[200],
-                                                  ),
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              },
-                            ),
-                          ],
+                          _buildSummaryRow(
+                            'Brand',
+                            widget.scannedData['brandName']?.toString() ??
+                                'N/A',
+                          ),
+                          _buildSummaryRow(
+                            'LTO',
+                            widget.scannedData['LTONumber']?.toString() ??
+                                'N/A',
+                          ),
+                          _buildSummaryRow(
+                            'CFPR',
+                            widget.scannedData['CFPRNumber']?.toString() ??
+                                'N/A',
+                          ),
+                          _buildSummaryRow(
+                            'Manufacturer',
+                            widget.scannedData['manufacturer']?.toString() ??
+                                'N/A',
+                          ),
+                          // Note: expirationDate removed - database stores certificate expiration,
+                          // not product expiration. Physical product expiration should be visually verified.
+                          _buildSummaryRow(
+                            'Company',
+                            widget.scannedData['companyName']?.toString() ??
+                                'N/A',
+                          ),
                         ],
                       ),
                     ),
 
-                  const SizedBox(height: 100), // Space for button
-                ],
-              ),
-            ),
-          ),
+                    const SizedBox(height: 16),
 
-          // Submit Button (Fixed at bottom)
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  // Save Draft Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(
-                      onPressed: isSubmitting ? null : _saveDraft,
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        side: BorderSide(color: AppColors.primary),
-                        shape: RoundedRectangleBorder(
+                    // Captured Product Images
+                    if (widget.frontImageUrl != null ||
+                        widget.backImageUrl != null ||
+                        widget.localFrontPath != null ||
+                        widget.localBackPath != null)
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withValues(alpha: 0.2),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
-                      ),
-                      child: const Text('Save as Draft'),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  // Submit Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: isSubmitting ? null : _submitReport,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        disabledBackgroundColor: Colors.grey,
-                      ),
-                      child: isSubmitting
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Colors.white,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(
+                                  Icons.camera_alt,
+                                  color: AppColors.primary,
+                                  size: 20,
+                                ),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Captured Product',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                if (widget.frontImageUrl != null ||
+                                    widget.localFrontPath != null)
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'Front',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          child: widget.frontImageUrl != null
+                                              ? Image.network(
+                                                  widget.frontImageUrl!,
+                                                  height: 150,
+                                                  width: double.infinity,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder:
+                                                      (
+                                                        context,
+                                                        error,
+                                                        stackTrace,
+                                                      ) {
+                                                        return Container(
+                                                          height: 150,
+                                                          color:
+                                                              Colors.grey[300],
+                                                          child: const Center(
+                                                            child: Icon(
+                                                              Icons.error,
+                                                            ),
+                                                          ),
+                                                        );
+                                                      },
+                                                )
+                                              : (widget.localFrontPath != null
+                                                    ? Image.file(
+                                                        File(
+                                                          widget
+                                                              .localFrontPath!,
+                                                        ),
+                                                        height: 150,
+                                                        width: double.infinity,
+                                                        fit: BoxFit.cover,
+                                                      )
+                                                    : Container(
+                                                        height: 150,
+                                                        color: Colors.grey[200],
+                                                      )),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                if ((widget.frontImageUrl != null ||
+                                        widget.localFrontPath != null) &&
+                                    (widget.backImageUrl != null ||
+                                        widget.localBackPath != null))
+                                  const SizedBox(width: 12),
+                                if (widget.backImageUrl != null ||
+                                    widget.localBackPath != null)
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'Back',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          child: widget.backImageUrl != null
+                                              ? Image.network(
+                                                  widget.backImageUrl!,
+                                                  height: 150,
+                                                  width: double.infinity,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder:
+                                                      (
+                                                        context,
+                                                        error,
+                                                        stackTrace,
+                                                      ) {
+                                                        return Container(
+                                                          height: 150,
+                                                          color:
+                                                              Colors.grey[300],
+                                                          child: const Center(
+                                                            child: Icon(
+                                                              Icons.error,
+                                                            ),
+                                                          ),
+                                                        );
+                                                      },
+                                                )
+                                              : (widget.localBackPath != null
+                                                    ? Image.file(
+                                                        File(
+                                                          widget.localBackPath!,
+                                                        ),
+                                                        height: 150,
+                                                        width: double.infinity,
+                                                        fit: BoxFit.cover,
+                                                      )
+                                                    : Container(
+                                                        height: 150,
+                                                        color: Colors.grey[200],
+                                                      )),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            // Additional Images Section (for box/can products)
+                            if ((widget.additionalImageUrls != null &&
+                                    widget.additionalImageUrls!.isNotEmpty) ||
+                                (widget.localAdditionalPaths != null &&
+                                    widget
+                                        .localAdditionalPaths!
+                                        .isNotEmpty)) ...[
+                              const SizedBox(height: 16),
+                              const Text(
+                                'Additional Views',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey,
                                 ),
                               ),
-                            )
-                          : const Text(
-                              'Submit Report',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
+                              const SizedBox(height: 8),
+                              GridView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 2,
+                                      crossAxisSpacing: 8,
+                                      mainAxisSpacing: 8,
+                                      childAspectRatio: 1.2,
+                                    ),
+                                itemCount:
+                                    (widget.additionalImageUrls?.length ?? 0) >
+                                        0
+                                    ? widget.additionalImageUrls!.length
+                                    : (widget.localAdditionalPaths?.length ??
+                                          0),
+                                itemBuilder: (context, index) {
+                                  // Different labels based on number of additional images
+                                  // 2 images = canned product (Left, Right)
+                                  // 4 images = box product (Top, Bottom, Left, Right)
+                                  final totalAdditional =
+                                      (widget.additionalImageUrls?.length ??
+                                              0) >
+                                          0
+                                      ? widget.additionalImageUrls!.length
+                                      : (widget.localAdditionalPaths?.length ??
+                                            0);
+
+                                  List<String> sideNames;
+                                  if (totalAdditional == 2) {
+                                    // Canned product - Left and Right sides
+                                    sideNames = ['Left', 'Right'];
+                                  } else {
+                                    // Box product - Top, Bottom, Left, Right
+                                    sideNames = [
+                                      'Top',
+                                      'Bottom',
+                                      'Left',
+                                      'Right',
+                                    ];
+                                  }
+                                  final sideName = index < sideNames.length
+                                      ? sideNames[index]
+                                      : 'Side ${index + 1}';
+
+                                  // Check if we have URLs or local paths
+                                  final hasUrl =
+                                      widget.additionalImageUrls != null &&
+                                      widget.additionalImageUrls!.length >
+                                          index;
+                                  final hasLocalPath =
+                                      widget.localAdditionalPaths != null &&
+                                      widget.localAdditionalPaths!.length >
+                                          index;
+
+                                  return Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        sideName,
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Expanded(
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          child: hasUrl
+                                              ? Image.network(
+                                                  widget
+                                                      .additionalImageUrls![index],
+                                                  width: double.infinity,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder:
+                                                      (
+                                                        context,
+                                                        error,
+                                                        stackTrace,
+                                                      ) {
+                                                        return Container(
+                                                          color:
+                                                              Colors.grey[300],
+                                                          child: const Center(
+                                                            child: Icon(
+                                                              Icons.error,
+                                                            ),
+                                                          ),
+                                                        );
+                                                      },
+                                                )
+                                              : hasLocalPath
+                                              ? Image.file(
+                                                  File(
+                                                    widget
+                                                        .localAdditionalPaths![index],
+                                                  ),
+                                                  width: double.infinity,
+                                                  fit: BoxFit.cover,
+                                                )
+                                              : Container(
+                                                  color: Colors.grey[200],
+                                                ),
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                },
                               ),
-                            ),
-                    ),
-                  ),
-                ],
+                            ],
+                          ],
+                        ),
+                      ),
+
+                    const SizedBox(height: 100), // Space for button
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
-      ),
-    ), // Scaffold
+
+            // Submit Button (Fixed at bottom)
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, -2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    // Save Draft Button
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: isSubmitting ? null : _saveDraft,
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          side: BorderSide(color: AppColors.primary),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text('Save as Draft'),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    // Submit Button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: isSubmitting ? null : _submitReport,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          disabledBackgroundColor: Colors.grey,
+                        ),
+                        child: isSubmitting
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                            : const Text(
+                                'Submit Report',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ), // Scaffold
     ); // PopScope
   }
 
@@ -985,7 +1062,8 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
     try {
       final draftData = {
         'scannedData': widget.scannedData,
-        'productSearchResult': widget.productSearchResult ?? {'found': false, 'product': null},
+        'productSearchResult':
+            widget.productSearchResult ?? {'found': false, 'product': null},
         'initialStatus': selectedStatus,
         'initialReason': selectedReason,
         'initialNotes': notesController.text,
