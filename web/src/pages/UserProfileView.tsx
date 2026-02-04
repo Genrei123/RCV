@@ -767,7 +767,8 @@ export function UserProfileView() {
               const data = error?.response?.data;
               const msg =
                 data?.message ||
-                (data?.errors?.fieldErrors && Object.values(data.errors.fieldErrors)[0]?.[0]) ||
+                (data?.errors?.fieldErrors &&
+                  (Object.values(data.errors.fieldErrors)[0] as string[] | undefined)?.[0]) ||
                 data?.errors?.formErrors?.[0] ||
                 "Failed to update profile";
               toast.error(typeof msg === "string" ? msg : "Failed to update profile");
