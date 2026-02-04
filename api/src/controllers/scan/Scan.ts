@@ -172,11 +172,9 @@ export const scanProduct = async (
       // STEP 2: Verify what's ACTUALLY on the packaging (compliance check)
       const cfprOnPackaging = verifyFieldInOCR(identifiedProduct.CFPRNumber, blockOfText);
       const ltoOnPackaging = verifyFieldInOCR(identifiedProduct.LTONumber, blockOfText);
-      const expirationOnPackaging = extractExpirationFromOCR(blockOfText);
       
       console.log(`   CFPR (${identifiedProduct.CFPRNumber}): ${cfprOnPackaging ? '✅ FOUND' : '❌ NOT FOUND'}`);
       console.log(`   LTO (${identifiedProduct.LTONumber}): ${ltoOnPackaging ? '✅ FOUND' : '❌ NOT FOUND'}`);
-      console.log(`   Expiration Date: ${expirationOnPackaging ? '✅ FOUND (' + expirationOnPackaging + ')' : '❌ NOT FOUND'}`);
       
       // STEP 3: Build compliance violations list
       const violations: string[] = [];
@@ -195,9 +193,7 @@ export const scanProduct = async (
         violations.push('WARNING: LTO number NOT printed on packaging');
       }
       
-      if (!expirationOnPackaging) {
-        violations.push('WARNING: Expiration date NOT found on packaging');
-      }
+      // NOTE: Expiration date check removed - database stores certificate expiration, not product expiration
       
       // Add database warnings
       if (warnings && warnings.length > 0) {
@@ -227,7 +223,6 @@ export const scanProduct = async (
           certificateId: identifiedProduct.CFPRNumber || null,  // Use CFPR as certificate ID
           registrationNumber: identifiedProduct.CFPRNumber || null,
           dateOfRegistration: identifiedProduct.dateOfRegistration || null,
-          expirationDate: identifiedProduct.expirationDate || null,
           // Additional product details (using actual entity fields)
           productCategory: identifiedProduct.productClassification || null,
           productType: identifiedProduct.productSubClassification || null,
@@ -251,10 +246,6 @@ export const scanProduct = async (
             status: !identifiedProduct.LTONumber 
               ? 'NOT_REGISTERED' 
               : (ltoOnPackaging ? 'COMPLIANT' : 'VIOLATION'),
-          },
-          expirationDate: {
-            foundOnPackaging: expirationOnPackaging || null,
-            status: expirationOnPackaging ? 'COMPLIANT' : 'VIOLATION',
           },
         },
         
