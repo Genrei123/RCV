@@ -137,6 +137,7 @@ export class AuditLogService {
       REJECT_USER: "Rejected User",
       REVOKE_ACCESS: "Revoked Access",
       SCAN_PRODUCT: "Scanned Product",
+      COMPLIANCE_REPORT: "Compliance Report",
       CREATE_USER: "Created User",
       UPDATE_USER: "Updated User",
       DELETE_USER: "Deleted User",
@@ -182,6 +183,10 @@ export class AuditLogService {
       SCAN_PRODUCT: {
         label: "Scanned",
         className: "bg-teal-500 text-white hover:bg-teal-600",
+      },
+      COMPLIANCE_REPORT: {
+        label: "Compliance Report",
+        className: "bg-amber-500 text-white hover:bg-amber-600",
       },
       UPDATE_PROFILE: {
         label: "Updated Profile",

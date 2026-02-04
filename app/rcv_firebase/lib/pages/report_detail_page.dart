@@ -19,6 +19,8 @@ class ReportDetailPage extends StatelessWidget {
     final additionalNotes = reportData['additionalNotes'];
     final frontImageUrl = reportData['frontImageUrl'];
     final backImageUrl = reportData['backImageUrl'];
+    final additionalImageUrls =
+        reportData['additionalImageUrls'] as List<dynamic>?;
     final ocrBlobText = reportData['ocrBlobText'];
     final createdAt = reportData['createdAt'] != null
         ? DateTime.parse(reportData['createdAt'])
@@ -171,8 +173,11 @@ class ReportDetailPage extends StatelessWidget {
               ]),
 
             // Images Section
-            if (frontImageUrl != null || backImageUrl != null)
+            if (frontImageUrl != null ||
+                backImageUrl != null ||
+                (additionalImageUrls != null && additionalImageUrls.isNotEmpty))
               _buildSection('Product Images', Icons.photo_library, [
+                // Front and Back Images
                 Row(
                   children: [
                     if (frontImageUrl != null)
@@ -187,6 +192,48 @@ class ReportDetailPage extends StatelessWidget {
                       ),
                   ],
                 ),
+                // Additional Images (for canned/box products)
+                if (additionalImageUrls != null &&
+                    additionalImageUrls.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    'Additional Views',
+                    style: AppFonts.labelStyle.copyWith(
+                      color: Colors.grey.shade600,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                          childAspectRatio: 1.0,
+                        ),
+                    itemCount: additionalImageUrls.length,
+                    itemBuilder: (context, index) {
+                      // Label based on number of additional images
+                      List<String> sideNames;
+                      if (additionalImageUrls.length == 2) {
+                        sideNames = ['Left', 'Right'];
+                      } else {
+                        sideNames = ['Top', 'Bottom', 'Left', 'Right'];
+                      }
+                      final sideName = index < sideNames.length
+                          ? sideNames[index]
+                          : 'Side ${index + 1}';
+                      return _buildImageCard(
+                        sideName,
+                        additionalImageUrls[index],
+                        context,
+                      );
+                    },
+                  ),
+                ],
               ]),
 
             // OCR Data Section
