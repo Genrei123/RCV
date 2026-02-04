@@ -678,6 +678,144 @@ class GPIOLEDService:
             pass
 
 # ============================================================================
+# On-Screen Keyboard for Touchscreen Kiosk
+# ============================================================================
+class OnScreenKeyboard:
+    """On-screen keyboard for touchscreen kiosk input"""
+    
+    # Keyboard layout - uppercase letters and numbers (typical for registration codes)
+    LAYOUT = [
+        ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
+        ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
+        ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', '-'],
+        ['Z', 'X', 'C', 'V', 'B', 'N', 'M', 'BACK', 'CLEAR'],
+    ]
+    
+    def __init__(self, parent, target_entry=None, on_submit=None, bg_color=Colors.SURFACE):
+        """
+        Create an on-screen keyboard
+        
+        Args:
+            parent: Parent tkinter widget
+            target_entry: Entry widget to type into
+            on_submit: Callback function when Enter/Submit is pressed
+            bg_color: Background color for the keyboard
+        """
+        self.parent = parent
+        self.target_entry = target_entry
+        self.on_submit = on_submit
+        self.bg_color = bg_color
+        self.frame = None
+        self.buttons = []
+        
+    def set_target(self, entry_widget):
+        """Set the target entry widget for keyboard input"""
+        self.target_entry = entry_widget
+        # Highlight the active entry
+        if entry_widget:
+            entry_widget.config(relief=tk.SOLID, bd=3, highlightbackground=Colors.PRIMARY, highlightcolor=Colors.PRIMARY, highlightthickness=2)
+    
+    def create_keyboard(self, parent_frame):
+        """Create the keyboard UI"""
+        if self.frame:
+            self.frame.destroy()
+            
+        self.frame = tk.Frame(parent_frame, bg=self.bg_color)
+        self.frame.pack(fill=tk.X, pady=(20, 10))
+        
+        self.buttons = []
+        
+        # Key dimensions - responsive to screen size
+        key_width = 5
+        key_height = 2
+        key_font = ("SF Pro Display", 14, "bold")
+        
+        for row_idx, row in enumerate(self.LAYOUT):
+            row_frame = tk.Frame(self.frame, bg=self.bg_color)
+            row_frame.pack(pady=3)
+            
+            for key in row:
+                if key == 'BACK':
+                    # Backspace key - wider
+                    btn = tk.Button(
+                        row_frame,
+                        text="⌫",
+                        font=key_font,
+                        width=7,
+                        height=key_height,
+                        bg=Colors.WARNING,
+                        fg=Colors.TEXT_WHITE,
+                        activebackground="#F57C00",
+                        activeforeground=Colors.TEXT_WHITE,
+                        relief=tk.RAISED,
+                        bd=2,
+                        command=self._backspace
+                    )
+                elif key == 'CLEAR':
+                    # Clear key
+                    btn = tk.Button(
+                        row_frame,
+                        text="CLR",
+                        font=key_font,
+                        width=7,
+                        height=key_height,
+                        bg=Colors.ERROR,
+                        fg=Colors.TEXT_WHITE,
+                        activebackground="#D32F2F",
+                        activeforeground=Colors.TEXT_WHITE,
+                        relief=tk.RAISED,
+                        bd=2,
+                        command=self._clear
+                    )
+                else:
+                    # Regular key
+                    btn = tk.Button(
+                        row_frame,
+                        text=key,
+                        font=key_font,
+                        width=key_width,
+                        height=key_height,
+                        bg=Colors.BACKGROUND,
+                        fg=Colors.TEXT_PRIMARY,
+                        activebackground=Colors.PRIMARY_LIGHT,
+                        activeforeground=Colors.TEXT_WHITE,
+                        relief=tk.RAISED,
+                        bd=2,
+                        command=lambda k=key: self._type_key(k)
+                    )
+                
+                btn.pack(side=tk.LEFT, padx=2)
+                self.buttons.append(btn)
+        
+        return self.frame
+    
+    def _type_key(self, key):
+        """Type a key into the target entry"""
+        if self.target_entry:
+            self.target_entry.insert(tk.END, key)
+            self.target_entry.focus()
+    
+    def _backspace(self):
+        """Delete the last character"""
+        if self.target_entry:
+            current = self.target_entry.get()
+            self.target_entry.delete(0, tk.END)
+            self.target_entry.insert(0, current[:-1])
+            self.target_entry.focus()
+    
+    def _clear(self):
+        """Clear the entire entry"""
+        if self.target_entry:
+            self.target_entry.delete(0, tk.END)
+            self.target_entry.focus()
+    
+    def destroy(self):
+        """Destroy the keyboard frame"""
+        if self.frame:
+            self.frame.destroy()
+            self.frame = None
+
+# ============================================================================
 # Main Kiosk Application
 # ============================================================================
 class KioskApp:
@@ -1843,7 +1981,7 @@ class KioskApp:
         self.compliance_frame.bind('<ButtonRelease-1>', self._resume_timer)
     
     def _setup_manual_search_screen(self):
-        """Setup manual search screen for typing CFPR and LTO numbers"""
+        """Setup manual search screen with on-screen keyboard for touchscreen"""
         # Main horizontal layout
         main_container = tk.Frame(self.manual_search_frame, bg=Colors.BACKGROUND)
         main_container.pack(fill=tk.BOTH, expand=True)
@@ -1924,99 +2062,150 @@ class KioskApp:
         # Spacer
         tk.Frame(sidebar, bg=Colors.WARNING).pack(fill=tk.BOTH, expand=True)
         
-        # RIGHT CONTENT AREA
+        # RIGHT CONTENT AREA - Scrollable for small screens
         content_area = tk.Frame(main_container, bg=Colors.BACKGROUND)
         content_area.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
-        # Center content
+        # Center content vertically near top for keyboard visibility
         center = tk.Frame(content_area, bg=Colors.BACKGROUND)
-        center.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+        center.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
         
         # Title
         tk.Label(
             center,
             text="Manual Product Search",
-            font=("SF Pro Display", 20, "bold"),
+            font=("SF Pro Display", 18, "bold"),
             bg=Colors.BACKGROUND,
             fg=Colors.TEXT_PRIMARY
-        ).pack(pady=(0, 5))
+        ).pack(pady=(5, 2))
         
         tk.Label(
             center,
-            text="Enter product registration numbers",
-            font=("SF Pro Text", 12),
+            text="Tap on input field, then use keyboard below",
+            font=("SF Pro Text", 11),
             bg=Colors.BACKGROUND,
             fg=Colors.TEXT_SECONDARY
-        ).pack(pady=(0, 30))
+        ).pack(pady=(0, 10))
         
-        # Input fields frame
-        fields_frame = tk.Frame(center, bg=Colors.SURFACE, padx=30, pady=30)
-        fields_frame.pack()
+        # Input fields frame - side by side for better layout
+        fields_frame = tk.Frame(center, bg=Colors.SURFACE, padx=20, pady=15)
+        fields_frame.pack(fill=tk.X)
         
-        # CFPR Number input
+        # CFPR Number input (left side)
+        cfpr_frame = tk.Frame(fields_frame, bg=Colors.SURFACE)
+        cfpr_frame.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=10)
+        
         tk.Label(
-            fields_frame,
+            cfpr_frame,
             text="CFPR Number:",
-            font=("SF Pro Text", 14, "bold"),
+            font=("SF Pro Text", 12, "bold"),
             bg=Colors.SURFACE,
             fg=Colors.TEXT_PRIMARY
-        ).grid(row=0, column=0, sticky=tk.W, pady=(0, 5))
+        ).pack(anchor=tk.W)
         
         self.cfpr_entry = tk.Entry(
-            fields_frame,
-            font=("SF Pro Text", 16),
-            width=25,
+            cfpr_frame,
+            font=("SF Pro Text", 18),
+            width=18,
             bg=Colors.BACKGROUND,
             fg=Colors.TEXT_PRIMARY,
             relief=tk.SOLID,
-            bd=2
+            bd=2,
+            insertwidth=3,
+            insertbackground=Colors.PRIMARY
         )
-        self.cfpr_entry.grid(row=1, column=0, pady=(0, 20))
+        self.cfpr_entry.pack(pady=(5, 3), fill=tk.X)
+        # Bind focus events to switch keyboard target
+        self.cfpr_entry.bind('<FocusIn>', lambda e: self._set_keyboard_target(self.cfpr_entry))
+        self.cfpr_entry.bind('<Button-1>', lambda e: self._set_keyboard_target(self.cfpr_entry))
         
         tk.Label(
-            fields_frame,
-            text="Example: FR-12345 or IM-67890",
-            font=("SF Pro Text", 10),
+            cfpr_frame,
+            text="e.g., FR-12345 or IM-67890",
+            font=("SF Pro Text", 9),
             bg=Colors.SURFACE,
             fg=Colors.TEXT_SECONDARY
-        ).grid(row=2, column=0, sticky=tk.W, pady=(0, 20))
+        ).pack(anchor=tk.W)
         
-        # LTO/BAI Number input
+        # LTO/BAI Number input (right side)
+        lto_frame = tk.Frame(fields_frame, bg=Colors.SURFACE)
+        lto_frame.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=10)
+        
         tk.Label(
-            fields_frame,
-            text="LTO/BAI Registration Number:",
-            font=("SF Pro Text", 14, "bold"),
+            lto_frame,
+            text="LTO/BAI Number:",
+            font=("SF Pro Text", 12, "bold"),
             bg=Colors.SURFACE,
             fg=Colors.TEXT_PRIMARY
-        ).grid(row=3, column=0, sticky=tk.W, pady=(0, 5))
+        ).pack(anchor=tk.W)
         
         self.lto_entry = tk.Entry(
-            fields_frame,
-            font=("SF Pro Text", 16),
-            width=25,
+            lto_frame,
+            font=("SF Pro Text", 18),
+            width=18,
             bg=Colors.BACKGROUND,
             fg=Colors.TEXT_PRIMARY,
             relief=tk.SOLID,
-            bd=2
+            bd=2,
+            insertwidth=3,
+            insertbackground=Colors.PRIMARY
         )
-        self.lto_entry.grid(row=4, column=0, pady=(0, 20))
+        self.lto_entry.pack(pady=(5, 3), fill=tk.X)
+        # Bind focus events to switch keyboard target
+        self.lto_entry.bind('<FocusIn>', lambda e: self._set_keyboard_target(self.lto_entry))
+        self.lto_entry.bind('<Button-1>', lambda e: self._set_keyboard_target(self.lto_entry))
         
         tk.Label(
-            fields_frame,
-            text="Example: LTO-2024-001 or DR-5678",
-            font=("SF Pro Text", 10),
+            lto_frame,
+            text="e.g., LTO-2024-001 or DR-5678",
+            font=("SF Pro Text", 9),
             bg=Colors.SURFACE,
             fg=Colors.TEXT_SECONDARY
-        ).grid(row=5, column=0, sticky=tk.W)
+        ).pack(anchor=tk.W)
         
-        # Note
+        # Active field indicator
+        self.active_field_label = tk.Label(
+            center,
+            text="👆 Tap an input field above to type",
+            font=("SF Pro Text", 11, "bold"),
+            bg=Colors.BACKGROUND,
+            fg=Colors.PRIMARY
+        )
+        self.active_field_label.pack(pady=(10, 5))
+        
+        # Create on-screen keyboard
+        self.manual_search_keyboard = OnScreenKeyboard(center, None)
+        self.manual_search_keyboard.create_keyboard(center)
+        
+        # Note at bottom
         tk.Label(
             center,
             text="💡 Enter at least one registration number to search",
-            font=("SF Pro Text", 11),
+            font=("SF Pro Text", 10),
             bg=Colors.BACKGROUND,
             fg=Colors.WARNING
-        ).pack(pady=(20, 0))
+        ).pack(pady=(10, 5))
+    
+    def _set_keyboard_target(self, entry_widget):
+        """Set the target entry for the on-screen keyboard"""
+        if hasattr(self, 'manual_search_keyboard'):
+            # Reset previous entry styling
+            if hasattr(self, 'cfpr_entry'):
+                self.cfpr_entry.config(relief=tk.SOLID, bd=2, highlightthickness=0)
+            if hasattr(self, 'lto_entry'):
+                self.lto_entry.config(relief=tk.SOLID, bd=2, highlightthickness=0)
+            
+            # Highlight active entry
+            entry_widget.config(relief=tk.SOLID, bd=3, highlightthickness=3, highlightbackground=Colors.PRIMARY, highlightcolor=Colors.PRIMARY)
+            
+            # Set keyboard target
+            self.manual_search_keyboard.set_target(entry_widget)
+            
+            # Update label
+            if entry_widget == self.cfpr_entry:
+                self.active_field_label.config(text="✏️ Typing into: CFPR Number")
+            else:
+                self.active_field_label.config(text="✏️ Typing into: LTO/BAI Number")
     
     def _setup_maintenance_screen(self):
         """Setup the maintenance/offline mode screen - FULL SCREEN LOCKOUT"""
@@ -3848,32 +4037,56 @@ class KioskApp:
         thread.start()
     
     def _process_manual_search(self, cfpr: str, lto: str):
-        """Process manual search by constructing OCR-like text"""
+        """Process manual search by constructing searchable text that matches backend patterns"""
         try:
-            # Construct text block similar to OCR output
-            # This mimics what OCR would extract from a label
+            # IMPORTANT: The backend FuzzySearchService expects the actual code values directly
+            # It uses learned patterns from the database like:
+            #   CFPR: /(?:FR|IM|CFPR)[-\s]?[A-Z0-9]{2,}/gi
+            #   LTO:  /(?:LTO|DR)[-\s]?[A-Z0-9]{2,}/gi
+            # So we need to include the codes EXACTLY as they would appear on a label
+            
             text_parts = []
             
+            # For CFPR - include multiple variations the OCR might see
             if cfpr:
-                text_parts.append(f"CFPR: {cfpr}")
-                text_parts.append(f"CFPR Number: {cfpr}")
-                text_parts.append(cfpr)
+                # Clean any extra spaces
+                cfpr_clean = cfpr.strip()
+                # Add the raw code (this is what the regex will match)
+                text_parts.append(cfpr_clean)
+                # Also add with common label prefixes
+                text_parts.append(f"CFPR No. {cfpr_clean}")
+                text_parts.append(f"CFPR-{cfpr_clean}")
+                # If the code doesn't have a standard prefix, try adding FR-
+                if not any(cfpr_clean.startswith(p) for p in ['FR-', 'FR', 'IM-', 'IM', 'CFPR']):
+                    text_parts.append(f"FR-{cfpr_clean}")
+                    text_parts.append(f"IM-{cfpr_clean}")
             
+            # For LTO - include multiple variations  
             if lto:
-                text_parts.append(f"LTO: {lto}")
-                text_parts.append(f"LTO Number: {lto}")
-                text_parts.append(f"BAI Registration: {lto}")
-                text_parts.append(lto)
+                lto_clean = lto.strip()
+                # Add the raw code
+                text_parts.append(lto_clean)
+                # Also add with common label prefixes
+                text_parts.append(f"LTO No. {lto_clean}")
+                text_parts.append(f"LTO-{lto_clean}")
+                # If the code doesn't have a standard prefix, try adding LTO- or DR-
+                if not any(lto_clean.startswith(p) for p in ['LTO-', 'LTO', 'DR-', 'DR']):
+                    text_parts.append(f"LTO-{lto_clean}")
+                    text_parts.append(f"DR-{lto_clean}")
             
-            # Combine into searchable text
+            # Combine into searchable text block
+            # The backend will scan this for recognizable codes
             combined_text = "\n".join(text_parts)
             
             print(f"\n{'='*60}")
             print(f"🔍 MANUAL SEARCH")
             print(f"{'='*60}")
-            print(f"CFPR: {cfpr if cfpr else 'Not provided'}")
-            print(f"LTO/BAI: {lto if lto else 'Not provided'}")
-            print(f"Constructed text: {combined_text}")
+            print(f"CFPR Input: {cfpr if cfpr else 'Not provided'}")
+            print(f"LTO/BAI Input: {lto if lto else 'Not provided'}")
+            print(f"Constructed text block:")
+            for line in text_parts:
+                print(f"   - {line}")
+            print(f"Total text length: {len(combined_text)} chars")
             print(f"{'='*60}\n")
             
             self.root.after(0, lambda: self.loading_detail_label.config(text="Searching database..."))
@@ -4058,10 +4271,15 @@ class KioskApp:
         # Convert to grayscale
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         
+        # Resize image for better OCR (2x upscale helps with small text)
+        height, width = gray.shape
+        scale = 2
+        gray_upscaled = cv2.resize(gray, (width * scale, height * scale), interpolation=cv2.INTER_CUBIC)
+        
         # TECHNIQUE 1: Adaptive Thresholding (best for varying lighting)
         print(f"   Pass 1: Adaptive Threshold...")
         adaptive_thresh = cv2.adaptiveThreshold(
-            gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
+            gray_upscaled, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
         )
         text1 = pytesseract.image_to_string(
             Image.fromarray(adaptive_thresh),
@@ -4072,7 +4290,7 @@ class KioskApp:
         
         # TECHNIQUE 2: Otsu's Thresholding (best for bimodal images)
         print(f"   Pass 2: Otsu's Threshold...")
-        _, otsu_thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        _, otsu_thresh = cv2.threshold(gray_upscaled, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         text2 = pytesseract.image_to_string(
             Image.fromarray(otsu_thresh),
             config='--psm 6 --oem 3'
@@ -4083,7 +4301,7 @@ class KioskApp:
         # TECHNIQUE 3: Morphological operations (removes noise)
         print(f"   Pass 3: Morphological Enhancement...")
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
-        morph = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, kernel)
+        morph = cv2.morphologyEx(gray_upscaled, cv2.MORPH_CLOSE, kernel)
         morph = cv2.morphologyEx(morph, cv2.MORPH_OPEN, kernel)
         _, morph_thresh = cv2.threshold(morph, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         text3 = pytesseract.image_to_string(
@@ -4096,7 +4314,7 @@ class KioskApp:
         # TECHNIQUE 4: Contrast enhancement with CLAHE
         print(f"   Pass 4: CLAHE Enhancement...")
         clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-        enhanced = clahe.apply(gray)
+        enhanced = clahe.apply(gray_upscaled)
         _, enhanced_thresh = cv2.threshold(enhanced, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         text4 = pytesseract.image_to_string(
             Image.fromarray(enhanced_thresh),
@@ -4119,7 +4337,7 @@ class KioskApp:
         kernel_sharpen = np.array([[-1,-1,-1],
                                    [-1, 9,-1],
                                    [-1,-1,-1]])
-        sharpened = cv2.filter2D(gray, -1, kernel_sharpen)
+        sharpened = cv2.filter2D(gray_upscaled, -1, kernel_sharpen)
         _, sharp_thresh = cv2.threshold(sharpened, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         text6 = pytesseract.image_to_string(
             Image.fromarray(sharp_thresh),
@@ -4127,6 +4345,16 @@ class KioskApp:
         )
         results.append(text6)
         print(f"   Pass 6 extracted {len(text6)} chars")
+        
+        # TECHNIQUE 7: Alphanumeric whitelist mode for registration codes
+        print(f"   Pass 7: Alphanumeric Whitelist for Codes...")
+        # This mode restricts to alphanumeric and hyphen - best for codes like FR-12345
+        text7 = pytesseract.image_to_string(
+            Image.fromarray(otsu_thresh),
+            config='--psm 6 --oem 3 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-'
+        )
+        results.append(text7)
+        print(f"   Pass 7 extracted {len(text7)} chars")
         
         # COMBINE ALL RESULTS
         # Strategy: Use the longest result as base, then merge unique words from others
@@ -4141,8 +4369,33 @@ class KioskApp:
             words = text.split()
             all_words.update(words)
         
-        # Also include the longest result in full
+        # POST-PROCESS: Extract potential registration codes
+        # Look for patterns that could be CFPR or LTO numbers
+        potential_codes = []
+        code_pattern = re.compile(r'[A-Za-z]{1,4}[-\s]?[0-9]{2,}[-\s]?[A-Za-z0-9]*', re.IGNORECASE)
+        
+        for text in results:
+            # Clean up the text first
+            cleaned = text.replace('\n', ' ').replace('\r', ' ')
+            matches = code_pattern.findall(cleaned)
+            for match in matches:
+                # Normalize the code
+                code = match.upper().strip()
+                # Only keep codes that look like registration numbers
+                if len(code) >= 4 and any(c.isdigit() for c in code):
+                    potential_codes.append(code)
+        
+        # Deduplicate potential codes
+        unique_codes = list(set(potential_codes))
+        
+        # Build the final combined text
+        # Include: longest result + unique words + extracted codes
         combined = longest + "\n\n" + " ".join(sorted(all_words))
+        
+        # Add extracted codes at the end for the fuzzy search to find
+        if unique_codes:
+            combined += "\n\n" + "Extracted Registration Codes:\n" + "\n".join(unique_codes)
+            print(f"   ✅ Extracted potential codes: {unique_codes}")
         
         print(f"   ✅ Final combined text: {len(combined)} chars")
         print(f"   ✅ Unique words found: {len(all_words)}")
