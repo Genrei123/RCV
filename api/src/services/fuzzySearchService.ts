@@ -141,43 +141,100 @@ export class FuzzySearchService {
   /**
    * Normalizes common OCR character mistakes
    * Handles: I/1, O/0, S/5, Z/2, B/8, etc.
+   * ENHANCED: Now handles many more OCR error patterns including $ ! @ # etc.
    */
   private static normalizeOCRCharacters(text: string): string {
     let normalized = text.toUpperCase();
     
-    // Create multiple normalized versions to handle ambiguous characters
-    // This helps match against database entries regardless of OCR mistakes
-    
-    // Common OCR substitutions (character -> possible interpretations)
-    const substitutions: { [key: string]: string } = {
-      'I': '[I1|]',  // I can be 1, |, or I
-      'l': '[I1|l]', // lowercase L
-      'O': '[O0]',   // O can be 0
-      'S': '[S5$]',  // S can be 5 or $
-      'Z': '[Z2]',   // Z can be 2
-      'B': '[B8]',   // B can be 8
-      'G': '[G6]',   // G can be 6
-      'T': '[T7]',   // T can be 7
-      '1': '[1I|l]', // 1 can be I, |, or l
-      '0': '[0O]',   // 0 can be O
-      '5': '[5S$]',  // 5 can be S
-      '2': '[2Z]',   // 2 can be Z
-      '8': '[8B]',   // 8 can be B
-      '6': '[6G]',   // 6 can be G
-      '7': '[7T]',   // 7 can be T
-    };
-    
-    // For simple comparison, just normalize ambiguous characters to their most common form
+    // ENHANCED OCR substitutions - normalize ALL variations to a canonical form
+    // This makes comparison much more forgiving for low-quality OCR
     normalized = normalized
-      .replace(/[I|]/g, '1')  // Treat I and | as 1
-      .replace(/O/g, '0')     // Treat O as 0
-      .replace(/S/g, '5')     // Treat S as 5
-      .replace(/Z/g, '2')     // Treat Z as 2
-      .replace(/B/g, '8')     // Treat B as 8
-      .replace(/G/g, '6')     // Treat G as 6
-      .replace(/T/g, '7');    // Treat T as 7
+      // Letters that look like numbers
+      .replace(/[I|l!]/g, '1')   // I, |, l, ! → 1
+      .replace(/[O]/g, '0')       // O → 0
+      .replace(/[S$]/g, '5')      // S, $ → 5
+      .replace(/[Z]/g, '2')       // Z → 2
+      .replace(/[B]/g, '8')       // B → 8
+      .replace(/[G]/g, '6')       // G → 6
+      .replace(/[T]/g, '7')       // T → 7
+      .replace(/[A@]/g, 'A')      // @ → A
+      .replace(/[E€3]/g, 'E')     // €, 3 → E
+      // Numbers that look like letters
+      .replace(/[1]/g, '1')       // Keep 1 as 1 (already normalized)
+      .replace(/[0]/g, '0')       // Keep 0 as 0
+      // Remove all non-alphanumeric characters for comparison
+      .replace(/[^A-Z0-9]/g, '');
     
     return normalized;
+  }
+
+  /**
+   * Calculate Levenshtein distance between two strings
+   * Used for fuzzy matching of OCR errors
+   */
+  private static levenshteinDistance(str1: string, str2: string): number {
+    const m = str1.length;
+    const n = str2.length;
+    
+    // Create matrix
+    const dp: number[][] = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+    
+    // Initialize first row and column
+    for (let i = 0; i <= m; i++) dp[i][0] = i;
+    for (let j = 0; j <= n; j++) dp[0][j] = j;
+    
+    // Fill matrix
+    for (let i = 1; i <= m; i++) {
+      for (let j = 1; j <= n; j++) {
+        if (str1[i - 1] === str2[j - 1]) {
+          dp[i][j] = dp[i - 1][j - 1];
+        } else {
+          dp[i][j] = 1 + Math.min(
+            dp[i - 1][j],     // deletion
+            dp[i][j - 1],     // insertion
+            dp[i - 1][j - 1]  // substitution
+          );
+        }
+      }
+    }
+    
+    return dp[m][n];
+  }
+
+  /**
+   * Calculate similarity ratio between two strings (0 to 1)
+   * 1 = identical, 0 = completely different
+   */
+  private static calculateSimilarity(str1: string, str2: string): number {
+    if (!str1 || !str2) return 0;
+    
+    const norm1 = this.normalizeOCRCharacters(str1);
+    const norm2 = this.normalizeOCRCharacters(str2);
+    
+    if (norm1 === norm2) return 1;
+    
+    const distance = this.levenshteinDistance(norm1, norm2);
+    const maxLen = Math.max(norm1.length, norm2.length);
+    
+    if (maxLen === 0) return 1;
+    
+    return 1 - (distance / maxLen);
+  }
+
+  /**
+   * Check if two codes are similar enough to be considered a match
+   * Uses Levenshtein distance with OCR normalization
+   * threshold: minimum similarity (0-1), default 0.7 (70% similar)
+   */
+  private static isSimilarCode(ocrCode: string, dbCode: string, threshold: number = 0.65): boolean {
+    const similarity = this.calculateSimilarity(ocrCode, dbCode);
+    
+    if (similarity >= threshold) {
+      console.log(`   [Similarity] "${ocrCode}" vs "${dbCode}": ${(similarity * 100).toFixed(1)}% (threshold: ${threshold * 100}%)`);
+      return true;
+    }
+    
+    return false;
   }
 
   /**
@@ -397,7 +454,8 @@ export class FuzzySearchService {
    * Performs a comprehensive fuzzy search against the Product database using OCR text
    * Searches: LTONumber, CFPRNumber, productName, brandName, company name
    * 
-   * PRIORITY: LTO/CFPR codes are MORE IMPORTANT than product names
+   * ENHANCED: Much more forgiving OCR matching using Levenshtein distance
+   * ENHANCED: Product name now gets higher priority alongside codes
    * USES: Dynamically learned patterns from database
    */
   static async searchProductsFuzzy(ocrText: string): Promise<{ 
@@ -417,266 +475,195 @@ export class FuzzySearchService {
     const extractedLTO = this.extractLTONumber(ocrText);
     
     console.log(`[FuzzySearch] Extracted codes - CFPR: ${extractedCFPR || 'none'}, LTO: ${extractedLTO || 'none'}`);
+    console.log(`[FuzzySearch] Keywords found: ${keywords.slice(0, 5).join(', ')}`);
 
-    // FAST PATH: Try CFPR cache lookup first (CFPR is UNIQUE - highest priority)
+    // FAST PATH: Try CFPR cache lookup first with fuzzy matching
     if (extractedCFPR && this.learnedPatterns?.productCache) {
-      const normalized = this.normalizeOCRCharacters(extractedCFPR.replace(/[-\s]/g, '').toUpperCase());
+      const normalized = this.normalizeOCRCharacters(extractedCFPR);
+      
+      // Try exact match first
       const cached = this.learnedPatterns.productCache.get(`CFPR:${normalized}`);
       if (cached) {
         console.log(`[FuzzySearch] ✅ CFPR cache hit: ${cached.productName}`);
         const validation = this.validateMatchAgainstOCR(cached, ocrText);
-        if (validation.valid) {
-          return { 
-            product: cached, 
-            searchDetails: { matchType: 'cfpr-cache', matchedOn: extractedCFPR, confidence: 'high' },
-            warnings: validation.warnings
-          };
-        }
+        return { 
+          product: cached, 
+          searchDetails: { matchType: 'cfpr-cache', matchedOn: extractedCFPR, confidence: 'high' },
+          warnings: validation.warnings
+        };
       }
-    }
-
-    // LTO cache - ONLY use if no CFPR was extracted (LTO is NOT unique)
-    // If we have a CFPR, we should use database search to ensure correct product
-    if (extractedLTO && !extractedCFPR && this.learnedPatterns?.productCache) {
-      const normalized = this.normalizeOCRCharacters(extractedLTO.replace(/[-\s]/g, '').toUpperCase());
-      const cached = this.learnedPatterns.productCache.get(`LTO:${normalized}`);
-      if (cached) {
-        console.log(`[FuzzySearch] LTO cache hit (no CFPR available): ${cached.productName}`);
-        const validation = this.validateMatchAgainstOCR(cached, ocrText);
-        if (validation.valid) {
-          return { 
-            product: cached, 
-            searchDetails: { matchType: 'lto-cache', matchedOn: extractedLTO, confidence: validation.confidence },
-            warnings: validation.warnings
-          };
-        }
-      }
-    }
-
-    // STRATEGY 1: Direct CFPR match (highest confidence - CFPR is unique identifier)
-    if (extractedCFPR) {
-      const cfprClean = extractedCFPR.replace(/[-\s]/g, '');
-      const cfprNormalized = this.normalizeOCRCharacters(cfprClean);
       
-      // Search with both original and normalized versions
-      const cfprMatch = await ProductRepo.createQueryBuilder("product")
-        .leftJoinAndSelect("product.company", "company")
-        .where(
-          new Brackets(qb => {
-            qb.where("REPLACE(REPLACE(product.CFPRNumber, '-', ''), ' ', '') ILIKE :cfpr", { cfpr: `%${cfprClean}%` })
-              .orWhere("REPLACE(REPLACE(product.CFPRNumber, '-', ''), ' ', '') ILIKE :cfprNorm", { cfprNorm: `%${cfprNormalized}%` });
-          })
-        )
-        .getOne();
-      
-      if (cfprMatch) {
-        // Validate match - either CFPR or LTO must be in OCR
-        const validation = this.validateMatchAgainstOCR(cfprMatch, ocrText);
-        
-        if (validation.valid) {
-          return { 
-            product: cfprMatch, 
-            searchDetails: { matchType: 'cfpr', matchedOn: extractedCFPR, confidence: validation.confidence },
-            warnings: validation.warnings
-          };
-        } else {
-          console.warn("[FuzzySearch] CFPR match rejected - insufficient verification:", validation.missingFields);
-        }
-      }
-    }
-
-    // STRATEGY 2: Direct LTO match - HANDLE MULTIPLE PRODUCTS WITH SAME LTO
-    if (extractedLTO) {
-      const ltoClean = extractedLTO.replace(/[-\s]/g, '');
-      const ltoNormalized = this.normalizeOCRCharacters(ltoClean);
-      
-      // Get ALL products matching this LTO (same company can have multiple products)
-      const ltoMatches = await ProductRepo.createQueryBuilder("product")
-        .leftJoinAndSelect("product.company", "company")
-        .where(
-          new Brackets(qb => {
-            qb.where("REPLACE(REPLACE(product.LTONumber, '-', ''), ' ', '') ILIKE :lto", { lto: `%${ltoClean}%` })
-              .orWhere("REPLACE(REPLACE(product.LTONumber, '-', ''), ' ', '') ILIKE :ltoNorm", { ltoNorm: `%${ltoNormalized}%` });
-          })
-        )
-        .getMany();  // Get ALL matches, not just one
-      
-      if (ltoMatches.length > 0) {
-        console.log(`[FuzzySearch] LTO ${extractedLTO} matched ${ltoMatches.length} products`);
-        
-        // CRITICAL: If we have an extracted CFPR, find the product that matches it EXACTLY
-        // CFPR is UNIQUE - if it matches, that IS the product, no scoring needed
-        if (extractedCFPR) {
-          const ocrCFPR = extractedCFPR.replace(/[-\s]/g, '').toUpperCase();
-          
-          for (const product of ltoMatches) {
-            if (product.CFPRNumber) {
-              const productCFPR = product.CFPRNumber.replace(/[-\s]/g, '').toUpperCase();
-              
-              // Exact match or contains match on CFPR
-              if (productCFPR === ocrCFPR || productCFPR.includes(ocrCFPR) || ocrCFPR.includes(productCFPR)) {
-                console.log(`[FuzzySearch] ✅ CFPR EXACT MATCH: ${product.CFPRNumber} === ${extractedCFPR}`);
-                console.log(`[FuzzySearch] Selected: ${product.productName} (CFPR match is definitive)`);
-                
-                const validation = this.validateMatchAgainstOCR(product, ocrText);
-                return { 
-                  product: product, 
-                  searchDetails: { 
-                    matchType: 'LTO+CFPR', 
-                    matchedOn: `LTO:${extractedLTO}, CFPR:${extractedCFPR}`, 
-                    confidence: 'high',
-                    candidatesCount: ltoMatches.length,
-                    cfprMatched: true
-                  },
-                  warnings: validation.warnings
-                };
-              }
-            }
-          }
-          console.log(`[FuzzySearch] ⚠️ CFPR ${extractedCFPR} not found among LTO matches, falling back to scoring`);
-        }
-        
-        // Fallback: If no CFPR match, use scoring to disambiguate
-        let bestMatch: Product | null = null;
-        let bestScore = 0;
-        
-        for (const product of ltoMatches) {
-          let score = 0;
-          
-          // HIGHEST PRIORITY: Check if CFPR matches (1000 points - virtually guarantees selection)
-          if (product.CFPRNumber && extractedCFPR) {
-            const productCFPR = product.CFPRNumber.replace(/[-\s]/g, '').toUpperCase();
-            const ocrCFPR = extractedCFPR.replace(/[-\s]/g, '').toUpperCase();
-            if (productCFPR === ocrCFPR || productCFPR.includes(ocrCFPR) || ocrCFPR.includes(productCFPR)) {
-              score += 1000;  // CFPR is unique identifier - this should be definitive
-              console.log(`   - ${product.productName}: CFPR match (+1000) - DEFINITIVE`);
-            }
-          }
-          
-          // MEDIUM PRIORITY: Check product name in OCR text
-          const productNameUpper = product.productName.toUpperCase();
-          const ocrTextUpper = ocrText.toUpperCase();
-          
-          // Split product name into words and check if they appear in OCR
-          const productWords = productNameUpper.split(/\s+/).filter(w => w.length >= 4);
-          let wordMatches = 0;
-          for (const word of productWords) {
-            if (ocrTextUpper.includes(word)) {
-              wordMatches++;
-              score += 10;  // Each matching word adds score
-            }
-          }
-          console.log(`   - ${product.productName}: ${wordMatches}/${productWords.length} name words matched (+${wordMatches * 10})`);
-          
-          // Check brand name
-          if (product.brandName) {
-            const brandUpper = product.brandName.toUpperCase();
-            if (ocrTextUpper.includes(brandUpper)) {
-              score += 15;
-              console.log(`   - ${product.productName}: Brand "${product.brandName}" matched (+15)`);
-            }
-          }
-          
-          // Update best match
-          if (score > bestScore) {
-            bestScore = score;
-            bestMatch = product;
-          }
-        }
-        
-        // Use best match if found, otherwise use first match
-        const selectedProduct = bestMatch || ltoMatches[0];
-        console.log(`[FuzzySearch] Selected: ${selectedProduct.productName} (score: ${bestScore})`);
-        
-        const validation = this.validateMatchAgainstOCR(selectedProduct, ocrText);
-        
-        if (validation.valid) {
-          return { 
-            product: selectedProduct, 
-            searchDetails: { 
-              matchType: 'LTO', 
-              matchedOn: extractedLTO, 
-              confidence: validation.confidence,
-              candidatesCount: ltoMatches.length,
-              selectedByScore: bestScore
-            },
-            warnings: validation.warnings
-          };
-        } else {
-          console.warn("[FuzzySearch] LTO match rejected - insufficient verification:", validation.missingFields);
-        }
-      }
-    }
-
-    // STRATEGY 3: Try other potential codes (with normalization)
-    if (potentialCodes.length > 0) {
-      for (const code of potentialCodes) {
-        const codeNormalized = this.normalizeOCRCharacters(code);
-        
-        const directMatch = await ProductRepo.createQueryBuilder("product")
-          .leftJoinAndSelect("product.company", "company")
-          .where(
-            new Brackets(qb => {
-              qb.where("product.LTONumber ILIKE :code", { code: `%${code}%` })
-                .orWhere("product.CFPRNumber ILIKE :code", { code: `%${code}%` })
-                .orWhere("product.LTONumber ILIKE :codeNorm", { codeNorm: `%${codeNormalized}%` })
-                .orWhere("product.CFPRNumber ILIKE :codeNorm", { codeNorm: `%${codeNormalized}%` });
-            })
-          )
-          .getOne();
-        
-        if (directMatch) {
-          // Validate match - either CFPR or LTO must be in OCR
-          const validation = this.validateMatchAgainstOCR(directMatch, ocrText);
-          
-          if (validation.valid) {
+      // Try fuzzy match against all cached products
+      for (const [key, product] of this.learnedPatterns.productCache.entries()) {
+        if (key.startsWith('CFPR:')) {
+          const dbCFPR = key.replace('CFPR:', '');
+          if (this.isSimilarCode(normalized, dbCFPR, 0.70)) {
+            console.log(`[FuzzySearch] ✅ CFPR fuzzy cache hit: ${product.productName}`);
+            const validation = this.validateMatchAgainstOCR(product, ocrText);
             return { 
-              product: directMatch, 
-              searchDetails: { matchType: 'code', matchedOn: code, confidence: validation.confidence },
+              product: product, 
+              searchDetails: { matchType: 'cfpr-fuzzy-cache', matchedOn: extractedCFPR, confidence: 'high' },
               warnings: validation.warnings
             };
-          } else {
-            console.warn("[FuzzySearch] Code match rejected - insufficient verification:", validation.missingFields);
           }
         }
       }
     }
 
-    // STRATEGY 4: Search by product name or brand name using keywords
-    // ONLY use this if we found some identifying codes in OCR (lower priority than code matches)
-    // This is a fallback when exact code matches fail
-    if (keywords.length > 0 && (extractedCFPR || extractedLTO)) {
-      for (const keyword of keywords) {
-        if (keyword.length < 5) continue; // Skip short words
+    // NEW STRATEGY: Search ALL products and score them based on multiple factors
+    // This allows product name to contribute even when codes are garbled
+    console.log(`[FuzzySearch] Performing comprehensive fuzzy search...`);
+    
+    const allProducts = await ProductRepo.find({
+      relations: ['company'],
+    });
+    
+    let bestMatch: Product | null = null;
+    let bestScore = 0;
+    let matchDetails: any = {};
+    
+    const ocrTextUpper = ocrText.toUpperCase();
+    
+    for (const product of allProducts) {
+      let score = 0;
+      let matchReasons: string[] = [];
+      
+      // === CFPR MATCHING (HIGHEST PRIORITY - UNIQUE IDENTIFIER) ===
+      if (product.CFPRNumber && extractedCFPR) {
+        const similarity = this.calculateSimilarity(extractedCFPR, product.CFPRNumber);
         
-        const nameMatch = await ProductRepo.createQueryBuilder("product")
-          .leftJoinAndSelect("product.company", "company")
-          .where("product.productName ILIKE :kw", { kw: `%${keyword}%` })
-          .orWhere("product.brandName ILIKE :kw", { kw: `%${keyword}%` })
-          .orWhere("company.name ILIKE :kw", { kw: `%${keyword}%` })
-          .getOne();
+        if (similarity >= 0.95) {
+          // Near-exact CFPR match - this is almost certainly the product
+          score += 1000;
+          matchReasons.push(`CFPR exact match (${(similarity * 100).toFixed(0)}%)`);
+        } else if (similarity >= 0.70) {
+          // Good CFPR similarity - likely the right product
+          score += Math.round(500 * similarity);
+          matchReasons.push(`CFPR similar (${(similarity * 100).toFixed(0)}%)`);
+        } else if (similarity >= 0.50) {
+          // Moderate CFPR similarity - might be OCR errors
+          score += Math.round(200 * similarity);
+          matchReasons.push(`CFPR partial (${(similarity * 100).toFixed(0)}%)`);
+        }
+      }
+      
+      // === LTO MATCHING (MEDIUM-HIGH PRIORITY - NOT UNIQUE) ===
+      if (product.LTONumber && extractedLTO) {
+        const similarity = this.calculateSimilarity(extractedLTO, product.LTONumber);
         
-        if (nameMatch) {
-          // Validate match - either CFPR or LTO must be in OCR
-          const validation = this.validateMatchAgainstOCR(nameMatch, ocrText);
-          
-          if (validation.valid) {
-            validation.warnings.push('Match based on product name - LTO/CFPR codes have higher priority');
-            return { 
-              product: nameMatch, 
-              searchDetails: { matchType: 'keyword', matchedOn: keyword, confidence: validation.confidence },
-              warnings: validation.warnings
-            };
-          } else {
-            console.warn("[FuzzySearch] Keyword match rejected - insufficient verification:", validation.missingFields);
-            // Continue searching - maybe another keyword will find a better match
+        if (similarity >= 0.95) {
+          score += 200;  // LTO is not unique, so lower than CFPR
+          matchReasons.push(`LTO exact match (${(similarity * 100).toFixed(0)}%)`);
+        } else if (similarity >= 0.70) {
+          score += Math.round(100 * similarity);
+          matchReasons.push(`LTO similar (${(similarity * 100).toFixed(0)}%)`);
+        }
+      }
+      
+      // === PRODUCT NAME MATCHING (MEDIUM PRIORITY - IMPORTANT FOR OCR) ===
+      const productNameUpper = product.productName.toUpperCase();
+      const productWords = productNameUpper.split(/\s+/).filter(w => w.length >= 3);
+      let nameWordMatches = 0;
+      
+      for (const word of productWords) {
+        if (ocrTextUpper.includes(word)) {
+          nameWordMatches++;
+        }
+      }
+      
+      if (productWords.length > 0) {
+        const nameMatchRatio = nameWordMatches / productWords.length;
+        
+        if (nameMatchRatio >= 0.8) {
+          // Most words match - strong product name match
+          score += 150;
+          matchReasons.push(`Product name strong match (${nameWordMatches}/${productWords.length} words)`);
+        } else if (nameMatchRatio >= 0.5) {
+          // Half or more words match
+          score += 80;
+          matchReasons.push(`Product name partial match (${nameWordMatches}/${productWords.length} words)`);
+        } else if (nameWordMatches >= 2) {
+          // At least 2 words match
+          score += 40;
+          matchReasons.push(`Product name ${nameWordMatches} words match`);
+        }
+      }
+      
+      // Check for exact product name substring
+      if (ocrTextUpper.includes(productNameUpper) || productNameUpper.includes(ocrTextUpper.substring(0, 20))) {
+        score += 100;
+        matchReasons.push('Product name substring match');
+      }
+      
+      // === BRAND NAME MATCHING ===
+      if (product.brandName) {
+        const brandUpper = product.brandName.toUpperCase();
+        if (ocrTextUpper.includes(brandUpper)) {
+          score += 50;
+          matchReasons.push(`Brand "${product.brandName}" found`);
+        }
+      }
+      
+      // === COMPANY NAME MATCHING ===
+      if (product.company?.name) {
+        const companyUpper = product.company.name.toUpperCase();
+        const companyWords = companyUpper.split(/\s+/).filter(w => w.length >= 4);
+        
+        for (const word of companyWords) {
+          if (ocrTextUpper.includes(word)) {
+            score += 20;
+            matchReasons.push(`Company word "${word}" found`);
+            break;  // Only count once
           }
         }
       }
+      
+      // Update best match
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = product;
+        matchDetails = {
+          score: score,
+          reasons: matchReasons,
+          cfprMatch: extractedCFPR ? this.calculateSimilarity(extractedCFPR, product.CFPRNumber || '') : 0,
+          ltoMatch: extractedLTO ? this.calculateSimilarity(extractedLTO, product.LTONumber || '') : 0,
+        };
+      }
+    }
+    
+    // Return best match if score is high enough
+    // Threshold: 50 points minimum (at least some evidence of match)
+    if (bestMatch && bestScore >= 50) {
+      console.log(`[FuzzySearch] ✅ Best match: ${bestMatch.productName} (score: ${bestScore})`);
+      console.log(`   Reasons: ${matchDetails.reasons.join(', ')}`);
+      
+      const validation = this.validateMatchAgainstOCR(bestMatch, ocrText);
+      
+      // Determine confidence based on score
+      let confidence: 'high' | 'medium' | 'low';
+      if (bestScore >= 500) {
+        confidence = 'high';
+      } else if (bestScore >= 150) {
+        confidence = 'medium';
+      } else {
+        confidence = 'low';
+      }
+      
+      return { 
+        product: bestMatch, 
+        searchDetails: { 
+          matchType: 'comprehensive-fuzzy', 
+          matchedOn: matchDetails.reasons.join(', '), 
+          confidence: confidence,
+          score: bestScore,
+          ...matchDetails
+        },
+        warnings: validation.warnings
+      };
     }
 
     // No validated match found
-    console.warn("[FuzzySearch] No product match found in database (or all matches failed validation)");
+    console.warn("[FuzzySearch] No product match found in database");
     return { 
       product: null, 
       searchDetails: { 
@@ -685,7 +672,8 @@ export class FuzzySearchService {
         extractedLTO,
         searchedCodes: potentialCodes, 
         searchedKeywords: keywords.slice(0, 10),
-        reason: !extractedCFPR ? 'CFPR number not found in label' : 'No matching product in database'
+        bestScore: bestScore,
+        reason: bestScore > 0 ? 'Best match score too low' : 'No matching evidence found'
       } 
     };
   }
