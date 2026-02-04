@@ -3759,48 +3759,133 @@ class KioskApp:
         thread = threading.Thread(target=self._process_ocr_scan, daemon=True)
         thread.start()
     
+    def _enhanced_ocr_extraction(self, frame, label: str = "") -> str:
+        """
+        Enhanced OCR extraction with multiple preprocessing techniques and passes
+        Combines results from different methods for maximum accuracy
+        """
+        results = []
+        
+        # Convert to grayscale
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        
+        # TECHNIQUE 1: Adaptive Thresholding (best for varying lighting)
+        print(f"   Pass 1: Adaptive Threshold...")
+        adaptive_thresh = cv2.adaptiveThreshold(
+            gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
+        )
+        text1 = pytesseract.image_to_string(
+            Image.fromarray(adaptive_thresh),
+            config='--psm 6 --oem 3'  # PSM 6: Uniform block of text
+        )
+        results.append(text1)
+        print(f"   Pass 1 extracted {len(text1)} chars")
+        
+        # TECHNIQUE 2: Otsu's Thresholding (best for bimodal images)
+        print(f"   Pass 2: Otsu's Threshold...")
+        _, otsu_thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        text2 = pytesseract.image_to_string(
+            Image.fromarray(otsu_thresh),
+            config='--psm 6 --oem 3'
+        )
+        results.append(text2)
+        print(f"   Pass 2 extracted {len(text2)} chars")
+        
+        # TECHNIQUE 3: Morphological operations (removes noise)
+        print(f"   Pass 3: Morphological Enhancement...")
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
+        morph = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, kernel)
+        morph = cv2.morphologyEx(morph, cv2.MORPH_OPEN, kernel)
+        _, morph_thresh = cv2.threshold(morph, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        text3 = pytesseract.image_to_string(
+            Image.fromarray(morph_thresh),
+            config='--psm 6 --oem 3'
+        )
+        results.append(text3)
+        print(f"   Pass 3 extracted {len(text3)} chars")
+        
+        # TECHNIQUE 4: Contrast enhancement with CLAHE
+        print(f"   Pass 4: CLAHE Enhancement...")
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        enhanced = clahe.apply(gray)
+        _, enhanced_thresh = cv2.threshold(enhanced, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        text4 = pytesseract.image_to_string(
+            Image.fromarray(enhanced_thresh),
+            config='--psm 6 --oem 3'
+        )
+        results.append(text4)
+        print(f"   Pass 4 extracted {len(text4)} chars")
+        
+        # TECHNIQUE 5: Different PSM mode - sparse text
+        print(f"   Pass 5: Sparse Text Mode...")
+        text5 = pytesseract.image_to_string(
+            Image.fromarray(adaptive_thresh),
+            config='--psm 11 --oem 3'  # PSM 11: Sparse text, find as much as possible
+        )
+        results.append(text5)
+        print(f"   Pass 5 extracted {len(text5)} chars")
+        
+        # TECHNIQUE 6: Sharpening filter
+        print(f"   Pass 6: Sharpened Image...")
+        kernel_sharpen = np.array([[-1,-1,-1],
+                                   [-1, 9,-1],
+                                   [-1,-1,-1]])
+        sharpened = cv2.filter2D(gray, -1, kernel_sharpen)
+        _, sharp_thresh = cv2.threshold(sharpened, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        text6 = pytesseract.image_to_string(
+            Image.fromarray(sharp_thresh),
+            config='--psm 6 --oem 3'
+        )
+        results.append(text6)
+        print(f"   Pass 6 extracted {len(text6)} chars")
+        
+        # COMBINE ALL RESULTS
+        # Strategy: Use the longest result as base, then merge unique words from others
+        print(f"\n   Combining {len(results)} OCR passes...")
+        
+        # Find the longest result (likely most comprehensive)
+        longest = max(results, key=len) if results else ""
+        
+        # Extract all unique words from all passes
+        all_words = set()
+        for text in results:
+            words = text.split()
+            all_words.update(words)
+        
+        # Also include the longest result in full
+        combined = longest + "\n\n" + " ".join(sorted(all_words))
+        
+        print(f"   ✅ Final combined text: {len(combined)} chars")
+        print(f"   ✅ Unique words found: {len(all_words)}")
+        
+        return combined
+    
     def _process_ocr_scan(self):
-        """Process OCR scan - extract text and send to API"""
+        """Process OCR scan - extract text and send to API with enhanced OCR processing"""
         try:
-            # Extract text from both images using Tesseract
+            # Extract text from both images using MULTIPLE OCR PASSES
             self.root.after(0, lambda: self.loading_detail_label.config(text="Reading front label..."))
             
-            # Preprocess front image for better OCR accuracy
-            front_rgb = cv2.cvtColor(self.ocr_front_frame, cv2.COLOR_BGR2RGB)
-            front_gray = cv2.cvtColor(self.ocr_front_frame, cv2.COLOR_BGR2GRAY)
-            # Apply adaptive thresholding to handle varying lighting
-            front_thresh = cv2.adaptiveThreshold(
-                front_gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
-            )
-            front_pil = Image.fromarray(front_thresh)
+            print("\n" + "="*60)
+            print("🔍 ENHANCED OCR PROCESSING - FRONT IMAGE")
+            print("="*60)
             
-            # OCR with configuration for better accuracy
-            front_text = pytesseract.image_to_string(
-                front_pil, 
-                config='--psm 6 --oem 3'  # PSM 6: Assume uniform block of text, OEM 3: Default OCR Engine
-            )
+            # Process front image with multiple techniques
+            front_text = self._enhanced_ocr_extraction(self.ocr_front_frame, "FRONT")
             
-            print(f"=== OCR FRONT IMAGE ===")
+            print(f"\n=== OCR FRONT IMAGE RESULT ===")
             print(f"Extracted text length: {len(front_text)} chars")
             print(f"Front text preview: {front_text[:200] if len(front_text) > 200 else front_text}")
-            print(f"=======================\n")
+            print(f"==============================\n")
             
             self.root.after(0, lambda: self.loading_detail_label.config(text="Reading back label..."))
             
-            # Preprocess back image for better OCR accuracy
-            back_rgb = cv2.cvtColor(self.ocr_back_frame, cv2.COLOR_BGR2RGB)
-            back_gray = cv2.cvtColor(self.ocr_back_frame, cv2.COLOR_BGR2GRAY)
-            # Apply adaptive thresholding to handle varying lighting
-            back_thresh = cv2.adaptiveThreshold(
-                back_gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
-            )
-            back_pil = Image.fromarray(back_thresh)
+            print("\n" + "="*60)
+            print("🔍 ENHANCED OCR PROCESSING - BACK IMAGE")
+            print("="*60)
             
-            # OCR with configuration for better accuracy
-            back_text = pytesseract.image_to_string(
-                back_pil,
-                config='--psm 6 --oem 3'  # PSM 6: Assume uniform block of text, OEM 3: Default OCR Engine
-            )
+            # Process back image with multiple techniques
+            back_text = self._enhanced_ocr_extraction(self.ocr_back_frame, "BACK")
             
             print(f"=== OCR BACK IMAGE ===")
             print(f"Extracted text length: {len(back_text)} chars")
