@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
-import { X, Building2, Loader2, ExternalLink, Package } from "lucide-react";
+import { X, Building2, Loader2, ExternalLink, Package, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import axios from "axios";
 import { toast } from "react-toastify";
+import CertificateTimelineModal from "@/components/CertificateTimelineModal";
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
 
@@ -39,6 +41,9 @@ export default function CompanyDetailsPublicModal({
 }: CompanyDetailsPublicModalProps) {
   const [company, setCompany] = useState<CompanyDetails | null>(null);
   const [loading, setLoading] = useState(false);
+  const [productSearchQuery, setProductSearchQuery] = useState('');
+  const [selectedProduct, setSelectedProduct] = useState<{ id: string; name: string } | null>(null);
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
 
   useEffect(() => {
     if (isOpen && companyId) {
@@ -181,16 +186,69 @@ export default function CompanyDetailsPublicModal({
               {/* Registered Products */}
               {company.products && company.products.length > 0 && (
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                    <Package className="h-5 w-5 text-teal-600" />
-                    Registered Products ({company.products.length})
-                  </h3>
-                  <div className="space-y-3">
-                    {company.products.map((product) => (
-                      <div key={product._id} className="bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                      <Package className="h-5 w-5 text-teal-600" />
+                      Registered Products ({company.products.length})
+                    </h3>
+                    {/* Product Search */}
+                    <div className="relative w-full sm:w-auto sm:min-w-[250px]">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        type="text"
+                        placeholder="Search products..."
+                        value={productSearchQuery}
+                        onChange={(e) => setProductSearchQuery(e.target.value)}
+                        className="pl-10 h-9 text-sm"
+                      />
+                    </div>
+                  </div>
+                  {/* Search Results Count */}
+                  {productSearchQuery && (
+                    <p className="text-sm text-gray-500 mb-3">
+                      Found {company.products.filter((product) => {
+                        const query = productSearchQuery.toLowerCase();
+                        return (
+                          product.productName.toLowerCase().includes(query) ||
+                          product.brandName.toLowerCase().includes(query) ||
+                          product.lotNumber?.toLowerCase().includes(query) ||
+                          product.productClassification?.toLowerCase().includes(query)
+                        );
+                      }).length} product{company.products.filter((product) => {
+                        const query = productSearchQuery.toLowerCase();
+                        return (
+                          product.productName.toLowerCase().includes(query) ||
+                          product.brandName.toLowerCase().includes(query) ||
+                          product.lotNumber?.toLowerCase().includes(query) ||
+                          product.productClassification?.toLowerCase().includes(query)
+                        );
+                      }).length !== 1 ? 's' : ''}
+                    </p>
+                  )}
+                  <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                    {company.products
+                      .filter((product) => {
+                        if (!productSearchQuery) return true;
+                        const query = productSearchQuery.toLowerCase();
+                        return (
+                          product.productName.toLowerCase().includes(query) ||
+                          product.brandName.toLowerCase().includes(query) ||
+                          product.lotNumber?.toLowerCase().includes(query) ||
+                          product.productClassification?.toLowerCase().includes(query)
+                        );
+                      })
+                      .map((product) => (
+                      <div 
+                        key={product._id} 
+                        className="bg-white border border-gray-200 rounded-lg p-4 hover:border-teal-300 hover:bg-teal-50/30 transition-all cursor-pointer group"
+                        onClick={() => {
+                          setSelectedProduct({ id: product._id, name: product.productName });
+                          setIsProductModalOpen(true);
+                        }}
+                      >
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <h4 className="font-medium text-gray-900">{product.productName}</h4>
+                            <h4 className="font-medium text-gray-900 group-hover:text-teal-700 transition-colors">{product.productName}</h4>
                             <div className="flex flex-wrap gap-2 mt-2">
                               <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200">
                                 {product.brandName}
@@ -202,14 +260,35 @@ export default function CompanyDetailsPublicModal({
                               )}
                             </div>
                           </div>
-                          {product.lotNumber && (
-                            <span className="text-xs font-mono text-gray-500 ml-4">
-                              Lot: {product.lotNumber}
+                          <div className="flex flex-col items-end gap-2">
+                            {product.lotNumber && (
+                              <span className="text-xs font-mono text-gray-500">
+                                Lot: {product.lotNumber}
+                              </span>
+                            )}
+                            <span className="text-xs text-teal-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                              Click to view details →
                             </span>
-                          )}
+                          </div>
                         </div>
                       </div>
                     ))}
+                    {company.products.filter((product) => {
+                      if (!productSearchQuery) return true;
+                      const query = productSearchQuery.toLowerCase();
+                      return (
+                        product.productName.toLowerCase().includes(query) ||
+                        product.brandName.toLowerCase().includes(query) ||
+                        product.lotNumber?.toLowerCase().includes(query) ||
+                        product.productClassification?.toLowerCase().includes(query)
+                      );
+                    }).length === 0 && (
+                      <div className="text-center py-8">
+                        <Search className="h-10 w-10 mx-auto text-gray-300 mb-2" />
+                        <p className="text-gray-500">No products match your search</p>
+                        <p className="text-sm text-gray-400 mt-1">Try different keywords</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -223,6 +302,20 @@ export default function CompanyDetailsPublicModal({
           </Button>
         </div>
       </div>
+
+      {/* Product Details Modal */}
+      {selectedProduct && (
+        <CertificateTimelineModal
+          isOpen={isProductModalOpen}
+          onClose={() => {
+            setIsProductModalOpen(false);
+            setSelectedProduct(null);
+          }}
+          productId={selectedProduct.id}
+          productName={selectedProduct.name}
+          isPublic={true}
+        />
+      )}
     </div>
   );
 }
