@@ -4,10 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class NavBarHelperOverlay extends StatefulWidget {
   final VoidCallback onComplete;
 
-  const NavBarHelperOverlay({
-    super.key,
-    required this.onComplete,
-  });
+  const NavBarHelperOverlay({super.key, required this.onComplete});
 
   @override
   State<NavBarHelperOverlay> createState() => _NavBarHelperOverlayState();
@@ -90,16 +87,10 @@ class _NavBarHelperOverlayState extends State<NavBarHelperOverlay> {
         // Semi-transparent overlay - clicking advances tutorial
         GestureDetector(
           onTap: _nextStep,
-          child: Container(
-            color: Colors.black54,
-          ),
+          child: Container(color: Colors.black54),
         ),
         // Skip button positioned near Home Dashboard
-        Positioned(
-          top: 60,
-          right: 20,
-          child: _buildSkipButton(),
-        ),
+        Positioned(top: 60, right: 20, child: _buildSkipButton()),
         // Everything with proper positioning
         Positioned.fill(
           child: Column(
@@ -110,7 +101,10 @@ class _NavBarHelperOverlayState extends State<NavBarHelperOverlay> {
               const Spacer(flex: 2),
               // Tooltip positioned above navbar
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 8,
+                ),
                 child: _buildTooltip(navBarItems[_currentStep]),
               ),
               const SizedBox(height: 40),
@@ -130,7 +124,7 @@ class _NavBarHelperOverlayState extends State<NavBarHelperOverlay> {
   Widget _buildSpotlight(NavBarItem item) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        return Container(
+        return SizedBox(
           width: double.infinity,
           height: 80,
           child: Stack(
@@ -145,10 +139,7 @@ class _NavBarHelperOverlayState extends State<NavBarHelperOverlay> {
                     shape: BoxShape.circle,
                     // ignore: deprecated_member_use
                     color: Colors.white.withOpacity(0.1),
-                    border: Border.all(
-                      color: Colors.white,
-                      width: 3,
-                    ),
+                    border: Border.all(color: Colors.white, width: 3),
                   ),
                   child: Center(
                     child: Icon(

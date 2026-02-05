@@ -311,7 +311,7 @@ class _LoginPageState extends State<LoginPage> {
                             Text(
                               'Contact admins for creating an account',
                               style: TextStyle(
-                                color: Colors.white.withOpacity(0.8),
+                                color: Colors.white.withValues(alpha: 0.8),
                                 fontSize: 14,
                                 fontStyle: FontStyle.italic,
                               ),
