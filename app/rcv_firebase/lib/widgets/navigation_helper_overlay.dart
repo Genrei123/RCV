@@ -143,6 +143,7 @@ class _NavBarHelperOverlayState extends State<NavBarHelperOverlay> {
                   height: 70,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
+                    // ignore: deprecated_member_use
                     color: Colors.white.withOpacity(0.1),
                     border: Border.all(
                       color: Colors.white,
