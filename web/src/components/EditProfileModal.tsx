@@ -7,6 +7,9 @@ import {
   Hash,
   Camera,
   ChevronDown,
+  Eye,
+  EyeOff,
+  Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +18,7 @@ import type { ProfileUser } from "@/pages/Profile";
 import { AvatarCropDialog } from "@/components/AvatarCropDialog";
 import { FirebaseStorageService } from "@/services/firebaseStorageService";
 import { toast } from "react-toastify";
+import { apiClient } from "@/services/axiosConfig";
 
 interface PhilippineCity {
   name: string;
@@ -54,6 +58,15 @@ export function EditProfileModal({
   const [initialData, setInitialData] = useState<Partial<ProfileUser> | null>(
     null
   );
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
 
   /**
    * Normalize phone number for display/editing
@@ -110,6 +123,15 @@ export function EditProfileModal({
       setCitySearchTerm(user.location || "");
       // Clear errors when modal opens
       setErrors({});
+      // Reset password fields
+      setPasswordData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+      setShowCurrentPassword(false);
+      setShowNewPassword(false);
+      setShowConfirmPassword(false);
       // prefer local override for preview if exists
       try {
         const saved = localStorage.getItem("profile_avatar_data");
@@ -266,6 +288,77 @@ export function EditProfileModal({
     }
   };
 
+  const validatePassword = () => {
+    const passwordErrors: Record<string, string> = {};
+
+    // Only validate if user is trying to change password
+    if (
+      passwordData.currentPassword ||
+      passwordData.newPassword ||
+      passwordData.confirmPassword
+    ) {
+      if (!passwordData.currentPassword) {
+        passwordErrors.currentPassword = "Current password is required";
+      }
+      if (!passwordData.newPassword) {
+        passwordErrors.newPassword = "New password is required";
+      } else if (passwordData.newPassword.length < 6) {
+        passwordErrors.newPassword = "Password must be at least 6 characters";
+      } else if (passwordData.newPassword === passwordData.currentPassword) {
+        passwordErrors.newPassword = "New password must be different from current password";
+      }
+      if (!passwordData.confirmPassword) {
+        passwordErrors.confirmPassword = "Please confirm your new password";
+      } else if (passwordData.newPassword !== passwordData.confirmPassword) {
+        passwordErrors.confirmPassword = "Passwords do not match";
+      }
+    }
+
+    return passwordErrors;
+  };
+
+  const handlePasswordChange = async () => {
+    const passwordErrors = validatePassword();
+    if (Object.keys(passwordErrors).length > 0) {
+      setErrors(passwordErrors);
+      const firstError = Object.values(passwordErrors)[0];
+      toast.error(firstError);
+      return false;
+    }
+
+    if (!passwordData.currentPassword && !passwordData.newPassword) {
+      return true; // No password change requested
+    }
+
+    setChangingPassword(true);
+    try {
+      const response = await apiClient.post("/auth/change-password", {
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+      });
+
+      if (response.data.success) {
+        toast.success("Password changed successfully!");
+        // Reset password fields
+        setPasswordData({
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        });
+        return true;
+      }
+      return false;
+    } catch (error: any) {
+      const message =
+        error.response?.data?.message || "Failed to change password";
+      toast.error(message);
+      setErrors({ currentPassword: message });
+      return false;
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -330,6 +423,14 @@ export function EditProfileModal({
 
     setLoading(true);
     try {
+      // Handle password change first (if requested)
+      const passwordChangeSuccess = await handlePasswordChange();
+      if (!passwordChangeSuccess && (passwordData.currentPassword || passwordData.newPassword)) {
+        // Password change was attempted but failed
+        setLoading(false);
+        return;
+      }
+
       // Format phone number before saving
       const dataToSave = {
         ...formData,
@@ -396,11 +497,18 @@ export function EditProfileModal({
       "avatar",
     ];
 
-    return fields.some((field) => {
+    const profileChanged = fields.some((field) => {
       const current = formData[field] ?? "";
       const initial = initialData[field] ?? "";
       return current !== initial;
     });
+
+    const passwordChanged =
+      passwordData.currentPassword !== "" ||
+      passwordData.newPassword !== "" ||
+      passwordData.confirmPassword !== "";
+
+    return profileChanged || passwordChanged;
   })();
 
   return (
@@ -726,6 +834,141 @@ export function EditProfileModal({
                 </div>
               </div>
             </div>
+
+            {/* Password Change Section */}
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                Change Password
+              </h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Leave blank if you don't want to change your password
+              </p>
+              <div className="grid grid-cols-1 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    Current Password
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      type={showCurrentPassword ? "text" : "password"}
+                      value={passwordData.currentPassword}
+                      onChange={(e) => {
+                        setPasswordData((prev) => ({
+                          ...prev,
+                          currentPassword: e.target.value,
+                        }));
+                        if (errors.currentPassword) {
+                          setErrors((prev) => ({ ...prev, currentPassword: "" }));
+                        }
+                      }}
+                      placeholder="Enter current password"
+                      className={`pl-10 pr-10 ${
+                        errors.currentPassword ? "border-red-500" : ""
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showCurrentPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                  {errors.currentPassword && (
+                    <p className="text-xs text-red-500">
+                      {errors.currentPassword}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    New Password
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      type={showNewPassword ? "text" : "password"}
+                      value={passwordData.newPassword}
+                      onChange={(e) => {
+                        setPasswordData((prev) => ({
+                          ...prev,
+                          newPassword: e.target.value,
+                        }));
+                        if (errors.newPassword) {
+                          setErrors((prev) => ({ ...prev, newPassword: "" }));
+                        }
+                      }}
+                      placeholder="Enter new password (min. 6 characters)"
+                      className={`pl-10 pr-10 ${
+                        errors.newPassword ? "border-red-500" : ""
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showNewPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                  {errors.newPassword && (
+                    <p className="text-xs text-red-500">{errors.newPassword}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    Confirm New Password
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      type={showConfirmPassword ? "text" : "password"}
+                      value={passwordData.confirmPassword}
+                      onChange={(e) => {
+                        setPasswordData((prev) => ({
+                          ...prev,
+                          confirmPassword: e.target.value,
+                        }));
+                        if (errors.confirmPassword) {
+                          setErrors((prev) => ({ ...prev, confirmPassword: "" }));
+                        }
+                      }}
+                      placeholder="Confirm new password"
+                      className={`pl-10 pr-10 ${
+                        errors.confirmPassword ? "border-red-500" : ""
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                  {errors.confirmPassword && (
+                    <p className="text-xs text-red-500">
+                      {errors.confirmPassword}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Actions */}
@@ -734,19 +977,21 @@ export function EditProfileModal({
               type="button"
               variant="outline"
               onClick={handleCancel}
-              disabled={loading || uploadingAvatar}
+              disabled={loading || uploadingAvatar || changingPassword}
             >
               Cancel
             </Button>
             <Button
               type="submit"
               className="bg-teal-600 hover:bg-teal-700 text-white cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={loading || uploadingAvatar || !isDirty}
+              disabled={loading || uploadingAvatar || changingPassword || !isDirty}
             >
               {loading
                 ? "Saving..."
                 : uploadingAvatar
                 ? "Uploading..."
+                : changingPassword
+                ? "Changing Password..."
                 : "Save Changes"}
             </Button>
           </div>

@@ -6,6 +6,7 @@ import { ethers } from 'ethers';
 import CustomError from '../utils/CustomError';
 import { storePDFHashOnBlockchain, renewProductCertificate, updateProductCertificate, BlockchainTransaction, BlockchainEntityData, BlockchainApprover } from './sepoliaBlockchainService';
 import { redisService } from './redisService';
+import { notifyAdminsOfNewApproval, notifyAdminsOfBlockchainRegistration } from './approvalEmailService';
 
 const approvalRepo: Repository<CertificateApproval> = DB.getRepository(CertificateApproval);
 const userRepo = UserRepo;
@@ -234,13 +235,23 @@ export async function submitCertificateForApproval(input: SubmitCertificateInput
             }
           }
         }
+
+        // Send email notification to all admins about blockchain registration
+        await notifyAdminsOfBlockchainRegistration(approval, blockchainTx.txHash);
       }
     } catch (blockchainError) {
       console.error('Failed to register on blockchain:', blockchainError);
     }
   }
 
-  return await approvalRepo.save(approval);
+  const savedApproval = await approvalRepo.save(approval);
+
+  // Send email notification to all admins about new approval (only if not auto-approved)
+  if (savedApproval.status === 'pending') {
+    await notifyAdminsOfNewApproval(savedApproval);
+  }
+
+  return savedApproval;
 }
 
 /**
@@ -925,6 +936,11 @@ export async function processApproval(input: ProcessApprovalInput): Promise<Cert
     } catch (blockchainError) {
       console.error('Failed to register on blockchain:', blockchainError);
     }
+    
+    // Send email notification to all admins about blockchain registration
+    if (approval.blockchainTxHash) {
+      await notifyAdminsOfBlockchainRegistration(approval, approval.blockchainTxHash);
+    }
   }
 
   return await approvalRepo.save(approval);
@@ -1217,7 +1233,12 @@ export async function resubmitRejectedCertificate(
     previousApprovalId: previousApproval._id,
   });
 
-  return await approvalRepo.save(newApproval);
+  const savedApproval = await approvalRepo.save(newApproval);
+
+  // Send email notification to all admins about the resubmission
+  await notifyAdminsOfNewApproval(savedApproval);
+
+  return savedApproval;
 }
 
 /**
