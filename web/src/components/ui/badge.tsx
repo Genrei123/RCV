@@ -19,6 +19,10 @@ const badgeVariants = cva(
           "border-transparent app-bg-success text-white hover:opacity-90",
         warning:
           "border-transparent app-bg-secondary text-white hover:opacity-90",
+        "app-bg-pending":
+          "border-transparent bg-yellow-100 text-yellow-800 hover:opacity-90",
+        archived:
+          "border-transparent app-bg-archived text-white hover:opacity-90",
       },
     },
     defaultVariants: {

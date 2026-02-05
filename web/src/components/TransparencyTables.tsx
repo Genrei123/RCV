@@ -277,27 +277,27 @@ export function TransparencyTables() {
           {/* Companies Table */}
           <TabsContent value="companies" className="m-0">
             {companies.length === 0 ? (
-              <div className="text-center py-12">
+              <div className="text-center py-16 px-6">
                 <Building2 className="h-12 w-12 mx-auto text-gray-300 mb-4" />
                 <p className="text-gray-500">No verified companies yet</p>
               </div>
             ) : (
               <>
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto px-6 py-4">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-gray-50">
-                        <TableHead>Company</TableHead>
-                        <TableHead className="hidden md:table-cell">License #</TableHead>
-                        <TableHead className="hidden lg:table-cell">Address</TableHead>
-                        <TableHead>Products</TableHead>
-                        <TableHead>Blockchain Tx</TableHead>
+                        <TableHead className="py-4 px-4">Company</TableHead>
+                        <TableHead className="hidden md:table-cell py-4 px-4">License #</TableHead>
+                        <TableHead className="hidden lg:table-cell py-4 px-4">Address</TableHead>
+                        <TableHead className="py-4 px-4">Products</TableHead>
+                        <TableHead className="py-4 px-4">Blockchain Tx</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredCompanies.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={5} className="text-center py-12">
+                          <TableCell colSpan={5} className="text-center py-16 px-6">
                             <Search className="h-12 w-12 mx-auto text-gray-300 mb-3" />
                             <p className="text-gray-500">No companies match your search</p>
                             <p className="text-sm text-gray-400 mt-1">Try different keywords</p>
@@ -310,39 +310,39 @@ export function TransparencyTables() {
                             className="cursor-pointer hover:bg-gray-50 transition-colors"
                             onClick={() => handleCompanyClick(company)}
                           >
-                            <TableCell>
-                            <span className="font-medium">{company.name}</span>
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell font-mono text-sm text-gray-500">
-                            {company.licenseNumber}
-                          </TableCell>
-                          <TableCell className="hidden lg:table-cell text-gray-600 text-sm max-w-[200px] truncate">
-                            {company.address}
-                          </TableCell>
-                          <TableCell>
-                            <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
-                              {company.productCount} products
-                            </Badge>
-                          </TableCell>
-                          <TableCell onClick={(e) => e.stopPropagation()}>
-                            <a
-                              href={company.etherscanUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm font-mono"
-                            >
-                              {truncateHash(company.blockchainTxHash)}
-                              <ExternalLink className="h-3 w-3" />
-                            </a>
-                          </TableCell>
-                        </TableRow>
-                      ))
+                            <TableCell className="py-4 px-4">
+                              <span className="font-medium">{company.name}</span>
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell font-mono text-sm text-gray-500 py-4 px-4">
+                              {company.licenseNumber}
+                            </TableCell>
+                            <TableCell className="hidden lg:table-cell text-gray-600 text-sm max-w-[200px] truncate py-4 px-4">
+                              {company.address}
+                            </TableCell>
+                            <TableCell className="py-4 px-4">
+                              <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
+                                {company.productCount} products
+                              </Badge>
+                            </TableCell>
+                            <TableCell onClick={(e) => e.stopPropagation()} className="py-4 px-4">
+                              <a
+                                href={company.etherscanUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm font-mono"
+                              >
+                                {truncateHash(company.blockchainTxHash)}
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
+                            </TableCell>
+                          </TableRow>
+                        ))
                       )}
                     </TableBody>
                   </Table>
                 </div>
                 {/* Pagination */}
-                <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
+                <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
                   <span className="text-sm text-gray-500">
                     Page {companyPage} of {companyTotalPages}
                   </span>
