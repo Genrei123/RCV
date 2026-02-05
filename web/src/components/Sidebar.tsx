@@ -360,6 +360,7 @@ export function Sidebar({
                       <div className="absolute left-4 right-4 top-full mt-1 bg-white border rounded-lg shadow-lg overflow-hidden z-50">
                         <div className="py-1">
                           <button
+                            type="button"
                             onClick={() => {
                               switchAccount();
                               setShowWalletMenu(false);
@@ -371,6 +372,7 @@ export function Sidebar({
                             <span>Switch Wallet</span>
                           </button>
                           <button
+                            type="button"
                             onClick={() => {
                               disconnect();
                               setShowWalletMenu(false);
@@ -525,6 +527,82 @@ export function Sidebar({
             {menuItems.map((m) => {
               const Icon = m.icon;
               const isActive = location.pathname === m.path;
+
+              if ((m as any).isWallet) {
+                // Mobile wallet menu item with dropdown
+                const handleWalletClick = () => {
+                  if (!isMetaMaskInstalled) {
+                    window.open('https://metamask.io/download/', '_blank');
+                  } else if (!isConnected) {
+                    connect(true);
+                  } else {
+                    // Toggle dropdown menu
+                    setShowWalletMenu((prev) => !prev);
+                  }
+                };
+
+                return (
+                  <div key={m.path} className="relative w-full" ref={walletMenuRef}>
+                    <button
+                      type="button"
+                      onClick={handleWalletClick}
+                      className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-neutral-600 hover:bg-neutral-100 cursor-pointer"
+                    >
+                      <Icon size={20} />
+                      <span className="font-medium flex-1 text-left">
+                        {isConnected && walletAddress 
+                          ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
+                          : m.label
+                        }
+                      </span>
+                      {isConnected && (
+                        <>
+                          <div className={`w-2 h-2 rounded-full ${isAuthorized ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                          <ChevronDown
+                            size={16}
+                            className={`transition-transform ${showWalletMenu ? 'rotate-180' : ''}`}
+                          />
+                        </>
+                      )}
+                    </button>
+
+                    {/* Mobile Wallet Dropdown Menu */}
+                    {isConnected && walletAddress && showWalletMenu && (
+                      <div className="mt-1 ml-4 bg-slate-50 rounded-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                        <div className="py-1">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              switchAccount();
+                              setShowWalletMenu(false);
+                              toast.info('Switching to another account...');
+                            }}
+                            className="w-full flex items-center gap-2 px-4 py-2 text-slate-700 hover:bg-slate-100 text-sm cursor-pointer"
+                          >
+                            <Repeat2 size={16} />
+                            <span>Switch Wallet</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              disconnect();
+                              setShowWalletMenu(false);
+                              toast.success('Wallet disconnected');
+                            }}
+                            className="w-full flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 text-sm cursor-pointer"
+                          >
+                            <Power size={16} />
+                            <span>Disconnect</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
               return (
                 <Link
                   key={m.path}

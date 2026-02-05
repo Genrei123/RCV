@@ -297,18 +297,26 @@ class _LoginPageState extends State<LoginPage> {
                           },
                         ),
                         SizedBox(height: 24),
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.pushNamed(context, '/reset-password');
-                          },
-                          child: Text(
-                            'Forgot your Password?',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontStyle: FontStyle.italic,
-                              decoration: TextDecoration.underline,
+                        Column(
+                          children: [
+                            Text(
+                              'Dont have an account?',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                          ),
+                            SizedBox(height: 8),
+                            Text(
+                              'Contact admins for creating an account',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.8),
+                                fontSize: 14,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),

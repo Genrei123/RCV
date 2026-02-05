@@ -1,7 +1,9 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Facebook, Twitter, Linkedin } from "lucide-react";
 
 export function Footer() {
+  const location = useLocation();
+
   return (
     <footer className="app-bg-primary text-white w-full overflow-x-hidden relative z-10">
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
@@ -27,6 +29,14 @@ export function Footer() {
             <div>
               <h4 className="font-semibold text-white mb-3">Explore</h4>
               <div className="space-y-2">
+                {location.pathname !== "/" && (
+                  <Link
+                    to="/"
+                    className="block text-white/80 hover:text-white transition-colors text-sm"
+                  >
+                    Landing Page
+                  </Link>
+                )}
                 <Link
                   to="/blog"
                   className="block text-white/80 hover:text-white transition-colors text-sm"

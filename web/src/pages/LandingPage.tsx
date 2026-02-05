@@ -955,7 +955,7 @@ export function LandingPage() {
               size="lg"
               className="app-bg-primary-light hover:bg-[#009b79] app-text-text  px-8  cursor-pointer"
             >
-              Create Free Account
+              Get Started
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </div>
