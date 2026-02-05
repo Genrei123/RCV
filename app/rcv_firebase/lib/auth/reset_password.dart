@@ -4,7 +4,6 @@ import '../widgets/animated_form_field.dart';
 import 'package:rcv_firebase/themes/app_colors.dart' as app_colors;
 import '../services/auth_service.dart';
 import '../widgets/processing_modal.dart';
-import 'package:flutter/scheduler.dart';
 
 class ResetPasswordPage extends StatefulWidget {
   const ResetPasswordPage({super.key});
@@ -21,6 +20,8 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   String? emailError;
   bool hasEmailError = false;
   bool isSubmitting = false;
+  bool codeSent = false;
+  String? sentToEmail;
 
   @override
   void initState() {
@@ -71,7 +72,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
 
     try {
       // Show processing modal
-      showProcessingModal(context, message: 'Sending reset link...');
+      showProcessingModal(context, message: 'Sending reset code...');
 
       final result = await _authService.sendPasswordResetEmail(email);
 
@@ -80,54 +81,31 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
       hideProcessingModal(context);
 
       if (result['success'] == true) {
-        // Show success dialog
-        if (!mounted) return;
-        await showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => AlertDialog(
-            title: Row(
-              children: [
-                Icon(Icons.check_circle, color: app_colors.AppColors.primary, size: 28),
-                SizedBox(width: 12),
-                Text('Email Sent!'),
-              ],
-            ),
-            content: Text(
-              'We\'ve sent a password reset link to $email. Please check your inbox and follow the instructions.',
-              style: TextStyle(fontSize: 16),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop(); // Close dialog
-                },
-                child: Text(
-                  'OK',
-                  style: TextStyle(
-                    color: app_colors.AppColors.primary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
+        // Show success and navigate to OTP verification
+        setState(() {
+          codeSent = true;
+          sentToEmail = email;
+        });
         
-        // After dialog closes, go back to login
         if (!mounted) return;
-        Navigator.of(context).pop();
+        
+        // Navigate to OTP verification page
+        Navigator.pushNamed(
+          context,
+          '/otp-verification',
+          arguments: {'email': email},
+        );
       } else {
         // Show error message
         setState(() {
-          emailError = result['message'] ?? 'Failed to send reset email';
+          emailError = result['message'] ?? 'Failed to send reset code';
           hasEmailError = true;
         });
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(result['message'] ?? 'Failed to send reset email'),
+              content: Text(result['message'] ?? 'Failed to send reset code'),
               backgroundColor: Colors.red,
             ),
           );
@@ -203,7 +181,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                         Container(
                           padding: EdgeInsets.all(24),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
+                            color: Colors.white.withValues(alpha: 0.2),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
@@ -224,9 +202,9 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                         ),
                         SizedBox(height: 16),
                         Text(
-                          "Enter your email address and we'll send you a link to reset your password.",
+                          "Enter your email address and we'll send you a verification code to reset your password.",
                           style: TextStyle(
-                            color: app_colors.AppColors.white.withOpacity(0.9),
+                            color: app_colors.AppColors.white.withValues(alpha: 0.9),
                             fontSize: 15,
                           ),
                           textAlign: TextAlign.center,
@@ -243,7 +221,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                         ),
                         SizedBox(height: 32),
                         AppButtons(
-                          text: isSubmitting ? 'Sending...' : 'Send Reset Link',
+                          text: isSubmitting ? 'Sending...' : 'Send Reset Code',
                           size: 48,
                           textColor: app_colors.AppColors.primary,
                           backgroundColor: app_colors.AppColors.white,

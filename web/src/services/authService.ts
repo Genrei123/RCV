@@ -158,4 +158,19 @@ export class AuthService {
             throw error;
         }
     }
+
+    static async changePassword(currentPassword: string, newPassword: string): Promise<{ success: boolean; message: string }> {
+        try {
+            const response = await apiClient.post<{ success: boolean; message: string }>('/auth/change-password', { 
+                currentPassword, 
+                newPassword 
+            }, {
+                withCredentials: true
+            });
+            return response.data;
+        } catch (error: any) {
+            console.error('Change password error:', error);
+            throw error;
+        }
+    }
 }

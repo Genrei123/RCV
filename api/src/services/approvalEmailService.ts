@@ -56,7 +56,7 @@ export async function notifyAdminsOfNewApproval(approval: CertificateApproval): 
     }
 
     const emailPromises = admins.map(async (admin) => {
-      const emailSubject = `🔔 ${actionType} Awaiting Your Approval - ${approval.entityName}`;
+      const emailSubject = `${actionType} Awaiting Your Approval - ${approval.entityName}`;
       
       const emailHtml = `
         <!DOCTYPE html>
@@ -72,7 +72,7 @@ export async function notifyAdminsOfNewApproval(approval: CertificateApproval): 
               padding: 20px;
             }
             .header {
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
               color: white;
               padding: 30px;
               border-radius: 10px 10px 0 0;
@@ -80,7 +80,9 @@ export async function notifyAdminsOfNewApproval(approval: CertificateApproval): 
             }
             .header h1 {
               margin: 0;
-              font-size: 24px;
+              font-size: 26px;
+              font-weight: bold;
+              text-shadow: 0 2px 4px rgba(0,0,0,0.2);
             }
             .content {
               background: #ffffff;
@@ -89,26 +91,28 @@ export async function notifyAdminsOfNewApproval(approval: CertificateApproval): 
               border-top: none;
             }
             .info-box {
-              background: #f8f9fa;
-              border-left: 4px solid #667eea;
-              padding: 15px;
+              background: #e8f5e9;
+              border-left: 4px solid #11998e;
+              padding: 20px;
               margin: 20px 0;
               border-radius: 4px;
+              box-shadow: 0 2px 4px rgba(0,0,0,0.05);
             }
             .info-row {
-              margin: 10px 0;
+              margin: 12px 0;
+              font-size: 15px;
             }
             .info-label {
               font-weight: bold;
-              color: #667eea;
+              color: #11998e;
               display: inline-block;
               min-width: 150px;
             }
             .badge {
               display: inline-block;
-              padding: 4px 12px;
+              padding: 5px 14px;
               border-radius: 12px;
-              font-size: 12px;
+              font-size: 13px;
               font-weight: bold;
               margin-left: 10px;
             }
@@ -121,22 +125,25 @@ export async function notifyAdminsOfNewApproval(approval: CertificateApproval): 
               color: white;
             }
             .badge-new {
-              background: #4caf50;
+              background: #11998e;
               color: white;
             }
             .button {
               display: inline-block;
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
               color: white;
-              padding: 15px 40px;
+              padding: 16px 45px;
               text-decoration: none;
               border-radius: 5px;
               font-weight: bold;
+              font-size: 16px;
               margin: 20px 0;
               text-align: center;
+              box-shadow: 0 4px 6px rgba(17, 153, 142, 0.3);
             }
             .button:hover {
-              background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+              background: linear-gradient(135deg, #0f8578 0%, #32d66f 100%);
+              box-shadow: 0 6px 8px rgba(17, 153, 142, 0.4);
             }
             .footer {
               background: #f8f9fa;
@@ -154,66 +161,72 @@ export async function notifyAdminsOfNewApproval(approval: CertificateApproval): 
               border-radius: 4px;
               padding: 15px;
               margin: 20px 0;
+              font-weight: 500;
+            }
+            .entity-name {
+              font-size: 18px;
+              font-weight: bold;
+              color: #11998e;
             }
           </style>
         </head>
         <body>
           <div class="header">
-            <h1>🔔 Certificate Approval Required</h1>
+            <h1>CERTIFICATE APPROVAL REQUIRED</h1>
           </div>
           
           <div class="content">
-            <p>Hello ${admin.firstName},</p>
+            <p style="font-size: 16px;">Hello <strong>${admin.firstName}</strong>,</p>
             
-            <p>A ${entityTypeLabel.toLowerCase()} certificate has been submitted and requires your approval.</p>
+            <p style="font-size: 15px; line-height: 1.7;">A <strong>${entityTypeLabel.toLowerCase()}</strong> certificate has been submitted and <strong>requires your approval</strong>.</p>
             
             <div class="info-box">
               <div class="info-row">
                 <span class="info-label">Type:</span>
-                <span>${actionType}</span>
+                <span style="font-weight: 600;">${actionType}</span>
                 ${isRenewal ? '<span class="badge badge-renewal">RENEWAL</span>' : ''}
                 ${isUpdate ? '<span class="badge badge-update">UPDATE</span>' : ''}
                 ${!isRenewal && !isUpdate ? '<span class="badge badge-new">NEW</span>' : ''}
               </div>
               <div class="info-row">
                 <span class="info-label">Entity Name:</span>
-                <span>${approval.entityName}</span>
+                <span class="entity-name">${approval.entityName}</span>
               </div>
               <div class="info-row">
                 <span class="info-label">Entity Type:</span>
-                <span>${entityTypeLabel}</span>
+                <span style="font-weight: 600;">${entityTypeLabel}</span>
               </div>
               <div class="info-row">
                 <span class="info-label">Certificate ID:</span>
-                <span>${approval.certificateId}</span>
+                <span style="font-family: monospace; font-weight: 600;">${approval.certificateId}</span>
               </div>
               <div class="info-row">
                 <span class="info-label">Submitted By:</span>
-                <span>${approval.submitterName || 'Unknown'}</span>
+                <span style="font-weight: 600;">${approval.submitterName || 'Unknown'}</span>
               </div>
               <div class="info-row">
                 <span class="info-label">Required Approvals:</span>
-                <span>${approval.approvalCount} of ${approval.requiredApprovals}</span>
+                <span style="font-weight: 600; color: #11998e; font-size: 16px;">${approval.approvalCount} of ${approval.requiredApprovals}</span>
               </div>
             </div>
 
             ${approval.pendingEntityData && !approval.entityCreated ? `
               <div class="alert">
-                <strong>⚠️ Note:</strong> This ${entityTypeLabel.toLowerCase()} will be created in the system after all approvals are received.
+                <strong>NOTE:</strong> This ${entityTypeLabel.toLowerCase()} will be created in the system after all approvals are received.
               </div>
             ` : ''}
             
             <div style="text-align: center; margin-top: 30px;">
               <a href="${approvalUrl}" class="button">
-                Review & Approve Certificate
+                REVIEW & APPROVE CERTIFICATE
               </a>
             </div>
             
-            <p style="margin-top: 30px; color: #666; font-size: 14px;">
-              <strong>What happens next?</strong><br>
-              • Review the certificate details<br>
-              • Sign with your MetaMask wallet<br>
-              • Once all ${approval.requiredApprovals} admin(s) approve, the certificate will be registered on the blockchain
+            <p style="margin-top: 30px; color: #555; font-size: 15px; line-height: 1.8;">
+              <strong style="color: #11998e; font-size: 16px;">What happens next?</strong><br>
+              <span style="display: block; margin-top: 8px;">• Review the certificate details</span>
+              <span style="display: block;">• Sign with your MetaMask wallet</span>
+              <span style="display: block;">• Once all ${approval.requiredApprovals} admin(s) approve, the certificate will be registered on the blockchain</span>
             </p>
           </div>
           
@@ -288,7 +301,7 @@ export async function notifyAdminsOfBlockchainRegistration(
     }
 
     const emailPromises = admins.map(async (admin) => {
-      const emailSubject = `✅ Certificate Registered on Blockchain - ${approval.entityName}`;
+      const emailSubject = `Certificate Successfully Registered on Blockchain - ${approval.entityName}`;
       
       const emailHtml = `
         <!DOCTYPE html>
@@ -321,29 +334,38 @@ export async function notifyAdminsOfBlockchainRegistration(
               border-top: none;
             }
             .success-badge {
-              background: #4caf50;
+              background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
               color: white;
-              padding: 10px 20px;
+              padding: 12px 24px;
               border-radius: 20px;
               display: inline-block;
               margin: 20px 0;
               font-weight: bold;
+              font-size: 16px;
+              box-shadow: 0 4px 6px rgba(17, 153, 142, 0.3);
             }
             .info-box {
-              background: #f8f9fa;
-              border-left: 4px solid #4caf50;
-              padding: 15px;
+              background: #e8f5e9;
+              border-left: 4px solid #11998e;
+              padding: 20px;
               margin: 20px 0;
               border-radius: 4px;
+              box-shadow: 0 2px 4px rgba(0,0,0,0.05);
             }
             .info-row {
-              margin: 10px 0;
+              margin: 12px 0;
+              font-size: 15px;
             }
             .info-label {
               font-weight: bold;
-              color: #4caf50;
+              color: #11998e;
               display: inline-block;
               min-width: 150px;
+            }
+            .entity-name {
+              font-size: 18px;
+              font-weight: bold;
+              color: #11998e;
             }
             .badge {
               display: inline-block;
@@ -365,15 +387,26 @@ export async function notifyAdminsOfBlockchainRegistration(
               display: inline-block;
               background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
               color: white;
-              padding: 15px 40px;
+              padding: 16px 45px;
               text-decoration: none;
               border-radius: 5px;
               font-weight: bold;
+              font-size: 16px;
               margin: 10px 5px;
               text-align: center;
+              box-shadow: 0 4px 6px rgba(17, 153, 142, 0.3);
+            }
+            .button:hover {
+              background: linear-gradient(135deg, #0f8578 0%, #32d66f 100%);
+              box-shadow: 0 6px 8px rgba(17, 153, 142, 0.4);
             }
             .button-secondary {
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+              box-shadow: 0 4px 6px rgba(33, 150, 243, 0.3);
+            }
+            .button-secondary:hover {
+              background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+              box-shadow: 0 6px 8px rgba(33, 150, 243, 0.4);
             }
             .hash-box {
               background: #f8f9fa;
@@ -398,50 +431,54 @@ export async function notifyAdminsOfBlockchainRegistration(
             .approvers-section {
               background: #e8f5e9;
               border-radius: 4px;
-              padding: 15px;
+              padding: 20px;
               margin: 20px 0;
+              border: 1px solid #c8e6c9;
+            }
+            .approvers-section strong {
+              font-size: 16px;
             }
           </style>
         </head>
         <body>
           <div class="header">
-            <h1>✅ Certificate Successfully Registered</h1>
+            <h1>CERTIFICATE SUCCESSFULLY REGISTERED</h1>
           </div>
           
           <div class="content">
-            <p>Hello ${admin.firstName},</p>
+            <p style="font-size: 16px;">Hello <strong>${admin.firstName}</strong>,</p>
             
             <div style="text-align: center;">
               <div class="success-badge">
-                ✓ Blockchain Registration Complete
+                BLOCKCHAIN REGISTRATION COMPLETE
               </div>
             </div>
             
-            <p>The ${entityTypeLabel.toLowerCase()} certificate has been successfully approved by all administrators and registered on the Sepolia blockchain.</p>
+            <p style="font-size: 15px; line-height: 1.7;">The <strong>${entityTypeLabel.toLowerCase()}</strong> certificate has been <strong>successfully approved</strong> by all administrators and <strong>registered on the Sepolia blockchain</strong>.</p>
             
             <div class="info-box">
               <div class="info-row">
                 <span class="info-label">Entity Name:</span>
-                <span>${approval.entityName}</span>
+                <span class="entity-name">${approval.entityName}</span>
                 ${isRenewal ? '<span class="badge badge-renewal">RENEWAL</span>' : ''}
                 ${isUpdate ? '<span class="badge badge-update">UPDATE</span>' : ''}
               </div>
               <div class="info-row">
                 <span class="info-label">Entity Type:</span>
-                <span>${entityTypeLabel}</span>
+                <span style="font-weight: 600;">${entityTypeLabel}</span>
               </div>
               <div class="info-row">
                 <span class="info-label">Certificate ID:</span>
-                <span>${approval.certificateId}</span>
+                <span style="font-family: monospace; font-weight: 600;">${approval.certificateId}</span>
               </div>
               <div class="info-row">
                 <span class="info-label">Blockchain Network:</span>
-                <span>Sepolia Testnet</span>
+                <span style="font-weight: 600;">Sepolia Testnet</span>
               </div>
             </div>
 
             <div style="margin: 20px 0;">
-              <strong>Transaction Hash:</strong>
+              <strong style="color: #11998e; font-size: 16px;">Transaction Hash:</strong>
               <div class="hash-box">
                 ${blockchainTxHash}
               </div>
@@ -449,25 +486,25 @@ export async function notifyAdminsOfBlockchainRegistration(
 
             ${approversList ? `
               <div class="approvers-section">
-                <strong style="color: #2e7d32;">📝 Certificate Approvers:</strong>
+                <strong style="color: #11998e;">Certificate Approvers:</strong>
                 ${approversList}
               </div>
             ` : ''}
             
             <div style="text-align: center; margin-top: 30px;">
               <a href="${certificateUrl}" class="button">
-                View Certificate
+                VIEW CERTIFICATE
               </a>
               <a href="${blockchainExplorerUrl}" class="button button-secondary" target="_blank">
-                View on Blockchain Explorer
+                VIEW ON BLOCKCHAIN EXPLORER
               </a>
             </div>
             
-            <p style="margin-top: 30px; color: #666; font-size: 14px;">
-              <strong>What this means:</strong><br>
-              • The certificate is now immutably recorded on the blockchain<br>
-              • Anyone can verify the certificate authenticity<br>
-              • The transaction is publicly visible on the Sepolia network
+            <p style="margin-top: 30px; color: #555; font-size: 15px; line-height: 1.8;">
+              <strong style="color: #11998e; font-size: 16px;">What this means:</strong><br>
+              <span style="display: block; margin-top: 8px;">• The certificate is now immutably recorded on the blockchain</span>
+              <span style="display: block;">• Anyone can verify the certificate authenticity</span>
+              <span style="display: block;">• The transaction is publicly visible on the Sepolia network</span>
             </p>
           </div>
           

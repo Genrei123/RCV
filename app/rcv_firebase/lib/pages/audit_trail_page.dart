@@ -456,8 +456,9 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
                                         fit: BoxFit.cover,
                                         width: double.infinity,
                                         loadingBuilder: (context, child, loadingProgress) {
-                                          if (loadingProgress == null)
+                                          if (loadingProgress == null) {
                                             return child;
+                                          }
                                           return Container(
                                             height: 200,
                                             color: Colors.grey[200],

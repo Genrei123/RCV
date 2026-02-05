@@ -1792,21 +1792,21 @@ class _QRScannerPageState extends State<QRScannerPage>
         // Check if the returned product actually matches what was entered
         bool matchesLTO =
             !hasLTO ||
-            normalize(product.ltoNumber).contains(normalize(enteredLTO!));
+            normalize(product.ltoNumber).contains(normalize(enteredLTO));
         bool matchesCFPR =
             !hasCFPR ||
-            normalize(product.cfprNumber).contains(normalize(enteredCFPR!));
+            normalize(product.cfprNumber).contains(normalize(enteredCFPR));
 
         // Also check reverse - if entered value contains the DB value
         if (!matchesLTO && hasLTO && product.ltoNumber != null) {
           matchesLTO = normalize(
-            enteredLTO!,
-          ).contains(normalize(product.ltoNumber!));
+            enteredLTO,
+          ).contains(normalize(product.ltoNumber));
         }
         if (!matchesCFPR && hasCFPR && product.cfprNumber != null) {
           matchesCFPR = normalize(
-            enteredCFPR!,
-          ).contains(normalize(product.cfprNumber!));
+            enteredCFPR,
+          ).contains(normalize(product.cfprNumber));
         }
 
         developer.log('Manual input verification:');
@@ -1820,13 +1820,12 @@ class _QRScannerPageState extends State<QRScannerPage>
         if (matchesLTO && matchesCFPR) {
           // Product matches - update extracted info with database values
           final updatedInfo = {
-            'productName': product.productName ?? extractedInfo['productName'],
-            'brandName': product.brandName ?? extractedInfo['brandName'],
-            'manufacturer':
-                product.company?.name ?? extractedInfo['manufacturer'],
-            'company': product.company?.name ?? extractedInfo['company'],
-            'LTONumber': product.ltoNumber ?? extractedInfo['LTONumber'],
-            'CFPRNumber': product.cfprNumber ?? extractedInfo['CFPRNumber'],
+            'productName': product.productName,
+            'brandName': product.brandName,
+            'manufacturer': product.company?.name,
+            'company': product.company?.name,
+            'LTONumber': product.ltoNumber,
+            'CFPRNumber': product.cfprNumber,
             'isCompliant': true, // Found in database means compliant
             'violations': <dynamic>[],
             'warnings': <dynamic>[],
@@ -1854,15 +1853,17 @@ class _QRScannerPageState extends State<QRScannerPage>
       if (mounted) Navigator.pop(context);
 
       // Show error
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Search failed: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Search failed: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
 
-      // Re-show the original modal
-      _showExtractedInfoModal(extractedInfo, ocrText);
+        // Re-show the original modal
+        _showExtractedInfoModal(extractedInfo, ocrText);
+      }
     }
   }
 
@@ -2212,65 +2213,6 @@ class _QRScannerPageState extends State<QRScannerPage>
         );
       },
     );
-  }
-
-  Future<void> _summarizeProduct(String ocrText) async {
-    try {
-      // Show loading indicator with descriptive text
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => Center(
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: const [
-                CircularProgressIndicator(color: Color(0xFF005440)),
-                SizedBox(height: 16),
-                Text(
-                  'Generating AI Summary...',
-                  style: TextStyle(
-                    color: Color(0xFF005440),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'This may take a moment',
-                  style: TextStyle(color: Colors.grey, fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-
-      final result = await _apiService.summarizeProduct(ocrText);
-
-      // Close loading indicator
-      if (mounted) Navigator.of(context).pop();
-
-      if (mounted && result['success'] == true) {
-        final aiSummary = result['aiSummary'];
-        _showSummaryModal(aiSummary);
-      }
-    } catch (e) {
-      if (mounted) {
-        Navigator.of(context).pop(); // Close loading
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to generate summary: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
   }
 
   void _showSummaryModal(Map<String, dynamic> aiSummary) {

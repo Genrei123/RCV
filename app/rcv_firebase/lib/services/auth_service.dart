@@ -217,11 +217,11 @@ class AuthService {
   // Send password reset email
   Future<Map<String, dynamic>> sendPasswordResetEmail(String email) async {
     try {
-      developer.log('Sending password reset email for: $email');
+      developer.log('Sending password reset code for: $email');
 
       final response = await http
           .post(
-            Uri.parse('$baseUrl/auth/forgot-password'),
+            Uri.parse('$baseUrl/mobile/forgot-password'),
             headers: {'Content-Type': 'application/json'},
             body: json.encode({'email': email}),
           )
@@ -236,16 +236,17 @@ class AuthService {
         return {
           'success': true,
           'message': responseData['message'] ?? 
-              'Password reset email sent! Please check your inbox.',
+              'Reset code sent successfully!',
+          'otp': responseData['otp'], // Include OTP for verification
         };
       } else {
         return {
           'success': false,
-          'message': responseData['message'] ?? 'Failed to send reset email',
+          'message': responseData['message'] ?? 'Failed to send reset code',
         };
       }
     } catch (e) {
-      developer.log('Error sending password reset email: $e');
+      developer.log('Error sending password reset code: $e');
 
       // Handle different types of errors
       String errorMessage;

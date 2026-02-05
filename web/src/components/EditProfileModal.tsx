@@ -56,7 +56,14 @@ export function EditProfileModal({
   const [initialData, setInitialData] = useState<Partial<ProfileUser> | null>(
     null
   );
-  const [requestingPasswordReset, setRequestingPasswordReset] = useState(false);
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [passwordErrors, setPasswordErrors] = useState<Record<string, string>>({});
+  const [changingPassword, setChangingPassword] = useState(false);
 
   /**
    * Normalize phone number for display/editing
@@ -269,24 +276,53 @@ export function EditProfileModal({
     }
   };
 
-  const handlePasswordResetRequest = async () => {
-    if (!user?.email) {
-      toast.error("Email address not found");
+  const handlePasswordChange = async () => {
+    // Validate password fields
+    const errors: Record<string, string> = {};
+
+    if (!passwordData.currentPassword) {
+      errors.currentPassword = 'Current password is required';
+    }
+
+    if (!passwordData.newPassword) {
+      errors.newPassword = 'New password is required';
+    } else if (passwordData.newPassword.length < 6) {
+      errors.newPassword = 'Password must be at least 6 characters';
+    }
+
+    if (!passwordData.confirmPassword) {
+      errors.confirmPassword = 'Please confirm your new password';
+    } else if (passwordData.newPassword !== passwordData.confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setPasswordErrors(errors);
       return;
     }
 
-    setRequestingPasswordReset(true);
+    setChangingPassword(true);
     try {
-      await AuthService.requestPasswordReset(user.email);
-      toast.success(
-        "Password reset email sent! Please check your inbox for instructions."
+      await AuthService.changePassword(
+        passwordData.currentPassword,
+        passwordData.newPassword
       );
+      toast.success('Password changed successfully!');
+      
+      // Reset password form
+      setPasswordData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      });
+      setPasswordErrors({});
+      setShowPasswordChange(false);
     } catch (error: any) {
       const message =
-        error.response?.data?.message || "Failed to send password reset email";
+        error.response?.data?.message || 'Failed to change password';
       toast.error(message);
     } finally {
-      setRequestingPasswordReset(false);
+      setChangingPassword(false);
     }
   };
 
@@ -751,34 +787,97 @@ export function EditProfileModal({
               </div>
             </div>
 
-            {/* Password Reset Section */}
+            {/* Password Change Section */}
             <div className="border-t pt-6">
-              <div className="flex items-start gap-4">
-                <div className="p-3 bg-amber-50 rounded-lg">
-                  <KeyRound className="h-5 w-5 text-amber-600" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                    Password Reset
-                  </h3>
-                  <p className="text-sm text-gray-600 mb-4">
-                    To change your password, we'll send you a secure reset link via email.
-                    This ensures your account remains protected.
-                  </p>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-800">
+                  Change Password
+                </h3>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowPasswordChange(!showPasswordChange)}
+                >
+                  {showPasswordChange ? 'Cancel' : 'Change Password'}
+                </Button>
+              </div>
+              
+              {showPasswordChange && (
+                <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">
+                      Current Password <span className="text-red-500">*</span>
+                    </label>
+                    <Input
+                      type="password"
+                      value={passwordData.currentPassword}
+                      onChange={(e) => {
+                        setPasswordData((prev) => ({ ...prev, currentPassword: e.target.value }));
+                        if (passwordErrors.currentPassword) {
+                          setPasswordErrors((prev) => ({ ...prev, currentPassword: '' }));
+                        }
+                      }}
+                      placeholder="Enter current password"
+                      className={passwordErrors.currentPassword ? 'border-red-500' : ''}
+                    />
+                    {passwordErrors.currentPassword && (
+                      <p className="text-sm text-red-500">{passwordErrors.currentPassword}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">
+                      New Password <span className="text-red-500">*</span>
+                    </label>
+                    <Input
+                      type="password"
+                      value={passwordData.newPassword}
+                      onChange={(e) => {
+                        setPasswordData((prev) => ({ ...prev, newPassword: e.target.value }));
+                        if (passwordErrors.newPassword) {
+                          setPasswordErrors((prev) => ({ ...prev, newPassword: '' }));
+                        }
+                      }}
+                      placeholder="Enter new password (min 6 characters)"
+                      className={passwordErrors.newPassword ? 'border-red-500' : ''}
+                    />
+                    {passwordErrors.newPassword && (
+                      <p className="text-sm text-red-500">{passwordErrors.newPassword}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">
+                      Confirm New Password <span className="text-red-500">*</span>
+                    </label>
+                    <Input
+                      type="password"
+                      value={passwordData.confirmPassword}
+                      onChange={(e) => {
+                        setPasswordData((prev) => ({ ...prev, confirmPassword: e.target.value }));
+                        if (passwordErrors.confirmPassword) {
+                          setPasswordErrors((prev) => ({ ...prev, confirmPassword: '' }));
+                        }
+                      }}
+                      placeholder="Confirm new password"
+                      className={passwordErrors.confirmPassword ? 'border-red-500' : ''}
+                    />
+                    {passwordErrors.confirmPassword && (
+                      <p className="text-sm text-red-500">{passwordErrors.confirmPassword}</p>
+                    )}
+                  </div>
+
                   <Button
                     type="button"
-                    variant="outline"
-                    onClick={handlePasswordResetRequest}
-                    disabled={requestingPasswordReset || !user?.email}
-                    className="flex items-center gap-2"
+                    onClick={handlePasswordChange}
+                    disabled={changingPassword}
+                    className="w-full bg-teal-600 hover:bg-teal-700 text-white"
                   >
-                    <KeyRound className="h-4 w-4" />
-                    {requestingPasswordReset
-                      ? "Sending Email..."
-                      : "Request Password Reset"}
+                    {changingPassword ? 'Changing Password...' : 'Change Password'}
                   </Button>
                 </div>
-              </div>
+              )}
             </div>
           </div>
 
