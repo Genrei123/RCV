@@ -304,6 +304,7 @@ export function Profile({
       await UserPageService.updateProfile(profileData);
 
       toast.success("Profile updated successfully!");
+      setShowEditModal(false);
 
       // Refresh profile data to get the updated avatar URL from backend
       await fetchProfile();
@@ -320,8 +321,6 @@ export function Profile({
 
       // Refresh audit logs to show the profile update action
       await fetchAllAuditLogs();
-
-      setShowEditModal(false);
     } catch (error) {
       console.error("Failed to update profile:", error);
       toast.error("Failed to update profile");

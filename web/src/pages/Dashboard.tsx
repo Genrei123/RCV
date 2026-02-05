@@ -1,6 +1,6 @@
 import { DataTable, type Column } from "@/components/DataTable";
 import { PageContainer } from "@/components/PageContainer";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { User } from "@/typeorm/entities/user.entity";
 import { truncateText } from "@/utils/textTruncate";
 import { Button } from "@/components/ui/button";
@@ -26,13 +26,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-// removed unused UI pagination imports; using shared Pagination component instead
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -54,15 +51,21 @@ import {
   Pencil, 
   XCircle, 
   Archive, 
+  ArchiveRestore,
   Trash2,
   RefreshCw,
   Loader2,
   Shield,
   FileCheck,
+  ChevronDown,
+  Check,
 } from "lucide-react";
 import ApprovalQueue from "@/components/ApprovalQueue";
 import MySubmissions from "@/components/MySubmissions";
 import { Pagination as SimplePagination } from '@/components/Pagination';
+import { RevokeConfirmationModal } from "@/components/RevokeConfirmationModal";
+import { ArchiveInviteConfirmationModal } from "@/components/ArchiveInviteConfirmationModal";
+import { DeleteInviteConfirmationModal } from "@/components/DeleteInviteConfirmationModal";
 
 export interface DashboardProps {
   success?: boolean;
@@ -111,6 +114,21 @@ export function Dashboard(props: DashboardProps) {
   const [editFormData, setEditFormData] = useState({ badgeId: "", email: "", personalMessage: "" });
   const [editLoading, setEditLoading] = useState(false);
 
+  // Revoke invite modal state
+  const [revokeModalOpen, setRevokeModalOpen] = useState(false);
+  const [inviteToRevoke, setInviteToRevoke] = useState<AdminInvite | null>(null);
+  const [revokeLoading, setRevokeLoading] = useState(false);
+
+  // Archive invite modal state
+  const [archiveModalOpen, setArchiveModalOpen] = useState(false);
+  const [inviteToArchive, setInviteToArchive] = useState<AdminInvite | null>(null);
+  const [archiveLoading, setArchiveLoading] = useState(false);
+
+  // Delete invite modal state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [inviteToDelete, setInviteToDelete] = useState<AdminInvite | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
   // Reject confirmation dialog state
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [userToReject, setUserToReject] = useState<User | null>(null);
@@ -119,6 +137,25 @@ export function Dashboard(props: DashboardProps) {
 
   // Status filter state
   const [statusFilter, setStatusFilter] = useState<"all" | "Pending" | "Active" | "Rejected">("all");
+  const [statusFilterOpen, setStatusFilterOpen] = useState(false);
+  const [sortFilterOpen, setSortFilterOpen] = useState(false);
+  const statusFilterRef = useRef<HTMLDivElement>(null);
+  const sortFilterRef = useRef<HTMLDivElement>(null);
+
+  // Click outside to close dropdowns (like View Profile)
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (statusFilterRef.current && !statusFilterRef.current.contains(target)) {
+        setStatusFilterOpen(false);
+      }
+      if (sortFilterRef.current && !sortFilterRef.current.contains(target)) {
+        setSortFilterOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Check if current user is an admin
   const isAdmin = (): boolean => {
@@ -336,7 +373,7 @@ export function Dashboard(props: DashboardProps) {
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="overflow-visible">
             {/* Edit - only for pending/badge_verified */}
             {['pending', 'badge_verified'].includes(row.status) && (
               <DropdownMenuItem onClick={() => handleEditInvite(row)}>
@@ -357,7 +394,7 @@ export function Dashboard(props: DashboardProps) {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
                   onClick={() => handleRevokeInvite(row._id)}
-                  className="text-orange-600"
+                  className="text-black"
                 >
                   <XCircle className="h-4 w-4 mr-2" />
                   Revoke
@@ -369,6 +406,13 @@ export function Dashboard(props: DashboardProps) {
               <DropdownMenuItem onClick={() => handleArchiveInvite(row._id)}>
                 <Archive className="h-4 w-4 mr-2" />
                 Archive
+              </DropdownMenuItem>
+            )}
+            {/* Unarchive - only for archived */}
+            {row.status === 'archived' && (
+              <DropdownMenuItem onClick={() => handleUnarchiveInvite(row._id)}>
+                <ArchiveRestore className="h-4 w-4 mr-2" />
+                Unarchive
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
@@ -423,34 +467,90 @@ export function Dashboard(props: DashboardProps) {
   };
 
   const handleRevokeInvite = async (inviteId: string) => {
-    if (!confirm("Are you sure you want to revoke this invitation? The agent will no longer be able to register.")) return;
+    // Find the invite to show in the modal
+    const invite = invites.find(inv => inv._id === inviteId);
+    if (invite) {
+      setInviteToRevoke(invite);
+      setRevokeModalOpen(true);
+    }
+  };
+
+  const confirmRevokeInvite = async () => {
+    if (!inviteToRevoke) return;
+    
+    setRevokeLoading(true);
     try {
-      await AdminInviteService.revokeInvite(inviteId);
+      await AdminInviteService.revokeInvite(inviteToRevoke._id);
       toast.success("Invitation revoked");
+      setRevokeModalOpen(false);
+      setInviteToRevoke(null);
       fetchInvites();
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to revoke invitation");
+    } finally {
+      setRevokeLoading(false);
     }
   };
 
   const handleArchiveInvite = async (inviteId: string) => {
+    // Find the invite to show in the modal
+    const invite = invites.find(inv => inv._id === inviteId);
+    if (invite) {
+      setInviteToArchive(invite);
+      setArchiveModalOpen(true);
+    }
+  };
+
+  const confirmArchiveInvite = async () => {
+    if (!inviteToArchive) return;
+    
+    setArchiveLoading(true);
     try {
-      await AdminInviteService.archiveInvite(inviteId);
+      await AdminInviteService.archiveInvite(inviteToArchive._id);
       toast.success("Invitation archived");
+      setArchiveModalOpen(false);
+      setInviteToArchive(null);
       fetchInvites();
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to archive invitation");
+    } finally {
+      setArchiveLoading(false);
+    }
+  };
+
+  const handleUnarchiveInvite = async (inviteId: string) => {
+    try {
+      await AdminInviteService.unarchiveInvite(inviteId);
+      toast.success("Invitation unarchived");
+      fetchInvites();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to unarchive invitation");
     }
   };
 
   const handleDeleteInvite = async (inviteId: string) => {
-    if (!confirm("Are you sure you want to permanently delete this invitation? This action cannot be undone.")) return;
+    // Find the invite to show in the modal
+    const invite = invites.find(inv => inv._id === inviteId);
+    if (invite) {
+      setInviteToDelete(invite);
+      setDeleteModalOpen(true);
+    }
+  };
+
+  const confirmDeleteInvite = async () => {
+    if (!inviteToDelete) return;
+    
+    setDeleteLoading(true);
     try {
-      await AdminInviteService.deleteInvite(inviteId);
+      await AdminInviteService.deleteInvite(inviteToDelete._id);
       toast.success("Invitation deleted");
+      setDeleteModalOpen(false);
+      setInviteToDelete(null);
       fetchInvites();
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to delete invitation");
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -853,44 +953,75 @@ export function Dashboard(props: DashboardProps) {
             }
             customControls={
               <>
-                <Select
-                  value={statusFilter}
-                  onValueChange={(value) =>
-                    setStatusFilter(value as "all" | "Pending" | "Active" | "Rejected")
-                  }
-                >
-                  <SelectTrigger className="w-full sm:w-[140px]">
-                    <SelectValue placeholder="Filter status..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectLabel>Status Filter</SelectLabel>
-                      <SelectItem value="all">All Users</SelectItem>
-                      <SelectItem value="Pending">Pending</SelectItem>
-                      <SelectItem value="Active">Active</SelectItem>
-                      <SelectItem value="Rejected">Rejected</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={sortKey}
-                  onValueChange={(value) =>
-                    setSortKey(value as "lastName" | "email" | "statusActive" | "statusPending")
-                  }
-                >
-                  <SelectTrigger className="w-full sm:w-[160px]">
-                    <SelectValue placeholder="Sort by..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectLabel>Sort Options</SelectLabel>
-                      <SelectItem value="lastName">Name (A→Z)</SelectItem>
-                      <SelectItem value="email">Email (A→Z)</SelectItem>
-                      <SelectItem value="statusActive">Status (Active-↑)</SelectItem>
-                      <SelectItem value="statusPending">Status (Pending-↑)</SelectItem>                      
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
+                {/* Status Filter - custom dropdown like View Profile (no Radix, page scrolls when open) */}
+                <div className="relative" ref={statusFilterRef}>
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilterOpen((o) => !o)}
+                    className="flex h-9 w-full sm:w-[140px] items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs"
+                  >
+                    <span>{statusFilter === "all" ? "All Users" : statusFilter}</span>
+                    <ChevronDown className="h-4 w-4 opacity-50" />
+                  </button>
+                  {statusFilterOpen && (
+                    <div className="absolute left-0 top-full z-50 mt-1 w-full min-w-[8rem] rounded-md border bg-white py-1 shadow-lg">
+                      <p className="px-3 py-1.5 text-xs text-muted-foreground">Status Filter</p>
+                      {(["all", "Pending", "Active", "Rejected"] as const).map((v) => (
+                        <button
+                          key={v}
+                          type="button"
+                          onClick={() => {
+                            setStatusFilter(v);
+                            setStatusFilterOpen(false);
+                          }}
+                          className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-slate-50"
+                        >
+                          {v === "all" ? "All Users" : v}
+                          {statusFilter === v && <Check className="h-4 w-4" />}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {/* Sort Options - custom dropdown like View Profile (no Radix, page scrolls when open) */}
+                <div className="relative" ref={sortFilterRef}>
+                  <button
+                    type="button"
+                    onClick={() => setSortFilterOpen((o) => !o)}
+                    className="flex h-9 w-full sm:w-[160px] items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs"
+                  >
+                    <span>
+                      {sortKey === "lastName" ? "Name (A→Z)" : sortKey === "email" ? "Email (A→Z)" : sortKey === "statusActive" ? "Status (Active-↑)" : "Status (Pending-↑)"}
+                    </span>
+                    <ChevronDown className="h-4 w-4 opacity-50" />
+                  </button>
+                  {sortFilterOpen && (
+                    <div className="absolute left-0 top-full z-50 mt-1 w-full min-w-[8rem] rounded-md border bg-white py-1 shadow-lg">
+                      <p className="px-3 py-1.5 text-xs text-muted-foreground">Sort Options</p>
+                      {(
+                        [
+                          { v: "lastName" as const, label: "Name (A→Z)" },
+                          { v: "email" as const, label: "Email (A→Z)" },
+                          { v: "statusActive" as const, label: "Status (Active-↑)" },
+                          { v: "statusPending" as const, label: "Status (Pending-↑)" },
+                        ] as const
+                      ).map(({ v, label }) => (
+                        <button
+                          key={v}
+                          type="button"
+                          onClick={() => {
+                            setSortKey(v);
+                            setSortFilterOpen(false);
+                          }}
+                          className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-slate-50"
+                        >
+                          {label}
+                          {sortKey === v && <Check className="h-4 w-4" />}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </>
             }
           />
@@ -1193,6 +1324,42 @@ export function Dashboard(props: DashboardProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Revoke Invitation Confirmation Modal */}
+      <RevokeConfirmationModal
+        isOpen={revokeModalOpen}
+        onClose={() => {
+          setRevokeModalOpen(false);
+          setInviteToRevoke(null);
+        }}
+        onConfirm={confirmRevokeInvite}
+        invite={inviteToRevoke}
+        loading={revokeLoading}
+      />
+
+      {/* Archive Invitation Confirmation Modal */}
+      <ArchiveInviteConfirmationModal
+        isOpen={archiveModalOpen}
+        onClose={() => {
+          setArchiveModalOpen(false);
+          setInviteToArchive(null);
+        }}
+        onConfirm={confirmArchiveInvite}
+        invite={inviteToArchive}
+        loading={archiveLoading}
+      />
+
+      {/* Delete Invitation Confirmation Modal */}
+      <DeleteInviteConfirmationModal
+        isOpen={deleteModalOpen}
+        onClose={() => {
+          setDeleteModalOpen(false);
+          setInviteToDelete(null);
+        }}
+        onConfirm={confirmDeleteInvite}
+        invite={inviteToDelete}
+        loading={deleteLoading}
+      />
     </>
   );
 }
