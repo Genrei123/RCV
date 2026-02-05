@@ -1792,21 +1792,21 @@ class _QRScannerPageState extends State<QRScannerPage>
         // Check if the returned product actually matches what was entered
         bool matchesLTO =
             !hasLTO ||
-            normalize(product.ltoNumber).contains(normalize(enteredLTO!));
+            normalize(product.ltoNumber).contains(normalize(enteredLTO));
         bool matchesCFPR =
             !hasCFPR ||
-            normalize(product.cfprNumber).contains(normalize(enteredCFPR!));
+            normalize(product.cfprNumber).contains(normalize(enteredCFPR));
 
         // Also check reverse - if entered value contains the DB value
-        if (!matchesLTO && hasLTO && product.ltoNumber != null) {
+        if (!matchesLTO && hasLTO) {
           matchesLTO = normalize(
-            enteredLTO!,
-          ).contains(normalize(product.ltoNumber!));
+            enteredLTO,
+          ).contains(normalize(product.ltoNumber));
         }
-        if (!matchesCFPR && hasCFPR && product.cfprNumber != null) {
+        if (!matchesCFPR && hasCFPR) {
           matchesCFPR = normalize(
-            enteredCFPR!,
-          ).contains(normalize(product.cfprNumber!));
+            enteredCFPR,
+          ).contains(normalize(product.cfprNumber));
         }
 
         developer.log('Manual input verification:');
@@ -1820,13 +1820,12 @@ class _QRScannerPageState extends State<QRScannerPage>
         if (matchesLTO && matchesCFPR) {
           // Product matches - update extracted info with database values
           final updatedInfo = {
-            'productName': product.productName ?? extractedInfo['productName'],
-            'brandName': product.brandName ?? extractedInfo['brandName'],
-            'manufacturer':
-                product.company?.name ?? extractedInfo['manufacturer'],
-            'company': product.company?.name ?? extractedInfo['company'],
-            'LTONumber': product.ltoNumber ?? extractedInfo['LTONumber'],
-            'CFPRNumber': product.cfprNumber ?? extractedInfo['CFPRNumber'],
+            'productName': product.productName,
+            'brandName': product.brandName,
+            'manufacturer': product.company?.name,
+            'company': product.company?.name,
+            'LTONumber': product.ltoNumber,
+            'CFPRNumber': product.cfprNumber,
             'isCompliant': true, // Found in database means compliant
             'violations': <dynamic>[],
             'warnings': <dynamic>[],
@@ -1854,15 +1853,17 @@ class _QRScannerPageState extends State<QRScannerPage>
       if (mounted) Navigator.pop(context);
 
       // Show error
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Search failed: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Search failed: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
 
-      // Re-show the original modal
-      _showExtractedInfoModal(extractedInfo, ocrText);
+        // Re-show the original modal
+        _showExtractedInfoModal(extractedInfo, ocrText);
+      }
     }
   }
 
@@ -2203,168 +2204,6 @@ class _QRScannerPageState extends State<QRScannerPage>
                     child: const Text(
                       'View Scanned Text',
                       style: TextStyle(fontSize: 14),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Future<void> _summarizeProduct(String ocrText) async {
-    try {
-      // Show loading indicator with descriptive text
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => Center(
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: const [
-                CircularProgressIndicator(color: Color(0xFF005440)),
-                SizedBox(height: 16),
-                Text(
-                  'Generating AI Summary...',
-                  style: TextStyle(
-                    color: Color(0xFF005440),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'This may take a moment',
-                  style: TextStyle(color: Colors.grey, fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-
-      final result = await _apiService.summarizeProduct(ocrText);
-
-      // Close loading indicator
-      if (mounted) Navigator.of(context).pop();
-
-      if (mounted && result['success'] == true) {
-        final aiSummary = result['aiSummary'];
-        _showSummaryModal(aiSummary);
-      }
-    } catch (e) {
-      if (mounted) {
-        Navigator.of(context).pop(); // Close loading
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to generate summary: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  void _showSummaryModal(Map<String, dynamic> aiSummary) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Container(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.8,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Header
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Colors.blue.shade700, Colors.blue.shade900],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.auto_awesome, color: Colors.white),
-                      const SizedBox(width: 12),
-                      const Expanded(
-                        child: Text(
-                          'AI Product Summary',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white),
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
-                    ],
-                  ),
-                ),
-                // Content
-                Flexible(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildExtractedField(
-                          'Product Name',
-                          aiSummary['productName'] ?? 'N/A',
-                          Icons.inventory_2,
-                          Colors.blue,
-                        ),
-                        const SizedBox(height: 12),
-                        _buildExtractedField(
-                          'LTO Number',
-                          aiSummary['LTONum'] ?? 'N/A',
-                          Icons.badge,
-                          Colors.orange,
-                        ),
-                        const SizedBox(height: 12),
-                        _buildExtractedField(
-                          'CFPR Number',
-                          aiSummary['CFPRNum'] ?? 'N/A',
-                          Icons.assignment,
-                          Colors.teal,
-                        ),
-                        const SizedBox(height: 12),
-                        _buildExtractedField(
-                          'Manufacturer',
-                          aiSummary['ManufacturedBy'] ?? 'N/A',
-                          Icons.factory,
-                          Colors.purple,
-                        ),
-                        const SizedBox(height: 12),
-                        _buildExtractedField(
-                          'Expiry Date',
-                          aiSummary['ExpiryDate'] ?? 'N/A',
-                          Icons.event_busy,
-                          Colors.red,
-                        ),
-                      ],
                     ),
                   ),
                 ),
