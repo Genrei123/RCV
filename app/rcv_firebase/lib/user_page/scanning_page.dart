@@ -1798,12 +1798,12 @@ class _QRScannerPageState extends State<QRScannerPage>
             normalize(product.cfprNumber).contains(normalize(enteredCFPR));
 
         // Also check reverse - if entered value contains the DB value
-        if (!matchesLTO && hasLTO && product.ltoNumber != null) {
+        if (!matchesLTO && hasLTO) {
           matchesLTO = normalize(
             enteredLTO,
           ).contains(normalize(product.ltoNumber));
         }
-        if (!matchesCFPR && hasCFPR && product.cfprNumber != null) {
+        if (!matchesCFPR && hasCFPR) {
           matchesCFPR = normalize(
             enteredCFPR,
           ).contains(normalize(product.cfprNumber));
@@ -2204,109 +2204,6 @@ class _QRScannerPageState extends State<QRScannerPage>
                     child: const Text(
                       'View Scanned Text',
                       style: TextStyle(fontSize: 14),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  void _showSummaryModal(Map<String, dynamic> aiSummary) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Container(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.8,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Header
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Colors.blue.shade700, Colors.blue.shade900],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.auto_awesome, color: Colors.white),
-                      const SizedBox(width: 12),
-                      const Expanded(
-                        child: Text(
-                          'AI Product Summary',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white),
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
-                    ],
-                  ),
-                ),
-                // Content
-                Flexible(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildExtractedField(
-                          'Product Name',
-                          aiSummary['productName'] ?? 'N/A',
-                          Icons.inventory_2,
-                          Colors.blue,
-                        ),
-                        const SizedBox(height: 12),
-                        _buildExtractedField(
-                          'LTO Number',
-                          aiSummary['LTONum'] ?? 'N/A',
-                          Icons.badge,
-                          Colors.orange,
-                        ),
-                        const SizedBox(height: 12),
-                        _buildExtractedField(
-                          'CFPR Number',
-                          aiSummary['CFPRNum'] ?? 'N/A',
-                          Icons.assignment,
-                          Colors.teal,
-                        ),
-                        const SizedBox(height: 12),
-                        _buildExtractedField(
-                          'Manufacturer',
-                          aiSummary['ManufacturedBy'] ?? 'N/A',
-                          Icons.factory,
-                          Colors.purple,
-                        ),
-                        const SizedBox(height: 12),
-                        _buildExtractedField(
-                          'Expiry Date',
-                          aiSummary['ExpiryDate'] ?? 'N/A',
-                          Icons.event_busy,
-                          Colors.red,
-                        ),
-                      ],
                     ),
                   ),
                 ),
