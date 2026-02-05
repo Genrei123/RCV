@@ -126,6 +126,35 @@ export class UserPageService {
     }
   }
 
+  /**
+   * Update another user's profile by ID (admin editing a user, e.g. from Maps → user profile view).
+   */
+  static async updateUserById(
+    userId: string,
+    data: Partial<UserProfile>
+  ): Promise<UserProfile> {
+    try {
+      const backendData: any = { ...data };
+      if (backendData.avatar) {
+        backendData.avatarUrl = backendData.avatar;
+        delete backendData.avatar;
+      }
+      // Backend UserValidation.partial() still validates when keys are present:
+      // optional strings like middleName require min(2) when sent. Omit empty optionals.
+      if (backendData.middleName === "") delete backendData.middleName;
+      if (backendData.fullName === "" || (typeof backendData.fullName === "string" && backendData.fullName.length < 2)) delete backendData.fullName;
+      const response = await apiClient.patch<any>(
+        `/user/users/${userId}`,
+        backendData
+      );
+      const user = response.data?.user ?? response.data;
+      return user;
+    } catch (error) {
+      console.error("Error updating user profile:", error);
+      throw error;
+    }
+  }
+
   static async archiveAccount(): Promise<void> {
     try {
       await apiClient.patch("/user/archive");

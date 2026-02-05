@@ -25,6 +25,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { toast } from "react-toastify";
+import type { ProfileUser } from "@/pages/Profile";
 
 // Read-only view of another user's profile+activities
 export function UserProfileView() {
@@ -730,13 +732,47 @@ export function UserProfileView() {
       {showEditModal && user && (
         <EditProfileModal
           isOpen={showEditModal}
-          user={user}
+          user={user as ProfileUser}
           onClose={() => setShowEditModal(false)}
-          onSave={async () => {
-            setShowEditModal(false);
-            // Refresh user data after edit
-            if (id) {
+          onSave={async (updatedUser: Partial<ProfileUser>) => {
+            // Backend PATCH /user/users/:id expects MySQL UUID (_id), not Firebase UID from URL
+            const userId = (user as any)?._id;
+            if (!userId) {
+              toast.error("User ID not available. Please refresh the page.");
+              return;
+            }
+            try {
+              const merged = { ...user, ...updatedUser } as ProfileUser;
+              const payload: Partial<ProfileUser> = { ...updatedUser };
+              if (
+                payload.firstName !== undefined ||
+                payload.middleName !== undefined ||
+                payload.lastName !== undefined
+              ) {
+                (payload as any).fullName = [
+                  merged.firstName,
+                  merged.middleName,
+                  merged.lastName,
+                ]
+                  .filter(Boolean)
+                  .join(" ")
+                  .trim();
+              }
+              await UserPageService.updateUserById(userId, payload);
+              toast.success("Profile updated successfully!");
+              setShowEditModal(false);
               await fetchUser();
+            } catch (error: any) {
+              console.error("Failed to update profile:", error);
+              const data = error?.response?.data;
+              const msg =
+                data?.message ||
+                (data?.errors?.fieldErrors &&
+                  (Object.values(data.errors.fieldErrors)[0] as string[] | undefined)?.[0]) ||
+                data?.errors?.formErrors?.[0] ||
+                "Failed to update profile";
+              toast.error(typeof msg === "string" ? msg : "Failed to update profile");
+              throw error;
             }
           }}
         />
