@@ -221,7 +221,7 @@ class AuthService {
 
       final response = await http
           .post(
-            Uri.parse('$baseUrl/mobile/forgot-password'),
+            Uri.parse('$baseUrl/auth/forgot-password'),
             headers: {'Content-Type': 'application/json'},
             body: json.encode({'email': email}),
           )
@@ -235,13 +235,13 @@ class AuthService {
       if (response.statusCode == 200) {
         return {
           'success': true,
-          'message': responseData['message'] ?? 'OTP sent successfully',
-          'otp': responseData['otp'] ?? '123456', // For testing
+          'message': responseData['message'] ?? 
+              'Password reset email sent! Please check your inbox.',
         };
       } else {
         return {
           'success': false,
-          'message': responseData['message'] ?? 'Failed to send OTP',
+          'message': responseData['message'] ?? 'Failed to send reset email',
         };
       }
     } catch (e) {
@@ -251,11 +251,11 @@ class AuthService {
       String errorMessage;
       if (e.toString().contains('SocketException')) {
         errorMessage =
-            'Cannot connect to server. Make sure the API is running and accessible.';
+            'Cannot connect to server. Please check your internet connection.';
       } else if (e.toString().contains('TimeoutException')) {
         errorMessage = 'Request timeout. Please try again.';
       } else {
-        errorMessage = 'Network error: ${e.toString()}';
+        errorMessage = 'Network error. Please try again.';
       }
 
       return {'success': false, 'message': errorMessage};
