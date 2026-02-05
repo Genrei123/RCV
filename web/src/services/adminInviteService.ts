@@ -160,6 +160,14 @@ export class AdminInviteService {
   }
 
   /**
+   * Unarchive an invitation (Admin only)
+   */
+  static async unarchiveInvite(inviteId: string) {
+    const response = await apiClient.post(`/admin-invite/unarchive/${inviteId}`);
+    return response.data;
+  }
+
+  /**
    * Update invitation details (Admin only)
    */
   static async updateInvite(inviteId: string, data: { badgeId?: string; email?: string; personalMessage?: string }) {
