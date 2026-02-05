@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:rcv_firebase/services/remote_config_service.dart';
 import 'package:rcv_firebase/utils/tab_history.dart';
 import 'package:rcv_firebase/widgets/navigation_bar.dart';
+import 'package:rcv_firebase/widgets/navigation_helper_overlay.dart';
 import 'agent_home_page.dart';
 import '../pages/audit_trail_page.dart';
 import 'scanning_category_page.dart';
@@ -23,6 +24,7 @@ class UserMainPage extends StatefulWidget {
 
 class _UserMainPageState extends State<UserMainPage> {
   late int _selectedIndex;
+  bool _showNavHelper = false;
 
   // List of pages for each tab
   late final List<Widget> _pages;
@@ -38,6 +40,18 @@ class _UserMainPageState extends State<UserMainPage> {
       const UserReportsPage(), // Reports
       const UserProfilePage(), // Profile
     ];
+    
+    // Check if this is first launch and show helper
+    _checkFirstLaunch();
+  }
+
+  Future<void> _checkFirstLaunch() async {
+    final isFirst = await NavBarHelperOverlay.isFirstLaunch();
+    if (isFirst && mounted) {
+      setState(() {
+        _showNavHelper = true;
+      });
+    }
   }
 
   void _onTabSelected(int index) {
@@ -108,14 +122,26 @@ class _UserMainPageState extends State<UserMainPage> {
           Navigator.maybePop(context);
         }
       },
-      child: Scaffold(
-        appBar: null, // AppBar will be managed by each page if needed
-        body: _pages[_selectedIndex],
-        bottomNavigationBar: AppBottomNavBar(
-          selectedIndex: _selectedIndex,
-          role: NavBarRole.user,
-          onTabSelected: _onTabSelected,
-        ),
+      child: Stack(
+        children: [
+          Scaffold(
+            appBar: null, // AppBar will be managed by each page if needed
+            body: _pages[_selectedIndex],
+            bottomNavigationBar: AppBottomNavBar(
+              selectedIndex: _selectedIndex,
+              role: NavBarRole.user,
+              onTabSelected: _onTabSelected,
+            ),
+          ),
+          if (_showNavHelper)
+            NavBarHelperOverlay(
+              onComplete: () {
+                setState(() {
+                  _showNavHelper = false;
+                });
+              },
+            ),
+        ],
       ),
     );
   }

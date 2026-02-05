@@ -228,13 +228,13 @@ function App() {
             }
           />
 
-          {/* Landing Page - Public */}
+          {/* Landing Page - Accessible to both logged-in and non-logged-in users */}
           <Route
             path="/"
             element={
-              <PublicRoute>
+              <AccessibleRoute>
                 <LandingPage />
-              </PublicRoute>
+              </AccessibleRoute>
             }
           />
 
