@@ -72,7 +72,7 @@ export function AvatarCropDialog({
             onCropChange={setCrop}
             onZoomChange={setZoom}
             onCropComplete={onCropComplete}
-            restrictPosition={false}
+            restrictPosition={true}
           />
         </div>
         <div className="flex items-center gap-4 mt-4">
