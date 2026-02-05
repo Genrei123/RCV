@@ -327,18 +327,18 @@ export function Dashboard(props: DashboardProps) {
       key: "status",
       label: "Status",
       render: (value: string) => {
-        const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-          pending: { label: "Pending", variant: "outline" },
+        const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" | "app-bg-pending" | "archived" }> = {
+          pending: { label: "Pending", variant: "app-bg-pending" },
           badge_verified: { label: "Badge Verified", variant: "secondary" },
           registered: { label: "Registered", variant: "default" },
           approved: { label: "Approved", variant: "default" },
           rejected: { label: "Rejected", variant: "destructive" },
           revoked: { label: "Revoked", variant: "destructive" },
-          archived: { label: "Archived", variant: "secondary" },
+          archived: { label: "Archived", variant: "archived" },
         };
         const config = statusConfig[value] || { label: value, variant: "outline" };
         return <Badge variant={config.variant}>{config.label}</Badge>;
-      },
+      }
     },
     {
       key: "invitedByName",
@@ -394,7 +394,8 @@ export function Dashboard(props: DashboardProps) {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
                   onClick={() => handleRevokeInvite(row._id)}
-                  className="text-black"
+                  className="text-red-600"
+                  variant="destructive"
                 >
                   <XCircle className="h-4 w-4 mr-2" />
                   Revoke
@@ -403,14 +404,22 @@ export function Dashboard(props: DashboardProps) {
             )}
             {/* Archive - for any status except archived */}
             {row.status !== 'archived' && (
-              <DropdownMenuItem onClick={() => handleArchiveInvite(row._id)}>
+              <DropdownMenuItem 
+                onClick={() => handleArchiveInvite(row._id)}
+                className="app-text-archived"
+                variant="archived"
+              >
                 <Archive className="h-4 w-4 mr-2" />
                 Archive
               </DropdownMenuItem>
             )}
             {/* Unarchive - only for archived */}
             {row.status === 'archived' && (
-              <DropdownMenuItem onClick={() => handleUnarchiveInvite(row._id)}>
+              <DropdownMenuItem 
+                onClick={() => handleUnarchiveInvite(row._id)}
+                className="app-text-archived"
+                variant="archived"
+              >
                 <ArchiveRestore className="h-4 w-4 mr-2" />
                 Unarchive
               </DropdownMenuItem>

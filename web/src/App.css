@@ -235,6 +235,9 @@ body {
   .app-text-archived {
     color: var(--app-archived);
   }
+  .app-bg-archived {
+    background-color: var(--app-archived);
+  }
   .app-bg-secondary {
     background-color: var(--app-secondary);
   }
