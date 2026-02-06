@@ -580,16 +580,6 @@ export function UserProfileView() {
                   {new Date(selectedLog.createdAt).toLocaleString()}
                 </p>
               </div>
-              {selectedLog.ipAddress && (
-                <div className="border-b pb-3">
-                  <p className="text-sm font-medium text-neutral-500 mb-1">
-                    IP Address
-                  </p>
-                  <p className="text-base text-neutral-900 font-mono">
-                    {selectedLog.ipAddress}
-                  </p>
-                </div>
-              )}
               {selectedLog.userAgent && (
                 <div className="border-b pb-3">
                   <p className="text-sm font-medium text-neutral-500 mb-1">

@@ -83,7 +83,6 @@ class _NavBarHelperOverlayState extends State<NavBarHelperOverlay> {
   @override
   Widget build(BuildContext context) {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
-    final screenHeight = MediaQuery.of(context).size.height;
     
     // Position spotlight at navigation bar height
     // Standard navbar height is 56, plus bottom safe area

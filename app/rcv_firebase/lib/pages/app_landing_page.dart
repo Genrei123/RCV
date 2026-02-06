@@ -176,7 +176,7 @@ class _AppLandingPageState extends State<AppLandingPage>
                           decoration: BoxDecoration(
                             color: _currentPage == index
                                 ? const Color(0xFF005440)
-                                : Colors.white.withOpacity(0.5),
+                                : Colors.white.withValues(alpha: 0.5),
                             borderRadius: BorderRadius.circular(4),
                           ),
                         ),

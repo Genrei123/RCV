@@ -8,7 +8,6 @@ export interface AuditTrail {
   details?: string;
   timestamp: Date;
   user?: User;
-  ipAddress?: string;
   userAgent?: string;
   location?: string;
 }

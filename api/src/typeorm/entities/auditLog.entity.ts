@@ -43,7 +43,6 @@ export const AuditLogValidation = z.object({
   userId: z.string().uuid().optional(),
   targetUserId: z.string().uuid().optional(),
   targetProductId: z.string().uuid().optional(),
-  ipAddress: z.string().optional(),
   userAgent: z.string().optional(),
   platform: z.enum(['WEB', 'MOBILE']).default('WEB'),
   location: z.object({
@@ -114,9 +113,6 @@ export class AuditLog {
 
   @Column({ type: "uuid", nullable: true })
   targetProductId!: string | null;
-
-  @Column({ type: "varchar", length: 45, nullable: true })
-  ipAddress!: string | null;
 
   @Column({ type: "text", nullable: true })
   userAgent!: string | null;

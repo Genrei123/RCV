@@ -690,7 +690,6 @@ export function Profile({
                         { header: "Action", key: "action", width: 38 },
                         { header: "Type", key: "type", width: 18 },
                         { header: "Platform", key: "platform", width: 12 },
-                        { header: "IP", key: "ip", width: 18 },
                         { header: "User Agent", key: "userAgent", width: 55 },
                         { header: "Log ID", key: "logId", width: 38 },
                       ];
@@ -702,7 +701,6 @@ export function Profile({
                           action: (l.action || "").replace(/\n|\r/g, " "),
                           type: l.actionType || "",
                           platform: l.platform || "",
-                          ip: l.ipAddress || "",
                           userAgent: (l.userAgent || "").replace(/\n|\r/g, " "),
                           logId: l._id,
                         });
@@ -1011,18 +1009,6 @@ export function Profile({
                   })}
                 </p>
               </div>
-
-              {/* IP Address */}
-              {selectedLog.ipAddress && (
-                <div className="border-b pb-3">
-                  <p className="text-sm font-medium text-neutral-500 mb-1">
-                    IP Address
-                  </p>
-                  <p className="text-base text-neutral-900 font-mono">
-                    {selectedLog.ipAddress}
-                  </p>
-                </div>
-              )}
 
               {/* User Agent */}
               {selectedLog.userAgent && (
