@@ -216,12 +216,6 @@ export async function notifyAdminsOfNewApproval(approval: CertificateApproval): 
               </div>
             ` : ''}
             
-            <div style="text-align: center; margin-top: 30px;">
-              <a href="${approvalUrl}" class="button">
-                REVIEW & APPROVE CERTIFICATE
-              </a>
-            </div>
-            
             <p style="margin-top: 30px; color: #555; font-size: 15px; line-height: 1.8;">
               <strong style="color: #11998e; font-size: 16px;">What happens next?</strong><br>
               <span style="display: block; margin-top: 8px;">• Review the certificate details</span>
