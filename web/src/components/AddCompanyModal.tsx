@@ -11,8 +11,6 @@ import {
   Trash2,
   Calendar,
   Loader2,
-  Search,
-  Map,
   Wallet,
   AlertTriangle,
 } from "lucide-react";
@@ -206,6 +204,12 @@ export function AddCompanyModal({
       delete window.initGoogleMapsCallback;
     };
   }, [isOpen]);
+
+  useEffect(() => {
+    if (mapError) {
+      console.warn('Google Maps failed to load');
+    }
+  }, [mapError]);
 
   // Initialize map when loaded
   useEffect(() => {
