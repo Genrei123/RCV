@@ -233,8 +233,8 @@ class _AppLandingPageState extends State<AppLandingPage>
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                Colors.black.withOpacity(0.3),
-                Colors.black.withOpacity(0.6),
+                Colors.black.withValues(alpha: 0.3),
+                Colors.black.withValues(alpha: 0.6),
               ],
             ),
           ),
@@ -264,7 +264,7 @@ class _AppLandingPageState extends State<AppLandingPage>
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w400,
-                  color: Colors.white.withOpacity(0.9),
+                  color: Colors.white.withValues(alpha: 0.9),
                   height: 1.5,
                   letterSpacing: 0.2,
                 ),
