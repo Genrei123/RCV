@@ -125,31 +125,55 @@ export function AddCompanyModal({
   // Errors
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Disable body scroll when modal is open
   useEffect(() => {
-    if (isOpen) {
-      const html = document.documentElement;
-      const body = document.body;
-      const previousHtmlOverflow = html.style.overflow;
-      const previousBodyOverflow = body.style.overflow;
-      const previousBodyPosition = body.style.position;
-      const scrollY = window.scrollY;
-      
-      html.style.overflow = "hidden";
-      body.style.overflow = "hidden";
-      body.style.position = "fixed";
-      body.style.width = "100%";
-      body.style.top = `-${scrollY}px`;
-      
-      return () => {
-        html.style.overflow = previousHtmlOverflow;
-        body.style.overflow = previousBodyOverflow;
-        body.style.position = previousBodyPosition;
-        body.style.width = "";
-        body.style.top = "";
-        window.scrollTo(0, scrollY);
-      };
-    }
+    if (!isOpen) return;
+    const html = document.documentElement;
+    const body = document.body;
+    const prev = {
+      htmlOverflow: html.style.overflow,
+      bodyOverflow: body.style.overflow,
+      bodyPosition: body.style.position,
+      bodyWidth: body.style.width,
+      bodyTop: body.style.top,
+    };
+    const scrollY = window.scrollY;
+    html.style.overflow = body.style.overflow = "hidden";
+    body.style.position = "fixed";
+    body.style.width = "100%";
+    body.style.top = `-${scrollY}px`;
+
+    const isFloatingLine = (el: HTMLElement) => {
+      if (el.closest('[role="dialog"]') || el.closest('.gm-style') || el.closest('[class*="toast"]') || el.id === 'root') return false;
+      const r = el.getBoundingClientRect();
+      const s = window.getComputedStyle(el);
+      if (r.height <= 0 || r.height >= 10 || r.width <= 200 || r.width <= r.height * 50) return false;
+      if (s.position !== 'fixed' && s.position !== 'absolute') return false;
+      const b = s.borderTopWidth || s.borderBottomWidth;
+      const bg = s.backgroundColor;
+      return (parseFloat(b) > 0) || (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent' && (bg.includes('255') || bg.includes('#fff')));
+    };
+
+    const remove = (el: HTMLElement) => { if (isFloatingLine(el)) el.remove(); };
+    const sweep = () => body.querySelectorAll('*').forEach((el) => { if (el.nodeType === Node.ELEMENT_NODE) remove(el as HTMLElement); });
+
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((m) => {
+        m.addedNodes.forEach((n) => { if (n.nodeType === Node.ELEMENT_NODE) remove(n as HTMLElement); });
+        if (m.type === 'attributes' && m.target.nodeType === Node.ELEMENT_NODE) remove(m.target as HTMLElement);
+      });
+    });
+    observer.observe(body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
+    sweep();
+    const t = setInterval(sweep, 200);
+
+    return () => {
+      clearInterval(t);
+      observer.disconnect();
+      Object.assign(html.style, { overflow: prev.htmlOverflow });
+      Object.assign(body.style, { overflow: prev.bodyOverflow, position: prev.bodyPosition, width: prev.bodyWidth, top: prev.bodyTop });
+      window.scrollTo(0, scrollY);
+      sweep();
+    };
   }, [isOpen]);
 
   // Load Google Maps
@@ -417,6 +441,10 @@ export function AddCompanyModal({
       newErrors.licenseNumber = MSG_TOO_LONG;
     }
 
+    if (!pendingDocuments.length) {
+      newErrors.documents = "At least one document is required";
+    }
+
     // 4. Regex Validations (From Dev Branch)
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = "Invalid email address";
@@ -597,7 +625,7 @@ export function AddCompanyModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ overflow: 'hidden' }}>
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
@@ -605,7 +633,7 @@ export function AddCompanyModal({
       />
 
       {/* Modal */}
-      <div className="relative bg-white rounded-lg shadow-xl w-full max-w-4xl my-8 max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="relative bg-white rounded-lg shadow-xl w-full max-w-4xl my-8 max-h-[90vh] overflow-hidden flex flex-col" style={{ isolation: 'isolate' }}>
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b shrink-0">
           <div className="flex items-center gap-3">
@@ -1008,6 +1036,10 @@ export function AddCompanyModal({
                     ))}
                   </div>
                 </div>
+              )}
+
+              {errors.documents && (
+                <p className="text-xs text-red-500">{errors.documents}</p>
               )}
 
               <p className="text-xs text-gray-500">
