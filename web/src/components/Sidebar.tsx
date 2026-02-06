@@ -115,11 +115,11 @@ export function Sidebar({
     };
 
     if (showProfileMenu || showWalletMenu) {
-      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("click", handleClickOutside);
     }
 
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("click", handleClickOutside);
     };
   }, [showProfileMenu, showWalletMenu]);
 
@@ -320,7 +320,8 @@ export function Sidebar({
 
               if ((item as any).isWallet) {
                 // Wallet menu item with dropdown
-                const handleWalletClick = () => {
+                const handleWalletClick = (e: React.MouseEvent) => {
+                  e.stopPropagation();
                   if (!isMetaMaskInstalled) {
                     window.open('https://metamask.io/download/', '_blank');
                   } else if (!isConnected) {
@@ -357,11 +358,15 @@ export function Sidebar({
 
                     {/* Wallet Dropdown Menu */}
                     {isConnected && walletAddress && showWalletMenu && (
-                      <div className="absolute left-4 right-4 top-full mt-1 bg-white border rounded-lg shadow-lg overflow-hidden z-50">
+                      <div 
+                        className="absolute left-4 right-4 top-full mt-1 bg-white border rounded-lg shadow-lg overflow-hidden z-50"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <div className="py-1">
                           <button
                             type="button"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               switchAccount();
                               setShowWalletMenu(false);
                               toast.info('Switching to another account...');
@@ -373,7 +378,8 @@ export function Sidebar({
                           </button>
                           <button
                             type="button"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               disconnect();
                               setShowWalletMenu(false);
                               toast.success('Wallet disconnected');
@@ -530,7 +536,8 @@ export function Sidebar({
 
               if ((m as any).isWallet) {
                 // Mobile wallet menu item with dropdown
-                const handleWalletClick = () => {
+                const handleWalletClick = (e: React.MouseEvent) => {
+                  e.stopPropagation();
                   if (!isMetaMaskInstalled) {
                     window.open('https://metamask.io/download/', '_blank');
                   } else if (!isConnected) {
@@ -568,7 +575,10 @@ export function Sidebar({
 
                     {/* Mobile Wallet Dropdown Menu */}
                     {isConnected && walletAddress && showWalletMenu && (
-                      <div className="mt-1 ml-4 bg-slate-50 rounded-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                      <div 
+                        className="mt-1 ml-4 bg-slate-50 rounded-lg overflow-hidden" 
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <div className="py-1">
                           <button
                             type="button"

@@ -893,7 +893,36 @@ export function AddCompanyModal({
                 Location
               </h3>
 
+              {/* Simple Address Input */}
+              <div className="space-y-2">
+                <Label htmlFor="address">
+                  Address <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="address"
+                  name="address"
+                  type="text"
+                  value={formData.address || ""}
+                  onChange={handleChange}
+                  placeholder="Enter company address..."
+                  className={errors.address ? "border-red-500" : ""}
+                />
+                {errors.address && (
+                  <p className="text-xs text-red-500">{errors.address}</p>
+                )}
+              </div>
+            </div>
+
+            {/* COMMENTED OUT - Original Location Section with Map */}
+            {/* 
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-gray-400" />
+                Location
+              </h3>
+
               {/* Address Input with Google Maps Autocomplete */}
+            {/*
               <div className="space-y-2">
                 <Label htmlFor="address">
                   Address <span className="text-red-500">*</span>
@@ -920,6 +949,7 @@ export function AddCompanyModal({
               </div>
 
               {/* Google Map */}
+            {/*
               <div className="rounded-lg overflow-hidden border border-gray-200">
                 {mapError ? (
                   <div className="h-[300px] flex flex-col items-center justify-center bg-gray-100 text-gray-500">
@@ -937,6 +967,7 @@ export function AddCompanyModal({
               </div>
 
               {/* Coordinates Display */}
+            {/*
               {formData.latitude && formData.longitude && (
                 <div className="flex items-center gap-4 p-3 bg-green-50 rounded-lg text-sm">
                   <MapPin className="h-4 w-4 text-green-600" />
@@ -950,6 +981,7 @@ export function AddCompanyModal({
                 Click on the map to place a marker or search for a location. You can drag the marker to adjust the position.
               </p>
             </div>
+            */}
 
             {/* Documents Section */}
             <div className="space-y-4">
