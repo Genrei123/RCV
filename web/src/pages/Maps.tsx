@@ -1,17 +1,26 @@
 import { MapComponent } from "@/components/MapComponent";
+import { KioskMapComponent } from "@/components/KioskMapComponent";
 import type { Inspector } from "@/components/MapComponent";
+import type { KioskMachine } from "@/components/KioskMapComponent";
 import { FirestoreService } from "@/services/firestore";
 import { DashboardService } from "@/services/dashboardService";
+import { KioskManagementService } from "@/services/kioskManagementService";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
+import { Button } from "@/components/ui/button";
+import { Users, Monitor } from "lucide-react";
 
 export function Maps() {
   const [inspectors, setInspectors] = useState<Inspector[]>([]);
   const [filteredInspectors, setFilteredInspectors] = useState<Inspector[]>([]);
+  const [kiosks, setKiosks] = useState<KioskMachine[]>([]);
+  const [filteredKiosks, setFilteredKiosks] = useState<KioskMachine[]>([]);
   const [, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
+  const [kiosksLoading, setKiosksLoading] = useState(false);
   const [searchUsers, setSearchUsers] = useState<any[]>([]);
+  const [viewMode, setViewMode] = useState<"agents" | "kiosks">("agents");
   const navigate = useNavigate();
 
   // Layout handles sizing/scroll; no body scroll hacks here
@@ -28,8 +37,9 @@ export function Maps() {
   };
 
   useEffect(() => {
-    const loadInspectors = async () => {
+    const loadData = async () => {
       try {
+        // Load inspectors
         const users = await FirestoreService.getAllUsers();
 
         const mappedInspectors: Inspector[] = users
@@ -62,22 +72,51 @@ export function Maps() {
 
         setInspectors(mappedInspectors);
         setFilteredInspectors(mappedInspectors);
+
+        // Load kiosks
+        const kioskData = await KioskManagementService.getAllKiosks();
+        setKiosks(kioskData);
+        setFilteredKiosks(kioskData);
       } catch (error) {
-        console.error("Error loading inspectors:", error);
+        console.error("Error loading data:", error);
         setInspectors([]);
         setFilteredInspectors([]);
+        setKiosks([]);
+        setFilteredKiosks([]);
       } finally {
         setLoading(false);
       }
     };
 
-    loadInspectors();
+    loadData();
 
-    // Refresh inspectors every 10 seconds to update active status
-    const interval = setInterval(loadInspectors, 10000);
+    // Refresh data every 10 seconds to update active status
+    const interval = setInterval(loadData, 10000);
     
     return () => clearInterval(interval);
   }, []);
+
+  // Function to fetch kiosks on demand
+  const fetchKiosks = async () => {
+    setKiosksLoading(true);
+    try {
+      const kioskData = await KioskManagementService.getAllKiosks();
+      setKiosks(kioskData);
+      setFilteredKiosks(kioskData);
+    } catch (error) {
+      console.error("Error loading kiosks:", error);
+    } finally {
+      setKiosksLoading(false);
+    }
+  };
+
+  // Handle view mode change - fetch fresh data when switching to kiosks
+  const handleViewModeChange = async (mode: "agents" | "kiosks") => {
+    setViewMode(mode);
+    if (mode === "kiosks") {
+      await fetchKiosks();
+    }
+  };
 
   const handleInspectorClick = (inspector: Inspector) => {
     if (inspector?.id) {
@@ -85,76 +124,96 @@ export function Maps() {
     }
   };
 
+  const handleKioskClick = (kiosk: KioskMachine) => {
+    // Navigate to kiosk details or open control panel
+    console.log("Kiosk clicked:", kiosk);
+  };
+
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
 
     if (!query.trim()) {
       setFilteredInspectors(inspectors);
+      setFilteredKiosks(kiosks);
       setSearchUsers([]);
       return;
     }
 
     try {
-      // Fetch all users through API, then filter by query
-      const resp = await DashboardService.getAllUsers();
-      const users = resp.users || [];
-      const q = query.toLowerCase();
-      const matchedUsers = users.filter((u: any) => {
-        const parts = [
-          u.firstName,
-          u.middleName,
-          u.lastName,
-          u.fullName,
-          u.name,
-          u.email,
-        ]
-          .filter(Boolean)
-          .map((s: any) => String(s).toLowerCase());
-        return parts.some((p: string) => p.includes(q));
-      });
+      if (viewMode === "agents") {
+        // Search agents/inspectors
+        const resp = await DashboardService.getAllUsers();
+        const users = resp.users || [];
+        const q = query.toLowerCase();
+        const matchedUsers = users.filter((u: any) => {
+          const parts = [
+            u.firstName,
+            u.middleName,
+            u.lastName,
+            u.fullName,
+            u.name,
+            u.email,
+          ]
+            .filter(Boolean)
+            .map((s: any) => String(s).toLowerCase());
+          return parts.some((p: string) => p.includes(q));
+        });
 
-      const matchedIds = new Set(matchedUsers.map((u: any) => u._id));
+        const matchedIds = new Set(matchedUsers.map((u: any) => u._id));
 
-      // Keep only inspectors (with location) whose IDs matched the user search
-      const filtered = inspectors.filter((i) => matchedIds.has(i.id));
-      setFilteredInspectors(filtered);
+        // Keep only inspectors (with location) whose IDs matched the user search
+        const filtered = inspectors.filter((i) => matchedIds.has(i.id));
+        setFilteredInspectors(filtered);
 
-      // Build suggestions including users without live locations
-      const suggestionUsers = matchedUsers.map((u: any) => {
-        const match = inspectors.find((i) => i.id === u._id);
-        return {
-          id: u._id,
-          name:
-            u.fullName ||
-            u.name ||
-            [u.firstName, u.lastName].filter(Boolean).join(" "),
-          role: u.role,
-          status: match?.status,
-          lastSeen: match?.lastSeen,
-          badgeId: match?.badgeId,
-          location: match?.location,
-        };
-      });
-      setSearchUsers(suggestionUsers);
+        // Build suggestions including users without live locations
+        const suggestionUsers = matchedUsers.map((u: any) => {
+          const match = inspectors.find((i) => i.id === u._id);
+          return {
+            id: u._id,
+            name:
+              u.fullName ||
+              u.name ||
+              [u.firstName, u.lastName].filter(Boolean).join(" "),
+            role: u.role,
+            status: match?.status,
+            lastSeen: match?.lastSeen,
+            badgeId: match?.badgeId,
+            location: match?.location,
+          };
+        });
+        setSearchUsers(suggestionUsers);
+      } else {
+        // Search kiosks
+        const q = query.toLowerCase();
+        const filtered = kiosks.filter(
+          (k) =>
+            k.name.toLowerCase().includes(q) ||
+            k.location.address.toLowerCase().includes(q) ||
+            k.id.toLowerCase().includes(q)
+        );
+        setFilteredKiosks(filtered);
+      }
     } catch (error) {
       console.error("Search error:", error);
       // Fallback to local name filter
-      const searchLower = query.toLowerCase();
-      const filtered = inspectors.filter((inspector) =>
-        inspector?.name?.toLowerCase().includes(searchLower)
-      );
-      setFilteredInspectors(filtered);
-      setSearchUsers(
-        filtered.map((i) => ({
-          id: i.id,
-          name: i.name,
-          role: i.role,
-          status: i.status,
-          lastSeen: i.lastSeen,
-          badgeId: i.badgeId,
-          location: i.location,
-        }))
-      );
+      if (viewMode === "agents") {
+        const searchLower = query.toLowerCase();
+        const filtered = inspectors.filter((inspector) =>
+          inspector?.name?.toLowerCase().includes(searchLower)
+        );
+        setFilteredInspectors(filtered);
+        setSearchUsers(
+          filtered.map((i) => ({
+            id: i.id,
+            name: i.name,
+            role: i.role,
+            status: i.status,
+            lastSeen: i.lastSeen,
+            badgeId: i.badgeId,
+            location: i.location,
+          }))
+        );
+      }
     }
   };
 
@@ -167,15 +226,50 @@ export function Maps() {
   }
 
   return (
-    <div className="h-full w-full">
-      <MapComponent
-        inspectors={filteredInspectors}
-        allInspectors={inspectors}
-        searchUsers={searchUsers}
-        onInspectorClick={handleInspectorClick}
-        onSearch={handleSearch}
-        loading={loading}
-      />
+    <div className="h-full w-full relative">
+      {/* Toggle Button - Upper Right Corner */}
+      <div className="absolute top-4 right-4 z-20">
+        <div className="bg-white rounded-lg shadow-lg p-1 flex gap-1">
+          <Button
+            variant={viewMode === "agents" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => handleViewModeChange("agents")}
+            className="gap-2"
+          >
+            <Users className="h-4 w-4" />
+            Agents
+          </Button>
+          <Button
+            variant={viewMode === "kiosks" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => handleViewModeChange("kiosks")}
+            className="gap-2"
+            disabled={kiosksLoading}
+          >
+            <Monitor className="h-4 w-4" />
+            {kiosksLoading ? "Loading..." : "Kiosks"}
+          </Button>
+        </div>
+      </div>
+
+      {/* Map Display */}
+      {viewMode === "agents" ? (
+        <MapComponent
+          inspectors={filteredInspectors}
+          allInspectors={inspectors}
+          searchUsers={searchUsers}
+          onInspectorClick={handleInspectorClick}
+          onSearch={handleSearch}
+          loading={loading}
+        />
+      ) : (
+        <KioskMapComponent
+          kiosks={filteredKiosks}
+          onKioskClick={handleKioskClick}
+          onSearch={handleSearch}
+          loading={kiosksLoading}
+        />
+      )}
     </div>
   );
 }

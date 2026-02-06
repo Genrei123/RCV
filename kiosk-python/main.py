@@ -307,6 +307,128 @@ if not TTS_AVAILABLE:
         print("TTS not available. Install edge-tts for best Filipino voice: pip install edge-tts")
 
 # ============================================================================
+# KIOSK MONITORING CONFIG
+# ============================================================================
+# Kiosk sends heartbeat to API every HEALTH_CHECK_INTERVAL seconds
+# API returns any pending commands (restart, mode change, LED control)
+# Kiosk executes commands and reports status on next heartbeat
+
+def get_auto_location():
+    """
+    Auto-detect kiosk location using IP geolocation.
+    Falls back to default Manila coordinates if detection fails.
+    
+    Note: IP geolocation returns ISP location, not exact physical location.
+    For precise location, set KIOSK_LAT/KIOSK_LNG environment variables
+    or use GPS hardware on the kiosk.
+    
+    Uses free ip-api.com service (no API key required, 45 requests/min limit).
+    """
+    default_location = {
+        'lat': 14.5995,
+        'lng': 120.9842,
+        'city': 'Manila',
+        'address': 'RCV Office, Manila',
+        'country': 'Philippines'
+    }
+    
+    try:
+        import requests
+        # Try multiple geolocation services for better accuracy
+        services = [
+            ('http://ip-api.com/json/', lambda d: {
+                'lat': d.get('lat'),
+                'lng': d.get('lon'),
+                'city': d.get('city'),
+                'region': d.get('regionName'),
+                'country': d.get('country'),
+                'success': d.get('status') == 'success'
+            }),
+            ('https://ipapi.co/json/', lambda d: {
+                'lat': d.get('latitude'),
+                'lng': d.get('longitude'),
+                'city': d.get('city'),
+                'region': d.get('region'),
+                'country': d.get('country_name'),
+                'success': not d.get('error')
+            }),
+        ]
+        
+        for url, parser in services:
+            try:
+                response = requests.get(url, timeout=5)
+                if response.status_code == 200:
+                    data = parser(response.json())
+                    if data.get('success') and data.get('lat') and data.get('lng'):
+                        location = {
+                            'lat': float(data['lat']),
+                            'lng': float(data['lng']),
+                            'city': data.get('city', default_location['city']),
+                            'address': f"{data.get('city', '')}, {data.get('region', '')}",
+                            'country': data.get('country', default_location['country'])
+                        }
+                        print(f"✓ Auto-detected location: {location['city']}, {location['country']} ({location['lat']}, {location['lng']})")
+                        print(f"  (Note: This is approximate ISP location. Set KIOSK_LAT/KIOSK_LNG env vars for exact location)")
+                        return location
+            except Exception as e:
+                continue
+                
+    except Exception as e:
+        print(f"⚠ Location auto-detect failed: {e}. Using defaults.")
+    
+    print(f"⚠ Using default location: {default_location['city']}")
+    return default_location
+
+def get_unique_kiosk_id():
+    """
+    Generate a unique kiosk ID based on machine identifiers.
+    Priority: MAC address > hostname > random UUID
+    """
+    import uuid
+    import socket
+    
+    # Try to use MAC address (most unique)
+    try:
+        mac = uuid.getnode()
+        # Format: kiosk-XXXX (last 4 hex chars of MAC)
+        mac_suffix = format(mac, 'x')[-4:].upper()
+        return f"kiosk-{mac_suffix}"
+    except:
+        pass
+    
+    # Fall back to hostname
+    try:
+        hostname = socket.gethostname().lower().replace(' ', '-')[:12]
+        return f"kiosk-{hostname}"
+    except:
+        pass
+    
+    # Last resort: random UUID
+    return f"kiosk-{str(uuid.uuid4())[:8]}"
+
+# Auto-detect location on startup (can be overridden by env vars)
+_auto_location = get_auto_location()
+
+KIOSK_ID = os.getenv('KIOSK_ID') or get_unique_kiosk_id()
+KIOSK_NAME = os.getenv('KIOSK_NAME', f'Kiosk {KIOSK_ID}')
+KIOSK_LAT = float(os.getenv('KIOSK_LAT', '0')) or _auto_location['lat']
+KIOSK_LNG = float(os.getenv('KIOSK_LNG', '0')) or _auto_location['lng']
+KIOSK_ADDRESS = os.getenv('KIOSK_ADDRESS') or _auto_location['address']
+KIOSK_CITY = os.getenv('KIOSK_CITY') or _auto_location['city']
+HEALTH_CHECK_INTERVAL = 10  # seconds between heartbeats (faster for command response)
+
+print(f"✓ Kiosk ID: {KIOSK_ID}")
+print(f"✓ Location: {KIOSK_CITY} ({KIOSK_LAT}, {KIOSK_LNG})")
+
+# psutil for system monitoring (optional)
+PSUTIL_AVAILABLE = False
+try:
+    import psutil
+    PSUTIL_AVAILABLE = True
+except ImportError:
+    print("psutil not installed. System info disabled. Install: pip install psutil")
+
+# ============================================================================
 # Design Constants (matching Flutter main.dart theme)
 # ============================================================================
 class Colors:
@@ -897,6 +1019,291 @@ class GPIOLEDService:
         except:
             pass
 
+
+# ============================================================================
+# KIOSK HEALTH CHECK SERVICE - Sends heartbeat and receives commands from API
+# ============================================================================
+class KioskHealthService:
+    """
+    Service that sends periodic heartbeat to the backend API.
+    The API returns any pending commands (restart, mode change, LED control).
+    Commands are executed immediately after receiving them.
+    """
+    
+    def __init__(self, kiosk_app=None):
+        self.kiosk_app = kiosk_app
+        self.api_base_url = os.getenv('API_BASE_URL', 'http://localhost:5500/api/v1')
+        self._running = False
+        self._thread = None
+        self._heartbeat_interval = HEALTH_CHECK_INTERVAL
+        
+        # Current status tracking
+        self.current_mode = 'idle'
+        self.led_states = {
+            'processing': False,
+            'success': False,
+            'error': False
+        }
+    
+    def start(self):
+        """Start the health check service in a background thread"""
+        if self._running:
+            return
+        
+        self._running = True
+        self._thread = threading.Thread(target=self._heartbeat_loop, daemon=True)
+        self._thread.start()
+        print(f"📡 Heartbeat service started (interval: {self._heartbeat_interval}s)")
+        print(f"📡 Sending heartbeats to: {self.api_base_url}/kiosks/heartbeat")
+    
+    def stop(self):
+        """Stop the health check service"""
+        self._running = False
+        if self._thread:
+            self._thread.join(timeout=2)
+        print("📡 Heartbeat service stopped")
+    
+    def update_status(self, mode: str, leds: dict = None):
+        """Update the current status to be sent in next heartbeat"""
+        self.current_mode = mode
+        if leds:
+            self.led_states = leds
+    
+    def _get_system_info(self) -> dict:
+        """Get system resource information"""
+        if PSUTIL_AVAILABLE:
+            try:
+                return {
+                    'cpu_percent': psutil.cpu_percent(interval=0.1),
+                    'memory_percent': psutil.virtual_memory().percent,
+                    'disk_percent': psutil.disk_usage('/').percent
+                }
+            except:
+                pass
+        return {'cpu_percent': 0, 'memory_percent': 0, 'disk_percent': 0}
+    
+    def _heartbeat_loop(self):
+        """Background loop that sends heartbeat every interval"""
+        while self._running:
+            try:
+                self._send_heartbeat()
+            except Exception as e:
+                print(f"❌ Heartbeat error: {e}")
+            
+            # Wait for next interval
+            time.sleep(self._heartbeat_interval)
+    
+    def _send_heartbeat(self) -> bool:
+        """Send heartbeat to backend and process any pending commands"""
+        try:
+            # Get current state from kiosk app if available
+            if self.kiosk_app:
+                self.current_mode = self.kiosk_app.state.value if hasattr(self.kiosk_app, 'state') else 'idle'
+            
+            payload = {
+                'kioskId': KIOSK_ID,
+                'name': KIOSK_NAME,
+                'location': {
+                    'lat': KIOSK_LAT,
+                    'lng': KIOSK_LNG,
+                    'address': KIOSK_ADDRESS,
+                    'city': KIOSK_CITY
+                },
+                'mode': self.current_mode,
+                'leds': self.led_states,
+                'systemInfo': self._get_system_info(),
+                'timestamp': datetime.now().isoformat()
+            }
+            
+            response = requests.post(
+                f'{self.api_base_url}/kiosks/heartbeat',
+                json=payload,
+                timeout=10
+            )
+            
+            if response.status_code in [200, 201]:
+                data = response.json()
+                print(f"✓ Heartbeat OK: {self.current_mode}")
+                
+                # Check for and execute pending commands
+                commands = data.get('commands', [])
+                if commands:
+                    print(f"📥 Received {len(commands)} command(s)")
+                    for cmd in commands:
+                        self._execute_command(cmd)
+                
+                return True
+            else:
+                print(f"⚠ Heartbeat response: {response.status_code}")
+                return False
+                
+        except requests.exceptions.ConnectionError:
+            print(f"❌ Cannot connect to backend at {self.api_base_url}")
+            return False
+        except Exception as e:
+            print(f"❌ Heartbeat failed: {e}")
+            return False
+    
+    def _execute_command(self, cmd: dict):
+        """Execute a command received from the API"""
+        command_type = cmd.get('command')
+        payload = cmd.get('payload', {})
+        
+        print(f"🔧 Executing command: {command_type}")
+        
+        try:
+            if command_type == 'restart':
+                self._do_restart()
+            
+            elif command_type == 'shutdown':
+                self._do_shutdown()
+            
+            elif command_type == 'set_mode':
+                mode = payload.get('mode', 'idle')
+                self._set_mode(mode)
+            
+            elif command_type == 'toggle_led':
+                led_name = payload.get('ledName')
+                if led_name:
+                    self._toggle_led(led_name)
+            
+            elif command_type == 'test_all_leds':
+                self._test_all_leds()
+            
+            else:
+                print(f"⚠ Unknown command: {command_type}")
+                
+        except Exception as e:
+            print(f"❌ Command execution failed: {e}")
+    
+    def _do_restart(self):
+        """Restart the kiosk application"""
+        print("🔄 Restarting kiosk application...")
+        
+        def restart():
+            time.sleep(1)
+            os.execv(sys.executable, ['python'] + sys.argv)
+        
+        threading.Thread(target=restart, daemon=True).start()
+    
+    def _do_shutdown(self):
+        """Shutdown the kiosk"""
+        print("⚠️ Shutting down kiosk...")
+        
+        # Stop the heartbeat service first
+        self.stop()
+        
+        def shutdown():
+            time.sleep(1)
+            if self.kiosk_app:
+                try:
+                    self.kiosk_app.root.after(0, self.kiosk_app.on_closing)
+                except:
+                    pass
+            # Force exit after 3 seconds if graceful shutdown fails
+            time.sleep(3)
+            print("🛑 Forcing exit...")
+            os._exit(0)
+        
+        threading.Thread(target=shutdown, daemon=True).start()
+    
+    def _set_mode(self, mode: str):
+        """Change kiosk mode"""
+        print(f"🔀 Setting mode to: {mode}")
+        self.current_mode = mode
+        
+        if self.kiosk_app:
+            try:
+                if mode == 'slideshow':
+                    self.kiosk_app.root.after(0, self.kiosk_app._start_slideshow)
+                elif mode == 'idle':
+                    self.kiosk_app.root.after(0, self.kiosk_app._show_start_screen)
+                elif mode == 'scanner':
+                    self.kiosk_app.root.after(0, self.kiosk_app._show_scan_screen)
+                elif mode == 'ocr':
+                    self.kiosk_app.root.after(0, self.kiosk_app._show_ocr_screen)
+                print(f"✓ Mode changed to: {mode}")
+            except Exception as e:
+                print(f"Mode change error: {e}")
+    
+    def _toggle_led(self, led_name: str):
+        """Toggle an LED"""
+        if led_name not in self.led_states:
+            print(f"⚠ Unknown LED: {led_name}")
+            return
+        
+        # Toggle state
+        new_state = not self.led_states[led_name]
+        self.led_states[led_name] = new_state
+        print(f"💡 LED {led_name} -> {'ON' if new_state else 'OFF'}")
+        
+        # Control GPIO if available
+        if self.kiosk_app and hasattr(self.kiosk_app, 'gpio_led'):
+            gpio = self.kiosk_app.gpio_led
+            if gpio and gpio.enabled:
+                try:
+                    # Use the gpio_led service methods
+                    if led_name == 'processing':
+                        if new_state:
+                            gpio.start_processing()
+                        else:
+                            gpio.stop_blinking()
+                    elif led_name == 'success':
+                        if new_state:
+                            gpio.show_success()
+                        else:
+                            gpio.stop_blinking()
+                    elif led_name == 'error':
+                        if new_state:
+                            gpio.show_error()
+                        else:
+                            gpio.stop_blinking()
+                except Exception as e:
+                    print(f"GPIO error: {e}")
+        else:
+            print(f"  (GPIO not available - state tracked locally)")
+    
+    def _test_all_leds(self):
+        """Test all LEDs in sequence"""
+        print("💡 Testing all LEDs...")
+        
+        def run_test():
+            # Test each LED for 1 second
+            for led_name in ['processing', 'success', 'error']:
+                self.led_states[led_name] = True
+                print(f"💡 Testing {led_name} - ON")
+                
+                if self.kiosk_app and hasattr(self.kiosk_app, 'gpio_led'):
+                    gpio = self.kiosk_app.gpio_led
+                    if gpio and gpio.enabled:
+                        try:
+                            if led_name == 'processing':
+                                gpio.start_processing()
+                            elif led_name == 'success':
+                                gpio.show_success()
+                            elif led_name == 'error':
+                                gpio.show_error()
+                        except Exception as e:
+                            print(f"GPIO error: {e}")
+                
+                time.sleep(1)
+                
+                self.led_states[led_name] = False
+                print(f"💡 Testing {led_name} - OFF")
+                
+                if self.kiosk_app and hasattr(self.kiosk_app, 'gpio_led'):
+                    gpio = self.kiosk_app.gpio_led
+                    if gpio and gpio.enabled:
+                        try:
+                            gpio.show_idle()
+                        except:
+                            pass
+            
+            print("✓ LED test complete")
+        
+        threading.Thread(target=run_test, daemon=True).start()
+
+
 # ============================================================================
 # On-Screen Keyboard for Touchscreen Kiosk
 # ============================================================================
@@ -1207,6 +1614,10 @@ class KioskApp:
         self.api = RCVApiService()  # RCV API Service
         self.gpio_led = GPIOLEDService()  # GPIO LED control for status indication
         self.video_thread = None  # Video loop thread
+        
+        # Remote monitoring service - sends heartbeat and receives commands
+        self.health_service = KioskHealthService(kiosk_app=self)
+        self.health_service.start()
         
         # Connectivity monitoring
         self.is_online = False
@@ -6089,6 +6500,10 @@ class KioskApp:
         """Handle application closing"""
         self.is_running = False
         self.tts.stop()
+        
+        # Stop heartbeat service
+        if hasattr(self, 'health_service') and self.health_service:
+            self.health_service.stop()
         
         # Cancel any pending timers
         if self.display_timer:
