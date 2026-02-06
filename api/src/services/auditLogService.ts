@@ -43,6 +43,7 @@ interface CreateAuditLogParams {
   };
   metadata?: Record<string, any>;
   req?: Request;
+  ipAddress?: string;
   userAgent?: string;
 }
 
@@ -69,6 +70,7 @@ export class AuditLogService {
       userId: userId || null,
       targetUserId: targetUserId || null,
       targetProductId: targetProductId || null,
+      ipAddress: req ? this.getIpAddress(req) : null,
       userAgent: req?.headers['user-agent'] || null,
       platform,
       location: location || null,
@@ -181,6 +183,18 @@ export class AuditLogService {
         total_items: total,
       },
     };
+  }
+
+  /**
+   * Extract IP address from request
+   */
+  private static getIpAddress(req: Request): string {
+    return (
+      (req.headers['x-forwarded-for'] as string)?.split(',')[0] ||
+      (req.headers['x-real-ip'] as string) ||
+      req.socket.remoteAddress ||
+      'Unknown'
+    );
   }
 
   /**
