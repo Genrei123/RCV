@@ -259,10 +259,11 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
                           'Date & Time',
                           _formatDate(log.createdAt),
                         ),
-                        if (log.ipAddress != null) ...[
-                          const Divider(height: 24),
-                          _buildDetailRow('IP Address', log.ipAddress!),
-                        ],
+                        // IP Address - HIDDEN FROM UI
+                        // if (log.ipAddress != null) ...[
+                        //   const Divider(height: 24),
+                        //   _buildDetailRow('IP Address', log.ipAddress!),
+                        // ],
                         if (log.location != null &&
                             log.location!['address'] != null) ...[
                           const Divider(height: 24),
