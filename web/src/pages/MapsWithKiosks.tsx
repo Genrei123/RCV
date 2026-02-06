@@ -5,7 +5,7 @@ import type { KioskMachine } from "@/components/KioskMapComponent";
 import { FirestoreService } from "@/services/firestore";
 import { DashboardService } from "@/services/dashboardService";
 import { KioskManagementService } from "@/services/kioskManagementService";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -20,6 +20,9 @@ export function MapsWithKiosks() {
   const [searchUsers, setSearchUsers] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<"inspectors" | "kiosks">("inspectors");
   const navigate = useNavigate();
+  
+  // Track Firebase unsubscribe function
+  const unsubscribeKiosksRef = useRef<(() => void) | null>(null);
 
   const isUserActive = (lastSeen?: string | Date): boolean => {
     if (!lastSeen) return false;
@@ -30,9 +33,9 @@ export function MapsWithKiosks() {
   };
 
   useEffect(() => {
-    const loadData = async () => {
+    // Load inspectors (non-real-time)
+    const loadInspectors = async () => {
       try {
-        // Load inspectors
         const users = await FirestoreService.getAllUsers();
         const mappedInspectors: Inspector[] = users
           .filter((user) => user.currentLocation)
@@ -58,26 +61,32 @@ export function MapsWithKiosks() {
 
         setInspectors(mappedInspectors);
         setFilteredInspectors(mappedInspectors);
-
-        // Load kiosks
-        const kioskData = await KioskManagementService.getAllKiosks();
-        setKiosks(kioskData);
-        setFilteredKiosks(kioskData);
       } catch (error) {
-        console.error("Error loading data:", error);
+        console.error("Error loading inspectors:", error);
         setInspectors([]);
         setFilteredInspectors([]);
-        setKiosks([]);
-        setFilteredKiosks([]);
-      } finally {
-        setLoading(false);
       }
     };
 
-    loadData();
+    loadInspectors();
 
-    const interval = setInterval(loadData, 10000);
-    return () => clearInterval(interval);
+    // Subscribe to kiosks with real-time updates from Firebase
+    unsubscribeKiosksRef.current = KioskManagementService.subscribeToKiosks((kioskData) => {
+      setKiosks(kioskData);
+      setFilteredKiosks(kioskData);
+      setLoading(false);
+    });
+
+    // Refresh inspectors periodically
+    const interval = setInterval(loadInspectors, 30000);
+    
+    return () => {
+      clearInterval(interval);
+      // Unsubscribe from Firebase when component unmounts
+      if (unsubscribeKiosksRef.current) {
+        unsubscribeKiosksRef.current();
+      }
+    };
   }, []);
 
   const handleInspectorClick = (inspector: Inspector) => {
