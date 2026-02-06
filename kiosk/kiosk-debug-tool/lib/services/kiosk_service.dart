@@ -56,11 +56,9 @@ class KioskService extends ChangeNotifier {
   }
 
   void startMonitoring() {
+    // Only fetch once on start - no automatic polling to reduce server load
+    // Kiosks send heartbeat every hour, so manual refresh is sufficient
     fetchAllKiosks();
-    _monitoringTimer = Timer.periodic(
-      const Duration(seconds: 10),
-      (_) => fetchAllKiosks(),
-    );
   }
 
   void stopMonitoring() {
