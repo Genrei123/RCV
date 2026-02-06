@@ -82,6 +82,12 @@ class _NavBarHelperOverlayState extends State<NavBarHelperOverlay> {
 
   @override
   Widget build(BuildContext context) {
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    
+    // Position spotlight at navigation bar height
+    // Standard navbar height is 56, plus bottom safe area
+    final spotlightBottomPosition = bottomPadding + 56 - 35; // Center the 70px circle
+    
     return Stack(
       children: [
         // Semi-transparent overlay - clicking advances tutorial
@@ -91,31 +97,22 @@ class _NavBarHelperOverlayState extends State<NavBarHelperOverlay> {
         ),
         // Skip button positioned near Home Dashboard
         Positioned(top: 60, right: 20, child: _buildSkipButton()),
-        // Everything with proper positioning
-        Positioned.fill(
-          child: Column(
-            children: [
-              // Top space
-              const Spacer(flex: 2),
-              // More space - removed control buttons
-              const Spacer(flex: 2),
-              // Tooltip positioned above navbar
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 8,
-                ),
-                child: _buildTooltip(navBarItems[_currentStep]),
-              ),
-              const SizedBox(height: 40),
-              // Circle positioned exactly on navbar
-              SizedBox(
-                height: 80,
-                child: _buildSpotlight(navBarItems[_currentStep]),
-              ),
-              const SizedBox(height: 40),
-            ],
+        // Tooltip positioned above navbar
+        Positioned(
+          bottom: bottomPadding + 56 + 50, // Above navbar with spacing
+          left: 0,
+          right: 0,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: _buildTooltip(navBarItems[_currentStep]),
           ),
+        ),
+        // Circle positioned at navbar location
+        Positioned(
+          bottom: spotlightBottomPosition,
+          left: 0,
+          right: 0,
+          child: _buildSpotlight(navBarItems[_currentStep]),
         ),
       ],
     );
@@ -126,7 +123,7 @@ class _NavBarHelperOverlayState extends State<NavBarHelperOverlay> {
       builder: (context, constraints) {
         return SizedBox(
           width: double.infinity,
-          height: 80,
+          height: 70,
           child: Stack(
             children: [
               Positioned(
