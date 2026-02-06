@@ -5,7 +5,7 @@ import type { KioskMachine } from "@/components/KioskMapComponent";
 import { FirestoreService } from "@/services/firestore";
 import { DashboardService } from "@/services/dashboardService";
 import { KioskManagementService } from "@/services/kioskManagementService";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,9 @@ export function Maps() {
   const [searchUsers, setSearchUsers] = useState<any[]>([]);
   const [viewMode, setViewMode] = useState<"agents" | "kiosks">("agents");
   const navigate = useNavigate();
+  
+  // Track Firebase unsubscribe function for kiosks
+  const unsubscribeKiosksRef = useRef<(() => void) | null>(null);
 
   // Layout handles sizing/scroll; no body scroll hacks here
 
@@ -37,9 +40,9 @@ export function Maps() {
   };
 
   useEffect(() => {
-    const loadData = async () => {
+    // Load inspectors (non-real-time)
+    const loadInspectors = async () => {
       try {
-        // Load inspectors
         const users = await FirestoreService.getAllUsers();
 
         const mappedInspectors: Inspector[] = users
@@ -72,50 +75,39 @@ export function Maps() {
 
         setInspectors(mappedInspectors);
         setFilteredInspectors(mappedInspectors);
-
-        // Load kiosks
-        const kioskData = await KioskManagementService.getAllKiosks();
-        setKiosks(kioskData);
-        setFilteredKiosks(kioskData);
       } catch (error) {
-        console.error("Error loading data:", error);
+        console.error("Error loading inspectors:", error);
         setInspectors([]);
         setFilteredInspectors([]);
-        setKiosks([]);
-        setFilteredKiosks([]);
       } finally {
         setLoading(false);
       }
     };
 
-    loadData();
+    loadInspectors();
 
-    // Refresh data every 10 seconds to update active status
-    const interval = setInterval(loadData, 10000);
-    
-    return () => clearInterval(interval);
-  }, []);
-
-  // Function to fetch kiosks on demand
-  const fetchKiosks = async () => {
-    setKiosksLoading(true);
-    try {
-      const kioskData = await KioskManagementService.getAllKiosks();
+    // Subscribe to kiosks with real-time updates from Firebase
+    unsubscribeKiosksRef.current = KioskManagementService.subscribeToKiosks((kioskData) => {
       setKiosks(kioskData);
       setFilteredKiosks(kioskData);
-    } catch (error) {
-      console.error("Error loading kiosks:", error);
-    } finally {
       setKiosksLoading(false);
-    }
-  };
+    });
 
-  // Handle view mode change - fetch fresh data when switching to kiosks
-  const handleViewModeChange = async (mode: "agents" | "kiosks") => {
+    // Refresh inspectors periodically
+    const interval = setInterval(loadInspectors, 30000);
+    
+    return () => {
+      clearInterval(interval);
+      // Unsubscribe from Firebase when component unmounts
+      if (unsubscribeKiosksRef.current) {
+        unsubscribeKiosksRef.current();
+      }
+    };
+  }, []);
+
+  // Handle view mode change - kiosks are already loaded via real-time subscription
+  const handleViewModeChange = (mode: "agents" | "kiosks") => {
     setViewMode(mode);
-    if (mode === "kiosks") {
-      await fetchKiosks();
-    }
   };
 
   const handleInspectorClick = (inspector: Inspector) => {
@@ -237,17 +229,16 @@ export function Maps() {
             className="gap-2"
           >
             <Users className="h-4 w-4" />
-            Agents
+            Inspectors
           </Button>
           <Button
             variant={viewMode === "kiosks" ? "default" : "ghost"}
             size="sm"
             onClick={() => handleViewModeChange("kiosks")}
             className="gap-2"
-            disabled={kiosksLoading}
           >
             <Monitor className="h-4 w-4" />
-            {kiosksLoading ? "Loading..." : "Kiosks"}
+            Kiosks
           </Button>
         </div>
       </div>
