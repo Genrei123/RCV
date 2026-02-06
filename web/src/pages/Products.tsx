@@ -14,6 +14,7 @@ import {
   PaginationPrevious,
   PaginationEllipsis,
 } from "@/components/ui/pagination";
+import { Pagination as PaginationControls } from "@/components/Pagination";
 import type { Product } from "@/typeorm/entities/product.entity";
 import { ProductCard } from "@/components/ProductCard";
 import { AddProductModal } from "@/components/AddProductModal";
@@ -501,12 +502,12 @@ export function Products(props: ProductsProps) {
             <div className="space-y-6">
               <div className="flex flex-row flex-nowrap items-center justify-end gap-2 sm:gap-3">
                 {/* Mobile: flexible width; Desktop: fixed width */}
-                <div className="relative flex-1 sm:flex-none max-w-[70%] min-w-[140px] sm:max-w-none sm:w-64 group rounded-md border border-gray-300 focus-within:border-black transition-colors flex items-center h-10">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4 group-focus-within:text-black transition-colors" />
+                <div className="relative flex-1 sm:flex-none max-w-[70%] min-w-[140px] sm:max-w-none sm:w-64 group rounded-md border-2 border-gray-200 focus-within:border-gray-400 focus-within:shadow-md transition-all flex items-center">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 group-focus-within:text-gray-700 transition-colors" />
                   <Input
                     type="text"
                     placeholder="Search products..."
-                    className="pl-10 border-0 bg-white text-gray-800 focus:text-black placeholder:text-gray-400 focus:placeholder:text-gray-500 h-10"
+                    className="pl-10 border-0 bg-white text-gray-800 placeholder:text-gray-500 focus:text-black focus:placeholder:text-gray-600"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
@@ -570,6 +571,27 @@ export function Products(props: ProductsProps) {
                     </div>
                   </div>
                 ) : null}
+
+                {/* Grid view pagination*/}
+                {pagedProducts && pagedProducts.length > 0 && (
+                  <div className="mt-4 flex items-center justify-between w-full px-6 pb-6">
+                    <div className="text-sm text-muted-foreground">
+                      Showing {pagedProducts.length} of {totalItems} products •
+                      Page {currentPage} of {totalPages}
+                    </div>
+                    <div>
+                      <PaginationControls
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        totalItems={totalItems}
+                        itemsPerPage={pageSize}
+                        onPageChange={(p) => fetchProductsPage(p)}
+                        alwaysShowControls
+                        showingText={null}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
