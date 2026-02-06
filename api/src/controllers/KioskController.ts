@@ -4,11 +4,14 @@ import { Request, Response } from 'express';
  * Kiosk Controller - Manages kiosk machines registration, health checks, and control
  * 
  * Flow:
- * 1. Kiosk sends heartbeat every 30 seconds with location/status
+ * 1. Kiosk sends heartbeat every 1 HOUR with location/status (reduced to save server resources)
  * 2. API stores kiosk data and returns any pending commands
- * 3. Web fetches kiosk list from API
- * 4. Web can queue commands (restart, mode change) via API
+ * 3. Web/App fetches kiosk list from API on manual refresh
+ * 4. Web/App can queue commands (restart, mode change) via API
  * 5. Kiosk receives commands in next heartbeat response and executes them
+ * 
+ * Note: Kiosks are considered "online" if they sent a heartbeat within the last hour.
+ * Commands will be queued and delivered on the next heartbeat.
  */
 
 // In-memory store for demo (replace with actual database)
@@ -98,12 +101,12 @@ export const kioskHeartbeat = async (req: Request, res: Response) => {
 export const getAllKiosks = async (req: Request, res: Response) => {
   try {
     const now = new Date();
-    const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
 
     // Convert map to array and update online status
     const kioskList = Array.from(kiosks.values()).map((kiosk: any) => {
       const lastSeen = new Date(kiosk.lastSeen);
-      const isOnline = lastSeen > fiveMinutesAgo;
+      const isOnline = lastSeen > oneHourAgo;
       
       return {
         ...kiosk,
@@ -141,9 +144,9 @@ export const getKioskById = async (req: Request, res: Response) => {
     }
 
     const now = new Date();
-    const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
     const lastSeen = new Date(kiosk.lastSeen);
-    const isOnline = lastSeen > fiveMinutesAgo;
+    const isOnline = lastSeen > oneHourAgo;
 
     res.json({
       success: true,
@@ -189,11 +192,11 @@ export const restartKiosk = async (req: Request, res: Response) => {
     
     console.log(`Restart command queued for kiosk ${id}`);
 
-    // Check if kiosk is online (responded within 5 minutes)
+    // Check if kiosk is online (responded within 1 hour)
     const now = new Date();
-    const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
     const lastSeen = new Date(kiosk.lastSeen);
-    const isOnline = lastSeen > fiveMinutesAgo;
+    const isOnline = lastSeen > oneHourAgo;
 
     res.json({
       success: true,

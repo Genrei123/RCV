@@ -415,7 +415,7 @@ KIOSK_LAT = float(os.getenv('KIOSK_LAT', '0')) or _auto_location['lat']
 KIOSK_LNG = float(os.getenv('KIOSK_LNG', '0')) or _auto_location['lng']
 KIOSK_ADDRESS = os.getenv('KIOSK_ADDRESS') or _auto_location['address']
 KIOSK_CITY = os.getenv('KIOSK_CITY') or _auto_location['city']
-HEALTH_CHECK_INTERVAL = 10  # seconds between heartbeats (faster for command response)
+HEALTH_CHECK_INTERVAL = 3600  # seconds between heartbeats (1 hour to reduce server load)
 
 print(f"✓ Kiosk ID: {KIOSK_ID}")
 print(f"✓ Location: {KIOSK_CITY} ({KIOSK_LAT}, {KIOSK_LNG})")
