@@ -1021,21 +1021,40 @@ class GPIOLEDService:
 
 
 # ============================================================================
-# KIOSK HEALTH CHECK SERVICE - Sends heartbeat and receives commands from API
+# KIOSK HEALTH CHECK SERVICE - Firebase Real-time Commands
 # ============================================================================
+
+# Import Firebase service
+try:
+    from services.firebase_service import FirebaseKioskService, FIREBASE_AVAILABLE
+except ImportError:
+    FIREBASE_AVAILABLE = False
+    FirebaseKioskService = None
+    print("⚠️ Firebase service not available")
+
+
 class KioskHealthService:
     """
-    Service that sends periodic heartbeat to the backend API.
-    The API returns any pending commands (restart, mode change, LED control).
-    Commands are executed immediately after receiving them.
+    Service that uses Firebase Firestore for real-time command listening.
+    
+    Features:
+    - INSTANT command execution via Firebase listeners (no polling!)
+    - Status updates to Firebase for monitoring
+    - Periodic heartbeat to update lastSeen timestamp
+    
+    Firebase Structure:
+    - kiosks/{kioskId} - Kiosk status document
+    - kiosks/{kioskId}/commands/{commandId} - Command documents (auto-deleted after execution)
     """
     
     def __init__(self, kiosk_app=None):
         self.kiosk_app = kiosk_app
-        self.api_base_url = os.getenv('API_BASE_URL', 'http://localhost:5500/api/v1')
         self._running = False
-        self._thread = None
-        self._heartbeat_interval = HEALTH_CHECK_INTERVAL
+        self._heartbeat_thread = None
+        self._heartbeat_interval = 300  # 5 minutes for status updates
+        
+        # Firebase service
+        self._firebase: FirebaseKioskService = None
         
         # Current status tracking
         self.current_mode = 'idle'
@@ -1046,28 +1065,65 @@ class KioskHealthService:
         }
     
     def start(self):
-        """Start the health check service in a background thread"""
+        """Start the Firebase listener and heartbeat service"""
         if self._running:
             return
         
         self._running = True
-        self._thread = threading.Thread(target=self._heartbeat_loop, daemon=True)
-        self._thread.start()
-        print(f"📡 Heartbeat service started (interval: {self._heartbeat_interval}s)")
-        print(f"📡 Sending heartbeats to: {self.api_base_url}/kiosks/heartbeat")
+        
+        # Initialize Firebase
+        if FIREBASE_AVAILABLE:
+            self._firebase = FirebaseKioskService(KIOSK_ID, self.kiosk_app)
+            
+            # Try to initialize Firebase
+            cred_path = os.getenv('FIREBASE_CREDENTIALS', 'firebase-credentials.json')
+            if self._firebase.initialize(cred_path):
+                # Update kiosk info
+                self._firebase.update_kiosk_info(
+                    name=KIOSK_NAME,
+                    lat=KIOSK_LAT,
+                    lng=KIOSK_LNG,
+                    address=KIOSK_ADDRESS,
+                    city=KIOSK_CITY
+                )
+                
+                # Start listening for commands
+                self._firebase.start_listening(self._handle_firebase_command)
+                
+                # Start heartbeat thread for periodic status updates
+                self._heartbeat_thread = threading.Thread(target=self._heartbeat_loop, daemon=True)
+                self._heartbeat_thread.start()
+                
+                print(f"🔥 Firebase kiosk service started")
+                print(f"   - Kiosk ID: {KIOSK_ID}")
+                print(f"   - Status updates: every {self._heartbeat_interval // 60} minutes")
+                print(f"   - Commands: INSTANT via Firebase listeners")
+            else:
+                print("❌ Firebase initialization failed - commands will not work")
+        else:
+            print("❌ Firebase not available - install firebase-admin package")
     
     def stop(self):
-        """Stop the health check service"""
+        """Stop the Firebase listener and heartbeat service"""
         self._running = False
-        if self._thread:
-            self._thread.join(timeout=2)
-        print("📡 Heartbeat service stopped")
+        
+        if self._firebase:
+            self._firebase.stop_listening()
+        
+        if self._heartbeat_thread:
+            self._heartbeat_thread.join(timeout=2)
+        
+        print("🔥 Firebase kiosk service stopped")
     
     def update_status(self, mode: str, leds: dict = None):
-        """Update the current status to be sent in next heartbeat"""
+        """Update the current status"""
         self.current_mode = mode
         if leds:
             self.led_states = leds
+        
+        # Update Firebase immediately
+        if self._firebase:
+            self._firebase.update_status('online', mode, self.led_states, self._get_system_info())
     
     def _get_system_info(self) -> dict:
         """Get system resource information"""
@@ -1083,95 +1139,51 @@ class KioskHealthService:
         return {'cpu_percent': 0, 'memory_percent': 0, 'disk_percent': 0}
     
     def _heartbeat_loop(self):
-        """Background loop that sends heartbeat every interval"""
+        """Background loop that sends periodic status updates"""
         while self._running:
             try:
-                self._send_heartbeat()
+                if self._firebase:
+                    # Get current mode from kiosk app
+                    if self.kiosk_app:
+                        self.current_mode = self.kiosk_app.state.value if hasattr(self.kiosk_app, 'state') else 'idle'
+                    
+                    self._firebase.send_heartbeat(
+                        mode=self.current_mode,
+                        leds=self.led_states,
+                        system_info=self._get_system_info()
+                    )
+                    print(f"✓ Status update sent: {self.current_mode}")
             except Exception as e:
                 print(f"❌ Heartbeat error: {e}")
             
             # Wait for next interval
             time.sleep(self._heartbeat_interval)
     
-    def _send_heartbeat(self) -> bool:
-        """Send heartbeat to backend and process any pending commands"""
-        try:
-            # Get current state from kiosk app if available
-            if self.kiosk_app:
-                self.current_mode = self.kiosk_app.state.value if hasattr(self.kiosk_app, 'state') else 'idle'
-            
-            payload = {
-                'kioskId': KIOSK_ID,
-                'name': KIOSK_NAME,
-                'location': {
-                    'lat': KIOSK_LAT,
-                    'lng': KIOSK_LNG,
-                    'address': KIOSK_ADDRESS,
-                    'city': KIOSK_CITY
-                },
-                'mode': self.current_mode,
-                'leds': self.led_states,
-                'systemInfo': self._get_system_info(),
-                'timestamp': datetime.now().isoformat()
-            }
-            
-            response = requests.post(
-                f'{self.api_base_url}/kiosks/heartbeat',
-                json=payload,
-                timeout=10
-            )
-            
-            if response.status_code in [200, 201]:
-                data = response.json()
-                print(f"✓ Heartbeat OK: {self.current_mode}")
-                
-                # Check for and execute pending commands
-                commands = data.get('commands', [])
-                if commands:
-                    print(f"📥 Received {len(commands)} command(s)")
-                    for cmd in commands:
-                        self._execute_command(cmd)
-                
-                return True
-            else:
-                print(f"⚠ Heartbeat response: {response.status_code}")
-                return False
-                
-        except requests.exceptions.ConnectionError:
-            print(f"❌ Cannot connect to backend at {self.api_base_url}")
-            return False
-        except Exception as e:
-            print(f"❌ Heartbeat failed: {e}")
-            return False
-    
-    def _execute_command(self, cmd: dict):
-        """Execute a command received from the API"""
-        command_type = cmd.get('command')
-        payload = cmd.get('payload', {})
-        
-        print(f"🔧 Executing command: {command_type}")
+    def _handle_firebase_command(self, command: str, payload: dict):
+        """Handle a command received from Firebase"""
+        print(f"🔧 Executing Firebase command: {command}")
         
         try:
-            if command_type == 'restart':
+            if command == 'restart':
                 self._do_restart()
             
-            elif command_type == 'shutdown':
+            elif command == 'shutdown':
                 self._do_shutdown()
             
-            elif command_type == 'set_mode':
+            elif command == 'set_mode':
                 mode = payload.get('mode', 'idle')
                 self._set_mode(mode)
             
-            elif command_type == 'toggle_led':
+            elif command == 'toggle_led':
                 led_name = payload.get('ledName')
                 if led_name:
                     self._toggle_led(led_name)
             
-            elif command_type == 'test_all_leds':
+            elif command == 'test_all_leds':
                 self._test_all_leds()
             
             else:
-                print(f"⚠ Unknown command: {command_type}")
+                print(f"⚠ Unknown command: {command}")
                 
         except Exception as e:
             print(f"❌ Command execution failed: {e}")

@@ -95,6 +95,37 @@ export const kioskHeartbeat = async (req: Request, res: Response) => {
 };
 
 /**
+ * Lightweight Command Poll Endpoint
+ * GET /api/v1/kiosks/:id/commands
+ * 
+ * Kiosk machines call this frequently (every 30 seconds) to check for pending commands.
+ * This is much lighter than a full heartbeat - just returns any queued commands.
+ */
+export const pollCommands = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    // Get and clear pending commands for this kiosk
+    const commands = pendingCommands.get(id) || [];
+    if (commands.length > 0) {
+      pendingCommands.delete(id);
+      console.log(`📤 Sending ${commands.length} command(s) to kiosk ${id}`);
+    }
+
+    res.json({
+      success: true,
+      commands: commands,
+    });
+  } catch (error) {
+    console.error('Poll commands error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+    });
+  }
+};
+
+/**
  * Get All Kiosks
  * GET /api/v1/kiosks
  */

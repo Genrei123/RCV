@@ -1,13 +1,19 @@
 import 'package:flutter/foundation.dart';
 import 'dart:async';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:cloud_firestore/cloud_firestore.dart';
 
+/// KioskService - Firebase-based real-time kiosk management
+///
+/// Uses Firebase Firestore for:
+/// - Reading kiosk status (real-time listeners)
+/// - Sending commands (instant delivery)
+/// - No polling needed!
+///
+/// Firestore Structure:
+/// - kiosks/{kioskId} - Kiosk status document
+/// - kiosks/{kioskId}/commands/{commandId} - Command documents
 class KioskService extends ChangeNotifier {
-  // RCV API endpoint - commands are queued here and kiosk polls for them
-  // For local development: http://10.0.2.2:3005 (Android emulator)
-  // For real device: use your computer's IP or ngrok URL
-  static const String _apiBaseUrl = 'https://rcv-production-cbd6.up.railway.app';
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   
   // Command debouncing - prevent spam
   final Map<String, DateTime> _lastCommandTime = {};
@@ -29,7 +35,9 @@ class KioskService extends ChangeNotifier {
   
   List<Map<String, dynamic>> _allKiosks = [];
   
-  Timer? _monitoringTimer;
+  // Firebase listeners
+  StreamSubscription<QuerySnapshot>? _kiosksSubscription;
+  StreamSubscription<DocumentSnapshot>? _selectedKioskSubscription;
   
   // Getters
   String? get selectedKioskId => _selectedKioskId;
@@ -51,55 +59,132 @@ class KioskService extends ChangeNotifier {
 
   void selectKiosk(String kioskId) {
     _selectedKioskId = kioskId;
-    refreshStatus();
+    _startListeningToSelectedKiosk();
     notifyListeners();
   }
 
+  /// Start listening to all kiosks (real-time updates)
   void startMonitoring() {
-    // Only fetch once on start - no automatic polling to reduce server load
-    // Kiosks send heartbeat every hour, so manual refresh is sufficient
-    fetchAllKiosks();
+    debugPrint('🔥 Starting Firebase kiosk monitoring');
+    
+    _kiosksSubscription = _firestore
+        .collection('kiosks')
+        .snapshots()
+        .listen((snapshot) {
+          _allKiosks = snapshot.docs.map((doc) {
+            final data = doc.data();
+            data['kioskId'] = doc.id;
+            
+            // Calculate online status (within last hour)
+            final lastSeen = data['lastSeen'] as Timestamp?;
+            if (lastSeen != null) {
+              final lastSeenDate = lastSeen.toDate();
+              final oneHourAgo = DateTime.now().subtract(const Duration(hours: 1));
+              data['status'] = lastSeenDate.isAfter(oneHourAgo) ? 'online' : 'offline';
+            } else {
+              data['status'] = 'offline';
+            }
+            
+            return data;
+          }).toList();
+          
+          debugPrint('📡 Loaded ${_allKiosks.length} kiosks from Firebase');
+          
+          // Update selected kiosk if it exists
+          if (_selectedKioskId != null) {
+            final selected = _allKiosks.firstWhere(
+              (k) => k['kioskId'] == _selectedKioskId,
+              orElse: () => {},
+            );
+            if (selected.isNotEmpty) {
+              _updateFromKioskData(selected);
+            }
+          }
+          
+          _isLoading = false;
+          notifyListeners();
+        }, onError: (e) {
+          debugPrint('❌ Firebase error: $e');
+          _isLoading = false;
+          notifyListeners();
+        });
+    
+    _isLoading = true;
+    notifyListeners();
+  }
+
+  /// Start listening to selected kiosk for real-time status
+  void _startListeningToSelectedKiosk() {
+    // Cancel existing subscription
+    _selectedKioskSubscription?.cancel();
+    
+    if (_selectedKioskId == null) return;
+    
+    debugPrint('🔥 Listening to kiosk: $_selectedKioskId');
+    
+    _selectedKioskSubscription = _firestore
+        .collection('kiosks')
+        .doc(_selectedKioskId)
+        .snapshots()
+        .listen((doc) {
+          if (doc.exists) {
+            final data = doc.data()!;
+            data['kioskId'] = doc.id;
+            _updateFromKioskData(data);
+            notifyListeners();
+          }
+        }, onError: (e) {
+          debugPrint('❌ Error listening to kiosk: $e');
+        });
   }
 
   void stopMonitoring() {
-    _monitoringTimer?.cancel();
-    _monitoringTimer = null;
+    _kiosksSubscription?.cancel();
+    _kiosksSubscription = null;
+    _selectedKioskSubscription?.cancel();
+    _selectedKioskSubscription = null;
   }
 
-  /// Fetch all kiosks from the API
+  /// Manual refresh - fetch all kiosks
   Future<void> fetchAllKiosks() async {
     try {
       _isLoading = true;
       notifyListeners();
       
-      debugPrint('Fetching kiosks from: $_apiBaseUrl/api/v1/kiosks');
-      final response = await http.get(
-        Uri.parse('$_apiBaseUrl/api/v1/kiosks'),
-      ).timeout(const Duration(seconds: 10));
-
-      debugPrint('Response status: ${response.statusCode}');
-      debugPrint('Response body: ${response.body}');
+      debugPrint('🔥 Fetching kiosks from Firebase');
+      final snapshot = await _firestore.collection('kiosks').get();
       
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        _allKiosks = List<Map<String, dynamic>>.from(data['kiosks'] ?? []);
-        debugPrint('Loaded ${_allKiosks.length} kiosks');
+      _allKiosks = snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['kioskId'] = doc.id;
         
-        // If we have a selected kiosk, update its status
-        if (_selectedKioskId != null) {
-          final selected = _allKiosks.firstWhere(
-            (k) => k['kioskId'] == _selectedKioskId,
-            orElse: () => {},
-          );
-          if (selected.isNotEmpty) {
-            _updateFromKioskData(selected);
-          }
+        // Calculate online status
+        final lastSeen = data['lastSeen'] as Timestamp?;
+        if (lastSeen != null) {
+          final lastSeenDate = lastSeen.toDate();
+          final oneHourAgo = DateTime.now().subtract(const Duration(hours: 1));
+          data['status'] = lastSeenDate.isAfter(oneHourAgo) ? 'online' : 'offline';
+        } else {
+          data['status'] = 'offline';
         }
-      } else {
-        debugPrint('API error: ${response.statusCode}');
+        
+        return data;
+      }).toList();
+      
+      debugPrint('📡 Fetched ${_allKiosks.length} kiosks');
+      
+      // Update selected kiosk if exists
+      if (_selectedKioskId != null) {
+        final selected = _allKiosks.firstWhere(
+          (k) => k['kioskId'] == _selectedKioskId,
+          orElse: () => {},
+        );
+        if (selected.isNotEmpty) {
+          _updateFromKioskData(selected);
+        }
       }
     } catch (e) {
-      debugPrint('Error fetching kiosks: $e');
+      debugPrint('❌ Error fetching kiosks: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -114,18 +199,17 @@ class KioskService extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
       
-      final response = await http.get(
-        Uri.parse('$_apiBaseUrl/api/v1/kiosks/$_selectedKioskId'),
-      ).timeout(const Duration(seconds: 10));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+      final doc = await _firestore.collection('kiosks').doc(_selectedKioskId).get();
+      
+      if (doc.exists) {
+        final data = doc.data()!;
+        data['kioskId'] = doc.id;
         _updateFromKioskData(data);
       } else {
         _isOnline = false;
       }
     } catch (e) {
-      debugPrint('Error fetching kiosk status: $e');
+      debugPrint('❌ Error refreshing status: $e');
       _isOnline = false;
     } finally {
       _isLoading = false;
@@ -140,11 +224,17 @@ class KioskService extends ChangeNotifier {
     _kioskLat = _parseDouble(location?['lat']);
     _kioskLng = _parseDouble(location?['lng']);
     _currentMode = data['mode']?.toString() ?? 'idle';
-    _isOnline = data['status']?.toString() == 'online';
     
-    final lastSeenStr = data['lastSeen']?.toString();
-    if (lastSeenStr != null) {
-      _lastSeen = DateTime.tryParse(lastSeenStr);
+    // Calculate online status from lastSeen
+    final lastSeen = data['lastSeen'];
+    if (lastSeen is Timestamp) {
+      _lastSeen = lastSeen.toDate();
+      final oneHourAgo = DateTime.now().subtract(const Duration(hours: 1));
+      _isOnline = _lastSeen!.isAfter(oneHourAgo);
+    } else if (data['status'] != null) {
+      _isOnline = data['status'].toString() == 'online';
+    } else {
+      _isOnline = false;
     }
     
     // LED states from kiosk data
@@ -176,7 +266,30 @@ class KioskService extends ChangeNotifier {
     _lastCommandTime[commandKey] = DateTime.now();
   }
 
-  /// Queue a command to toggle an LED
+  /// Send a command to Firebase (instant delivery to kiosk)
+  Future<bool> _sendCommand(String command, {Map<String, dynamic>? payload}) async {
+    if (_selectedKioskId == null) return false;
+    
+    try {
+      await _firestore
+          .collection('kiosks')
+          .doc(_selectedKioskId)
+          .collection('commands')
+          .add({
+            'command': command,
+            'payload': payload ?? {},
+            'timestamp': FieldValue.serverTimestamp(),
+          });
+      
+      debugPrint('🔥 Command sent: $command');
+      return true;
+    } catch (e) {
+      debugPrint('❌ Error sending command: $e');
+      return false;
+    }
+  }
+
+  /// Toggle an LED
   Future<bool> toggleLED(String ledName) async {
     if (_selectedKioskId == null) return false;
     
@@ -186,24 +299,12 @@ class KioskService extends ChangeNotifier {
       return false;
     }
     
-    try {
-      final response = await http.post(
-        Uri.parse('$_apiBaseUrl/api/v1/kiosks/$_selectedKioskId/led/$ledName/toggle'),
-      ).timeout(const Duration(seconds: 10));
-
-      if (response.statusCode == 200) {
-        _markCommandSent(commandKey);
-        debugPrint('LED toggle command queued for $ledName');
-        return true;
-      }
-      return false;
-    } catch (e) {
-      debugPrint('Error toggling LED: $e');
-      return false;
-    }
+    final success = await _sendCommand('toggle_led', payload: {'ledName': ledName});
+    if (success) _markCommandSent(commandKey);
+    return success;
   }
 
-  /// Queue a command to test all LEDs
+  /// Test all LEDs
   Future<bool> testAllLEDs() async {
     if (_selectedKioskId == null) return false;
     
@@ -213,24 +314,12 @@ class KioskService extends ChangeNotifier {
       return false;
     }
     
-    try {
-      final response = await http.post(
-        Uri.parse('$_apiBaseUrl/api/v1/kiosks/$_selectedKioskId/led/test-all'),
-      ).timeout(const Duration(seconds: 10));
-
-      if (response.statusCode == 200) {
-        _markCommandSent(commandKey);
-        debugPrint('Test all LEDs command queued');
-        return true;
-      }
-      return false;
-    } catch (e) {
-      debugPrint('Error testing LEDs: $e');
-      return false;
-    }
+    final success = await _sendCommand('test_all_leds');
+    if (success) _markCommandSent(commandKey);
+    return success;
   }
 
-  /// Queue a restart command
+  /// Restart the kiosk
   Future<bool> restartKiosk() async {
     if (_selectedKioskId == null) return false;
     
@@ -240,24 +329,12 @@ class KioskService extends ChangeNotifier {
       return false;
     }
     
-    try {
-      final response = await http.post(
-        Uri.parse('$_apiBaseUrl/api/v1/kiosks/$_selectedKioskId/restart'),
-      ).timeout(const Duration(seconds: 10));
-
-      if (response.statusCode == 200) {
-        _markCommandSent(commandKey);
-        debugPrint('Restart command queued');
-        return true;
-      }
-      return false;
-    } catch (e) {
-      debugPrint('Error restarting kiosk: $e');
-      return false;
-    }
+    final success = await _sendCommand('restart');
+    if (success) _markCommandSent(commandKey);
+    return success;
   }
 
-  /// Queue a shutdown command
+  /// Shutdown the kiosk
   Future<bool> shutdownKiosk() async {
     if (_selectedKioskId == null) return false;
     
@@ -267,24 +344,12 @@ class KioskService extends ChangeNotifier {
       return false;
     }
     
-    try {
-      final response = await http.post(
-        Uri.parse('$_apiBaseUrl/api/v1/kiosks/$_selectedKioskId/shutdown'),
-      ).timeout(const Duration(seconds: 10));
-
-      if (response.statusCode == 200) {
-        _markCommandSent(commandKey);
-        debugPrint('Shutdown command queued');
-        return true;
-      }
-      return false;
-    } catch (e) {
-      debugPrint('Error shutting down kiosk: $e');
-      return false;
-    }
+    final success = await _sendCommand('shutdown');
+    if (success) _markCommandSent(commandKey);
+    return success;
   }
 
-  /// Queue a mode change command
+  /// Change kiosk mode
   Future<bool> setMode(String mode) async {
     if (_selectedKioskId == null) return false;
     
@@ -294,23 +359,9 @@ class KioskService extends ChangeNotifier {
       return false;
     }
     
-    try {
-      final response = await http.post(
-        Uri.parse('$_apiBaseUrl/api/v1/kiosks/$_selectedKioskId/mode'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'mode': mode}),
-      ).timeout(const Duration(seconds: 10));
-
-      if (response.statusCode == 200) {
-        _markCommandSent(commandKey);
-        debugPrint('Mode change command queued: $mode');
-        return true;
-      }
-      return false;
-    } catch (e) {
-      debugPrint('Error setting mode: $e');
-      return false;
-    }
+    final success = await _sendCommand('set_mode', payload: {'mode': mode});
+    if (success) _markCommandSent(commandKey);
+    return success;
   }
 
   @override

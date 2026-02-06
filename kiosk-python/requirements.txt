@@ -22,6 +22,9 @@ RPi.GPIO>=0.7.1       # GPIO control for status LEDs (auto-skips on non-RPi)
 # HTTP requests for API calls
 requests>=2.31.0
 
+# Firebase for real-time command listening
+firebase-admin>=6.4.0
+
 # Flask for control server
 flask>=3.0.0
 flask-cors>=4.0.0
