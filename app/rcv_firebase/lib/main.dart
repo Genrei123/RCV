@@ -20,10 +20,6 @@ import 'pages/crop_label.dart';
 import 'pages/splash_page.dart';
 import 'pages/app_landing_page.dart';
 
-// Import Firebase Auth
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
