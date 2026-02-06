@@ -10,7 +10,6 @@ class AuditLog {
   final String action;
   final String actionType;
   final DateTime createdAt;
-  final String? ipAddress;
   final String? userAgent;
   final String platform;
   final Map<String, dynamic>? location;
@@ -21,7 +20,6 @@ class AuditLog {
     required this.action,
     required this.actionType,
     required this.createdAt,
-    this.ipAddress,
     this.userAgent,
     required this.platform,
     this.location,
@@ -34,7 +32,6 @@ class AuditLog {
       action: json['action'] ?? '',
       actionType: json['actionType'] ?? '',
       createdAt: DateTime.parse(json['createdAt']),
-      ipAddress: json['ipAddress'],
       userAgent: json['userAgent'],
       platform: json['platform'] ?? 'MOBILE',
       location: json['location'],
@@ -239,11 +236,6 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
                         ),
                         const Divider(height: 24),
                         _buildDetailRow('Platform', log.platform),
-                        // IP Address - HIDDEN FROM UI
-                        // if (log.ipAddress != null) ...[
-                        //   const Divider(height: 24),
-                        //   _buildDetailRow('IP Address', log.ipAddress ?? 'N/A'),
-                        // ],
                         if (log.location != null) ...[
                           const Divider(height: 24),
                           _buildDetailRow(

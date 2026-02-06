@@ -7,7 +7,6 @@ export interface AuditLog {
   userId: string;
   targetUserId?: string;
   targetProductId?: string;
-  ipAddress?: string;
   userAgent?: string;
   platform: 'WEB' | 'MOBILE';
   location?: {
