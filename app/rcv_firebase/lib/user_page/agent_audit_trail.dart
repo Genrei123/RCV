@@ -239,10 +239,11 @@ class _AuditTrailPageState extends State<AuditTrailPage> {
                         ),
                         const Divider(height: 24),
                         _buildDetailRow('Platform', log.platform),
-                        if (log.ipAddress != null) ...[
-                          const Divider(height: 24),
-                          _buildDetailRow('IP Address', log.ipAddress ?? 'N/A'),
-                        ],
+                        // IP Address - HIDDEN FROM UI
+                        // if (log.ipAddress != null) ...[
+                        //   const Divider(height: 24),
+                        //   _buildDetailRow('IP Address', log.ipAddress ?? 'N/A'),
+                        // ],
                         if (log.location != null) ...[
                           const Divider(height: 24),
                           _buildDetailRow(
