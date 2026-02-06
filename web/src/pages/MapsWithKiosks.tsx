@@ -8,31 +8,24 @@ import { KioskManagementService } from "@/services/kioskManagementService";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
-import { Button } from "@/components/ui/button";
-import { Users, Monitor } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-export function Maps() {
+export function MapsWithKiosks() {
   const [inspectors, setInspectors] = useState<Inspector[]>([]);
   const [filteredInspectors, setFilteredInspectors] = useState<Inspector[]>([]);
   const [kiosks, setKiosks] = useState<KioskMachine[]>([]);
   const [filteredKiosks, setFilteredKiosks] = useState<KioskMachine[]>([]);
   const [, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
-  const [kiosksLoading, setKiosksLoading] = useState(false);
   const [searchUsers, setSearchUsers] = useState<any[]>([]);
-  const [viewMode, setViewMode] = useState<"agents" | "kiosks">("agents");
+  const [activeTab, setActiveTab] = useState<"inspectors" | "kiosks">("inspectors");
   const navigate = useNavigate();
 
-  // Layout handles sizing/scroll; no body scroll hacks here
-
-  // Determine if a user is currently active (logged in recently) based on lastSeen timestamp
   const isUserActive = (lastSeen?: string | Date): boolean => {
     if (!lastSeen) return false;
-    
     const lastSeenDate = new Date(lastSeen);
     const now = new Date();
-    const fiveMinutesInMs = 5 * 60 * 1000; // 5 minutes in milliseconds
-    
+    const fiveMinutesInMs = 5 * 60 * 1000;
     return now.getTime() - lastSeenDate.getTime() < fiveMinutesInMs;
   };
 
@@ -41,34 +34,27 @@ export function Maps() {
       try {
         // Load inspectors
         const users = await FirestoreService.getAllUsers();
-
         const mappedInspectors: Inspector[] = users
           .filter((user) => user.currentLocation)
-          .map((user) => {
-            return {
-              id: user.id,
-              name: user.fullName,
-              email: user.email,
-              role: user.role,
-              status: isUserActive(user.updatedAt)
-                ? ("active" as const)
-                : ("inactive" as const),
-              lastSeen: user.updatedAt,
-              badgeId: user.badgeId,
-              location: {
-                lat: user.currentLocation.latitude,
-                lng: user.currentLocation.longitude,
-                address:
-                  user.location ||
-                  `${user.currentLocation.latitude.toFixed(
-                    6
-                  )}, ${user.currentLocation.longitude.toFixed(6)}`,
-                city: `${user.currentLocation.latitude.toFixed(
-                  6
-                )}, ${user.currentLocation.longitude.toFixed(6)}`,
-              },
-            };
-          });
+          .map((user) => ({
+            id: user.id,
+            name: user.fullName,
+            email: user.email,
+            role: user.role,
+            status: isUserActive(user.updatedAt)
+              ? ("active" as const)
+              : ("inactive" as const),
+            lastSeen: user.updatedAt,
+            badgeId: user.badgeId,
+            location: {
+              lat: user.currentLocation.latitude,
+              lng: user.currentLocation.longitude,
+              address:
+                user.location ||
+                `${user.currentLocation.latitude.toFixed(6)}, ${user.currentLocation.longitude.toFixed(6)}`,
+              city: `${user.currentLocation.latitude.toFixed(6)}, ${user.currentLocation.longitude.toFixed(6)}`,
+            },
+          }));
 
         setInspectors(mappedInspectors);
         setFilteredInspectors(mappedInspectors);
@@ -90,33 +76,9 @@ export function Maps() {
 
     loadData();
 
-    // Refresh data every 10 seconds to update active status
     const interval = setInterval(loadData, 10000);
-    
     return () => clearInterval(interval);
   }, []);
-
-  // Function to fetch kiosks on demand
-  const fetchKiosks = async () => {
-    setKiosksLoading(true);
-    try {
-      const kioskData = await KioskManagementService.getAllKiosks();
-      setKiosks(kioskData);
-      setFilteredKiosks(kioskData);
-    } catch (error) {
-      console.error("Error loading kiosks:", error);
-    } finally {
-      setKiosksLoading(false);
-    }
-  };
-
-  // Handle view mode change - fetch fresh data when switching to kiosks
-  const handleViewModeChange = async (mode: "agents" | "kiosks") => {
-    setViewMode(mode);
-    if (mode === "kiosks") {
-      await fetchKiosks();
-    }
-  };
 
   const handleInspectorClick = (inspector: Inspector) => {
     if (inspector?.id) {
@@ -140,8 +102,7 @@ export function Maps() {
     }
 
     try {
-      if (viewMode === "agents") {
-        // Search agents/inspectors
+      if (activeTab === "inspectors") {
         const resp = await DashboardService.getAllUsers();
         const users = resp.users || [];
         const q = query.toLowerCase();
@@ -160,12 +121,9 @@ export function Maps() {
         });
 
         const matchedIds = new Set(matchedUsers.map((u: any) => u._id));
-
-        // Keep only inspectors (with location) whose IDs matched the user search
         const filtered = inspectors.filter((i) => matchedIds.has(i.id));
         setFilteredInspectors(filtered);
 
-        // Build suggestions including users without live locations
         const suggestionUsers = matchedUsers.map((u: any) => {
           const match = inspectors.find((i) => i.id === u._id);
           return {
@@ -183,7 +141,6 @@ export function Maps() {
         });
         setSearchUsers(suggestionUsers);
       } else {
-        // Search kiosks
         const q = query.toLowerCase();
         const filtered = kiosks.filter(
           (k) =>
@@ -195,25 +152,6 @@ export function Maps() {
       }
     } catch (error) {
       console.error("Search error:", error);
-      // Fallback to local name filter
-      if (viewMode === "agents") {
-        const searchLower = query.toLowerCase();
-        const filtered = inspectors.filter((inspector) =>
-          inspector?.name?.toLowerCase().includes(searchLower)
-        );
-        setFilteredInspectors(filtered);
-        setSearchUsers(
-          filtered.map((i) => ({
-            id: i.id,
-            name: i.name,
-            role: i.role,
-            status: i.status,
-            lastSeen: i.lastSeen,
-            badgeId: i.badgeId,
-            location: i.location,
-          }))
-        );
-      }
     }
   };
 
@@ -226,50 +164,39 @@ export function Maps() {
   }
 
   return (
-    <div className="h-full w-full relative">
-      {/* Toggle Button - Upper Right Corner */}
-      <div className="absolute top-4 right-4 z-20">
-        <div className="bg-white rounded-lg shadow-lg p-1 flex gap-1">
-          <Button
-            variant={viewMode === "agents" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => handleViewModeChange("agents")}
-            className="gap-2"
-          >
-            <Users className="h-4 w-4" />
-            Agents
-          </Button>
-          <Button
-            variant={viewMode === "kiosks" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => handleViewModeChange("kiosks")}
-            className="gap-2"
-            disabled={kiosksLoading}
-          >
-            <Monitor className="h-4 w-4" />
-            {kiosksLoading ? "Loading..." : "Kiosks"}
-          </Button>
+    <div className="h-full w-full">
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => setActiveTab(v as "inspectors" | "kiosks")}
+        className="h-full w-full"
+      >
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
+          <TabsList className="bg-white shadow-lg">
+            <TabsTrigger value="inspectors">Inspectors</TabsTrigger>
+            <TabsTrigger value="kiosks">Kiosk Machines</TabsTrigger>
+          </TabsList>
         </div>
-      </div>
 
-      {/* Map Display */}
-      {viewMode === "agents" ? (
-        <MapComponent
-          inspectors={filteredInspectors}
-          allInspectors={inspectors}
-          searchUsers={searchUsers}
-          onInspectorClick={handleInspectorClick}
-          onSearch={handleSearch}
-          loading={loading}
-        />
-      ) : (
-        <KioskMapComponent
-          kiosks={filteredKiosks}
-          onKioskClick={handleKioskClick}
-          onSearch={handleSearch}
-          loading={kiosksLoading}
-        />
-      )}
+        <TabsContent value="inspectors" className="h-full m-0">
+          <MapComponent
+            inspectors={filteredInspectors}
+            allInspectors={inspectors}
+            searchUsers={searchUsers}
+            onInspectorClick={handleInspectorClick}
+            onSearch={handleSearch}
+            loading={loading}
+          />
+        </TabsContent>
+
+        <TabsContent value="kiosks" className="h-full m-0">
+          <KioskMapComponent
+            kiosks={filteredKiosks}
+            onKioskClick={handleKioskClick}
+            onSearch={handleSearch}
+            loading={loading}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
