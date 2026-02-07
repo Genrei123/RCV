@@ -196,6 +196,21 @@ PublicRouter.get('/company/:id', async (req: Request, res: Response, next: NextF
 
     const company = await CompanyRepo.findOne({
       where: { _id: id },
+      select: [
+        '_id',
+        'name',
+        'address',
+        'licenseNumber',
+        'businessType',
+        'registrationDate',
+        'sepoliaTransactionId',
+        'documents',
+        'phone',
+        'email',
+        'website',
+        'latitude',
+        'longitude',
+      ],
     });
 
     if (!company) {
