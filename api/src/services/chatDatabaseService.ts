@@ -58,21 +58,34 @@ export class ChatDatabaseService {
         take: 10,
       });
 
-      return products.map((p: Product) => ({
-        id: p._id,
-        productName: p.productName,
-        brandName: p.brandName,
-        cfprNumber: p.CFPRNumber,
-        ltoNumber: p.LTONumber,
-        lotNumber: p.lotNumber,
-        companyName: p.company.name,
-        companyLicense: p.company.licenseNumber,
-        classification: p.productClassification,
-        subClassification: p.productSubClassification,
-        expirationDate: p.expirationDate.toISOString().split('T')[0],
-        registrationDate: p.dateOfRegistration.toISOString().split('T')[0],
-        blockchainHash: p.sepoliaTransactionId || null,
-      }));
+      return products.map((p: Product) => {
+        // Safely handle dates which might be strings from the database
+        const formatDate = (date: any): string => {
+          if (!date) return 'N/A';
+          try {
+            const dateObj = date instanceof Date ? date : new Date(date);
+            return dateObj.toISOString().split('T')[0];
+          } catch {
+            return 'N/A';
+          }
+        };
+
+        return {
+          id: p._id,
+          productName: p.productName,
+          brandName: p.brandName,
+          cfprNumber: p.CFPRNumber,
+          ltoNumber: p.LTONumber,
+          lotNumber: p.lotNumber,
+          companyName: p.company?.name || 'Unknown',
+          companyLicense: p.company?.licenseNumber || 'Unknown',
+          classification: p.productClassification,
+          subClassification: p.productSubClassification,
+          expirationDate: formatDate(p.expirationDate),
+          registrationDate: formatDate(p.dateOfRegistration),
+          blockchainHash: p.sepoliaTransactionId || null,
+        };
+      });
     } catch (error) {
       console.error('Error searching products:', error);
       return [];
@@ -102,19 +115,34 @@ export class ChatDatabaseService {
         take: 10,
       });
 
-      return companies.map((c: Company) => ({
-        id: c._id,
-        name: c.name,
-        address: c.address,
-        licenseNumber: c.licenseNumber,
-        phone: c.phone || null,
-        email: c.email || null,
-        website: c.website || null,
-        businessType: c.businessType || null,
-        registrationDate: c.registrationDate?.toISOString().split('T')[0] || null,
-        blockchainHash: c.sepoliaTransactionId || null,
-        productCount: c.products?.length || 0,
-      }));
+      return companies.map((c: Company) => {
+        // Safely handle registrationDate which might be null, undefined, or a string
+        let regDate: string | null = null;
+        if (c.registrationDate) {
+          try {
+            const dateObj = c.registrationDate instanceof Date 
+              ? c.registrationDate 
+              : new Date(c.registrationDate);
+            regDate = dateObj.toISOString().split('T')[0];
+          } catch {
+            regDate = null;
+          }
+        }
+
+        return {
+          id: c._id,
+          name: c.name,
+          address: c.address,
+          licenseNumber: c.licenseNumber,
+          phone: c.phone || null,
+          email: c.email || null,
+          website: c.website || null,
+          businessType: c.businessType || null,
+          registrationDate: regDate,
+          blockchainHash: c.sepoliaTransactionId || null,
+          productCount: c.products?.length || 0,
+        };
+      });
     } catch (error) {
       console.error('Error searching companies:', error);
       return [];

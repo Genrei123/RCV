@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Building2, Loader2, ExternalLink, Package, Search } from "lucide-react";
+import { X, Building2, Loader2, ExternalLink, Package, Search, FileText, Download, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,12 @@ interface CompanyDetails {
   businessType: string;
   registrationDate?: string;
   sepoliaTransactionId?: string;
+  documents?: Array<{
+    name: string;
+    url: string;
+    type: string;
+    uploadedAt: string;
+  }>;
   products?: Array<{
     _id: string;
     productName: string;
@@ -44,6 +50,7 @@ export default function CompanyDetailsPublicModal({
   const [productSearchQuery, setProductSearchQuery] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<{ id: string; name: string } | null>(null);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [documentErrors, setDocumentErrors] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (isOpen && companyId) {
@@ -182,6 +189,84 @@ export default function CompanyDetailsPublicModal({
                   )}
                 </dl>
               </div>
+
+              {/* Documents Section */}
+              {company.documents && company.documents.length > 0 && (
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-blue-600" />
+                    Company Documents ({company.documents.length})
+                  </h3>
+                  <div className="space-y-2">
+                    {company.documents.map((doc, index) => {
+                      const hasError = documentErrors[doc.url];
+                      
+                      const handleDocumentClick = async (e: React.MouseEvent) => {
+                        e.preventDefault();
+                        
+                        // Try to fetch the document to check if it exists
+                        try {
+                          const response = await fetch(doc.url, { method: 'HEAD' });
+                          if (response.ok) {
+                            window.open(doc.url, '_blank', 'noopener,noreferrer');
+                          } else {
+                            setDocumentErrors(prev => ({ ...prev, [doc.url]: true }));
+                            toast.error('Document not found. It may have been moved or deleted.');
+                          }
+                        } catch {
+                          // If HEAD request fails (CORS), try opening directly
+                          window.open(doc.url, '_blank', 'noopener,noreferrer');
+                        }
+                      };
+
+                      return (
+                        <div
+                          key={index}
+                          className={`flex items-center justify-between p-3 rounded-lg transition-colors ${
+                            hasError 
+                              ? 'bg-red-50 border border-red-200' 
+                              : 'bg-white border border-gray-200 hover:bg-gray-50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded flex items-center justify-center ${
+                              hasError ? 'bg-red-100' : 'bg-blue-100'
+                            }`}>
+                              {hasError ? (
+                                <AlertCircle className="h-5 w-5 text-red-600" />
+                              ) : (
+                                <FileText className="h-5 w-5 text-blue-600" />
+                              )}
+                            </div>
+                            <div>
+                              <p className={`text-sm font-medium ${hasError ? 'text-red-900' : 'text-gray-900'}`}>
+                                {doc.name}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {doc.type} • Uploaded {formatDate(doc.uploadedAt)}
+                              </p>
+                              {hasError && (
+                                <p className="text-xs text-red-600 mt-1">
+                                  Document unavailable
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          {!hasError && (
+                            <button
+                              onClick={handleDocumentClick}
+                              className="flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm font-medium"
+                            >
+                              <Download className="h-4 w-4" />
+                              View
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Registered Products */}
               {company.products && company.products.length > 0 && (

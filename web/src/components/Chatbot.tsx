@@ -16,7 +16,7 @@ export function Chatbot() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
-      text: "Hi! I'm your RCV assistant. How can I help you today?",
+      text: "Hi! I'm Arcy, your RCV assistant. I can help you with questions about the RCV platform, registered products, companies, and our blog content. How can I assist you today?",
       sender: "bot",
       timestamp: new Date(),
     },
@@ -49,7 +49,7 @@ export function Chatbot() {
 
   const streamText = (fullText: string, messageId: string) => {
     let currentIndex = 0;
-    const charsPerInterval = 3; // Characters to show per interval
+    const charsPerInterval = 1; // Characters to show per interval (letter by letter)
     
     // Add initial empty message
     const botResponse: Message = {
@@ -167,13 +167,21 @@ export function Chatbot() {
 
       {/* Chatbot Window */}
       {isOpen && (
-        <div 
-          className={`fixed bg-white rounded-2xl shadow-2xl flex flex-col z-50 border border-gray-200 transition-all duration-300 ${
-            isExpanded 
-              ? "inset-2 sm:inset-4 md:inset-8" 
-              : "bottom-4 right-4 sm:bottom-6 sm:right-6 w-[calc(100vw-2rem)] sm:w-96 h-[calc(100vh-8rem)] sm:h-[32rem]"
-          }`}
-        >
+        <>
+          {/* Dark backdrop when expanded */}
+          {isExpanded && (
+            <div 
+              className="fixed inset-0 bg-black/60 z-40 transition-opacity duration-300"
+              onClick={() => setIsExpanded(false)}
+            />
+          )}
+          <div 
+            className={`fixed bg-white rounded-2xl shadow-2xl flex flex-col z-50 border border-gray-200 transition-all duration-300 ${
+              isExpanded 
+                ? "inset-2 sm:inset-4 md:inset-8" 
+                : "bottom-4 right-4 sm:bottom-6 sm:right-6 w-[calc(100vw-2rem)] sm:w-96 h-[calc(100vh-8rem)] sm:h-[32rem]"
+            }`}
+          >
           {/* Header */}
           <div className="app-bg-primary text-white p-4 rounded-t-2xl flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -307,7 +315,8 @@ export function Chatbot() {
               Press Enter to send
             </p>
           </div>
-        </div>
+          </div>
+        </>
       )}
     </>
   );
