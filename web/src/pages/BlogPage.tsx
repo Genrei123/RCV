@@ -40,8 +40,10 @@ export function BlogPage() {
       if (selectedCategory) {
         setLoading(true);
         try {
+          // Pass 0 to fetch all posts in the category without limit
           const filteredPosts = await SanityService.getBlogPostsByCategory(
-            selectedCategory
+            selectedCategory,
+            0
           );
           setPosts(filteredPosts);
         } catch (error) {
@@ -52,7 +54,8 @@ export function BlogPage() {
       } else {
         setLoading(true);
         try {
-          const allPosts = await SanityService.getBlogPosts();
+          // Pass 0 to fetch all posts without limit
+          const allPosts = await SanityService.getBlogPosts(0);
           setPosts(allPosts);
         } catch (error) {
           console.error("Error fetching all posts:", error);

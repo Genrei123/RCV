@@ -106,9 +106,11 @@ export class SanityService {
 
   /**
    * Fetch all blog posts
+   * @param limit - Number of posts to fetch. Pass 0 or undefined for all posts.
    */
-  static async getBlogPosts(limit: number = 10): Promise<SanityBlogPost[]> {
-    const query = `*[_type == "blogPost"] | order(publishedAt desc) [0...${limit}] {
+  static async getBlogPosts(limit?: number): Promise<SanityBlogPost[]> {
+    const limitClause = limit && limit > 0 ? `[0...${limit}]` : '';
+    const query = `*[_type == "blogPost"] | order(publishedAt desc) ${limitClause} {
       _id,
       title,
       slug,
@@ -230,9 +232,12 @@ export class SanityService {
 
   /**
    * Fetch blog posts by category
+   * @param categoryId - The category ID to filter by
+   * @param limit - Number of posts to fetch. Pass 0 or undefined for all posts.
    */
-  static async getBlogPostsByCategory(categoryId: string, limit: number = 10): Promise<SanityBlogPost[]> {
-    const query = `*[_type == "blogPost" && $categoryId in categories[]._ref] | order(publishedAt desc) [0...${limit}] {
+  static async getBlogPostsByCategory(categoryId: string, limit?: number): Promise<SanityBlogPost[]> {
+    const limitClause = limit && limit > 0 ? `[0...${limit}]` : '';
+    const query = `*[_type == "blogPost" && $categoryId in categories[]._ref] | order(publishedAt desc) ${limitClause} {
       _id,
       title,
       slug,

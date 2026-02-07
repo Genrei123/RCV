@@ -19,15 +19,26 @@ export function MobileAppShowcase({ data }: MobileAppShowcaseProps) {
 
   if (!data || data.length === 0) return null;
 
-  const currentShowcase = data[currentDocument];
+  // Ensure currentDocument is within bounds
+  const safeDocumentIndex = Math.max(0, Math.min(currentDocument, data.length - 1));
+  const currentShowcase = data[safeDocumentIndex];
   const screenshots = currentShowcase?.screenshots || [];
-  const currentScreen = screenshots[currentScreenshot];
+  
+  // Ensure currentScreenshot is within bounds
+  const safeScreenshotIndex = screenshots.length > 0 
+    ? Math.max(0, Math.min(currentScreenshot, screenshots.length - 1)) 
+    : 0;
+  const currentScreen = screenshots[safeScreenshotIndex];
 
   const handleNextDocument = () => {
+    if (data.length <= 1 || isTransitioning) return;
     setIsTransitioning(true);
     setSwipeDirection('left');
     setTimeout(() => {
-      setCurrentDocument((prev) => (prev + 1) % data.length);
+      setCurrentDocument((prev) => {
+        const next = prev + 1;
+        return next >= data.length ? 0 : next;
+      });
       setCurrentScreenshot(0);
       setActiveHotspot(null);
       setIsTransitioning(false);
@@ -36,10 +47,14 @@ export function MobileAppShowcase({ data }: MobileAppShowcaseProps) {
   };
 
   const handlePrevDocument = () => {
+    if (data.length <= 1 || isTransitioning) return;
     setIsTransitioning(true);
     setSwipeDirection('right');
     setTimeout(() => {
-      setCurrentDocument((prev) => (prev - 1 + data.length) % data.length);
+      setCurrentDocument((prev) => {
+        const next = prev - 1;
+        return next < 0 ? data.length - 1 : next;
+      });
       setCurrentScreenshot(0);
       setActiveHotspot(null);
       setIsTransitioning(false);
@@ -48,10 +63,14 @@ export function MobileAppShowcase({ data }: MobileAppShowcaseProps) {
   };
 
   const handleNext = () => {
+    if (screenshots.length <= 1 || isTransitioning) return;
     setIsTransitioning(true);
     setSwipeDirection('left');
     setTimeout(() => {
-      setCurrentScreenshot((prev) => (prev + 1) % screenshots.length);
+      setCurrentScreenshot((prev) => {
+        const next = prev + 1;
+        return next >= screenshots.length ? 0 : next;
+      });
       setActiveHotspot(null);
       setIsTransitioning(false);
       setSwipeDirection(null);
@@ -59,10 +78,14 @@ export function MobileAppShowcase({ data }: MobileAppShowcaseProps) {
   };
 
   const handlePrev = () => {
+    if (screenshots.length <= 1 || isTransitioning) return;
     setIsTransitioning(true);
     setSwipeDirection('right');
     setTimeout(() => {
-      setCurrentScreenshot((prev) => (prev - 1 + screenshots.length) % screenshots.length);
+      setCurrentScreenshot((prev) => {
+        const next = prev - 1;
+        return next < 0 ? screenshots.length - 1 : next;
+      });
       setActiveHotspot(null);
       setIsTransitioning(false);
       setSwipeDirection(null);
@@ -111,7 +134,21 @@ export function MobileAppShowcase({ data }: MobileAppShowcaseProps) {
     setIsDragging(false);
   };
 
-  if (!screenshots.length) return null;
+  // Show placeholder if no screenshots instead of returning null
+  if (!screenshots.length) {
+    return (
+      <section className="py-12 app-bg-neutral-soft">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <h2 className="text-3xl md:text-4xl font-bold text-text mb-4">
+              {currentShowcase?.title || 'Mobile App Showcase'}
+            </h2>
+            <p className="text-text-subtle">No screenshots available</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   const hotspots = currentScreen?.hotspots || [];
   // Limit to maximum 4 hotspots per screen
