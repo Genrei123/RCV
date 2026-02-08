@@ -84,6 +84,7 @@ export function LandingPage() {
   const [carouselScale, setCarouselScale] = useState(1);
   const [carouselOpacity, setCarouselOpacity] = useState(1);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
   // Disable scroll when mobile menu is open
   useEffect(() => {
@@ -126,6 +127,13 @@ export function LandingPage() {
         setNavbarScrolled(true);
       } else {
         setNavbarScrolled(false);
+      }
+      
+      // Show scroll to top button when scrolled down 500px
+      if (currentScrollY > 500) {
+        setShowScrollTop(true);
+      } else {
+        setShowScrollTop(false);
       }
       
       // Carousel closing animation on scroll
@@ -819,7 +827,8 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Featured Blogs Section */}
+      {/* Featured 
+      Section */}
       {featuredBlogs.length > 0 && (
         <section className="py-20 app-bg-neutral-soft">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -964,6 +973,29 @@ export function LandingPage() {
 
       <Footer />
       <Chatbot />
+      
+      {/* Scroll to Top Button */}
+      {showScrollTop && (
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="fixed bottom-8 left-8 z-50 p-4 bg-primary/70 hover:bg-primary/90 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 group backdrop-blur-sm"
+          aria-label="Scroll to top"
+        >
+          <svg
+            className="w-6 h-6 transform group-hover:-translate-y-1 transition-transform"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M5 10l7-7m0 0l7 7m-7-7v18"
+            />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }

@@ -52,6 +52,7 @@ export const getAllUsers = async (
         "status",
         "rejectionReason",
         "role",
+        "isSuperAdmin",
         "webAccess",
         "appAccess",
         "avatarUrl",
@@ -102,6 +103,7 @@ export const getUserById = async (
         "_id",
         "email",
         "role",
+        "isSuperAdmin",
         "approved",
         "status",
         "rejectionReason",
@@ -137,6 +139,7 @@ export const getUserById = async (
           "_id",
           "email",
           "role",
+          "isSuperAdmin",
           "approved",
           "status",
           "rejectionReason",
@@ -1142,5 +1145,193 @@ export const demoteAdminToAgent = async (
     });
   } catch (error) {
     next(error);
+  }
+};
+
+/**
+ * Unreject a user - restore rejected user to pending status (Super Admin only)
+ */
+export const unrejectUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const idResult = IdSchema.safeParse(req.params.id);
+  if (!idResult.success) {
+    return res.status(400).json({ success: false, message: "Invalid User ID" });
+  }
+
+  try {
+    const user = await UserRepo.findOneBy({ _id: idResult.data });
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    if (user.status !== "Rejected") {
+      return res.status(400).json({
+        success: false,
+        message: "User is not in rejected status",
+      });
+    }
+
+    // Restore to pending status
+    user.status = "Pending";
+    user.approved = false;
+    user.rejectionReason = undefined;
+
+    const saved = await UserRepo.save(user);
+
+    // Log the unreject action
+    const currentUserId = req.user?._id;
+    if (currentUserId) {
+      await AuditLogService.createLog({
+        action: "User account restored from rejected status",
+        actionType: "UPDATE_USER",
+        userId: currentUserId,
+        targetUserId: user._id,
+        platform: "WEB",
+        req,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      user: saved,
+      message: "User restored to pending status",
+    });
+  } catch (error) {
+    return next(CustomError.security(500, "Server Error"));
+  }
+};
+
+/**
+ * Archive a user (Super Admin only)
+ */
+export const archiveUserById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const idResult = IdSchema.safeParse(req.params.id);
+  if (!idResult.success) {
+    return res.status(400).json({ success: false, message: "Invalid User ID" });
+  }
+
+  try {
+    const user = await UserRepo.findOneBy({ _id: idResult.data });
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    if (user.status === "Archived") {
+      return res.status(400).json({
+        success: false,
+        message: "User is already archived",
+      });
+    }
+
+    // Disable Firebase account if user has one
+    if (user.firebaseUid) {
+      try {
+        await FirebaseAuthService.disableFirebaseUser(user.firebaseUid);
+      } catch (error) {
+        console.error('Failed to disable Firebase user:', error);
+      }
+    }
+
+    user.status = "Archived";
+    user.approved = false;
+
+    const saved = await UserRepo.save(user);
+
+    // Log the archive action
+    const currentUserId = req.user?._id;
+    if (currentUserId) {
+      await AuditLogService.createLog({
+        action: "User account archived by admin",
+        actionType: "UPDATE_USER",
+        userId: currentUserId,
+        targetUserId: user._id,
+        platform: "WEB",
+        req,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      user: saved,
+      message: "User archived successfully",
+    });
+  } catch (error) {
+    return next(CustomError.security(500, "Server Error"));
+  }
+};
+
+/**
+ * Unarchive a user (Super Admin only)
+ */
+export const unarchiveUserById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const idResult = IdSchema.safeParse(req.params.id);
+  if (!idResult.success) {
+    return res.status(400).json({ success: false, message: "Invalid User ID" });
+  }
+
+  try {
+    const user = await UserRepo.findOneBy({ _id: idResult.data });
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    if (user.status !== "Archived") {
+      return res.status(400).json({
+        success: false,
+        message: "User is not archived",
+      });
+    }
+
+    // Enable Firebase account if user has one
+    if (user.firebaseUid) {
+      try {
+        await FirebaseAuthService.enableFirebaseUser(user.firebaseUid);
+      } catch (error) {
+        console.error('Failed to enable Firebase user:', error);
+      }
+    }
+
+    user.status = "Pending";
+    user.approved = false;
+
+    const saved = await UserRepo.save(user);
+
+    // Log the unarchive action
+    const currentUserId = req.user?._id;
+    if (currentUserId) {
+      await AuditLogService.createLog({
+        action: "User account unarchived by admin",
+        actionType: "UPDATE_USER",
+        userId: currentUserId,
+        targetUserId: user._id,
+        platform: "WEB",
+        req,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      user: saved,
+      message: "User unarchived successfully",
+    });
+  } catch (error) {
+    return next(CustomError.security(500, "Server Error"));
   }
 };

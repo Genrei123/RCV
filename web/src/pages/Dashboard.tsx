@@ -136,7 +136,7 @@ export function Dashboard(props: DashboardProps) {
   const [rejectionReason, setRejectionReason] = useState("");
 
   // Status filter state
-  const [statusFilter, setStatusFilter] = useState<"all" | "Pending" | "Active" | "Rejected">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "Pending" | "Active" | "Rejected" | "Archived">("all");
   const [statusFilterOpen, setStatusFilterOpen] = useState(false);
   const [sortFilterOpen, setSortFilterOpen] = useState(false);
   const statusFilterRef = useRef<HTMLDivElement>(null);
@@ -975,7 +975,7 @@ export function Dashboard(props: DashboardProps) {
                   {statusFilterOpen && (
                     <div className="absolute left-0 top-full z-50 mt-1 w-full min-w-[8rem] rounded-md border bg-white py-1 shadow-lg">
                       <p className="px-3 py-1.5 text-xs text-muted-foreground">Status Filter</p>
-                      {(["all", "Pending", "Active", "Rejected"] as const).map((v) => (
+                      {(["all", "Pending", "Active", "Rejected", "Archived"] as const).map((v) => (
                         <button
                           key={v}
                           type="button"

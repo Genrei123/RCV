@@ -81,11 +81,24 @@ class LEDStatusCard extends StatelessWidget {
               ),
             ),
             
-            // Toggle Switch
-            Switch(
-              value: isOn,
-              onChanged: (_) => onToggle(),
-              activeColor: color,
+            // Toggle Button
+            ElevatedButton(
+              onPressed: onToggle,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: color,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: Text(
+                isOn ? 'Turn OFF' : 'Turn ON',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
             ),
           ],
         ),

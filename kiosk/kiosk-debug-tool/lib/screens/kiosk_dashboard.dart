@@ -204,19 +204,6 @@ class _KioskDashboardState extends State<KioskDashboard> {
                       onPressed: () => _handleCommand('Set OCR Mode',
                         () => kioskService.setMode('ocr')),
                     ),
-                    const SizedBox(height: 12),
-                    ControlButtonCard(
-                      icon: Icons.power_settings_new,
-                      title: 'Shutdown Kiosk',
-                      subtitle: 'Safely shutdown the kiosk machine',
-                      color: AppTheme.errorRed,
-                      onPressed: () => _showConfirmDialog(
-                            context,
-                            'Shutdown Kiosk?',
-                            'This will completely shutdown the kiosk. The command will be queued and executed on next heartbeat.',
-                            () => _handleCommand('Shutdown', kioskService.shutdownKiosk),
-                          ),
-                    ),
                     const SizedBox(height: 24),
                     
                     // Test All LEDs Button

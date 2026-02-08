@@ -98,11 +98,47 @@ export class UserPageService {
     }
   }
 
+  static async unrejectUser(userId: string): Promise<void> {
+    try {
+      await apiClient.patch(`/user/users/${userId}/unreject`);
+    } catch (error) {
+      console.error("Error unrejecting user:", error);
+      throw error;
+    }
+  }
+
   static async updateUserAccess(userId: string, webAccess: boolean, appAccess: boolean): Promise<void> {
     try {
       await apiClient.patch(`/user/users/${userId}/access`, { webAccess, appAccess });
     } catch (error) {
       console.error("Error updating user access:", error);
+      throw error;
+    }
+  }
+
+  static async archiveUser(userId: string): Promise<void> {
+    try {
+      await apiClient.patch(`/user/users/${userId}/archive`);
+    } catch (error) {
+      console.error("Error archiving user:", error);
+      throw error;
+    }
+  }
+
+  static async unarchiveUser(userId: string): Promise<void> {
+    try {
+      await apiClient.patch(`/user/users/${userId}/unarchive`);
+    } catch (error) {
+      console.error("Error unarchiving user:", error);
+      throw error;
+    }
+  }
+
+  static async deleteUser(userId: string): Promise<void> {
+    try {
+      await apiClient.delete(`/user/users/${userId}`);
+    } catch (error) {
+      console.error("Error deleting user:", error);
       throw error;
     }
   }
