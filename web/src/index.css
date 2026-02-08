@@ -1,4 +1,11 @@
-@import "tailwindcss";Animation Delay Utilities */
+@import "tailwindcss";
+
+/* Enable smooth scrolling globally */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Animation Delay Utilities */
 .delay-0 { animation-delay: 0s; }
 .delay-100 { animation-delay: 0.1s; }
 .delay-150 { animation-delay: 0.15s; }

@@ -62,6 +62,31 @@ export function UserDetailModal({
   // Demotion state
   const [demotionLoading, setDemotionLoading] = useState(false);
 
+  // Archive/Delete/Unreject state (Super Admin)
+  const [archiveLoading, setArchiveLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [unrejectLoading, setUnrejectLoading] = useState(false);
+
+  // Confirmation dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText: string;
+    cancelText: string;
+    onConfirm: () => void;
+    variant?: 'warning' | 'danger';
+    requireEmailConfirm?: boolean;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmText: 'Confirm',
+    cancelText: 'Cancel',
+    onConfirm: () => {},
+  });
+  const [emailConfirmInput, setEmailConfirmInput] = useState('');
+
   // Update local state when user changes
   useEffect(() => {
     if (user) {
@@ -178,12 +203,23 @@ export function UserDetailModal({
   const handlePromoteToAdmin = async () => {
     if (!user?._id) return;
 
-    // Confirm before promoting
-    const confirmPromote = window.confirm(
-      `Are you sure you want to promote ${user.fullName} to admin? This user will have full administrative privileges.`
-    );
-    
-    if (!confirmPromote) return;
+    // Show confirmation dialog
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Promote to Admin',
+      message: `Are you sure you want to promote ${user.fullName} to admin? This user will have full administrative privileges.`,
+      confirmText: 'Promote',
+      cancelText: 'Cancel',
+      variant: 'warning',
+      onConfirm: async () => {
+        setConfirmDialog({ ...confirmDialog, isOpen: false });
+        await executePromoteToAdmin();
+      },
+    });
+  };
+
+  const executePromoteToAdmin = async () => {
+    if (!user?._id) return;
 
     setPromotionLoading(true);
     try {
@@ -211,12 +247,23 @@ export function UserDetailModal({
   const handleDemoteAdminToAgent = async () => {
     if (!user?._id) return;
 
-    // Confirm before demoting
-    const confirmDemote = window.confirm(
-      `Are you sure you want to demote ${user.fullName} from admin to agent? This user will lose administrative privileges.`
-    );
-    
-    if (!confirmDemote) return;
+    // Show confirmation dialog
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Demote to Agent',
+      message: `Are you sure you want to demote ${user.fullName} from admin to agent? This user will lose administrative privileges.`,
+      confirmText: 'Demote',
+      cancelText: 'Cancel',
+      variant: 'warning',
+      onConfirm: async () => {
+        setConfirmDialog({ ...confirmDialog, isOpen: false });
+        await executeDemoteAdminToAgent();
+      },
+    });
+  };
+
+  const executeDemoteAdminToAgent = async () => {
+    if (!user?._id) return;
 
     setDemotionLoading(true);
     try {
@@ -237,6 +284,150 @@ export function UserDetailModal({
       toast.error("Failed to demote admin to agent");
     } finally {
       setDemotionLoading(false);
+    }
+  };
+
+  // Handle archive user (Super Admin)
+  const handleArchiveUser = async () => {
+    if (!user?._id) return;
+
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Archive User',
+      message: `Are you sure you want to archive ${user.fullName}? This will hide the user from active lists but data will be preserved.`,
+      confirmText: 'Archive',
+      cancelText: 'Cancel',
+      variant: 'warning',
+      onConfirm: async () => {
+        setConfirmDialog({ ...confirmDialog, isOpen: false });
+        await executeArchiveUser();
+      },
+    });
+  };
+
+  const executeArchiveUser = async () => {
+    if (!user?._id) return;
+
+    setArchiveLoading(true);
+    try {
+      await UserPageService.archiveUser(user._id);
+      toast.success(`${user.fullName} has been archived successfully`);
+      onAccessUpdate?.({ ...user, status: 'Archived' });
+      onClose();
+    } catch (error) {
+      console.error("Error archiving user:", error);
+      toast.error("Failed to archive user");
+    } finally {
+      setArchiveLoading(false);
+    }
+  };
+
+  // Handle unarchive user (Super Admin)
+  const handleUnarchiveUser = async () => {
+    if (!user?._id) return;
+
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Unarchive User',
+      message: `Are you sure you want to unarchive ${user.fullName}? This will restore the user to pending status.`,
+      confirmText: 'Unarchive',
+      cancelText: 'Cancel',
+      variant: 'warning',
+      onConfirm: async () => {
+        setConfirmDialog({ ...confirmDialog, isOpen: false });
+        await executeUnarchiveUser();
+      },
+    });
+  };
+
+  const executeUnarchiveUser = async () => {
+    if (!user?._id) return;
+
+    setArchiveLoading(true);
+    try {
+      await UserPageService.unarchiveUser(user._id);
+      toast.success(`${user.fullName} has been unarchived successfully`);
+      onAccessUpdate?.({ ...user, status: 'Active' });
+      onClose();
+    } catch (error) {
+      console.error("Error unarchiving user:", error);
+      toast.error("Failed to unarchive user");
+    } finally {
+      setArchiveLoading(false);
+    }
+  };
+
+  // Handle permanent delete user (Super Admin only)
+  const handleDeleteUser = async () => {
+    if (!user?._id) return;
+
+    setEmailConfirmInput('');
+    setConfirmDialog({
+      isOpen: true,
+      title: '⚠️ Permanent Delete Warning',
+      message: `Are you sure you want to PERMANENTLY DELETE ${user.fullName}?\n\nThis action:\n• CANNOT be undone\n• Will delete ALL user data\n• Will remove ALL associated records\n\nTo confirm, type the user's email address: ${user.email}`,
+      confirmText: 'Delete Permanently',
+      cancelText: 'Cancel',
+      variant: 'danger',
+      requireEmailConfirm: true,
+      onConfirm: async () => {
+        // Email check happens in the button disabled state, no need to check again here
+        setConfirmDialog({ ...confirmDialog, isOpen: false });
+        setEmailConfirmInput('');
+        await executeDeleteUser();
+      },
+    });
+  };
+
+  const executeDeleteUser = async () => {
+    if (!user?._id) return;
+
+    setDeleteLoading(true);
+    try {
+      await UserPageService.deleteUser(user._id);
+      toast.success(`${user.fullName} has been permanently deleted`);
+      // User is deleted from database, trigger parent refresh
+      onAccessUpdate?.(user);
+      onClose();
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      toast.error("Failed to delete user permanently");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  // Handle unreject user (Super Admin only)
+  const handleUnrejectUser = async () => {
+    if (!user?._id) return;
+
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Restore Rejected User',
+      message: `Are you sure you want to restore ${user.fullName}'s status back to pending approval? You can then approve them if needed.`,
+      confirmText: 'Restore',
+      cancelText: 'Cancel',
+      variant: 'warning',
+      onConfirm: async () => {
+        setConfirmDialog({ ...confirmDialog, isOpen: false });
+        await executeUnrejectUser();
+      },
+    });
+  };
+
+  const executeUnrejectUser = async () => {
+    if (!user?._id) return;
+
+    setUnrejectLoading(true);
+    try {
+      await UserPageService.unrejectUser(user._id);
+      toast.success(`${user.fullName} has been restored to pending status. You can now approve them.`);
+      onAccessUpdate?.({ ...user, status: 'Pending', approved: false });
+    } catch (error) {
+      console.error("Error unrejecting user:", error);
+      toast.error("Failed to unreject user");
+    } finally {
+      setUnrejectLoading(false);
     }
   };
 
@@ -764,29 +955,62 @@ export function UserDetailModal({
             <div className="pt-6 border-t mt-6">
               {isRejected ? (
                 <>
-                  {/* Rejected User Section - Buttons Disabled */}
+                  {/* Rejected User Section */}
                   <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
                     <p className="text-sm text-red-700">
-                      This user has been rejected. The decision has already been made and cannot be changed.
+                      This user has been rejected.
+                      {currentUser?.isSuperAdmin ? (
+                        <> As Super Admin, you can restore this account to pending status or approve it.</>
+                      ) : (
+                        <> Contact a Super Admin to restore or approve this account.</>
+                      )}
                     </p>
+                    {user.rejectionReason && (
+                      <div className="mt-2 pt-2 border-t border-red-200">
+                        <p className="text-xs text-red-600 font-semibold">Rejection Reason:</p>
+                        <p className="text-sm text-red-700 mt-1">{user.rejectionReason}</p>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex gap-3">
-                    <Button
-                      variant="outline"
-                      disabled
-                      className="flex-1 opacity-50 cursor-not-allowed"
-                    >
-                      <XCircle className="h-4 w-4 mr-2" />
-                      Reject User
-                    </Button>
-                    <Button
-                      disabled
-                      className="flex-1 opacity-50 cursor-not-allowed"
-                    >
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Approve User
-                    </Button>
-                  </div>
+                  {currentUser?.isSuperAdmin ? (
+                    <div className="flex gap-3">
+                      <Button
+                        onClick={handleUnrejectUser}
+                        disabled={unrejectLoading}
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        {unrejectLoading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Restoring...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Restore to Pending
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-3">
+                      <Button
+                        variant="outline"
+                        disabled
+                        className="flex-1 opacity-50 cursor-not-allowed"
+                      >
+                        <XCircle className="h-4 w-4 mr-2" />
+                        Reject User
+                      </Button>
+                      <Button
+                        disabled
+                        className="flex-1 opacity-50 cursor-not-allowed"
+                      >
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Approve User
+                      </Button>
+                    </div>
+                  )}
                 </>
               ) : !user.approved ? (
                 <>
@@ -886,24 +1110,139 @@ export function UserDetailModal({
           )}
 
           {/* Action Buttons */}
-          <div className="flex justify-end gap-3 pt-6 border-t mt-6">
-            <Button
-              onClick={handleViewProfileAndActivities}
-              className="flex items-center gap-2 app-bg-primary hover:app-bg-secondary text-white cursor-pointer"
-            >
-              <Eye className="h-4 w-4" />
-              View Profile & Activities
-            </Button>
-            <Button
-              onClick={onClose}
-              variant="outline"
-              className="cursor-pointer"
-            >
-              Close
-            </Button>
+          <div className="flex justify-between gap-3 pt-6 border-t mt-6">
+            <div className="flex gap-2">
+              {/* Super Admin Powers - Archive/Unarchive */}
+              {currentUser?.isSuperAdmin && user.email !== 'super@gmail.com' && (
+                <>
+                  {user.status === 'Archived' ? (
+                    <Button
+                      onClick={handleUnarchiveUser}
+                      disabled={archiveLoading}
+                      variant="outline"
+                      className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                    >
+                      {archiveLoading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Unarchiving...
+                        </>
+                      ) : (
+                        "Unarchive User"
+                      )}
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={handleArchiveUser}
+                      disabled={archiveLoading}
+                      variant="outline"
+                      className="border-orange-500 text-orange-600 hover:bg-orange-50"
+                    >
+                      {archiveLoading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Archiving...
+                        </>
+                      ) : (
+                        "Archive User"
+                      )}
+                    </Button>
+                  )}
+                  
+                  {/* Super Admin - Permanent Delete */}
+                  <Button
+                    onClick={handleDeleteUser}
+                    disabled={deleteLoading}
+                    variant="outline"
+                    className="border-red-600 text-red-600 hover:bg-red-50"
+                  >
+                    {deleteLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Deleting...
+                      </>
+                    ) : (
+                      "Delete Permanently"
+                    )}
+                  </Button>
+                </>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                onClick={handleViewProfileAndActivities}
+                className="flex items-center gap-2 app-bg-primary hover:app-bg-secondary text-white cursor-pointer"
+              >
+                <Eye className="h-4 w-4" />
+                View Profile & Activities
+              </Button>
+              <Button
+                onClick={onClose}
+                variant="outline"
+                className="cursor-pointer"
+              >
+                Close
+              </Button>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Confirmation Dialog Modal */}
+      {confirmDialog.isOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+            <h3 className={`text-xl font-semibold mb-4 ${
+              confirmDialog.variant === 'danger' ? 'text-red-600' : 'text-orange-600'
+            }`}>
+              {confirmDialog.title}
+            </h3>
+            <p className="text-gray-700 whitespace-pre-line mb-6">
+              {confirmDialog.message}
+            </p>
+            
+            {confirmDialog.requireEmailConfirm && (
+              <div className="mb-4">
+                <Label htmlFor="emailConfirm" className="text-sm font-medium mb-2 block">
+                  Type email to confirm:
+                </Label>
+                <Input
+                  id="emailConfirm"
+                  type="text"
+                  value={emailConfirmInput}
+                  onChange={(e) => setEmailConfirmInput(e.target.value)}
+                  placeholder={user?.email}
+                  className="w-full"
+                />
+              </div>
+            )}
+
+            <div className="flex gap-3 justify-end">
+              <Button
+                onClick={() => {
+                  setConfirmDialog({ ...confirmDialog, isOpen: false });
+                  setEmailConfirmInput('');
+                }}
+                variant="outline"
+              >
+                {confirmDialog.cancelText}
+              </Button>
+              <Button
+                onClick={confirmDialog.onConfirm}
+                className={
+                  confirmDialog.variant === 'danger'
+                    ? 'bg-red-600 hover:bg-red-700 text-white'
+                    : 'bg-orange-600 hover:bg-orange-700 text-white'
+                }
+                disabled={confirmDialog.requireEmailConfirm && emailConfirmInput !== user?.email}
+              >
+                {confirmDialog.confirmText}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
