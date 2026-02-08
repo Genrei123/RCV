@@ -208,6 +208,7 @@ describe("Sign In", () => {
           "email",
           "password",
           "role",
+          "isSuperAdmin",
           "approved",
           "firstName",
           "lastName",
