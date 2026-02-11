@@ -28,7 +28,7 @@
     "@sanity/image-url": "^2.0.3",
     "@tailwindcss/vite": "^4.1.13",
     "@types/crypto-js": "^4.2.2",
-    "axios": "^1.12.2",
+    "axios": "^1.13.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "crypto-js": "^4.2.0",
