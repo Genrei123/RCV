@@ -13,6 +13,7 @@ import {
   ChevronDown,
   Power,
   Repeat2,
+  HelpCircle,
 } from "lucide-react";
 import { LogoutModal } from "./LogoutModal";
 import { AuthService } from "@/services/authService";
@@ -78,9 +79,11 @@ export const LogoIcon = ({
 export function Sidebar({
   open = false,
   onClose,
+  onTutorialStart,
 }: {
   open: boolean;
   onClose?: () => void;
+  onTutorialStart?: () => void;
 }) {
   const location = useLocation();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -335,6 +338,7 @@ export function Sidebar({
                   <div key={item.path} className="relative" ref={walletMenuRef}>
                     <button
                       onClick={handleWalletClick}
+                      data-tutorial="connect-wallet"
                       className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-neutral-600 hover:bg-neutral-100 relative"
                     >
                       <Icon size={20} />
@@ -390,10 +394,12 @@ export function Sidebar({
                 );
               }
 
+              const tutorialKey = item.label.toLowerCase().replace(/\s+/g, "-");
               return (
                 <Link
                   key={item.path}
                   to={item.path}
+                  data-tutorial={tutorialKey}
                   className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
                     isActive
                       ? "app-bg-primary text-white"
@@ -408,6 +414,19 @@ export function Sidebar({
                 </Link>
               );
             })}
+
+            {/* Tutorial Button - Small word style */}
+            <button
+              onClick={() => {
+                onTutorialStart?.();
+                closeDrawer?.();
+              }}
+              className="flex items-center gap-2 px-4 py-2 mt-2 text-sm text-neutral-500 hover:text-neutral-700 transition-colors"
+              title="Start guided tour"
+            >
+              <HelpCircle size={16} />
+              <span>Tutorial</span>
+            </button>
           </div>
         </nav>
       </aside>
@@ -546,6 +565,7 @@ export function Sidebar({
                     <button
                       type="button"
                       onClick={handleWalletClick}
+                      data-tutorial="connect-wallet"
                       className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-neutral-600 hover:bg-neutral-100 cursor-pointer"
                     >
                       <Icon size={20} />
@@ -607,6 +627,7 @@ export function Sidebar({
                 <Link
                   key={m.path}
                   to={m.path}
+                  data-tutorial={m.label.toLowerCase().replace(/\s+/g, "-")}
                   onClick={() => {
                     closeDrawer();
                   }}
@@ -624,6 +645,19 @@ export function Sidebar({
                 </Link>
               );
             })}
+
+            {/* Tutorial Button - Small word style */}
+            <button
+              onClick={() => {
+                onTutorialStart?.();
+                closeDrawer();
+              }}
+              className="flex items-center gap-2 px-4 py-2 mt-2 text-sm text-neutral-500 hover:text-neutral-700 transition-colors"
+              title="Start guided tour"
+            >
+              <HelpCircle size={16} />
+              <span>Tutorial</span>
+            </button>
           </nav>
         </div>
       </div>

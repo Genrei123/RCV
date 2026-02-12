@@ -59,6 +59,7 @@ import {
   FileCheck,
   ChevronDown,
   Check,
+  HelpCircle,
 } from "lucide-react";
 import ApprovalQueue from "@/components/ApprovalQueue";
 import MySubmissions from "@/components/MySubmissions";
@@ -66,6 +67,7 @@ import { Pagination as SimplePagination } from '@/components/Pagination';
 import { RevokeConfirmationModal } from "@/components/RevokeConfirmationModal";
 import { ArchiveInviteConfirmationModal } from "@/components/ArchiveInviteConfirmationModal";
 import { DeleteInviteConfirmationModal } from "@/components/DeleteInviteConfirmationModal";
+import { TutorialHelper } from "@/components/TutorialHelper";
 
 export interface DashboardProps {
   success?: boolean;
@@ -141,6 +143,9 @@ export function Dashboard(props: DashboardProps) {
   const [sortFilterOpen, setSortFilterOpen] = useState(false);
   const statusFilterRef = useRef<HTMLDivElement>(null);
   const sortFilterRef = useRef<HTMLDivElement>(null);
+
+  // Page tutorial state
+  const [showPageTutorial, setShowPageTutorial] = useState(false);
 
   // Click outside to close dropdowns (like View Profile)
   useEffect(() => {
@@ -772,9 +777,18 @@ export function Dashboard(props: DashboardProps) {
         className="relative"
         title="Dashboard"
         description="Overview of system statistics and user management"
+        titleAction={
+          <button
+            onClick={() => setShowPageTutorial(true)}
+            className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600 transition-colors"
+            title="Page tutorial"
+          >
+            <HelpCircle size={18} />
+          </button>
+        }
       >
         {/* Statistics Cards: rectangle for Total Users, smaller squares for others on mobile */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-8">
+        <div data-tutorial="dashboard-stats" className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-8">
           {/* Total Users (full-width rectangle on mobile) */}
           <Card className="col-span-2 md:col-span-1 h-28 sm:h-auto shadow-lg border-transparent">
             <CardContent className="p-4 sm:p-6 h-full flex flex-col justify-center">
@@ -846,7 +860,7 @@ export function Dashboard(props: DashboardProps) {
         </div>
 
         {/* View Toggle - Dropdown on mobile, button group on desktop */}
-        <div className="w-full mb-4">
+        <div data-tutorial="dashboard-tabs" className="w-full mb-4">
           {/* Mobile: Dropdown */}
           <div className="sm:hidden">
             <Select
@@ -939,7 +953,7 @@ export function Dashboard(props: DashboardProps) {
 
         {/* Users Table */}
         {viewMode === "users" && (
-        <div className="w-full">
+        <div data-tutorial="dashboard-table" className="w-full">
           <DataTable
             title="User Accounts"
             columns={columns}
@@ -1369,6 +1383,14 @@ export function Dashboard(props: DashboardProps) {
         invite={inviteToDelete}
         loading={deleteLoading}
       />
+
+      {/* Page Tutorial */}
+      {showPageTutorial && (
+        <TutorialHelper 
+          mode="page" 
+          onClose={() => setShowPageTutorial(false)} 
+        />
+      )}
     </>
   );
 }

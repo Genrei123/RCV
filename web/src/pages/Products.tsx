@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Grid, List, Search, Download, Link2 } from "lucide-react";
+import { Plus, Grid, List, Search, Download, Link2, HelpCircle } from "lucide-react";
 import { PageContainer } from "@/components/PageContainer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,7 @@ import { ProductStatsView } from "@/components/ProductStatsView";
 import type { Company } from "@/typeorm/entities/company.entity";
 import { PDFGenerationService } from "@/services/pdfGenerationService";
 import { toast } from "react-toastify";
+import { TutorialHelper } from "@/components/TutorialHelper";
 
 type PageTab = "products" | "stats";
 
@@ -52,6 +53,7 @@ export function Products(props: ProductsProps) {
   const [productStatus, setProductStatus] = useState<"active" | "archived">(
     "active",
   );
+  const [showPageTutorial, setShowPageTutorial] = useState(false);
 
   // Disable body scroll when a modal is open
   useEffect(() => {
@@ -284,6 +286,15 @@ export function Products(props: ProductsProps) {
     <PageContainer
       title="Products"
       description="Manage and view all registered products in the system."
+      titleAction={
+        <button
+          onClick={() => setShowPageTutorial(true)}
+          className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600 transition-colors"
+          title="Page tutorial"
+        >
+          <HelpCircle size={18} />
+        </button>
+      }
     >
       {/* Page Tab Navigation */}
       {/* <div className="flex border-b mb-6">
@@ -347,6 +358,7 @@ export function Products(props: ProductsProps) {
           {/* Content */}
           {viewMode === "list" ? (
             <>
+              <div data-tutorial="products-table">
               <DataTable
                 title="Product List"
                 columns={columns}
@@ -358,7 +370,7 @@ export function Products(props: ProductsProps) {
                 emptyStateDescription="Try adjusting your search or add a new product to get started."
                 customControls={
                   <div className="flex flex-wrap items-center justify-between gap-3 w-full">
-                    <div className="flex bg-gray-100 p-1 rounded-lg">
+                    <div data-tutorial="products-filter" className="flex bg-gray-100 p-1 rounded-lg">
                       <button
                         className={`px-3 py-1 text-sm font-medium rounded-md transition-all cursor-pointer ${
                           productStatus === "active"
@@ -387,6 +399,7 @@ export function Products(props: ProductsProps) {
                       </button>
                     </div>
                     <Button
+                      data-tutorial="products-add"
                       onClick={handleAddProduct}
                       className="whitespace-nowrap cursor-pointer"
                     >
@@ -396,6 +409,7 @@ export function Products(props: ProductsProps) {
                   </div>
                 }
               />
+              </div>
 
               <div className="mt-4 flex items-center justify-between w-full">
                 <div className="text-sm text-muted-foreground">
@@ -592,6 +606,14 @@ export function Products(props: ProductsProps) {
         companies={props.companies || []}
         onRenewalSuccess={handleAddSuccess}
       />
+
+      {/* Page Tutorial */}
+      {showPageTutorial && (
+        <TutorialHelper 
+          mode="page" 
+          onClose={() => setShowPageTutorial(false)} 
+        />
+      )}
     </PageContainer>
   );
 }

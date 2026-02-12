@@ -8,6 +8,7 @@ interface PageContainerProps {
   title?: string;
   description?: string;
   headerAction?: ReactNode;
+  titleAction?: ReactNode;
 }
 
 export function PageContainer({
@@ -17,6 +18,7 @@ export function PageContainer({
   title,
   description,
   headerAction,
+  titleAction,
 }: PageContainerProps) {
   const maxWidthClasses = {
     sm: "max-w-sm",
@@ -44,9 +46,12 @@ export function PageContainer({
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-1 py-4 md:py-6">
             <div className="flex-1 min-w-0">
               {title && (
-                <h1 className="text-2xl md:text-3xl font-bold app-text mb-1">
-                  {title}
-                </h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-2xl md:text-3xl font-bold app-text mb-1">
+                    {title}
+                  </h1>
+                  {titleAction}
+                </div>
               )}
               {description && (
                 <p className="app-text-subtle text-sm md:text-base">
