@@ -267,7 +267,6 @@ export const TutorialHelper = ({ onClose, mode = "sidebar" }: TutorialHelperProp
                 const isTableStep = step.elementSelector.includes('table');
                 const tooltipWidth = 320;
                 const tooltipHeight = 200;
-                const isMobile = window.innerWidth < 768;
                 
                 if (isTableStep) {
                   // For table elements, position above
