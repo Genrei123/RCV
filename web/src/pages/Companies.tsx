@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Building2, Download, Link2, Archive, RefreshCw } from "lucide-react";
+import { Plus, Building2, Download, Link2, Archive, RefreshCw, HelpCircle } from "lucide-react";
 import { PageContainer } from "@/components/PageContainer";
 import { Button } from "@/components/ui/button";
 import { DataTable, type Column } from "@/components/DataTable";
@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/pagination";
 import { PDFGenerationService } from "@/services/pdfGenerationService";
 import { toast } from "react-toastify";
+import { TutorialHelper } from "@/components/TutorialHelper";
 
 export interface CompaniesProps {
   companies?: Company[];
@@ -43,6 +44,7 @@ export function Companies(props: CompaniesProps) {
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [companyToArchive, setCompanyToArchive] = useState<Company | null>(null);
   const [archiveLoading, setArchiveLoading] = useState(false);
+  const [showPageTutorial, setShowPageTutorial] = useState(false);
 
   // Disable body scroll when a modal is open
   useEffect(() => {
@@ -319,6 +321,15 @@ export function Companies(props: CompaniesProps) {
       <PageContainer
         title="Companies"
         description="Manage and view all registered companies in the system."
+        titleAction={
+          <button
+            onClick={() => setShowPageTutorial(true)}
+            className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600 transition-colors"
+            title="Page tutorial"
+          >
+            <HelpCircle size={18} />
+          </button>
+        }
       >
         {/* Header Summary */}
         <div className="flex items-center justify-end mb-4">
@@ -335,6 +346,7 @@ export function Companies(props: CompaniesProps) {
 
         {/* Data Table */}
         <>
+          <div data-tutorial="companies-table">
           <DataTable
             title="Company List"
             columns={columns}
@@ -346,7 +358,7 @@ export function Companies(props: CompaniesProps) {
             emptyStateDescription="Try adjusting your search or add a new company to get started."
             customControls={
               <div className="flex flex-wrap items-center justify-between gap-3 w-full">
-                <div className="flex bg-muted p-1 rounded-md">
+                <div data-tutorial="companies-filter" className="flex bg-muted p-1 rounded-md">
                   <button
                     onClick={() => setActiveTab("active")}
                     className={`px-3 py-1 text-sm rounded-sm transition-all ${
@@ -369,6 +381,7 @@ export function Companies(props: CompaniesProps) {
                   </button>
                 </div>
                 <Button
+                  data-tutorial="companies-add"
                   onClick={() => setShowAddModal(true)}
                   className="whitespace-nowrap cursor-pointer"
                 >
@@ -378,6 +391,7 @@ export function Companies(props: CompaniesProps) {
               </div>
             }
           />
+          </div>
 
           <div className="mt-4 flex items-center justify-between w-full">
             <div className="text-sm text-muted-foreground">
@@ -505,6 +519,14 @@ export function Companies(props: CompaniesProps) {
         action={activeTab === 'active' ? 'archive' : 'restore'}
         loading={archiveLoading}
       />
+
+      {/* Page Tutorial */}
+      {showPageTutorial && (
+        <TutorialHelper 
+          mode="page" 
+          onClose={() => setShowPageTutorial(false)} 
+        />
+      )}
     </>
   );
 }
