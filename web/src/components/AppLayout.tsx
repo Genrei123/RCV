@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Sidebar } from "./Sidebar";
 import { Footer } from "./Footer";
+import { TutorialHelper } from "./TutorialHelper";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -16,6 +17,22 @@ export const AppLayout = ({
   hideSidebar = false,
 }: AppLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
+
+  // Check if tutorial should be shown on first visit
+  useEffect(() => {
+    const tutorialCompleted = localStorage.getItem("tutorial_completed");
+    const hasVisited = localStorage.getItem("app_first_visit");
+    
+    if (!tutorialCompleted && !hasVisited) {
+      // Small delay to ensure layout is rendered
+      const timer = setTimeout(() => {
+        setShowTutorial(true);
+      }, 500);
+      localStorage.setItem("app_first_visit", "true");
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   // Lock body scroll when sidebar is open (mobile)
   useEffect(() => {
@@ -63,7 +80,13 @@ export const AppLayout = ({
 
         {/* Sidebar + main content */}
         <div className="flex flex-1 min-w-0 min-h-0">
-          {!hideSidebar && <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />}
+          {!hideSidebar && (
+            <Sidebar
+              open={sidebarOpen}
+              onClose={() => setSidebarOpen(false)}
+              onTutorialStart={() => setShowTutorial(true)}
+            />
+          )}
 
           <main className="flex-1 flex flex-col min-h-0 min-w-0">
             <div
@@ -77,6 +100,11 @@ export const AppLayout = ({
             </div>
           </main>
         </div>
+
+        {/* Tutorial Helper */}
+        {showTutorial && (
+          <TutorialHelper onClose={() => setShowTutorial(false)} />
+        )}
 
         {/* Footer sits at the bottom because flex-1 is above it */}
         {!hideFooter && <Footer />}
