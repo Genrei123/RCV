@@ -303,7 +303,9 @@ export function AgentRegistration() {
       }
     }
 
-    if (!formData.location.trim()) newErrors.location = "Location is required";
+    if (!formData.location.trim()) {
+      newErrors.location = "Please select a city/municipality from the dropdown list";
+    }
     if (!formData.dateOfBirth)
       newErrors.dateOfBirth = "Date of birth is required";
     else {
@@ -426,7 +428,7 @@ export function AgentRegistration() {
 
   const passwordStrength = getPasswordStrength(formData.password);
   const filteredCities = philippineCities.filter((city) =>
-    city.name.toLowerCase().includes(citySearchTerm.toLowerCase())
+    citySearchTerm ? city.name.toLowerCase().includes(citySearchTerm.toLowerCase()) : true
   );
 
   // =========================================================================
@@ -831,9 +833,10 @@ export function AgentRegistration() {
                         onChange={(e) => {
                           const value = e.target.value;
                           setCitySearchTerm(value);
-                          if (value !== formData.location) {
-                            setFormData({ ...formData, location: "" });
-                          }
+                          
+                          // Clear location when user types - only dropdown selection is valid
+                          setFormData({ ...formData, location: "" });
+                          
                           if (value) {
                             setShowCityDropdown(true);
                           }
@@ -842,15 +845,22 @@ export function AgentRegistration() {
                           // Handle autocomplete/autosuggestion selection
                           const currentValue = citySearchTerm || formData.location;
                           if (currentValue) {
-                            // Check if the current value matches a valid city
-                            const matchedCity = philippineCities.find(
+                            // Only accept exact matches from the predefined list
+                            const exactMatch = philippineCities.find(
                               (city) => city.name.toLowerCase() === currentValue.toLowerCase()
                             );
-                            if (matchedCity) {
-                              setFormData({ ...formData, location: matchedCity.name });
-                              setCitySearchTerm(matchedCity.name);
+                            
+                            if (exactMatch) {
+                              // Exact match found
+                              setFormData({ ...formData, location: exactMatch.name });
+                              setCitySearchTerm(exactMatch.name);
                               if (errors.location) {
                                 setErrors({ ...errors, location: "" });
+                              }
+                            } else {
+                              // No exact match - clear the location and show error
+                              if (currentValue.length > 0) {
+                                setErrors({ ...errors, location: "Please select a city from the dropdown list" });
                               }
                             }
                           }
@@ -866,7 +876,24 @@ export function AgentRegistration() {
                         }}
                         disabled={loading || citiesLoading}
                       />
-                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                      <button
+                        type="button"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 w-4 h-4 flex items-center justify-center"
+                        onClick={() => {
+                          if (showCityDropdown) {
+                            setShowCityDropdown(false);
+                          } else {
+                            setShowCityDropdown(true);
+                            // If there's no search term, show all cities
+                            if (!citySearchTerm && !formData.location) {
+                              setCitySearchTerm("");
+                            }
+                          }
+                        }}
+                        disabled={loading || citiesLoading}
+                      >
+                        <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showCityDropdown ? 'rotate-180' : ''}`} />
+                      </button>
                     </div>
                     {showCityDropdown && filteredCities.length > 0 && (
                       <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-auto">
