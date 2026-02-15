@@ -97,6 +97,23 @@ const handleRateLimitError = (retryAfter?: string) => {
   });
 };
 
+// Helper function to check if the request is to an authentication endpoint
+const isAuthEndpoint = (url?: string): boolean => {
+  if (!url) return false;
+  
+  const authEndpoints = [
+    '/auth/login',
+    '/auth/register',
+    '/mobile/login',
+    '/mobile/register',
+    '/auth/forgot-password',
+    '/auth/verify-reset-code',
+    '/auth/reset-password',
+  ];
+  
+  return authEndpoints.some(endpoint => url.includes(endpoint));
+};
+
 // Add response interceptor to handle errors and stop loading
 apiClient.interceptors.response.use(
   (response) => {
@@ -110,6 +127,10 @@ apiClient.interceptors.response.use(
     
     const responseData = error.response?.data;
     const statusCode = error.response?.status;
+    const requestUrl = error.config?.url;
+    
+    // Check if this is an authentication endpoint
+    const isAuthRequest = isAuthEndpoint(requestUrl);
     
     // Check for wallet mismatch response (logout required)
     if (responseData?.logout === true && responseData?.code === 'WALLET_MISMATCH') {
@@ -118,7 +139,8 @@ apiClient.interceptors.response.use(
     }
     
     // Handle 401 Unauthorized - expired token, invalid session, or revoked access
-    if (statusCode === 401) {
+    // BUT: Don't trigger logout for authentication endpoints (login/register failures)
+    if (statusCode === 401 && !isAuthRequest) {
       // Check if this is an expired token specifically
       const isExpiredToken = responseData?.message?.toLowerCase().includes('expired') ||
                              responseData?.error?.toLowerCase().includes('expired') ||
@@ -133,7 +155,8 @@ apiClient.interceptors.response.use(
     }
     
     // Handle 403 Forbidden - suspicious activity, insufficient permissions, or security threat
-    if (statusCode === 403) {
+    // BUT: Don't trigger logout for authentication endpoints (user not approved, etc.)
+    if (statusCode === 403 && !isAuthRequest) {
       // Check for specific security threats
       const isSuspiciousActivity = responseData?.message?.toLowerCase().includes('suspicious') ||
                                    responseData?.message?.toLowerCase().includes('blocked') ||
