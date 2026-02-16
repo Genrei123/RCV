@@ -80,10 +80,14 @@ export function Sidebar({
   open = false,
   onClose,
   onTutorialStart,
+  // When true the sidebar keeps its internal scroll (previous behavior).
+  // Default: false — use the page's scroll instead of an internal scrollbar.
+  preserveInnerScroll = false,
 }: {
   open: boolean;
   onClose?: () => void;
   onTutorialStart?: () => void;
+  preserveInnerScroll?: boolean;
 }) {
   const location = useLocation();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -233,8 +237,9 @@ export function Sidebar({
 
   return (
     <>
-      {/* Desktop sidebar: sticky with max height; allows global footer to appear below */}
-      <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:sticky lg:top-0 lg:max-h-screen bg-white border-r overflow-y-auto flex-shrink-0">
+      {/* Desktop sidebar: sticky with page scroll (or preserve inner scroll via prop) */}
+      <aside className={`hidden lg:flex lg:flex-col lg:w-64 lg:sticky lg:top-0 bg-white border-r ${preserveInnerScroll ? 'lg:max-h-screen overflow-y-auto' : 'overflow-visible'} flex-shrink-0`}>
+
         {/* Logo Section */}
         <div className="p-6 border-b border-neutral-200">
           <div className="flex items-center gap-2 ">
@@ -432,7 +437,7 @@ export function Sidebar({
             >
               <HelpCircle size={16} />
               <span>Tutorial</span>
-            </button>
+            </button> 
           </div>
         </nav>
       </aside>
@@ -458,7 +463,7 @@ export function Sidebar({
         <div
           className={`absolute left-0 top-0 h-full w-full sm:max-w-xs md:max-w-sm bg-white shadow-lg transform transition-transform ${
             visible ? "translate-x-0" : "-translate-x-full"
-          } overflow-y-auto`}
+          } ${preserveInnerScroll ? 'overflow-y-auto' : 'overflow-visible'}`}
         >
           {/* Drawer header: logo + title + close button */}
           <div className="flex items-center justify-between px-6 py-5 border-b border-neutral-200">
