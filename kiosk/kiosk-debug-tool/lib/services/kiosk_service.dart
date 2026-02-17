@@ -349,6 +349,21 @@ class KioskService extends ChangeNotifier {
     return success;
   }
 
+  /// Close the kiosk application for maintenance (will NOT auto-restart)
+  Future<bool> closeApp() async {
+    if (_selectedKioskId == null) return false;
+    
+    const commandKey = 'close_app';
+    if (!_canSendCommand(commandKey)) {
+      debugPrint('Command $commandKey is in cooldown');
+      return false;
+    }
+    
+    final success = await _sendCommand('close_app');
+    if (success) _markCommandSent(commandKey);
+    return success;
+  }
+
   /// Change kiosk mode
   Future<bool> setMode(String mode) async {
     if (_selectedKioskId == null) return false;

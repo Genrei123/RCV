@@ -105,6 +105,10 @@ export function KioskMapComponent({
     handleCommand(kioskId, 'Shutdown', () => KioskManagementService.shutdownKiosk(kioskId));
   };
 
+  const handleCloseApp = (kioskId: string) => {
+    handleCommand(kioskId, 'Close Application', () => KioskManagementService.closeApp(kioskId));
+  };
+
   const handleTestLEDs = (kioskId: string) => {
     handleCommand(kioskId, 'Test LEDs', () => KioskManagementService.testAllLEDs(kioskId));
   };
@@ -288,6 +292,17 @@ export function KioskMapComponent({
                 >
                   <Power className="h-3 w-3 mr-1" />
                   Shutdown
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="w-full"
+                  onClick={() => handleCloseApp(selectedKiosk.id)}
+                  disabled={selectedKiosk.status === "offline" || commandLoading !== null}
+                  title="Close the kiosk app for maintenance. It will NOT auto-restart."
+                >
+                  <Power className="h-3 w-3 mr-1" />
+                  Close Application
                 </Button>
               </div>
             </div>
