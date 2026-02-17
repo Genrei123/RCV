@@ -264,23 +264,61 @@ export const TutorialHelper = ({ onClose, mode = "sidebar" }: TutorialHelperProp
         style={
           highlightPosition
             ? (() => {
-                const isTableStep = step.elementSelector.includes('table');
-                const tooltipWidth = 320;
-                const tooltipHeight = 200;
-                
-                if (isTableStep) {
-                  // For table elements, position above
-                  return {
-                    top: `${Math.max(20, highlightPosition.top - tooltipHeight - 20)}px`,
-                    left: `${Math.max(20, Math.min(highlightPosition.left, window.innerWidth - tooltipWidth - 20))}px`,
-                  };
+                // Responsive tooltip placement: prefer right/left when space allows,
+                // otherwise place below or above and always clamp inside viewport.
+                const el = highlightPosition;
+                const spacing = 12;
+                const maxTooltipWidth = Math.min(380, Math.round(window.innerWidth * 0.9));
+                const tooltipHeightEstimate = 200; // used for vertical clamping
+
+                const centerX = el.left + el.width / 2;
+                const spaceRight = window.innerWidth - (el.left + el.width);
+                const spaceLeft = el.left;
+                const spaceBelow = window.innerHeight - (el.top + el.height);
+
+                let top = el.top + el.height + spacing; // default: below
+                let left = Math.max(12, Math.min(el.left, window.innerWidth - maxTooltipWidth - 12));
+                let placement: 'bottom' | 'top' | 'right' | 'left' = 'bottom';
+
+                // Mobile: center tooltip and use viewport width
+                if (window.innerWidth <= 640) {
+                  const mobileWidth = Math.min(maxTooltipWidth, Math.round(window.innerWidth * 0.85));
+                  left = Math.round((window.innerWidth - mobileWidth) / 2);
+                  top = Math.min(window.innerHeight - tooltipHeightEstimate - 12, el.top + el.height + 12);
+                  placement = 'bottom';
+                } else if (spaceRight >= maxTooltipWidth + spacing) {
+                  // enough room to the right
+                  left = el.left + el.width + spacing;
+                  top = Math.min(Math.max(12, el.top + (el.height - tooltipHeightEstimate) / 2), window.innerHeight - tooltipHeightEstimate - 12);
+                  placement = 'right';
+                } else if (spaceLeft >= maxTooltipWidth + spacing) {
+                  // enough room to the left
+                  left = Math.max(12, el.left - maxTooltipWidth - spacing);
+                  top = Math.min(Math.max(12, el.top + (el.height - tooltipHeightEstimate) / 2), window.innerHeight - tooltipHeightEstimate - 12);
+                  placement = 'left';
+                } else if (spaceBelow >= tooltipHeightEstimate + spacing) {
+                  // place below
+                  top = el.top + el.height + spacing;
+                  left = Math.max(12, Math.min(el.left, window.innerWidth - maxTooltipWidth - 12));
+                  placement = 'bottom';
                 } else {
-                  // For other elements, position below
-                  return {
-                    top: `${highlightPosition.top + highlightPosition.height + 20}px`,
-                    left: `${Math.max(20, Math.min(highlightPosition.left, window.innerWidth - tooltipWidth - 20))}px`,
-                  };
+                  // fallback: above
+                  top = Math.max(12, el.top - tooltipHeightEstimate - spacing);
+                  left = Math.max(12, Math.min(el.left, window.innerWidth - maxTooltipWidth - 12));
+                  placement = 'top';
                 }
+
+                // compute arrow horizontal offset relative to tooltip
+                const arrowLeft = Math.max(12, Math.min(maxTooltipWidth - 24, Math.round(centerX - left - 8)));
+
+                return {
+                  top: `${top}px`,
+                  left: `${left}px`,
+                  width: `${Math.min(maxTooltipWidth, 380)}px`,
+                  // expose placement and arrow position to CSS via attributes/variables
+                  ['data-placement' as any]: placement,
+                  ['--arrow-left' as any]: `${arrowLeft}px`,
+                } as React.CSSProperties;
               })()
             : undefined
         }

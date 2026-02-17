@@ -187,7 +187,7 @@ export function RemoteConfig() {
                         </p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                         {draftParameters.map((param) => {
                                 const isChanged =
                                     publishedParameters.find((p) => p.key === param.key)
@@ -245,7 +245,7 @@ export function RemoteConfig() {
                                 return (
                                     <div
                                         key={param.key}
-                                        className={`bg-white rounded-lg shadow-sm border transition-colors ${
+                                        className={`bg-white rounded-lg shadow-sm border transition-colors min-w-0 ${
                                             isChanged
                                                 ? "border-yellow-300 app-bg-secondary-soft"
                                                 : "border-neutral-200"
@@ -273,7 +273,7 @@ export function RemoteConfig() {
                                                 <span className="text-xs text-neutral-500 block mb-2">
                                                     Status
                                                 </span>
-                                                <p className="text-neutral-600 text-xs break-words">
+                                                <p className="text-neutral-600 text-xs whitespace-normal break-words break-all max-w-full overflow-hidden">
                                                     {param.type === "boolean" &&
                                                     typeof param.value === "boolean"
                                                         ? param.value
@@ -314,7 +314,7 @@ export function RemoteConfig() {
                                                     </button>
                                                 ) : (
                                                     (param.type === "string" || param.type === "number") ? (
-                                                        <div className="w-full flex gap-2">
+                                                        <div className="w-full flex gap-2 min-w-0">
                                                             <input
                                                                 type={param.type === "number" ? "number" : "text"}
                                                                 value={param.value !== null && param.value !== undefined ? String(param.value) : ""}
@@ -326,7 +326,7 @@ export function RemoteConfig() {
                                                                             : e.target.value
                                                                     )
                                                                 }
-                                                                className="flex-1 px-3 py-2 border border-neutral-200 rounded-md text-sm break-words overflow-hidden"
+                                                                className="flex-1 min-w-0 px-3 py-2 border border-neutral-200 rounded-md text-sm overflow-hidden"
                                                             />
                                                             <button
                                                                 onClick={() => {
