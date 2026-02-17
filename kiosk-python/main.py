@@ -1596,7 +1596,7 @@ class KioskApp:
     # Display duration in seconds
     RESULT_DISPLAY_DURATION = 30   # 30 seconds for results (2-page PDF)
     ERROR_DISPLAY_DURATION = 10    # 10 seconds for errors
-    SCAN_COOLDOWN = 2              # Seconds between scans
+    SCAN_COOLDOWN = 5              # Seconds between scans (prevents rapid-fire phantom scans)
     
     def __init__(self, root: tk.Tk):
         self.root = root
@@ -1620,6 +1620,13 @@ class KioskApp:
         self.last_scan_time = 0
         self.last_scan_data = ""
         self.display_timer = None
+        
+        # QR consistency tracking - require same QR across multiple frames
+        # to prevent phantom/noise scans from triggering validation
+        self.pending_qr_data = None
+        self.pending_qr_count = 0
+        self.QR_CONFIRM_FRAMES = 3  # Must see same QR in 3 consecutive frames
+        self.MIN_QR_DATA_LENGTH = 5  # Minimum characters for valid QR data
         self.loading_animation_id = None
         self.loading_angle = 0
         self.is_error_timer = False
@@ -4168,12 +4175,31 @@ class KioskApp:
             if not self.camera or not self.camera.isOpened():
                 raise Exception("No camera found. Please connect a camera.")
             
-            # Set camera resolution (lower resolution for better performance)
+            # Set camera resolution
             self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
             self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
             
             # Set camera buffer size to 1 to reduce latency
             self.camera.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+            
+            # Enable autofocus for sharper text/QR capture
+            # CAP_PROP_AUTOFOCUS = 1 enables continuous autofocus on supported cameras
+            autofocus_set = self.camera.set(cv2.CAP_PROP_AUTOFOCUS, 1)
+            if autofocus_set:
+                print("Camera autofocus ENABLED")
+            else:
+                print("Camera autofocus not supported by this camera - trying manual focus")
+                # Try setting focus to 0 (infinity/auto) as fallback
+                # Some cameras use CAP_PROP_FOCUS with 0 = auto
+                focus_set = self.camera.set(cv2.CAP_PROP_FOCUS, 0)
+                if focus_set:
+                    print("Manual focus set to auto (0)")
+                else:
+                    print("Focus control not available - camera uses fixed focus")
+            
+            # Set exposure and white balance to auto for better image quality
+            self.camera.set(cv2.CAP_PROP_AUTO_EXPOSURE, 3)  # 3 = auto exposure
+            self.camera.set(cv2.CAP_PROP_AUTO_WB, 1)  # Enable auto white balance
             
             print(f"Camera configured: 640x480")
             
@@ -4259,8 +4285,25 @@ class KioskApp:
                 # Try to detect QR code
                 display_frame, qr_data = self.process_qr_frame(frame)
                 
-                if qr_data and self.can_process_scan(qr_data):
-                    self.handle_qr_detection(qr_data)
+                if qr_data and len(qr_data.strip()) >= self.MIN_QR_DATA_LENGTH:
+                    # Multi-frame confirmation: require the same QR data
+                    # across consecutive frames to filter out noise/phantom reads
+                    if qr_data == self.pending_qr_data:
+                        self.pending_qr_count += 1
+                    else:
+                        # New/different QR detected - reset counter
+                        self.pending_qr_data = qr_data
+                        self.pending_qr_count = 1
+                    
+                    # Only process after consistent detection across N frames
+                    if self.pending_qr_count >= self.QR_CONFIRM_FRAMES and self.can_process_scan(qr_data):
+                        self.pending_qr_data = None
+                        self.pending_qr_count = 0
+                        self.handle_qr_detection(qr_data)
+                else:
+                    # No valid QR detected - reset pending confirmation
+                    self.pending_qr_data = None
+                    self.pending_qr_count = 0
                 
                 # Display frame in scan mode
                 self.display_frame(display_frame)
@@ -4317,8 +4360,17 @@ class KioskApp:
     def can_process_scan(self, data: str) -> bool:
         """Check if enough time has passed since last scan"""
         current_time = time.time()
-        if data == self.last_scan_data and (current_time - self.last_scan_time) < self.SCAN_COOLDOWN:
+        time_since_last = current_time - self.last_scan_time
+        
+        # Global cooldown - prevent ANY scan too soon after the last one
+        # This prevents rapid-fire scanning from noise or reflections
+        if time_since_last < self.SCAN_COOLDOWN:
             return False
+        
+        # Extended cooldown for the exact same QR data (10 seconds)
+        if data == self.last_scan_data and time_since_last < 10:
+            return False
+        
         return True
     
     def handle_qr_detection(self, qr_data: str):
@@ -4827,7 +4879,7 @@ class KioskApp:
             self.gpio_led.start_processing()  # Reuse blinking LED
     
     def reset_to_idle(self):
-        """Reset kiosk to idle/scan state"""
+        """Reset kiosk to start screen (camera off) to prevent phantom scans during standby"""
         if self.display_timer:
             self.root.after_cancel(self.display_timer)
         
@@ -4835,15 +4887,16 @@ class KioskApp:
         self.pdf_photos = []
         self.last_scan_data = ""  # Reset last scan to allow re-scanning same QR
         
+        # Reset QR confirmation state
+        self.pending_qr_data = None
+        self.pending_qr_count = 0
+        
         # Set GPIO to idle state (all LEDs off)
         self.gpio_led.show_idle()
         
-        # Return to scan screen
-        self._show_scan_screen()
-        
-        # Restart camera if needed
-        if not self.camera or not self.camera.isOpened():
-            self.start_camera()
+        # Return to START screen (camera off) instead of scan screen
+        # This prevents the kiosk from randomly scanning when nobody is using it
+        self._show_start_screen()
         
         self.tts.speak(EnglishMessages.READY_FOR_NEXT)
     
