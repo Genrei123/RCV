@@ -31,7 +31,7 @@ import { Chatbot } from "@/components/Chatbot";
 import landingData from "@/data/landinginfo.json";
 import { SanityService } from "@/services/sanityService";
 import { urlFor } from "@/lib/sanity";
-import type { SanityFeature, SanityAboutSection, SanityObjective, SanityVideoSection, SanityBlogPost, SanityMobileAppShowcase, SanityKioskShowcase } from "@/lib/sanity";
+import type { SanityFeature, SanityAboutSection, SanityObjective, SanityVideoSection, SanityBlogPost, SanityMobileAppShowcase, SanityKioskShowcase, SanityCtaSection } from "@/lib/sanity";
 import { MobileAppShowcase } from "@/components/MobileAppShowcase";
 import { KioskShowcase } from "@/components/KioskShowcase";
 import { AnimatedDiv } from "@/components/AnimatedDiv";
@@ -79,6 +79,7 @@ export function LandingPage() {
   const [featuredBlogs, setFeaturedBlogs] = useState<SanityBlogPost[]>([]);
   const [mobileAppShowcase, setMobileAppShowcase] = useState<SanityMobileAppShowcase[]>([]);
   const [kioskShowcase, setKioskShowcase] = useState<SanityKioskShowcase | null>(null);
+  const [ctaSection, setCtaSection] = useState<SanityCtaSection | null>(null);
   const [showcaseView, setShowcaseView] = useState<'mobile' | 'kiosk'>('mobile');
   const [navbarScrolled, setNavbarScrolled] = useState(false);
   const [carouselScale, setCarouselScale] = useState(1);
@@ -151,7 +152,7 @@ export function LandingPage() {
   useEffect(() => {
     const fetchSanityData = async () => {
       try {
-        const [slides, feats, about, objs, video, blogs, appShowcase, kioskData] = await Promise.all([
+        const [slides, feats, about, objs, video, blogs, appShowcase, kioskData, ctaData] = await Promise.all([
           SanityService.getHeroSlides().catch(() => fallbackHeroSlides),
           SanityService.getFeatures().catch(() => []),
           SanityService.getAboutSection().catch(() => null),
@@ -160,6 +161,7 @@ export function LandingPage() {
           SanityService.getFeaturedBlogPosts(3).catch(() => []),
           SanityService.getMobileAppShowcase().catch(() => []),
           SanityService.getKioskShowcase().catch(() => null),
+          SanityService.getCtaSection().catch(() => null),
         ]);
 
         // Process hero slides with media URLs
@@ -197,6 +199,7 @@ export function LandingPage() {
         setFeaturedBlogs(blogs);
         setMobileAppShowcase(appShowcase);
         setKioskShowcase(kioskData);
+        setCtaSection(ctaData);
       } catch (error) {
         console.error('Error fetching Sanity data:', error);
         // Keep fallback data
@@ -950,23 +953,63 @@ export function LandingPage() {
       )}
 
       {/* CTA Section */}
-      <section className="py-20 app-bg-white">
+      <section
+        className="py-20 app-bg-white"
+        style={ctaSection?.sectionBackground ? { background: ctaSection.sectionBackground } : undefined}
+      >
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl font-bold app-text-primary mb-4">
-            Ready to Get Started?
+            {ctaSection?.title || 'Ready to Get Started?'}
           </h2>
           <p className="text-lg app-text-text/80 mb-8 max-w-2xl mx-auto">
-            Start to verify your products and ensure compliance today with RCV.
+            {ctaSection?.description || 'Start to verify your products and ensure compliance today with RCV.'}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button
-              onClick={() => navigate("/login")}
-              size="lg"
-              className="app-bg-primary-light hover:bg-[#009b79] app-text-text  px-8  cursor-pointer"
-            >
-              Get Started
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
+            {ctaSection?.buttons && ctaSection.buttons.length > 0 ? (
+              ctaSection.buttons.map((button) => (
+                <Button
+                  key={button._key}
+                  onClick={() => {
+                    if (button.linkType === 'internal') {
+                      navigate(button.href);
+                    } else if (button.linkType === 'external') {
+                      if (button.openInNewTab) {
+                        window.open(button.href, '_blank', 'noopener,noreferrer');
+                      } else {
+                        window.location.href = button.href;
+                      }
+                    } else if (button.linkType === 'scroll') {
+                      document.getElementById(button.href)?.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }}
+                  size="lg"
+                  variant={button.variant === 'outline' ? 'outline' : button.variant === 'ghost' ? 'ghost' : 'default'}
+                  className={[
+                    'px-8 cursor-pointer transition-all',
+                    button.backgroundColor?.startsWith('bg-') ? button.backgroundColor : button.variant === 'primary' || !button.variant ? 'app-bg-primary-light hover:bg-[#009b79]' : '',
+                    button.textColor?.startsWith('text-') ? button.textColor : button.variant === 'primary' || !button.variant ? 'app-text-text' : '',
+                    button.variant === 'outline' ? 'app-border-primary app-text-primary hover:app-bg-primary hover:text-white' : '',
+                    button.variant === 'ghost' ? 'app-text-primary hover:app-bg-primary-soft' : '',
+                  ].filter(Boolean).join(' ')}
+                  style={{
+                    ...(button.backgroundColor && !button.backgroundColor.startsWith('bg-') ? { backgroundColor: button.backgroundColor } : {}),
+                    ...(button.textColor && !button.textColor.startsWith('text-') ? { color: button.textColor } : {}),
+                  }}
+                >
+                  {button.label}
+                  {button.showArrow && <ArrowRight className="ml-2 h-5 w-5" />}
+                </Button>
+              ))
+            ) : (
+              <Button
+                onClick={() => navigate("/login")}
+                size="lg"
+                className="app-bg-primary-light hover:bg-[#009b79] app-text-text px-8 cursor-pointer"
+              >
+                Get Started
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            )}
           </div>
         </div>
       </section>
