@@ -5299,328 +5299,91 @@ class KioskApp:
     
     def _enhanced_ocr_extraction(self, frame, label: str = "") -> str:
         """
-        Enhanced OCR extraction using Tesseract OCR
-        - Works on Raspberry Pi and all platforms
-        - Automatic noise reduction and preprocessing
-        - Smart validation to filter garbage text
-        - Focused extraction of registration codes
+        OCR extraction using Tesseract OCR - sends RAW text to backend.
+        
+        Matches the mobile app approach: minimal image preprocessing,
+        single OCR pass, NO text filtering/cleaning/code extraction.
+        The backend handles all fuzzy matching and code extraction.
         """
         global TESSERACT_AVAILABLE
         
-        results = []
-        extracted_codes = []
+        if not TESSERACT_AVAILABLE:
+            print(f"   ERROR: Tesseract OCR not available!")
+            return "ERROR: Tesseract OCR not installed. Run: sudo apt-get install tesseract-ocr"
         
         # Convert to grayscale
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        
-        # Get image dimensions
         height, width = gray.shape
         
-        # STEP 1: NOISE REDUCTION for low-quality cameras
-        print(f"   Step 1: Noise reduction...")
+        # Image preprocessing (matches mobile app approach):
+        # 1. Upscale small images for better OCR accuracy
+        min_dimension = 1500
+        if max(height, width) < min_dimension:
+            scale = min_dimension / max(height, width)
+            gray = cv2.resize(gray, (int(width * scale), int(height * scale)), interpolation=cv2.INTER_CUBIC)
+            print(f"   Upscaled from {width}x{height} to {gray.shape[1]}x{gray.shape[0]}")
         
-        # Bilateral filter - preserves edges while removing noise
+        # 2. Light denoising (preserve edges)
         denoised = cv2.bilateralFilter(gray, 9, 75, 75)
         
-        # Median blur - removes salt-and-pepper noise
-        denoised = cv2.medianBlur(denoised, 3)
+        # 3. Contrast enhancement (CLAHE)
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        enhanced = clahe.apply(denoised)
         
-        # STEP 2: UPSCALE for better OCR (helps with small/blurry text)
-        scale = 2  # 2x upscale for better Tesseract accuracy
-        upscaled = cv2.resize(denoised, (width * scale, height * scale), interpolation=cv2.INTER_CUBIC)
-        
-        # STEP 3: CONTRAST ENHANCEMENT
-        print(f"   Step 2: Contrast enhancement...")
-        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
-        enhanced = clahe.apply(upscaled)
-        
-        # STEP 4: Prepare multiple image variants for OCR
-        
-        # Adaptive threshold version
-        adaptive = cv2.adaptiveThreshold(
-            enhanced, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 15, 4
-        )
-        kernel_small = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
-        adaptive = cv2.morphologyEx(adaptive, cv2.MORPH_CLOSE, kernel_small)
-        
-        # Otsu's threshold version
-        _, otsu = cv2.threshold(enhanced, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        
-        # ============================================================
-        # Tesseract OCR Engine
-        # ============================================================
-        if TESSERACT_AVAILABLE:
-            print(f"   Using Tesseract OCR...")
-            
-            # Pass 1: Adaptive threshold
-            print(f"   Pass 1: Adaptive Threshold...")
-            try:
-                text1 = pytesseract.image_to_string(
-                    Image.fromarray(adaptive),
-                    lang='eng',
-                    config='--psm 6 --oem 1'
-                )
-                results.append(self._clean_ocr_text(text1))
-                print(f"   Pass 1: {len(text1)} chars -> cleaned to {len(results[-1])} chars")
-            except Exception as e:
-                print(f"   Pass 1 failed: {e}")
-            
-            # Pass 2: Otsu's threshold
-            print(f"   Pass 2: Otsu's Threshold...")
-            try:
-                text2 = pytesseract.image_to_string(
-                    Image.fromarray(otsu),
-                    lang='eng',
-                    config='--psm 6 --oem 1'
-                )
-                results.append(self._clean_ocr_text(text2))
-                print(f"   Pass 2: {len(text2)} chars -> cleaned to {len(results[-1])} chars")
-            except Exception as e:
-                print(f"   Pass 2 failed: {e}")
-            
-            # Pass 3: Full page segmentation
-            print(f"   Pass 3: Full page segmentation...")
-            try:
-                text3 = pytesseract.image_to_string(
-                    Image.fromarray(otsu),
-                    lang='eng',
-                    config='--psm 3 --oem 1'
-                )
-                results.append(self._clean_ocr_text(text3))
-                print(f"   Pass 3: {len(text3)} chars -> cleaned to {len(results[-1])} chars")
-            except Exception as e:
-                print(f"   Pass 3 failed: {e}")
-            
-            # Pass 4: Enhanced grayscale with sparse text mode (good for labels)
-            print(f"   Pass 4: Enhanced grayscale (sparse text)...")
-            try:
-                text4 = pytesseract.image_to_string(
-                    Image.fromarray(enhanced),
-                    lang='eng',
-                    config='--psm 11 --oem 1'  # Sparse text mode
-                )
-                results.append(self._clean_ocr_text(text4))
-                print(f"   Pass 4: {len(text4)} chars -> cleaned to {len(results[-1])} chars")
-            except Exception as e:
-                print(f"   Pass 4 failed: {e}")
-        
-        else:
-            # No OCR engine available
-            print(f"   ERROR: Tesseract OCR not available!")
-            print(f"   Install: sudo apt-get install tesseract-ocr tesseract-ocr-eng")
-            print(f"   Install: pip install pytesseract")
-            return "ERROR: Tesseract OCR not installed. Run: sudo apt-get install tesseract-ocr"
-        
-        # STEP 5: EXTRACT REGISTRATION CODES from all results
-        print(f"\n   Extracting registration codes...")
-        
-        # Patterns for Philippine product registration codes
-        code_patterns = [
-            # CFPR patterns: FR-XXXX, IM-XXXX, CFPR-XXXX
-            r'(?:FR|IM|CFPR)[-\s]?[A-Z0-9]{2,}[-\s]?[A-Z0-9]*',
-            # LTO patterns: LTO-XXXX, DR-XXXX  
-            r'(?:LTO|DR)[-\s]?[A-Z0-9]{2,}[-\s]?[A-Z0-9]*',
-            # Generic code pattern: 2-4 letters followed by hyphen and numbers
-            r'[A-Z]{2,4}[-][0-9]{2,}(?:[-][A-Z0-9]+)?',
-            # BAI pattern
-            r'BAI[-\s]?[A-Z0-9]{2,}',
-        ]
-        
-        for text in results:
-            text_upper = text.upper()
-            for pattern in code_patterns:
-                matches = re.findall(pattern, text_upper, re.IGNORECASE)
-                for match in matches:
-                    # Normalize: remove spaces, ensure uppercase
-                    code = re.sub(r'\s+', '', match.upper())
-                    # Validate: must have at least one letter and one digit
-                    if (len(code) >= 4 and 
-                        any(c.isalpha() for c in code) and 
-                        any(c.isdigit() for c in code)):
-                        extracted_codes.append(code)
-        
-        # Deduplicate and sort codes
-        unique_codes = list(set(extracted_codes))
-        print(f"   Found {len(unique_codes)} potential codes: {unique_codes}")
-        
-        # STEP 6: BUILD FINAL TEXT with validation
-        print(f"\n   Building final validated text...")
-        
-        # Collect all valid words from all passes
-        valid_words = set()
-        for text in results:
-            words = text.split()
-            for word in words:
-                # Only keep words that pass validation
-                if self._is_valid_word(word):
-                    valid_words.add(word.upper())
-        
-        # Find the longest clean result
-        longest_clean = ""
-        for text in results:
-            cleaned = self._clean_ocr_text(text)
-            if len(cleaned) > len(longest_clean):
-                longest_clean = cleaned
-        
-        # Build combined text
-        combined_parts = []
-        
-        # Add longest result first
-        if longest_clean:
-            combined_parts.append(longest_clean)
-        
-        # Add unique valid words
-        if valid_words:
-            combined_parts.append("\n" + " ".join(sorted(valid_words)))
-        
-        # Add extracted codes prominently
-        if unique_codes:
-            combined_parts.append("\n\nRegistration Codes Found:")
-            for code in unique_codes:
-                combined_parts.append(code)
-        
-        combined = "\n".join(combined_parts)
-        
-        print(f"   Final text: {len(combined)} chars, {len(valid_words)} valid words, {len(unique_codes)} codes")
-        
-        return combined
+        # Single OCR pass with best general settings
+        print(f"   Running Tesseract OCR ({label})...")
+        try:
+            raw_text = pytesseract.image_to_string(
+                Image.fromarray(enhanced),
+                lang='eng',
+                config='--psm 6 --oem 1'  # Assume uniform block of text
+            )
+            print(f"   OCR result: {len(raw_text)} chars")
+            print(f"   Preview: {raw_text[:200] if len(raw_text) > 200 else raw_text}")
+            return raw_text.strip()
+        except Exception as e:
+            print(f"   OCR failed: {e}")
+            return ""
     
     def _clean_ocr_text(self, text: str) -> str:
-        """
-        Clean OCR text by removing garbage characters from low-quality scans
-        """
+        """Minimal text cleanup - preserve raw OCR output for backend processing"""
         if not text:
             return ""
-        
-        lines = []
-        for line in text.split('\n'):
-            # Skip lines that are mostly garbage
-            line = line.strip()
-            if not line:
-                continue
-            
-            # Count valid vs invalid characters
-            valid_chars = sum(1 for c in line if c.isalnum() or c in '-./() ')
-            total_chars = len(line)
-            
-            # Skip lines with too many invalid characters (noise)
-            if total_chars > 0 and valid_chars / total_chars < 0.7:
-                continue
-            
-            # Skip very short lines (likely noise)
-            if len(line) < 2:
-                continue
-            
-            # Skip lines that are just repeated characters (artifact)
-            if len(set(line.replace(' ', ''))) < 2:
-                continue
-            
-            # Clean up the line
-            cleaned = re.sub(r'[^\w\s\-./()]', '', line)  # Remove special chars except common ones
-            cleaned = re.sub(r'\s+', ' ', cleaned)  # Normalize whitespace
-            
-            if cleaned.strip():
-                lines.append(cleaned.strip())
-        
-        return '\n'.join(lines)
+        return text.strip()
     
     def _is_valid_word(self, word: str) -> bool:
-        """
-        Check if a word is valid (not OCR garbage from low-quality camera)
-        """
-        if not word:
+        """Check if a word is valid - kept for backward compatibility"""
+        if not word or len(word.strip()) < 2:
             return False
-        
-        word = word.strip()
-        
-        # Too short - likely noise
-        if len(word) < 2:
-            return False
-        
-        # Too long single "word" - likely garbage
-        if len(word) > 30:
-            return False
-        
-        # Must have at least some alphanumeric characters
-        alnum_count = sum(1 for c in word if c.isalnum())
-        if alnum_count < len(word) * 0.5:
-            return False
-        
-        # Reject if mostly repeated characters (artifact like "llllll" or ".......")
-        unique_chars = set(word.lower())
-        if len(unique_chars) < min(3, len(word) * 0.3):
-            return False
-        
-        # Reject random character sequences that don't look like words or codes
-        # Valid: "FR-12345", "Product", "LTO2024"
-        # Invalid: "xyzqwj", "|||", "```"
-        
-        # Check for reasonable character distribution
-        letters = sum(1 for c in word if c.isalpha())
-        digits = sum(1 for c in word if c.isdigit())
-        
-        # Pure symbols - reject
-        if letters == 0 and digits == 0:
-            return False
-        
-        # If it looks like a code (letters + digits), keep it
-        if letters > 0 and digits > 0:
-            return True
-        
-        # If it's pure letters, check if it could be a word (at least 2 chars, not random)
-        if letters > 0 and digits == 0:
-            # Check for vowels - real words usually have them
-            vowels = sum(1 for c in word.lower() if c in 'aeiou')
-            # Allow words with vowels OR short words (could be abbreviations like "FR", "LTO")
-            if vowels > 0 or len(word) <= 4:
-                return True
-            # Reject long strings with no vowels (likely garbage)
-            return False
-        
-        # Pure digits - could be a number, keep if reasonable length
-        if digits > 0 and letters == 0:
-            return len(word) <= 15  # Reject very long number strings
-        
         return True
     
     def _process_ocr_scan(self):
-        """Process OCR scan - extract text and send to API with enhanced OCR processing"""
+        """Process OCR scan - extract raw text and let backend handle analysis.
+        Follows the same approach as the mobile app: send raw OCR text with
+        --- FRONT/BACK OF LABEL --- delimiters."""
         try:
-            # Extract text from both images using MULTIPLE OCR PASSES
+            # Extract raw text from both images
             self.root.after(0, lambda: self.loading_detail_label.config(text="Reading front label..."))
             
             print("\n" + "="*60)
-            print("ENHANCED OCR PROCESSING - FRONT IMAGE")
+            print("OCR EXTRACTION - FRONT IMAGE")
             print("="*60)
-            
-            # Process front image with multiple techniques
             front_text = self._enhanced_ocr_extraction(self.ocr_front_frame, "FRONT")
-            
-            print(f"\n=== OCR FRONT IMAGE RESULT ===")
-            print(f"Extracted text length: {len(front_text)} chars")
-            print(f"Front text preview: {front_text[:200] if len(front_text) > 200 else front_text}")
-            print(f"==============================\n")
+            print(f"Front text: {len(front_text)} chars")
             
             self.root.after(0, lambda: self.loading_detail_label.config(text="Reading back label..."))
             
             print("\n" + "="*60)
-            print("ENHANCED OCR PROCESSING - BACK IMAGE")
+            print("OCR EXTRACTION - BACK IMAGE")
             print("="*60)
-            
-            # Process back image with multiple techniques
             back_text = self._enhanced_ocr_extraction(self.ocr_back_frame, "BACK")
+            print(f"Back text: {len(back_text)} chars")
             
-            print(f"=== OCR BACK IMAGE ===")
-            print(f"Extracted text length: {len(back_text)} chars")
-            print(f"Back text preview: {back_text[:200] if len(back_text) > 200 else back_text}")
-            print(f"======================\n")
-            
-            # Combine text
-            combined_text = f"{front_text}\n\n{back_text}"
-            print(f"=== COMBINED OCR TEXT ===")
-            print(f"Total characters: {len(combined_text)}")
-            print(f"Combined text preview:\n{combined_text[:300] if len(combined_text) > 300 else combined_text}")
-            print(f"=========================\n")
+            # Combine with delimiters matching mobile app format
+            combined_text = f"--- FRONT OF LABEL ---\n\n{front_text}\n\n--- BACK OF LABEL ---\n\n{back_text}"
+            print(f"\n=== COMBINED RAW OCR TEXT ({len(combined_text)} chars) ===")
+            print(combined_text[:500])
+            print(f"=========================")
             
             self.root.after(0, lambda: self.loading_detail_label.config(text="Searching for product..."))
             
@@ -5655,7 +5418,15 @@ class KioskApp:
         # Store current product info for certificate viewing
         product_info = response.get("productInfo", {})
         self.current_ocr_product = product_info
-        self.current_ocr_certificate_id = product_info.get("certificateId") or product_info.get("CFPRNumber")
+        
+        # Certificate ID priority: actual blockchain cert ID > CFPR number
+        # The scan endpoint returns CFPRNumber as certificateId, which isn't
+        # the blockchain certificate ID. We store both for the PDF lookup.
+        self.current_ocr_certificate_id = (
+            product_info.get("certificateId") or 
+            product_info.get("CFPRNumber") or 
+            product_info.get("registrationNumber")
+        )
         
         # Update GPIO LED based on result
         if found:
@@ -5822,7 +5593,8 @@ class KioskApp:
             self.tts.speak("No certificate available")
             return
         
-        print(f"Viewing certificate: {self.current_ocr_certificate_id}")
+        cert_id = self.current_ocr_certificate_id
+        print(f"Viewing certificate: {cert_id}")
         
         # Pause the timer while viewing certificate
         self.timer_paused = True
@@ -5833,28 +5605,81 @@ class KioskApp:
         # Fetch certificate in background
         thread = threading.Thread(
             target=self._fetch_ocr_certificate, 
-            args=(self.current_ocr_certificate_id,), 
+            args=(cert_id,), 
             daemon=True
         )
         thread.start()
     
     def _fetch_ocr_certificate(self, certificate_id: str):
-        """Fetch and display certificate PDF for OCR result"""
+        """Fetch and display certificate PDF for OCR result.
+        
+        The certificate_id from scan response can be:
+        - A CFPR number (e.g., 'FR-1234567') - NOT a blockchain cert ID
+        - A blockchain cert ID (e.g., 'CERT-PROD-xxx' or 'CERT-COMP-xxx')
+        
+        Strategy:
+        1. If it's a blockchain ID (CERT-xxx), use the PDF endpoint directly
+        2. Otherwise, try the blockchain PDF endpoint first (might match)
+        3. Fall back to constructing a Firebase Storage URL from product info
+        """
         try:
-            # Get PDF URL from API
+            product_info = self.current_ocr_product or {}
+            pdf_url = None
+            
+            # Strategy 1: Try blockchain PDF endpoint
+            print(f"Attempting to fetch PDF for: {certificate_id}")
             pdf_response = self.api.get_certificate_pdf_url(certificate_id)
-            pdf_url = pdf_response.get("certificate", {}).get("pdfUrl") if pdf_response.get("success") else None
+            if pdf_response.get("success"):
+                pdf_url = pdf_response.get("certificate", {}).get("pdfUrl")
+            
+            # Strategy 2: If the scan response included a productId or companyId,
+            # try constructing a CERT-PROD- or CERT-COMP- ID
+            if not pdf_url:
+                product_id = product_info.get("productId")
+                company_id = product_info.get("companyId")
+                
+                if product_id:
+                    alt_cert_id = f"CERT-PROD-{product_id}"
+                    print(f"Trying constructed cert ID: {alt_cert_id}")
+                    alt_response = self.api.get_certificate_pdf_url(alt_cert_id)
+                    if alt_response.get("success"):
+                        pdf_url = alt_response.get("certificate", {}).get("pdfUrl")
+                        certificate_id = alt_cert_id  # Update to the real cert ID
+                
+                if not pdf_url and company_id:
+                    alt_cert_id = f"CERT-COMP-{company_id}"
+                    print(f"Trying constructed cert ID: {alt_cert_id}")
+                    alt_response = self.api.get_certificate_pdf_url(alt_cert_id)
+                    if alt_response.get("success"):
+                        pdf_url = alt_response.get("certificate", {}).get("pdfUrl")
+                        certificate_id = alt_cert_id
+            
+            # Strategy 3: Direct Firebase Storage URL construction
+            if not pdf_url:
+                print(f"API lookup failed, constructing Firebase URL directly")
+                pdf_url = self.api._construct_firebase_pdf_url(certificate_id)
+                print(f"Constructed URL: {pdf_url}")
+                # Verify the URL is accessible
+                try:
+                    head_resp = requests.head(pdf_url, timeout=10, allow_redirects=True)
+                    if head_resp.status_code != 200:
+                        print(f"Firebase URL returned {head_resp.status_code}, PDF may not exist")
+                        pdf_url = None
+                except Exception as e:
+                    print(f"Firebase URL check failed: {e}")
+                    pdf_url = None
             
             if pdf_url:
                 print(f"Certificate PDF URL: {pdf_url}")
-                # Create certificate data object for display
+                # Create certificate data object with CORRECT field names
                 cert = CertificateData(
-                    id=certificate_id,
-                    status="valid" if pdf_url else "pending",
+                    certificate_id=certificate_id,
+                    product_name=product_info.get("productName", "Unknown Product"),
+                    company_name=product_info.get("manufacturer", "Unknown"),
+                    issue_date=product_info.get("dateOfRegistration", "N/A"),
+                    expiry_date=product_info.get("expirationDate", "N/A"),
+                    status="valid",
                     pdf_url=pdf_url,
-                    company=self.current_ocr_product.get("manufacturer", "Unknown"),
-                    issued_date=self.current_ocr_product.get("dateOfRegistration"),
-                    expiry_date=self.current_ocr_product.get("expirationDate"),
                 )
                 
                 # Switch to result screen with PDF
@@ -5862,8 +5687,8 @@ class KioskApp:
             else:
                 print(f"No PDF available for certificate: {certificate_id}")
                 self.root.after(0, lambda: self._show_error_screen(
-                    "Certificate Not Found",
-                    f"No PDF available for {certificate_id}"
+                    "Certificate PDF Not Found",
+                    f"Could not find PDF for {certificate_id}.\nThe certificate may not have a PDF uploaded yet."
                 ))
                 
         except Exception as e:
