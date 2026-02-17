@@ -152,6 +152,26 @@ export interface SanityMobileAppShowcase {
   }>;
 }
 
+export interface SanityCtaButton {
+  _key: string;
+  label: string;
+  linkType: 'internal' | 'external' | 'scroll';
+  href: string;
+  variant: 'primary' | 'outline' | 'ghost';
+  backgroundColor?: string;
+  textColor?: string;
+  showArrow: boolean;
+  openInNewTab: boolean;
+}
+
+export interface SanityCtaSection {
+  _id: string;
+  title: string;
+  description?: string;
+  buttons: SanityCtaButton[];
+  sectionBackground?: string;
+}
+
 export interface SanityKioskShowcase {
   _id: string;
   title: string;

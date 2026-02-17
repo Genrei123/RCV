@@ -430,7 +430,7 @@ export function MapComponent({
       <div className="w-full h-full flex items-center justify-center">
         <Card className="p-8">
           <p className="text-red-600">
-            Map unavailable. Check GOOGLE_MAPS_SETUP.md
+            Map unavailable. Please come back later.
           </p>
         </Card>
       </div>

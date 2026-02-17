@@ -206,6 +206,30 @@ class _KioskDashboardState extends State<KioskDashboard> {
                     ),
                     const SizedBox(height: 24),
                     
+                    // Danger Zone
+                    const Text(
+                      'Maintenance',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ControlButtonCard(
+                      icon: Icons.power_settings_new,
+                      title: 'Close Application',
+                      subtitle: 'Stop the kiosk for maintenance (will NOT auto-restart)',
+                      color: AppTheme.errorRed,
+                      onPressed: () => _showConfirmDialog(
+                        context,
+                        'Close Kiosk Application?',
+                        'This will close the kiosk application completely. It will NOT auto-restart.\n\nTo start it again you will need to manually run the kiosk or reboot the device.',
+                        () => _handleCommand('Close Application', kioskService.closeApp),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    
                     // Test All LEDs Button
                     SizedBox(
                       width: double.infinity,

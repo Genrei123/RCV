@@ -301,6 +301,31 @@ export class SanityService {
   }
 
   /**
+   * Fetch CTA section
+   */
+  static async getCtaSection() {
+    const query = `*[_type == "ctaSection"][0]{
+      _id,
+      title,
+      description,
+      buttons[]{
+        _key,
+        label,
+        linkType,
+        href,
+        variant,
+        backgroundColor,
+        textColor,
+        showArrow,
+        openInNewTab
+      },
+      sectionBackground
+    }`;
+
+    return await sanityClient.fetch(query);
+  }
+
+  /**
    * Fetch kiosk showcase with 3D model
    */
   static async getKioskShowcase() {

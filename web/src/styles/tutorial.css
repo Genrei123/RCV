@@ -252,7 +252,7 @@
   content: "";
   position: absolute;
   bottom: 100%;
-  left: 20px;
+  left: var(--arrow-left, 20px);
   width: 0;
   height: 0;
   border-left: 8px solid transparent;
@@ -261,4 +261,12 @@
   margin-bottom: -7px;
   z-index: 10001;
   filter: drop-shadow(0 -1px 2px rgba(0, 0, 0, 0.1));
+  transition: left 0.12s ease;
+}
+
+/* hide arrow when tooltip is placed to the side or above */
+.tutorial-tooltip[data-placement="right"]::before,
+.tutorial-tooltip[data-placement="left"]::before,
+.tutorial-tooltip[data-placement="top"]::before {
+  display: none;
 }

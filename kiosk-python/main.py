@@ -296,7 +296,7 @@ if not TTS_AVAILABLE:
     except ImportError:
         pass
 
-# Fallback to gTTS (Google, supports Tagalog but sounds robotic)
+# Fallback to gTTS (Google Text-to-Speech)
 if not TTS_AVAILABLE:
     try:
         from gtts import gTTS
@@ -304,7 +304,7 @@ if not TTS_AVAILABLE:
         TTS_AVAILABLE = True
         TTS_ENGINE = "gtts"
     except ImportError:
-        print("TTS not available. Install edge-tts for best Filipino voice: pip install edge-tts")
+        print("TTS not available. Install edge-tts for best voice quality: pip install edge-tts")
 
 # ============================================================================
 # KIOSK MONITORING CONFIG
@@ -680,13 +680,13 @@ class RCVApiService:
             return {"success": False, "message": "API not accessible"}
 
 # ============================================================================
-# TTS Service for Tagalog Voice Output - Using Microsoft Neural Voices
+# TTS Service for Voice Output - Using Microsoft Neural Voices
 # ============================================================================
 class TTSService:
-    # Microsoft Edge TTS Filipino voices (neural, natural-sounding)
+    # Microsoft Edge TTS voices (neural, natural-sounding)
     FILIPINO_VOICE = "fil-PH-BlessicaNeural"  # Female Filipino voice
     FILIPINO_VOICE_MALE = "fil-PH-AngeloNeural"  # Male Filipino voice
-    ENGLISH_VOICE = "en-US-JennyNeural"  # Fallback English voice
+    ENGLISH_VOICE = "en-US-JennyNeural"  # English voice (default)
     
     def __init__(self):
         self.enabled = TTS_AVAILABLE
@@ -708,8 +708,8 @@ class TTSService:
                 print(f"pyttsx3 init error: {e}")
                 self.enabled = False
     
-    def speak(self, text: str, lang: str = "fil"):
-        """Speak text using Microsoft neural voice (edge-tts) for natural Filipino"""
+    def speak(self, text: str, lang: str = "en"):
+        """Speak text using Microsoft neural voice (edge-tts) for natural speech"""
         if not self.enabled or self.is_muted or self.is_speaking:
             return
         
@@ -725,14 +725,14 @@ class TTSService:
         self.is_speaking = True
         try:
             if TTS_ENGINE == "edge_tts":
-                # Use Microsoft Edge neural TTS (best quality for Filipino)
+                # Use Microsoft Edge neural TTS (best quality)
                 self._speak_edge_tts(text, lang)
             elif TTS_ENGINE == "pyttsx3" and self.engine:
                 # pyttsx3 (offline, English only)
                 self.engine.say(text)
                 self.engine.runAndWait()
             elif TTS_ENGINE == "gtts":
-                # gTTS (Google, supports Tagalog but sounds robotic)
+                # gTTS (Google Text-to-Speech)
                 temp_file = os.path.join(self.temp_dir, "tts_output.mp3")
                 tts = gTTS(text=text, lang="tl", slow=False)
                 tts.save(temp_file)
@@ -744,7 +744,7 @@ class TTSService:
             self.is_speaking = False
     
     def _speak_edge_tts(self, text: str, lang: str):
-        """Use Microsoft Edge neural TTS for natural-sounding Filipino"""
+        """Use Microsoft Edge neural TTS for natural-sounding speech"""
         try:
             # Select voice based on language
             voice = self.FILIPINO_VOICE if lang in ["fil", "tl", "tagalog"] else self.ENGLISH_VOICE
@@ -819,34 +819,34 @@ class TTSService:
             self.stop()
 
 # ============================================================================
-# Tagalog Messages
+# English Messages
 # ============================================================================
-class TagalogMessages:
-    WELCOME = "Magandang araw! Handa na ang kiosk para sa pag-scan."
-    SCAN_DETECTED = "May na-detect na scan. Pinoproseso..."
+class EnglishMessages:
+    WELCOME = "Welcome! The kiosk is ready for scanning."
+    SCAN_DETECTED = "Scan detected. Processing..."
     
     @staticmethod
     def certificate_valid(product_name: str, company: str) -> str:
-        return f"Ang sertipiko para sa {product_name} mula sa {company} ay balido at tunay."
+        return f"The certificate for {product_name} from {company} is valid and authentic."
     
     @staticmethod
     def certificate_expired(product_name: str) -> str:
-        return f"Babala! Ang sertipiko para sa {product_name} ay expired na."
+        return f"Warning! The certificate for {product_name} has expired."
     
     @staticmethod
     def certificate_invalid() -> str:
-        return "Babala! Hindi kilala ang sertipiko na ito. Maaaring peke."
+        return "Warning! This certificate is not recognized. May be counterfeit."
     
     @staticmethod
     def product_authentic(product_name: str, brand: str) -> str:
-        return f"Ang {product_name} mula sa {brand} ay tunay at may kalidad."
+        return f"The {product_name} from {brand} is authentic and quality-verified."
     
     @staticmethod
     def product_suspicious(product_name: str) -> str:
-        return f"Babala! Ang {product_name} ay maaaring peke. Mag-ingat sa pagbili."
+        return f"Warning! The {product_name} may be counterfeit. Exercise caution."
     
-    READY_FOR_NEXT = "Handa na ulit para sa susunod na scan."
-    ERROR_OCCURRED = "May nangyaring error. Subukan muli."
+    READY_FOR_NEXT = "Ready for the next scan."
+    ERROR_OCCURRED = "An error occurred. Please try again."
 
 # ============================================================================
 # GPIO LED Control Service
@@ -1170,6 +1170,9 @@ class KioskHealthService:
             elif command == 'shutdown':
                 self._do_shutdown()
             
+            elif command == 'close_app':
+                self._do_close_app()
+            
             elif command == 'set_mode':
                 mode = payload.get('mode', 'idle')
                 self._set_mode(mode)
@@ -1199,7 +1202,7 @@ class KioskHealthService:
         threading.Thread(target=restart, daemon=True).start()
     
     def _do_shutdown(self):
-        """Shutdown the kiosk"""
+        """Shutdown the kiosk (allows auto-restart by run_kiosk.sh)"""
         print("⚠️ Shutting down kiosk...")
         
         # Stop the heartbeat service first
@@ -1215,9 +1218,31 @@ class KioskHealthService:
             # Force exit after 3 seconds if graceful shutdown fails
             time.sleep(3)
             print("🛑 Forcing exit...")
-            os._exit(0)
+            os._exit(1)  # Exit code 1 = run_kiosk.sh will auto-restart
         
         threading.Thread(target=shutdown, daemon=True).start()
+    
+    def _do_close_app(self):
+        """Close the kiosk application for maintenance (no auto-restart)"""
+        print("🔧 Closing kiosk for maintenance...")
+        
+        # Stop the heartbeat service first
+        self.stop()
+        
+        def close_app():
+            time.sleep(1)
+            if self.kiosk_app:
+                try:
+                    self.kiosk_app.root.after(0, self.kiosk_app.on_closing)
+                except:
+                    pass
+            # Force exit with code 42 after 3 seconds if graceful shutdown fails
+            # Exit code 42 tells run_kiosk.sh NOT to restart
+            time.sleep(3)
+            print("🛑 Forcing exit for maintenance...")
+            os._exit(42)
+        
+        threading.Thread(target=close_app, daemon=True).start()
     
     def _set_mode(self, mode: str):
         """Change kiosk mode"""
@@ -1861,29 +1886,12 @@ class KioskApp:
         
         tk.Label(
             content,
-            text="Maligayang Pagdating",
-            font=("SF Pro Text", 14),
-            bg=Colors.BACKGROUND,
-            fg=Colors.TEXT_SECONDARY
-        ).pack(pady=(0, 20))
-        
-        tk.Label(
-            content,
             text="Tap a button on the left\nto begin scanning",
-            font=("SF Pro Text", 12),
+            font=("SF Pro Text", 14),
             bg=Colors.BACKGROUND,
             fg=Colors.TEXT_SECONDARY,
             justify=tk.CENTER
-        ).pack(pady=(0, 10))
-        
-        tk.Label(
-            content,
-            text="I-tap ang button sa kaliwa\npara magsimula",
-            font=("SF Pro Text", 10),
-            bg=Colors.BACKGROUND,
-            fg="#999999",
-            justify=tk.CENTER
-        ).pack()
+        ).pack(pady=(0, 20))
     
     def _setup_scan_screen(self):
         """Setup the scanning screen with sidebar layout for small screens"""
@@ -2018,13 +2026,7 @@ class KioskApp:
             fg=Colors.TEXT_PRIMARY
         ).pack(pady=(0, 3))
         
-        tk.Label(
-            camera_outer,
-            text="Ilagay ang QR Code dito",
-            font=("SF Pro Text", 10),
-            bg=Colors.BACKGROUND,
-            fg=Colors.TEXT_SECONDARY
-        ).pack(pady=(0, 10))
+
         
         # Camera frame with decorative border
         camera_border = tk.Frame(
@@ -2103,14 +2105,6 @@ class KioskApp:
             bg=Colors.PRIMARY,
             fg=Colors.TEXT_WHITE
         ).pack(pady=(10, 0))
-        
-        tk.Label(
-            center,
-            text="Mangyaring maghintay...",
-            font=("SF Pro Text", 28),
-            bg=Colors.PRIMARY,
-            fg="#CCCCCC"
-        ).pack(pady=(20, 0))
         
         # Processing details
         self.loading_detail_label = tk.Label(
@@ -2272,7 +2266,7 @@ class KioskApp:
         
         self.ocr_instruction_sub = tk.Label(
             center,
-            text="Ilagay ang HARAP ng label",
+            text="Position the front of the product label",
             font=("SF Pro Text", 10),
             bg=Colors.BACKGROUND,
             fg=Colors.TEXT_SECONDARY
@@ -2553,7 +2547,7 @@ class KioskApp:
         
         self.error_detail_label = tk.Label(
             error_content,
-            text="May nangyaring problema",
+            text="A problem occurred",
             font=("SF Pro Text", 24),
             bg=Colors.BACKGROUND,
             fg=Colors.TEXT_SECONDARY,
@@ -3224,10 +3218,9 @@ class KioskApp:
             fg=Colors.TEXT_WHITE
         ).pack(pady=(0, 20))
         
-        # Tagalog translation - still large
         tk.Label(
             content,
-            text="WALANG KONEKSYON",
+            text="NO CONNECTION",
             font=("SF Pro Display", 48, "bold"),
             bg=Colors.ERROR,
             fg=Colors.TEXT_WHITE
@@ -3241,15 +3234,7 @@ class KioskApp:
             bg=Colors.ERROR,
             fg=Colors.TEXT_WHITE
         )
-        self.maintenance_message.pack(pady=(0, 10))
-        
-        tk.Label(
-            content,
-            text="Hindi maka-connect sa server",
-            font=("SF Pro Text", 24),
-            bg=Colors.ERROR,
-            fg="#FFCCCC"
-        ).pack(pady=(0, 50))
+        self.maintenance_message.pack(pady=(0, 50))
         
         # Status indicator box
         status_frame = tk.Frame(content, bg="#D32F2F", padx=40, pady=25)
@@ -3291,14 +3276,6 @@ class KioskApp:
             bg=Colors.ERROR,
             fg="#FFCCCC"
         ).pack(pady=(20, 0))
-        
-        tk.Label(
-            content,
-            text="Awtomatikong magpapatuloy ang kiosk kapag naibalik ang koneksyon",
-            font=("SF Pro Text", 16),
-            bg=Colors.ERROR,
-            fg="#FF9999"
-        ).pack(pady=(5, 0))
     
     def _draw_qr_icon(self, canvas, size, color):
         """Draw a QR code icon on canvas"""
@@ -3453,7 +3430,7 @@ class KioskApp:
         # Focus on first field
         self.cfpr_entry.focus()
     
-    def _show_error_screen(self, message: str, detail: str = "May nangyaring problema"):
+    def _show_error_screen(self, message: str, detail: str = "A problem occurred"):
         """Show error screen"""
         self._hide_all_screens()
         self.error_message_label.config(text=message)
@@ -3463,7 +3440,7 @@ class KioskApp:
         self.start_display_timer(self.ERROR_DISPLAY_DURATION, is_error=True)
         # Show error LED
         self.gpio_led.show_error()
-        self.tts.speak(TagalogMessages.ERROR_OCCURRED)
+        self.tts.speak(EnglishMessages.ERROR_OCCURRED)
     
     def _show_maintenance_screen(self, message: str = "Server connection lost"):
         """Show maintenance/offline screen and start polling"""
@@ -3540,7 +3517,7 @@ class KioskApp:
             
             self._show_error_screen(
                 "Request Timeout",
-                "Ang kahilingan ay nag-timeout. Subukan muli."
+                "The request timed out. Please try again."
             )
     
     def _populate_result_info(self, cert: CertificateData = None, product: ProductData = None):
@@ -3787,11 +3764,11 @@ class KioskApp:
             
             # TTS
             if is_valid:
-                self.tts.speak(TagalogMessages.certificate_valid(cert.product_name, cert.company_name))
+                self.tts.speak(EnglishMessages.certificate_valid(cert.product_name, cert.company_name))
             elif is_pending:
-                self.tts.speak("Nakita ang PDF certificate. Hindi pa na-verify sa blockchain.")
+                self.tts.speak("PDF certificate found. Not yet verified on blockchain.")
             else:
-                self.tts.speak(TagalogMessages.certificate_invalid())
+                self.tts.speak(EnglishMessages.certificate_invalid())
         
         elif product:
             # Product info
@@ -3918,9 +3895,9 @@ class KioskApp:
             
             # TTS
             if is_authentic:
-                self.tts.speak(TagalogMessages.product_authentic(product.product_name, product.brand))
+                self.tts.speak(EnglishMessages.product_authentic(product.product_name, product.brand))
             else:
-                self.tts.speak(TagalogMessages.product_suspicious(product.product_name))
+                self.tts.speak(EnglishMessages.product_suspicious(product.product_name))
     
     def setup_certificate_panel(self, cert: CertificateData):
         """Display certificate information on the MASSIVE result screen"""
@@ -3930,13 +3907,13 @@ class KioskApp:
         
         if is_valid:
             header_color = Colors.SUCCESS
-            status_text = "VERIFIED / TUNAY"
+            status_text = "VERIFIED"
         elif is_pending:
             header_color = Colors.WARNING
-            status_text = "PDF FOUND / NAKITA ANG PDF"
+            status_text = "PDF FOUND"
         else:
             header_color = Colors.ERROR
-            status_text = "NOT FOUND / HINDI NAHANAP"
+            status_text = "NOT FOUND"
         
         self.result_header.config(bg=header_color)
         self.result_status_label.config(bg=header_color, text=status_text)
@@ -3969,13 +3946,13 @@ class KioskApp:
         
         if product.source == "not_found":
             header_color = Colors.ERROR
-            status_text = "NOT FOUND / HINDI NAHANAP"
+            status_text = "NOT FOUND"
         elif is_authentic:
             header_color = Colors.SUCCESS
-            status_text = "REGISTERED / REHISTRADO"
+            status_text = "REGISTERED"
         else:
             header_color = Colors.WARNING
-            status_text = "SUSPICIOUS / KAHINA-HINALA"
+            status_text = "SUSPICIOUS"
         
         self.result_header.config(bg=header_color)
         self.result_status_label.config(bg=header_color, text=status_text)
@@ -3996,7 +3973,7 @@ class KioskApp:
     
     def setup_error_panel(self, message: str):
         """Display error screen with 10 second timeout"""
-        self._show_error_screen(message, "May nangyaring problema. Subukan muli.")
+        self._show_error_screen(message, "A problem occurred. Please try again.")
     
     def initialize_kiosk(self):
         """Initialize kiosk - check API, show start screen (camera off)"""
@@ -4006,7 +3983,7 @@ class KioskApp:
         
         # Show start screen (camera stays off until user taps)
         self._show_start_screen()
-        self.tts.speak(TagalogMessages.WELCOME)
+        self.tts.speak(EnglishMessages.WELCOME)
         
         # Start background connectivity monitoring (after initial delay)
         self.root.after(5000, self._start_background_monitoring)
@@ -4161,7 +4138,7 @@ class KioskApp:
         
         # Return to start screen
         self._show_start_screen()
-        self.tts.speak("Koneksyon sa server ay naibalik. Handa na ulit ang kiosk.")
+        self.tts.speak("Server connection restored. The kiosk is ready.")
         
         # Start background monitoring (longer interval)
         self.connectivity_poll_id = self.root.after(
@@ -4213,7 +4190,7 @@ class KioskApp:
             self.state = KioskState.ERROR
             self._show_error_screen(
                 f"Camera Error: {str(e)}",
-                "Hindi mahanap ang camera. Mangyaring ikonekta ang camera."
+                "Camera not found. Please connect a camera."
             )
     
     def restart_camera(self):
@@ -4351,7 +4328,7 @@ class KioskApp:
         
         self.state = KioskState.PROCESSING
         self._show_loading_screen("Analyzing QR code...")
-        self.tts.speak(TagalogMessages.SCAN_DETECTED)
+        self.tts.speak(EnglishMessages.SCAN_DETECTED)
         
         # Process in background thread
         thread = threading.Thread(target=self._process_qr_data, args=(qr_data,), daemon=True)
@@ -4740,14 +4717,14 @@ class KioskApp:
     def _handle_error(self, message: str):
         """Handle processing error"""
         self.state = KioskState.ERROR
-        self._show_error_screen(f"Processing Error: {message}", "May problema sa pagproseso. Subukan muli.")
+        self._show_error_screen(f"Processing Error: {message}", "A processing error occurred. Please try again.")
     
     def _handle_unknown_qr(self, data: str):
         """Handle unrecognized QR code"""
         self.state = KioskState.ERROR
         self._show_error_screen(
             "Unrecognized QR Code",
-            f"Hindi kilalang QR code format.\n\nData: {data[:80]}..."
+            f"Unrecognized QR code format.\n\nData: {data[:80]}..."
         )
     
     def _show_certificate(self, cert: CertificateData):
@@ -4868,7 +4845,7 @@ class KioskApp:
         if not self.camera or not self.camera.isOpened():
             self.start_camera()
         
-        self.tts.speak(TagalogMessages.READY_FOR_NEXT)
+        self.tts.speak(EnglishMessages.READY_FOR_NEXT)
     
     # ============ OCR Capture Methods ============
     
@@ -4896,21 +4873,21 @@ class KioskApp:
         # Update button states based on what's captured
         if self.ocr_front_frame is None:
             self.ocr_instruction_label.config(text="Position FRONT of label")
-            self.ocr_instruction_sub.config(text="Ilagay ang HARAP ng label")
+            self.ocr_instruction_sub.config(text="Position the front of the product label")
             self.ocr_capture_front_btn.config(state=tk.NORMAL)
             self.ocr_capture_back_btn.config(state=tk.DISABLED)
             self.ocr_submit_btn.config(state=tk.DISABLED)
         
         elif self.ocr_front_frame is not None and self.ocr_back_frame is None:
             self.ocr_instruction_label.config(text="Front captured! Now BACK")
-            self.ocr_instruction_sub.config(text="Nakuha na ang HARAP! Ngayon LIKOD")
+            self.ocr_instruction_sub.config(text="Front captured! Now position the back")
             self.ocr_capture_front_btn.config(state=tk.NORMAL)  # Can retake
             self.ocr_capture_back_btn.config(state=tk.NORMAL)  # Now enabled
             self.ocr_submit_btn.config(state=tk.DISABLED)
         
         elif self.ocr_front_frame is not None and self.ocr_back_frame is not None:
             self.ocr_instruction_label.config(text="Both sides captured!")
-            self.ocr_instruction_sub.config(text="Nakuha ang dalawang panig!")
+            self.ocr_instruction_sub.config(text="Both sides captured!")
             self.ocr_capture_front_btn.config(state=tk.NORMAL)  # Can retake
             self.ocr_capture_back_btn.config(state=tk.NORMAL)  # Can retake
             self.ocr_submit_btn.config(state=tk.NORMAL)  # Can submit
@@ -5031,12 +5008,12 @@ class KioskApp:
         if not cfpr and not lto:
             self._show_error_screen(
                 "Missing Information",
-                "Please enter at least CFPR or LTO/BAI number\nPakipasok ang kahit CFPR o LTO/BAI number"
+                "Please enter at least a CFPR or LTO/BAI number."
             )
             return
         
         # Show loading screen
-        self._show_loading_screen("Searching for product...\nHinahanap ang produkto...")
+        self._show_loading_screen("Searching for product...")
         
         # Process in background
         thread = threading.Thread(target=self._process_manual_search, args=(cfpr, lto), daemon=True)
@@ -5117,7 +5094,7 @@ class KioskApp:
             print(f"Manual search error: {e}")
             self.root.after(0, lambda: self._show_error_screen(
                 f"Search Error: {str(e)}",
-                "May problema sa paghahanap ng produkto"
+                "An error occurred while searching for the product."
             ))
     
     def _review_ocr_capture(self, image_index: int):
@@ -5615,7 +5592,7 @@ class KioskApp:
             print(f"OCR processing error: {error_msg}")
             self.root.after(0, lambda msg=error_msg: self._show_error_screen(
                 f"Processing Error: {msg}",
-                "May problema sa pagproseso ng label"
+                "An error occurred while processing the label."
             ))
     
     def _display_compliance_result(self, response: dict):
@@ -5798,7 +5775,7 @@ class KioskApp:
         self.timer_paused = True
         
         # Show loading
-        self._show_loading_screen("Loading certificate...\nNaglo-load ng sertipiko...")
+        self._show_loading_screen("Loading certificate...")
         
         # Fetch certificate in background
         thread = threading.Thread(
@@ -5863,7 +5840,7 @@ class KioskApp:
     def _fetch_and_display_pdf_pages(self, pdf_url: str):
         """Fetch PDF and display 2 pages side by side"""
         # Show loading state
-        self.pdf_page1_label.config(text="Loading PDF...\nNaglo-load ng PDF...", image="")
+        self.pdf_page1_label.config(text="Loading PDF...", image="")
         self.pdf_page2_label.config(text="", image="")
         
         # Fetch PDF in background thread
@@ -5878,7 +5855,7 @@ class KioskApp:
             # Download PDF
             response = requests.get(pdf_url, timeout=30)
             if response.status_code != 200:
-                self.root.after(0, lambda: self._show_pdf_error("Failed to load PDF\nHindi ma-load ang PDF"))
+                self.root.after(0, lambda: self._show_pdf_error("Failed to load PDF"))
                 return
             
             # Try to render PDF to images using pdf2image if available
@@ -5974,7 +5951,7 @@ class KioskApp:
     def _show_pdf_success_no_preview(self):
         """Show PDF loaded but no preview available"""
         self.pdf_page1_label.config(
-            text="PDF Certificate Available\nNakuha ang PDF Certificate\n\n(Install pdf2image for preview)",
+            text="PDF Certificate Available\n\n(Install pdf2image for preview)",
             image=""
         )
         self.pdf_page2_label.config(text="", image="")

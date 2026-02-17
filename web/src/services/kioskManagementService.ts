@@ -187,9 +187,16 @@ export class KioskManagementService {
   }
 
   /**
-   * Shutdown a kiosk machine
+   * Shutdown a kiosk machine (allows auto-restart)
    */
   static async shutdownKiosk(id: string): Promise<boolean> {
     return this.sendCommand(id, 'shutdown');
+  }
+
+  /**
+   * Close kiosk application for maintenance (will NOT auto-restart)
+   */
+  static async closeApp(id: string): Promise<boolean> {
+    return this.sendCommand(id, 'close_app');
   }
 }
