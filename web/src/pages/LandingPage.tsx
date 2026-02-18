@@ -467,12 +467,12 @@ export function LandingPage() {
             loop: true,
           }}
           plugins={[autoplayRef.current]}
-          className="w-full relative"
+          className="w-full relative h-screen"
         >
           <CarouselContent className="m-0">
             {heroSlides.map((slide, index) => (
               <CarouselItem key={index} className="p-0">
-                <div className="relative h-120 md:h-200 overflow-hidden">
+                <div className="relative h-screen overflow-hidden">
                   {/* Background Image/Video */}
                   <div className="absolute inset-0 z-0" style={{ boxShadow: 'inset 0 30px 40px rgba(0,0,0,0.5)' }}>
                     {slide.isVideo ? (
