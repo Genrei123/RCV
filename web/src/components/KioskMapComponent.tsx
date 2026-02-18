@@ -150,8 +150,8 @@ export function KioskMapComponent({
 
   return (
     <div className="relative h-full w-full">
-      {/* Search Bar */}
-      <div className="absolute top-4 left-4 right-4 z-10 max-w-md">
+      {/* Search Bar - positioned to avoid map controls and tabs */}
+      <div className="absolute top-16 left-4 right-4 md:right-auto z-10 w-full md:w-96 max-w-md">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
           <Input
@@ -164,8 +164,8 @@ export function KioskMapComponent({
         </div>
       </div>
 
-      {/* Stats Card - positioned below toggle buttons */}
-      <Card className="absolute top-16 right-4 z-10 p-3 bg-white shadow-lg">
+      {/* Stats Card - positioned to avoid map controls */}
+      <Card className="absolute bottom-20 md:bottom-16 left-1/2 -translate-x-1/2 z-10 p-3 bg-white shadow-lg">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1">
             <div className="w-2 h-2 rounded-full bg-green-500"></div>

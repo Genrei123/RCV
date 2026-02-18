@@ -219,8 +219,8 @@ export function Maps() {
 
   return (
     <div className="h-full w-full relative">
-      {/* Toggle Button - Upper Right Corner */}
-      <div className="absolute top-4 right-4 z-20">
+      {/* Toggle Button - Upper Left Corner */}
+      <div className="absolute top-4 left-4 z-20">
         <div className="bg-white rounded-lg shadow-lg p-1 flex gap-1">
           <Button
             variant={viewMode === "agents" ? "default" : "ghost"}
