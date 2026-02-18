@@ -2308,91 +2308,58 @@ class KioskApp:
         
         tk.Label(
             preview_section,
-            text="Captured Images - Click to review",
-            font=("SF Pro Text", 10, "bold"),
+            text="Captured Images - Tap to review",
+            font=("SF Pro Text", 11, "bold"),
             bg=Colors.BACKGROUND,
             fg=Colors.TEXT_SECONDARY
-        ).pack(pady=(0, 5))
+        ).pack(pady=(0, 8))
         
-        # Preview frame for both images side by side
+        # Preview frame for both images side by side - LARGER thumbnails
         preview_images_frame = tk.Frame(preview_section, bg=Colors.BACKGROUND)
         preview_images_frame.pack()
         
-        # Front image preview (clickable)
+        # Front image preview (clickable) - pixel-based sizing for proper thumbnails
+        front_preview_border = tk.Frame(preview_images_frame, bg=Colors.TEXT_SECONDARY, padx=2, pady=2)
+        front_preview_border.pack(side=tk.LEFT, padx=8)
+        
         self.ocr_front_preview = tk.Label(
-            preview_images_frame,
-            text="Front:\nNot captured",
-            font=("SF Pro Text", 9),
+            front_preview_border,
+            text="FRONT\nNot captured",
+            font=("SF Pro Text", 12),
             bg=Colors.SURFACE,
             fg=Colors.TEXT_SECONDARY,
-            width=25,
-            height=10,
             cursor="hand2",
-            relief=tk.RIDGE,
-            bd=2
+            relief=tk.FLAT,
         )
-        self.ocr_front_preview.pack(side=tk.LEFT, padx=5)
+        self.ocr_front_preview.config(width=240, height=160)
+        self.ocr_front_preview.pack()
+        self.ocr_front_preview.pack_propagate(False) if hasattr(self.ocr_front_preview, 'pack_propagate') else None
         self.ocr_front_preview.bind('<Button-1>', lambda e: self._review_ocr_capture(0))
         
-        # Back image preview (clickable)
-        self.ocr_back_preview = tk.Label(
+        tk.Label(
             preview_images_frame,
-            text="Back:\nNot captured",
-            font=("SF Pro Text", 9),
-            bg=Colors.SURFACE,
-            fg=Colors.TEXT_SECONDARY,
-            width=25,
-            height=10,
-            cursor="hand2",
-            relief=tk.RIDGE,
-            bd=2
-        )
-        self.ocr_back_preview.pack(side=tk.LEFT, padx=5)
-        self.ocr_back_preview.bind('<Button-1>', lambda e: self._review_ocr_capture(1))
-        
-        # Captured images preview (shows after capture)
-        self.ocr_preview_container = tk.Frame(center, bg=Colors.BACKGROUND)
-        self.ocr_preview_container.pack(pady=(10, 0))
-        
-        preview_label = tk.Label(
-            self.ocr_preview_container,
-            text="Captured Images - Click to review:",
-            font=("SF Pro Text", 10, "bold"),
+            text="",
+            font=("SF Pro Text", 8),
             bg=Colors.BACKGROUND,
-            fg=Colors.TEXT_SECONDARY
-        )
-        preview_label.pack(pady=(5, 5))
+            width=1
+        ).pack(side=tk.LEFT)
         
-        # Preview frame for both images side by side
-        preview_images_frame = tk.Frame(self.ocr_preview_container, bg=Colors.BACKGROUND)
-        preview_images_frame.pack()
+        # Back image preview (clickable) - pixel-based sizing for proper thumbnails
+        back_preview_border = tk.Frame(preview_images_frame, bg=Colors.TEXT_SECONDARY, padx=2, pady=2)
+        back_preview_border.pack(side=tk.LEFT, padx=8)
         
-        # Front image preview
-        self.ocr_front_preview = tk.Label(
-            preview_images_frame,
-            text="Front: Not captured",
-            font=("SF Pro Text", 9),
-            bg=Colors.SURFACE,
-            fg=Colors.TEXT_SECONDARY,
-            width=25,
-            height=15,
-            cursor="hand2"
-        )
-        self.ocr_front_preview.pack(side=tk.LEFT, padx=5)
-        self.ocr_front_preview.bind('<Button-1>', lambda e: self._review_ocr_capture(0))
-        
-        # Back image preview
         self.ocr_back_preview = tk.Label(
-            preview_images_frame,
-            text="Back: Not captured",
-            font=("SF Pro Text", 9),
+            back_preview_border,
+            text="BACK\nNot captured",
+            font=("SF Pro Text", 12),
             bg=Colors.SURFACE,
             fg=Colors.TEXT_SECONDARY,
-            width=25,
-            height=15,
-            cursor="hand2"
+            cursor="hand2",
+            relief=tk.FLAT,
         )
-        self.ocr_back_preview.pack(side=tk.LEFT, padx=5)
+        self.ocr_back_preview.config(width=240, height=160)
+        self.ocr_back_preview.pack()
+        self.ocr_back_preview.pack_propagate(False) if hasattr(self.ocr_back_preview, 'pack_propagate') else None
         self.ocr_back_preview.bind('<Button-1>', lambda e: self._review_ocr_capture(1))
     
     def _setup_result_screen(self):
@@ -2914,22 +2881,60 @@ class KioskApp:
         self.compliance_front_thumb = tk.Label(
             self.compliance_photos_frame,
             text="Front",
-            font=("SF Pro Text", 9),
+            font=("SF Pro Text", 11),
             bg=Colors.SURFACE,
-            width=16,
-            height=5
+            width=220,
+            height=140
         )
-        self.compliance_front_thumb.pack(side=tk.LEFT, padx=6)
+        self.compliance_front_thumb.pack(side=tk.LEFT, padx=8)
         
         self.compliance_back_thumb = tk.Label(
             self.compliance_photos_frame,
             text="Back",
-            font=("SF Pro Text", 9),
+            font=("SF Pro Text", 11),
             bg=Colors.SURFACE,
-            width=16,
-            height=5
+            width=220,
+            height=140
         )
-        self.compliance_back_thumb.pack(side=tk.LEFT, padx=6)
+        self.compliance_back_thumb.pack(side=tk.LEFT, padx=8)
+        
+        # MANUAL SEARCH button - shown only when product not found
+        self.compliance_manual_search_frame = tk.Frame(content, bg=Colors.BACKGROUND)
+        # Don't pack yet - only shown when product not found
+        
+        self.compliance_manual_search_btn = tk.Button(
+            self.compliance_manual_search_frame,
+            text="MANUAL SEARCH\nEnter Registration Numbers",
+            font=("SF Pro Display", 20, "bold"),
+            bg=Colors.PRIMARY,
+            fg=Colors.TEXT_WHITE,
+            activebackground=Colors.PRIMARY_LIGHT,
+            activeforeground=Colors.TEXT_WHITE,
+            relief=tk.FLAT,
+            bd=0,
+            padx=50,
+            pady=20,
+            cursor="hand2",
+            command=self._show_manual_search_screen
+        )
+        self.compliance_manual_search_btn.pack(pady=10)
+        
+        self.compliance_retry_btn = tk.Button(
+            self.compliance_manual_search_frame,
+            text="TRY SCANNING AGAIN",
+            font=("SF Pro Text", 14, "bold"),
+            bg=Colors.WARNING,
+            fg=Colors.TEXT_WHITE,
+            activebackground="#F57C00",
+            activeforeground=Colors.TEXT_WHITE,
+            relief=tk.FLAT,
+            bd=0,
+            padx=30,
+            pady=12,
+            cursor="hand2",
+            command=self._start_ocr_capture
+        )
+        self.compliance_retry_btn.pack(pady=(0, 5))
         
         # Footer with timer
         self.compliance_footer = tk.Frame(self.compliance_frame, bg=Colors.PRIMARY, height=80)
@@ -3354,6 +3359,14 @@ class KioskApp:
                       self.compliance_frame, self.manual_search_frame,
                       self.error_frame, self.maintenance_frame]:
             frame.pack_forget()
+        
+        # Destroy dynamic OCR not-found screen if it exists
+        if hasattr(self, '_ocr_not_found_frame') and self._ocr_not_found_frame:
+            try:
+                self._ocr_not_found_frame.destroy()
+            except:
+                pass
+            self._ocr_not_found_frame = None
         
         # Cancel any running timers
         if self.processing_timeout_id:
@@ -4271,6 +4284,11 @@ class KioskApp:
         while self.is_running and self.camera and self.camera.isOpened():
             loop_start = time.time()
             
+            # GUARD: Skip processing entirely if slideshow is active or camera should be off
+            if self.slideshow_active or self.state == KioskState.CAMERA_OFF:
+                time.sleep(0.1)
+                continue
+            
             ret, frame = self.camera.read()
             if not ret:
                 print("Failed to read frame from camera")
@@ -4914,9 +4932,9 @@ class KioskApp:
         self.ocr_front_thumb.config(text="Front: -", image="")
         self.ocr_back_thumb.config(text="Back: -", image="")
         
-        # Reset preview images
-        self.ocr_front_preview.config(text="Front:\nNot captured", image="", relief=tk.RIDGE, bg=Colors.SURFACE)
-        self.ocr_back_preview.config(text="Back:\nNot captured", image="", relief=tk.RIDGE, bg=Colors.SURFACE)
+        # Reset preview images (match the new pixel-based preview labels)
+        self.ocr_front_preview.config(text="FRONT\nNot captured", image="", bg=Colors.SURFACE)
+        self.ocr_back_preview.config(text="BACK\nNot captured", image="", bg=Colors.SURFACE)
         
         # Update UI
         self._update_ocr_ui()
@@ -4978,9 +4996,9 @@ class KioskApp:
         self.ocr_front_thumb.config(image=thumb, text="")
         self.ocr_front_thumb.image = thumb
         
-        # Create larger preview image
-        preview = self._create_thumbnail(frame_copy, 200, 130)
-        self.ocr_front_preview.config(image=preview, text="", relief=tk.SOLID, bg=Colors.SUCCESS_LIGHT, bd=3)
+        # Create larger preview image (240x160 to match the preview label size)
+        preview = self._create_thumbnail(frame_copy, 240, 160)
+        self.ocr_front_preview.config(image=preview, text="", bg=Colors.SUCCESS_LIGHT)
         self.ocr_front_preview.image = preview
         
         # Store in list to prevent garbage collection
@@ -5006,14 +5024,16 @@ class KioskApp:
         self.ocr_back_thumb.config(image=thumb, text="")
         self.ocr_back_thumb.image = thumb
         
-        # Create larger preview image
-        preview = self._create_thumbnail(frame_copy, 200, 130)
-        self.ocr_back_preview.config(image=preview, text="", relief=tk.SOLID, bg=Colors.SUCCESS_LIGHT, bd=3)
+        # Create larger preview image (240x160 to match the preview label size)
+        preview = self._create_thumbnail(frame_copy, 240, 160)
+        self.ocr_back_preview.config(image=preview, text="", bg=Colors.SUCCESS_LIGHT)
         self.ocr_back_preview.image = preview
         
         # Add to list to prevent garbage collection (keep both previews)
-        if len(self.ocr_preview_photos) == 2:
+        if len(self.ocr_preview_photos) >= 2:
             self.ocr_preview_photos.extend([preview, thumb])
+        else:
+            self.ocr_preview_photos = [preview, thumb]
         
         print(f"Back captured - Preview size: {preview.width()}x{preview.height()}")
         
@@ -5360,15 +5380,40 @@ class KioskApp:
     def _process_ocr_scan(self):
         """Process OCR scan - extract raw text and let backend handle analysis.
         Follows the same approach as the mobile app: send raw OCR text with
-        --- FRONT/BACK OF LABEL --- delimiters."""
+        --- FRONT/BACK OF LABEL --- delimiters.
+        
+        Guard clauses:
+        - Validates frames exist before processing
+        - Checks minimum text length (matching mobile app's 20 char minimum)
+        - Handles API errors gracefully with user-friendly messages
+        - Catches all exceptions to prevent crashes
+        """
         try:
+            # GUARD: Validate frames exist
+            if self.ocr_front_frame is None:
+                self.root.after(0, lambda: self._show_ocr_not_found_screen(
+                    "No front image captured. Please capture the front of the label first."
+                ))
+                return
+            
+            if self.ocr_back_frame is None:
+                self.root.after(0, lambda: self._show_ocr_not_found_screen(
+                    "No back image captured. Please capture the back of the label first."
+                ))
+                return
+            
             # Extract raw text from both images
             self.root.after(0, lambda: self.loading_detail_label.config(text="Reading front label..."))
             
             print("\n" + "="*60)
             print("OCR EXTRACTION - FRONT IMAGE")
             print("="*60)
-            front_text = self._enhanced_ocr_extraction(self.ocr_front_frame, "FRONT")
+            front_text = ""
+            try:
+                front_text = self._enhanced_ocr_extraction(self.ocr_front_frame, "FRONT")
+            except Exception as e:
+                print(f"Front OCR extraction failed: {e}")
+                front_text = ""
             print(f"Front text: {len(front_text)} chars")
             
             self.root.after(0, lambda: self.loading_detail_label.config(text="Reading back label..."))
@@ -5376,7 +5421,12 @@ class KioskApp:
             print("\n" + "="*60)
             print("OCR EXTRACTION - BACK IMAGE")
             print("="*60)
-            back_text = self._enhanced_ocr_extraction(self.ocr_back_frame, "BACK")
+            back_text = ""
+            try:
+                back_text = self._enhanced_ocr_extraction(self.ocr_back_frame, "BACK")
+            except Exception as e:
+                print(f"Back OCR extraction failed: {e}")
+                back_text = ""
             print(f"Back text: {len(back_text)} chars")
             
             # Combine with delimiters matching mobile app format
@@ -5384,6 +5434,20 @@ class KioskApp:
             print(f"\n=== COMBINED RAW OCR TEXT ({len(combined_text)} chars) ===")
             print(combined_text[:500])
             print(f"=========================")
+            
+            # GUARD: Check minimum text length (matching mobile app's validation)
+            actual_text = front_text.strip() + back_text.strip()
+            if len(actual_text) < 10:
+                print(f"Insufficient OCR text detected: {len(actual_text)} chars (minimum: 10)")
+                self.root.after(0, lambda: self._show_ocr_not_found_screen(
+                    "Could not read text from the label.\\n\\n"
+                    "Tips:\\n"
+                    "• Ensure good lighting\\n"
+                    "• Hold the label steady and flat\\n"
+                    "• Make sure text is in focus\\n"
+                    "• Try positioning closer to the camera"
+                ))
+                return
             
             self.root.after(0, lambda: self.loading_detail_label.config(text="Searching for product..."))
             
@@ -5393,23 +5457,179 @@ class KioskApp:
             response = self.api.scan_product_ocr(combined_text)
             print(f"API Response: success={response.get('success')}, found={response.get('found')}, isCompliant={response.get('isCompliant')}")
             
+            # GUARD: Handle connection errors
+            if response.get("error") == "connection_error":
+                self.root.after(0, lambda: self._show_error_screen(
+                    "Server Unavailable",
+                    "Cannot connect to RCV server. Please check your internet connection."
+                ))
+                return
+            
+            # GUARD: Handle timeout
+            if response.get("error") == "timeout":
+                self.root.after(0, lambda: self._show_ocr_not_found_screen(
+                    "Request timed out. The server took too long to respond.\\n\\n"
+                    "Try again or use Manual Search instead."
+                ))
+                return
+            
+            # GUARD: Handle HTTP errors (404, 500, etc.)
+            if response.get("error") in ("http_error", "unknown"):
+                error_msg = response.get("message", "Unknown error")
+                print(f"API error: {error_msg}")
+                self.root.after(0, lambda: self._show_ocr_not_found_screen(
+                    f"Server error: {error_msg}\\n\\n"
+                    "Try Manual Search instead."
+                ))
+                return
+            
             if response.get("success"):
                 print(f"Displaying compliance result to user")
                 self.root.after(0, lambda: self._display_compliance_result(response))
             else:
-                print(f"Scan failed: {response.get('message')}")
-                self.root.after(0, lambda: self._show_error_screen(
-                    "Scan failed",
-                    response.get("message", "Could not process the product label")
+                # API returned success=false - show not found with manual search option
+                msg = response.get("message", "Could not process the product label")
+                print(f"Scan returned not successful: {msg}")
+                self.root.after(0, lambda: self._show_ocr_not_found_screen(
+                    f"{msg}\\n\\nTry Manual Search to enter registration numbers directly."
                 ))
                 
+        except requests.exceptions.ConnectionError:
+            print("OCR processing error: Connection refused")
+            self.root.after(0, lambda: self._show_error_screen(
+                "Server Unavailable",
+                "Cannot connect to RCV server. Check your connection."
+            ))
+        except requests.exceptions.Timeout:
+            print("OCR processing error: Request timeout")
+            self.root.after(0, lambda: self._show_ocr_not_found_screen(
+                "Request timed out.\\n\\nTry Manual Search instead."
+            ))
         except Exception as e:
             error_msg = str(e)
             print(f"OCR processing error: {error_msg}")
-            self.root.after(0, lambda msg=error_msg: self._show_error_screen(
-                f"Processing Error: {msg}",
-                "An error occurred while processing the label."
+            self.root.after(0, lambda msg=error_msg: self._show_ocr_not_found_screen(
+                f"Processing Error: {msg}\\n\\nTry Manual Search instead."
             ))
+    
+    def _show_ocr_not_found_screen(self, message: str = "Product not found"):
+        """Show a 'Product Not Found' screen with a prominent MANUAL SEARCH button.
+        Used when OCR fails, text is insufficient, or API returns no results.
+        Gives the user a clear path to manual search instead of a dead end."""
+        
+        # Stop camera while showing this screen
+        if self.camera and self.camera.isOpened():
+            self.is_running = False
+            self.camera.release()
+            self.camera = None
+        
+        self._hide_all_screens()
+        self.state = KioskState.ERROR
+        
+        # GPIO LED - error state
+        self.gpio_led.show_error()
+        
+        # Build the not-found screen dynamically
+        not_found_frame = tk.Frame(self.main_frame, bg=Colors.BACKGROUND)
+        not_found_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Red header
+        header = tk.Frame(not_found_frame, bg=Colors.ERROR, height=120)
+        header.pack(fill=tk.X)
+        header.pack_propagate(False)
+        
+        tk.Label(
+            header,
+            text="PRODUCT NOT FOUND",
+            font=("SF Pro Display", 42, "bold"),
+            bg=Colors.ERROR,
+            fg=Colors.TEXT_WHITE
+        ).pack(expand=True)
+        
+        # Content area
+        content = tk.Frame(not_found_frame, bg=Colors.BACKGROUND)
+        content.pack(fill=tk.BOTH, expand=True)
+        
+        center = tk.Frame(content, bg=Colors.BACKGROUND)
+        center.place(relx=0.5, rely=0.45, anchor=tk.CENTER)
+        
+        # Error icon
+        error_icon = tk.Canvas(center, width=120, height=120, bg=Colors.BACKGROUND, highlightthickness=0)
+        error_icon.pack(pady=(0, 20))
+        error_icon.create_oval(10, 10, 110, 110, outline=Colors.ERROR, width=6)
+        error_icon.create_text(60, 60, text="!", font=("SF Pro Display", 60, "bold"), fill=Colors.ERROR)
+        
+        # Message
+        tk.Label(
+            center,
+            text=message.replace("\\n", "\n"),
+            font=("SF Pro Text", 18),
+            bg=Colors.BACKGROUND,
+            fg=Colors.TEXT_PRIMARY,
+            wraplength=700,
+            justify=tk.CENTER
+        ).pack(pady=(0, 30))
+        
+        # ===== BIG MANUAL SEARCH BUTTON =====
+        manual_btn = tk.Button(
+            center,
+            text="MANUAL SEARCH\nEnter Registration Numbers",
+            font=("SF Pro Display", 24, "bold"),
+            bg=Colors.PRIMARY,
+            fg=Colors.TEXT_WHITE,
+            activebackground=Colors.PRIMARY_LIGHT,
+            activeforeground=Colors.TEXT_WHITE,
+            relief=tk.FLAT,
+            bd=0,
+            padx=60,
+            pady=25,
+            cursor="hand2",
+            command=lambda: [not_found_frame.destroy(), self._show_manual_search_screen()]
+        )
+        manual_btn.pack(pady=(0, 20))
+        
+        # TRY AGAIN button (re-scan with OCR)
+        retry_btn = tk.Button(
+            center,
+            text="TRY SCANNING AGAIN",
+            font=("SF Pro Display", 16, "bold"),
+            bg=Colors.WARNING,
+            fg=Colors.TEXT_WHITE,
+            activebackground="#F57C00",
+            activeforeground=Colors.TEXT_WHITE,
+            relief=tk.FLAT,
+            bd=0,
+            padx=40,
+            pady=15,
+            cursor="hand2",
+            command=lambda: [not_found_frame.destroy(), self._start_ocr_capture()]
+        )
+        retry_btn.pack(pady=(0, 15))
+        
+        # BACK TO HOME button
+        home_btn = tk.Button(
+            center,
+            text="BACK TO HOME",
+            font=("SF Pro Text", 14),
+            bg=Colors.SURFACE,
+            fg=Colors.TEXT_PRIMARY,
+            activebackground="#E0E0E0",
+            relief=tk.FLAT,
+            bd=0,
+            padx=30,
+            pady=10,
+            cursor="hand2",
+            command=lambda: [not_found_frame.destroy(), self._show_start_screen()]
+        )
+        home_btn.pack()
+        
+        # Store reference for cleanup
+        self._ocr_not_found_frame = not_found_frame
+        
+        # Auto-return to home after 60 seconds
+        self.start_display_timer(60, is_error=True)
+        
+        self.tts.speak("Product not found. You can try Manual Search to enter registration numbers directly.")
     
     def _display_compliance_result(self, response: dict):
         """Display product search result - shows product and certificate information"""
@@ -5443,12 +5663,16 @@ class KioskApp:
             )
             # Hide VIEW button when no product found
             self.view_cert_btn.pack_forget()
+            # Show MANUAL SEARCH button when product not found
+            self.compliance_manual_search_frame.pack(fill=tk.X, padx=15, pady=(10, 0))
         else:
             self.compliance_header.config(bg=Colors.SUCCESS)
             self.compliance_status_label.config(
                 bg=Colors.SUCCESS,
                 text="REGISTERED PRODUCT FOUND"
             )
+            # Hide MANUAL SEARCH button when product is found
+            self.compliance_manual_search_frame.pack_forget()
             # Show VIEW button when product is found
             if self.current_ocr_certificate_id:
                 self.view_cert_btn.pack(side=tk.LEFT, padx=10)
@@ -5557,16 +5781,16 @@ class KioskApp:
         # Don't show warnings/violations - just positive info
         self.compliance_warnings_frame.pack_forget()
         
-        # Show thumbnails of captured images (if from OCR scan)
+        # Show thumbnails of captured images (if from OCR scan) - larger for better visibility
         if self.ocr_front_frame is not None:
-            thumb = self._create_thumbnail(self.ocr_front_frame, 150, 100)
+            thumb = self._create_thumbnail(self.ocr_front_frame, 220, 140)
             self.compliance_front_thumb.config(image=thumb, text="")
             self.compliance_front_thumb.image = thumb
         else:
             self.compliance_front_thumb.config(text="Front", image="")
         
         if self.ocr_back_frame is not None:
-            thumb = self._create_thumbnail(self.ocr_back_frame, 150, 100)
+            thumb = self._create_thumbnail(self.ocr_back_frame, 220, 140)
             self.compliance_back_thumb.config(image=thumb, text="")
             self.compliance_back_thumb.image = thumb
         else:
@@ -6251,6 +6475,18 @@ class KioskApp:
             return
         
         print("Starting slideshow screensaver...")
+        
+        # CRITICAL: Stop camera to prevent phantom scans during idle slideshow
+        if self.camera and self.camera.isOpened():
+            print("Stopping camera for slideshow (prevents phantom scans)")
+            self.is_running = False
+            self.camera.release()
+            self.camera = None
+        
+        # Reset any pending QR state
+        self.pending_qr_data = None
+        self.pending_qr_count = 0
+        
         self.slideshow_active = True
         self.slideshow_current_index = 0
         
@@ -6337,11 +6573,11 @@ class KioskApp:
         self.slideshow_timer_id = self.root.after(self.SLIDESHOW_INTERVAL, self._cycle_slideshow)
     
     def _stop_slideshow(self, event=None):
-        """Stop slideshow and return to main menu"""
+        """Stop slideshow and return to main menu (camera stays off until user taps scan)"""
         if not self.slideshow_active:
             return
         
-        print("Stopping slideshow - returning to main menu")
+        print("Stopping slideshow - returning to main menu (camera OFF)")
         self.slideshow_active = False
         
         # Cancel cycling timer
@@ -6357,7 +6593,8 @@ class KioskApp:
         # Clear photo references
         self.slideshow_photos = []
         
-        # Show start screen
+        # Show start screen (camera stays off - user must tap to start scanning)
+        # This prevents phantom scans when nobody is actively using the kiosk
         self._show_start_screen()
         
         # Restart idle timer
