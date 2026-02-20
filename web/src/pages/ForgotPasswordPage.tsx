@@ -41,9 +41,8 @@ export function ForgotPasswordPage() {
 
   const getPasswordStrength = (password: string): PasswordStrength => {
     let score = 0;
-    
-    if (password.length >= 8) score++;
-    if (password.length >= 12) score++;
+    if (password.length >= 14) score++;
+    if (password.length >= 16) score++;
     if (/[a-z]/.test(password)) score++;
     if (/[A-Z]/.test(password)) score++;
     if (/[0-9]/.test(password)) score++;
@@ -55,8 +54,16 @@ export function ForgotPasswordPage() {
     return { score, label: 'Strong', color: 'bg-primary-500' };
   };
 
+  const passwordRequirements = [
+    { label: 'At least 14 characters', test: (p: string) => p.length >= 14 },
+    { label: 'At least one uppercase letter (A-Z)', test: (p: string) => /[A-Z]/.test(p) },
+    { label: 'At least one lowercase letter (a-z)', test: (p: string) => /[a-z]/.test(p) },
+    { label: 'At least one number (0-9)', test: (p: string) => /[0-9]/.test(p) },
+    { label: 'Special characters (!@#$%^&*)', test: (p: string) => /[^A-Za-z0-9]/.test(p) },
+  ];
+
   const validatePassword = (password: string): boolean => {
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{14,}$/;
     return passwordRegex.test(password);
   };
 
@@ -117,7 +124,7 @@ export function ForgotPasswordPage() {
     setError('');
 
     if (!validatePassword(newPassword)) {
-      setError('Password must be at least 8 characters with uppercase, lowercase, and number');
+      setError('Password must be at least 14 characters with uppercase, lowercase, number, and may contain special characters');
       return;
     }
 
@@ -308,6 +315,18 @@ export function ForgotPasswordPage() {
               </div>
               <span className="text-xs font-medium text-neutral-600">{passwordStrength.label}</span>
             </div>
+            <ul className="mt-2 space-y-1">
+              {passwordRequirements.map((req, idx) => (
+                <li key={idx} className={`text-xs flex items-center gap-1.5 ${req.test(newPassword) ? 'text-primary-600' : 'text-neutral-400'}`}>
+                  {req.test(newPassword) ? (
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                  ) : (
+                    <span className="w-3.5 h-3.5 rounded-full border border-neutral-300 inline-block" />
+                  )}
+                  {req.label}
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </div>
