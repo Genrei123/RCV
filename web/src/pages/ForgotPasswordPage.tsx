@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,6 +33,26 @@ export function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [passwordFieldError, setPasswordFieldError] = useState('');
+  const [confirmPasswordFieldError, setConfirmPasswordFieldError] = useState('');
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to top of card whenever an error appears
+  useEffect(() => {
+    if (error) {
+      cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [error]);
+
+  useEffect(() => {
+    if (!successMessage) return;
+
+    const timer = setTimeout(() => {
+      setSuccessMessage('');
+    }, 30000);
+
+    return () => clearTimeout(timer);
+  }, [successMessage]);
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -51,7 +71,7 @@ export function ForgotPasswordPage() {
     if (score <= 2) return { score, label: 'Weak', color: 'bg-error-500' };
     if (score <= 4) return { score, label: 'Fair', color: 'bg-yellow-500' };
     if (score <= 5) return { score, label: 'Good', color: 'bg-blue-500' };
-    return { score, label: 'Strong', color: 'bg-primary-500' };
+    return { score, label: 'Strong', color: 'bg-red-500' };
   };
 
   const passwordRequirements = [
@@ -122,14 +142,16 @@ export function ForgotPasswordPage() {
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setPasswordFieldError('');
+    setConfirmPasswordFieldError('');
 
     if (!validatePassword(newPassword)) {
-      setError('Password must be at least 14 characters with uppercase, lowercase, number, and may contain special characters');
+      setPasswordFieldError('Password must be at least 14 characters with uppercase, lowercase, number and special characters');
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match');
+      setConfirmPasswordFieldError('Passwords do not match');
       return;
     }
 
@@ -154,9 +176,6 @@ export function ForgotPasswordPage() {
     try {
       await AuthService.requestPasswordReset(email);
       setSuccessMessage('Reset code resent successfully!');
-      
-      // Clear success message after 3 seconds
-      setTimeout(() => setSuccessMessage(''), 3000);
     } catch (err: any) {
       setError('Failed to resend code. Please try again.');
     } finally {
@@ -293,7 +312,13 @@ export function ForgotPasswordPage() {
             placeholder="Enter new password"
             className="pl-10 pr-10 h-11"
             value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
+            onChange={(e) => {
+              setNewPassword(e.target.value);
+              if (passwordFieldError) setPasswordFieldError('');
+              if (confirmPasswordFieldError && confirmPassword === e.target.value) {
+                setConfirmPasswordFieldError('');
+              }
+            }}
             required
           />
           <button
@@ -317,17 +342,33 @@ export function ForgotPasswordPage() {
             </div>
             <ul className="mt-2 space-y-1">
               {passwordRequirements.map((req, idx) => (
-                <li key={idx} className={`text-xs flex items-center gap-1.5 ${req.test(newPassword) ? 'text-primary-600' : 'text-neutral-400'}`}>
+                <li
+                  key={idx}
+                  className={`text-xs flex items-center gap-1.5 ${
+                    req.test(newPassword)
+                      ? 'text-primary-600'
+                      : newPassword
+                      ? 'text-error-600'
+                      : 'text-neutral-400'
+                  }`}
+                >
                   {req.test(newPassword) ? (
                     <CheckCircle2 className="w-3.5 h-3.5" />
                   ) : (
-                    <span className="w-3.5 h-3.5 rounded-full border border-neutral-300 inline-block" />
+                    <span
+                      className={`w-3.5 h-3.5 rounded-full border inline-block ${
+                        newPassword ? 'border-error-400' : 'border-neutral-300'
+                      }`}
+                    />
                   )}
                   {req.label}
                 </li>
               ))}
             </ul>
           </div>
+        )}
+        {passwordFieldError && (
+          <p className="text-error-600 text-xs mt-2">{passwordFieldError}</p>
         )}
       </div>
 
@@ -342,7 +383,10 @@ export function ForgotPasswordPage() {
             placeholder="Confirm new password"
             className="pl-10 pr-10 h-11"
             value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
+            onChange={(e) => {
+              setConfirmPassword(e.target.value);
+              if (confirmPasswordFieldError) setConfirmPasswordFieldError('');
+            }}
             required
           />
           <button
@@ -358,6 +402,9 @@ export function ForgotPasswordPage() {
             <CheckCircle2 className="w-4 h-4 text-primary-600" />
             <span className="text-xs text-primary-600">Passwords match</span>
           </div>
+        )}
+        {confirmPasswordFieldError && (
+          <p className="text-error-600 text-xs mt-2">{confirmPasswordFieldError}</p>
         )}
       </div>
 
@@ -399,7 +446,7 @@ export function ForgotPasswordPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-primary-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md p-8 shadow-2xl bg-white">
+      <Card ref={cardRef} className="w-full max-w-md p-8 shadow-2xl bg-white">
         {/* Back Button */}
         {currentStep !== RESET_STEPS.SUCCESS && (
           <button
