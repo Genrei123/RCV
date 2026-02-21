@@ -751,13 +751,13 @@ export const resetPassword = async (
       );
     }
 
-    // Validate password strength
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+    // Validate password strength (must match registration requirements)
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{14,}$/;
     if (!passwordRegex.test(newPassword)) {
       return next(
         new CustomError(
           400,
-          "Password must be at least 8 characters with uppercase, lowercase, and number"
+          "Password must be at least 14 characters with uppercase, lowercase, number, and may contain special characters"
         )
       );
     }
@@ -781,6 +781,17 @@ export const resetPassword = async (
     const isCodeValid = bcryptjs.compareSync(code, resetRequest.key);
     if (!isCodeValid) {
       return next(new CustomError(400, "Invalid reset code"));
+    }
+
+    // Check if the new password is the same as the current password
+    const isSamePassword = bcryptjs.compareSync(newPassword, user.password);
+    if (isSamePassword) {
+      return next(
+        new CustomError(
+          400,
+          "New password cannot be the same as your current password"
+        )
+      );
     }
 
     // Hash the new password
