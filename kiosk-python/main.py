@@ -1026,10 +1026,11 @@ class GPIOLEDService:
 
 # Import Firebase service
 try:
-    from services.firebase_service import FirebaseKioskService, FIREBASE_AVAILABLE
+    from services.firebase_service import FirebaseKioskService, FIREBASE_AVAILABLE, install_log_interceptor
 except ImportError:
     FIREBASE_AVAILABLE = False
     FirebaseKioskService = None
+    install_log_interceptor = None
     print("⚠️ Firebase service not available")
 
 
@@ -1055,6 +1056,8 @@ class KioskHealthService:
         
         # Firebase service
         self._firebase: FirebaseKioskService = None
+        self._log_interceptor = None
+        self._cleanup_thread = None
         
         # Current status tracking
         self.current_mode = 'idle'
@@ -1063,6 +1066,21 @@ class KioskHealthService:
             'success': False,
             'error': False
         }
+    
+    def log(self, message: str, level: str = 'info', category: str = 'general', extra_data: dict = None):
+        """
+        Send a log entry directly to Firebase.
+        Use this for key operational events to guarantee they are logged,
+        independent of the stdout interceptor.
+        
+        Args:
+            message: The log message
+            level: 'info', 'warning', 'error', 'debug'
+            category: 'camera', 'capture', 'ocr', 'scan', 'api', 'system', etc.
+            extra_data: Optional dict of additional context
+        """
+        if self._firebase:
+            self._firebase.send_log(level, message, category, extra_data)
     
     def start(self):
         """Start the Firebase listener and heartbeat service"""
@@ -1094,10 +1112,20 @@ class KioskHealthService:
                 self._heartbeat_thread = threading.Thread(target=self._heartbeat_loop, daemon=True)
                 self._heartbeat_thread.start()
                 
+                # Install log interceptor - captures all print() output and sends to Firebase
+                if install_log_interceptor:
+                    self._log_interceptor = install_log_interceptor(self._firebase)
+                    print(f"📋 Firebase log streaming enabled")
+                
+                # Start periodic log cleanup (every 6 hours, delete logs older than 24h)
+                self._cleanup_thread = threading.Thread(target=self._log_cleanup_loop, daemon=True)
+                self._cleanup_thread.start()
+                
                 print(f"🔥 Firebase kiosk service started")
                 print(f"   - Kiosk ID: {KIOSK_ID}")
                 print(f"   - Status updates: every {self._heartbeat_interval // 60} minutes")
                 print(f"   - Commands: INSTANT via Firebase listeners")
+                print(f"   - Log streaming: ENABLED")
             else:
                 print("❌ Firebase initialization failed - commands will not work")
         else:
@@ -1159,6 +1187,19 @@ class KioskHealthService:
             # Wait for next interval
             time.sleep(self._heartbeat_interval)
     
+    def _log_cleanup_loop(self):
+        """Background loop that periodically cleans up old Firebase logs"""
+        LOG_CLEANUP_INTERVAL = 6 * 3600  # Every 6 hours
+        LOG_MAX_AGE_HOURS = 24  # Delete logs older than 24 hours
+        
+        while self._running:
+            try:
+                time.sleep(LOG_CLEANUP_INTERVAL)
+                if self._firebase:
+                    self._firebase.cleanup_old_logs(hours=LOG_MAX_AGE_HOURS)
+            except Exception as e:
+                print(f"⚠️ Log cleanup error: {e}")
+    
     def _handle_firebase_command(self, command: str, payload: dict):
         """Handle a command received from Firebase"""
         print(f"🔧 Executing Firebase command: {command}")
@@ -1184,6 +1225,11 @@ class KioskHealthService:
             
             elif command == 'test_all_leds':
                 self._test_all_leds()
+            
+            elif command == 'clear_logs':
+                if self._firebase:
+                    self._firebase.clear_all_logs()
+                    print("📋 Logs cleared by debug tool")
             
             else:
                 print(f"⚠ Unknown command: {command}")
@@ -1592,6 +1638,13 @@ class OnScreenKeyboard:
 # ============================================================================
 # Main Kiosk Application
 # ============================================================================
+# ============================================================================
+# DEBUG MODE TOGGLE
+# Set to True during development to show mouse cursor and enable keyboard input.
+# Set to False for final kiosk deployment (hides cursor, disables keyboard).
+# ============================================================================
+DEBUG_MODE = True  # <-- Set to False for production kiosk deployment
+
 class KioskApp:
     # Display duration in seconds
     RESULT_DISPLAY_DURATION = 30   # 30 seconds for results (2-page PDF)
@@ -1754,6 +1807,9 @@ class KioskApp:
         # ============ MAINTENANCE SCREEN (Server offline) ============
         self.maintenance_frame = tk.Frame(self.main_frame, bg=Colors.BACKGROUND)
         
+        # ============ BOOT SCREEN (Startup loading) ============
+        self.boot_frame = tk.Frame(self.main_frame, bg=Colors.PRIMARY)
+        
         # Setup each screen
         self._setup_start_screen()
         self._setup_scan_screen()
@@ -1764,9 +1820,10 @@ class KioskApp:
         self._setup_manual_search_screen()
         self._setup_error_screen()
         self._setup_maintenance_screen()
+        self._setup_boot_screen()
         
-        # Start with start screen (camera off)
-        self._show_start_screen()
+        # Start with boot screen (connecting to server)
+        self._show_boot_screen()
     
     def _setup_start_screen(self):
         """Setup the initial start screen with sidebar layout for small screens"""
@@ -1799,7 +1856,7 @@ class KioskApp:
         # Sidebar buttons - compact for small screens
         self.start_camera_btn = tk.Button(
             sidebar,
-            text="START\nCAMERA",
+            text="SCAN\nWITH QR",
             font=("SF Pro Display", 11, "bold"),
             bg=Colors.PRIMARY_LIGHT,
             fg=Colors.TEXT_WHITE,
@@ -1818,7 +1875,7 @@ class KioskApp:
             sidebar,
             text="SCAN\nLABEL",
             font=("SF Pro Display", 11, "bold"),
-            bg=Colors.ACCENT,
+            bg=Colors.ACCENT if TESSERACT_AVAILABLE else "#999999",
             fg=Colors.TEXT_WHITE,
             activebackground=Colors.PRIMARY_LIGHT,
             activeforeground=Colors.TEXT_WHITE,
@@ -1827,9 +1884,20 @@ class KioskApp:
             width=14,
             pady=15,
             command=self._start_ocr_capture,
-            cursor="hand2"
+            cursor="hand2" if TESSERACT_AVAILABLE else "arrow",
+            state=tk.NORMAL if TESSERACT_AVAILABLE else tk.DISABLED
         )
         self.start_ocr_btn.pack(pady=8, padx=10, fill=tk.X)
+        
+        # OCR unavailable notice
+        if not TESSERACT_AVAILABLE:
+            tk.Label(
+                sidebar,
+                text="OCR unavailable",
+                font=("SF Pro Text", 8),
+                bg=Colors.PRIMARY,
+                fg="#FF9999"
+            ).pack(padx=10)
         
         self.manual_search_btn = tk.Button(
             sidebar,
@@ -1929,22 +1997,6 @@ class KioskApp:
         ).pack(pady=(0, 15))
         
         # Sidebar control buttons - compact for small screens
-        self.mute_button = tk.Button(
-            sidebar,
-            text="SOUND\nON" if not self.tts.is_muted else "SOUND\nOFF",
-            font=("SF Pro Text", 9, "bold"),
-            bg=Colors.PRIMARY_LIGHT,
-            fg=Colors.TEXT_WHITE,
-            activebackground=Colors.ACCENT,
-            activeforeground=Colors.TEXT_WHITE,
-            relief=tk.FLAT,
-            bd=0,
-            width=12,
-            pady=10,
-            command=self.toggle_sound
-        )
-        self.mute_button.pack(pady=5, padx=8, fill=tk.X)
-        
         self.reload_camera_btn = tk.Button(
             sidebar,
             text="RELOAD",
@@ -1965,7 +2017,7 @@ class KioskApp:
             sidebar,
             text="SCAN\nLABEL",
             font=("SF Pro Text", 9, "bold"),
-            bg=Colors.ACCENT,
+            bg=Colors.ACCENT if TESSERACT_AVAILABLE else "#999999",
             fg=Colors.TEXT_WHITE,
             activebackground="#00A895",
             activeforeground=Colors.TEXT_WHITE,
@@ -1973,7 +2025,8 @@ class KioskApp:
             bd=0,
             width=12,
             pady=10,
-            command=self._start_ocr_capture
+            command=self._start_ocr_capture,
+            state=tk.NORMAL if TESSERACT_AVAILABLE else tk.DISABLED
         )
         self.scan_product_btn.pack(pady=5, padx=8, fill=tk.X)
         
@@ -2011,9 +2064,9 @@ class KioskApp:
             pady=8,
             command=self.on_closing
         )
-        # Bind long press to show exit button
-        self.mute_button.bind('<Button-1>', self.start_exit_timer)
-        self.mute_button.bind('<ButtonRelease-1>', self.cancel_exit_timer)
+        # Bind long press on RELOAD to show exit button
+        self.reload_camera_btn.bind('<Button-1>', self.start_exit_timer)
+        self.reload_camera_btn.bind('<ButtonRelease-1>', self.cancel_exit_timer)
         self.exit_timer = None
         
         # RIGHT CONTENT AREA - Camera
@@ -2044,12 +2097,15 @@ class KioskApp:
         )
         camera_border.pack()
         
-        # Inner camera container - responsive size for small screens
+        # Inner camera container - fixed size for small screens
+        qr_cam_w = min(380, self.screen_width - 180)
+        qr_cam_h = min(280, self.screen_height - 120)
+        
         self.camera_container = tk.Frame(
             camera_border,
             bg=Colors.SURFACE,
-            width=400,
-            height=300
+            width=qr_cam_w,
+            height=qr_cam_h
         )
         self.camera_container.pack()
         self.camera_container.pack_propagate(False)
@@ -2061,11 +2117,9 @@ class KioskApp:
             text="Loading Camera...",
             font=("SF Pro Text", 12),
             bg=Colors.SURFACE,
-            fg=Colors.TEXT_SECONDARY,
-            width=400,
-            height=300
+            fg=Colors.TEXT_SECONDARY
         )
-        self.camera_label.pack(expand=False, fill=tk.NONE)
+        self.camera_label.pack(expand=True, fill=tk.BOTH)
         self.camera_label.config(anchor=tk.CENTER)
         
         # Scanning indicator below camera
@@ -2086,21 +2140,21 @@ class KioskApp:
         center = tk.Frame(self.loading_frame, bg=Colors.PRIMARY)
         center.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
         
-        # Large spinner canvas
+        # Spinner canvas - sized for small screens
         self.loading_canvas = tk.Canvas(
             center,
-            width=200,
-            height=200,
+            width=100,
+            height=100,
             bg=Colors.PRIMARY,
             highlightthickness=0
         )
-        self.loading_canvas.pack(pady=(0, 50))
+        self.loading_canvas.pack(pady=(0, 15))
         
-        # Loading text - HUGE
+        # Loading text - fits small screen
         tk.Label(
             center,
             text="VERIFYING",
-            font=("SF Pro Display", 72, "bold"),
+            font=("SF Pro Display", 28, "bold"),
             bg=Colors.PRIMARY,
             fg=Colors.TEXT_WHITE
         ).pack()
@@ -2108,103 +2162,57 @@ class KioskApp:
         tk.Label(
             center,
             text="Please Wait...",
-            font=("SF Pro Display", 36),
+            font=("SF Pro Display", 16),
             bg=Colors.PRIMARY,
             fg=Colors.TEXT_WHITE
-        ).pack(pady=(10, 0))
+        ).pack(pady=(5, 0))
         
         # Processing details
         self.loading_detail_label = tk.Label(
             center,
             text="Connecting to blockchain...",
-            font=("SF Pro Text", 18),
+            font=("SF Pro Text", 11),
             bg=Colors.PRIMARY,
             fg="#AAAAAA"
         )
-        self.loading_detail_label.pack(pady=(50, 0))
+        self.loading_detail_label.pack(pady=(15, 0))
     
     def _setup_ocr_capture_screen(self):
-        """Setup OCR product scan screen with sidebar layout for small screens"""
-        # Main horizontal layout - sidebar on left, content on right
+        """Setup OCR product scan screen - simple: camera preview + capture buttons.
+        No modal, no popups. Camera shows live feed, user taps CAPTURE for front,
+        then CAPTURE for back, then SUBMIT. Fixed sizes for small Pi screens."""
+        # Full vertical layout
         main_container = tk.Frame(self.ocr_frame, bg=Colors.BACKGROUND)
         main_container.pack(fill=tk.BOTH, expand=True)
         
-        # LEFT SIDEBAR - Control buttons
-        sidebar = tk.Frame(main_container, bg=Colors.ACCENT, width=140)
-        sidebar.pack(side=tk.LEFT, fill=tk.Y)
-        sidebar.pack_propagate(False)
-        
-        # Sidebar header
-        tk.Label(
-            sidebar,
-            text="SCAN",
-            font=("SF Pro Display", 14, "bold"),
-            bg=Colors.ACCENT,
-            fg=Colors.TEXT_WHITE
-        ).pack(pady=(10, 3))
+        # ===== TOP BAR - Step indicator + Cancel =====
+        top_bar = tk.Frame(main_container, bg=Colors.ACCENT, height=34)
+        top_bar.pack(fill=tk.X)
+        top_bar.pack_propagate(False)
         
         self.ocr_header_label = tk.Label(
-            sidebar,
-            text="LABEL",
-            font=("SF Pro Text", 10),
+            top_bar,
+            text="SCAN LABEL",
+            font=("SF Pro Display", 10, "bold"),
             bg=Colors.ACCENT,
-            fg="#CCCCCC"
+            fg=Colors.TEXT_WHITE
         )
-        self.ocr_header_label.pack(pady=(0, 15))
+        self.ocr_header_label.pack(side=tk.LEFT, padx=8)
         
-        # Control buttons - compact for small screens
-        self.ocr_capture_front_btn = tk.Button(
-            sidebar,
-            text="PICTURE 1\n(FRONT)",
+        self.ocr_instruction_label = tk.Label(
+            top_bar,
+            text="Step 1: Capture FRONT",
             font=("SF Pro Text", 9, "bold"),
-            bg=Colors.PRIMARY,
-            fg=Colors.TEXT_WHITE,
-            activebackground=Colors.PRIMARY_LIGHT,
-            activeforeground=Colors.TEXT_WHITE,
-            relief=tk.FLAT,
-            bd=0,
-            width=12,
-            pady=10,
-            command=self._ocr_capture_front
+            bg=Colors.ACCENT,
+            fg="#E0F2F1"
         )
-        self.ocr_capture_front_btn.pack(pady=5, padx=8, fill=tk.X)
+        self.ocr_instruction_label.pack(side=tk.LEFT, padx=6, expand=True)
         
-        self.ocr_capture_back_btn = tk.Button(
-            sidebar,
-            text="PICTURE 2\n(BACK)",
-            font=("SF Pro Text", 9, "bold"),
-            bg=Colors.PRIMARY,
-            fg=Colors.TEXT_WHITE,
-            activebackground=Colors.PRIMARY_LIGHT,
-            activeforeground=Colors.TEXT_WHITE,
-            relief=tk.FLAT,
-            bd=0,
-            width=12,
-            pady=10,
-            command=self._ocr_capture_back,
-            state=tk.DISABLED
-        )
-        self.ocr_capture_back_btn.pack(pady=5, padx=8, fill=tk.X)
-        
-        self.ocr_submit_btn = tk.Button(
-            sidebar,
-            text="SUBMIT",
-            font=("SF Pro Text", 9, "bold"),
-            bg=Colors.SUCCESS,
-            fg=Colors.TEXT_WHITE,
-            activebackground="#43A047",
-            activeforeground=Colors.TEXT_WHITE,
-            relief=tk.FLAT,
-            bd=0,
-            width=12,
-            pady=10,
-            command=self._ocr_submit_scan,
-            state=tk.DISABLED
-        )
-        self.ocr_submit_btn.pack(pady=5, padx=8, fill=tk.X)
+        # Hidden sub-label (kept for compatibility)
+        self.ocr_instruction_sub = tk.Label(top_bar, text="", bg=Colors.ACCENT, fg=Colors.ACCENT)
         
         self.ocr_cancel_btn = tk.Button(
-            sidebar,
+            top_bar,
             text="CANCEL",
             font=("SF Pro Text", 9, "bold"),
             bg=Colors.ERROR,
@@ -2213,82 +2221,24 @@ class KioskApp:
             activeforeground=Colors.TEXT_WHITE,
             relief=tk.FLAT,
             bd=0,
-            width=12,
-            pady=10,
+            padx=8,
             command=self._ocr_cancel
         )
-        self.ocr_cancel_btn.pack(pady=5, padx=8, fill=tk.X)
+        self.ocr_cancel_btn.pack(side=tk.RIGHT, padx=4, pady=3)
         
-        # Spacer
-        tk.Frame(sidebar, bg=Colors.ACCENT).pack(fill=tk.BOTH, expand=True)
+        # ===== CAMERA PREVIEW - Fixed size, centered =====
+        cam_w = min(400, self.screen_width - 20)
+        cam_h = min(280, self.screen_height - 160)
         
-        # Thumbnails at bottom of sidebar
-        tk.Label(
-            sidebar,
-            text="Photos:",
-            font=("SF Pro Text", 9, "bold"),
-            bg=Colors.ACCENT,
-            fg=Colors.TEXT_WHITE
-        ).pack(pady=(5, 3), padx=8, anchor=tk.W)
+        cam_center = tk.Frame(main_container, bg=Colors.BACKGROUND)
+        cam_center.pack(fill=tk.BOTH, expand=True)
         
-        self.ocr_front_thumb = tk.Label(
-            sidebar,
-            text="Front: -",
-            font=("SF Pro Text", 8),
-            bg="#00A895",
-            fg=Colors.TEXT_WHITE,
-            width=14,
-            height=2
-        )
-        self.ocr_front_thumb.pack(pady=3, padx=8)
-        
-        self.ocr_back_thumb = tk.Label(
-            sidebar,
-            text="Back: -",
-            font=("SF Pro Text", 8),
-            bg="#00A895",
-            fg=Colors.TEXT_WHITE,
-            width=14,
-            height=2
-        )
-        self.ocr_back_thumb.pack(pady=(3, 10), padx=8)
-        
-        # RIGHT CONTENT AREA - Camera and captured images
-        content_area = tk.Frame(main_container, bg=Colors.BACKGROUND)
-        content_area.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        
-        # Center content
-        center = tk.Frame(content_area, bg=Colors.BACKGROUND)
-        center.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
-        
-        # Instructions - smaller for small screens
-        self.ocr_instruction_label = tk.Label(
-            center,
-            text="Position FRONT of label",
-            font=("SF Pro Display", 14, "bold"),
-            bg=Colors.BACKGROUND,
-            fg=Colors.TEXT_PRIMARY
-        )
-        self.ocr_instruction_label.pack(pady=(0, 3))
-        
-        self.ocr_instruction_sub = tk.Label(
-            center,
-            text="Position the front of the product label",
-            font=("SF Pro Text", 10),
-            bg=Colors.BACKGROUND,
-            fg=Colors.TEXT_SECONDARY
-        )
-        self.ocr_instruction_sub.pack(pady=(0, 10))
-        
-        # Camera frame for OCR - smaller for small screens
-        ocr_camera_border = tk.Frame(center, bg=Colors.ACCENT, padx=3, pady=3)
-        ocr_camera_border.pack()
+        cam_border = tk.Frame(cam_center, bg=Colors.ACCENT, padx=2, pady=2)
+        cam_border.pack(expand=True)
         
         self.ocr_camera_container = tk.Frame(
-            ocr_camera_border,
-            bg=Colors.SURFACE,
-            width=400,
-            height=300
+            cam_border, bg="#000000",
+            width=cam_w, height=cam_h
         )
         self.ocr_camera_container.pack()
         self.ocr_camera_container.pack_propagate(False)
@@ -2296,71 +2246,97 @@ class KioskApp:
         self.ocr_camera_label = tk.Label(
             self.ocr_camera_container,
             text="Camera Preview",
-            font=("SF Pro Text", 12),
-            bg=Colors.SURFACE,
-            fg=Colors.TEXT_SECONDARY
+            font=("SF Pro Text", 10),
+            bg="#000000",
+            fg=Colors.TEXT_WHITE
         )
-        self.ocr_camera_label.pack(expand=True)
+        self.ocr_camera_label.pack(expand=True, fill=tk.BOTH)
         
-        # Captured images preview (shows after capture)
-        preview_section = tk.Frame(center, bg=Colors.BACKGROUND)
-        preview_section.pack(pady=(15, 0))
-        
-        tk.Label(
-            preview_section,
-            text="Captured Images - Tap to review",
-            font=("SF Pro Text", 11, "bold"),
-            bg=Colors.BACKGROUND,
-            fg=Colors.TEXT_SECONDARY
-        ).pack(pady=(0, 8))
-        
-        # Preview frame for both images side by side - LARGER thumbnails
-        preview_images_frame = tk.Frame(preview_section, bg=Colors.BACKGROUND)
-        preview_images_frame.pack()
-        
-        # Front image preview (clickable) - pixel-based sizing for proper thumbnails
-        front_preview_border = tk.Frame(preview_images_frame, bg=Colors.TEXT_SECONDARY, padx=2, pady=2)
-        front_preview_border.pack(side=tk.LEFT, padx=8)
+        # ===== STATUS STRIP - Shows capture status =====
+        status_strip = tk.Frame(main_container, bg=Colors.SURFACE, height=28)
+        status_strip.pack(fill=tk.X)
+        status_strip.pack_propagate(False)
         
         self.ocr_front_preview = tk.Label(
-            front_preview_border,
-            text="FRONT\nNot captured",
-            font=("SF Pro Text", 12),
+            status_strip,
+            text="FRONT: --",
+            font=("SF Pro Text", 9),
             bg=Colors.SURFACE,
             fg=Colors.TEXT_SECONDARY,
-            cursor="hand2",
-            relief=tk.FLAT,
+            padx=6
         )
-        self.ocr_front_preview.config(width=240, height=160)
-        self.ocr_front_preview.pack()
-        self.ocr_front_preview.pack_propagate(False) if hasattr(self.ocr_front_preview, 'pack_propagate') else None
-        self.ocr_front_preview.bind('<Button-1>', lambda e: self._review_ocr_capture(0))
+        self.ocr_front_preview.pack(side=tk.LEFT, padx=4)
         
-        tk.Label(
-            preview_images_frame,
-            text="",
-            font=("SF Pro Text", 8),
-            bg=Colors.BACKGROUND,
-            width=1
-        ).pack(side=tk.LEFT)
-        
-        # Back image preview (clickable) - pixel-based sizing for proper thumbnails
-        back_preview_border = tk.Frame(preview_images_frame, bg=Colors.TEXT_SECONDARY, padx=2, pady=2)
-        back_preview_border.pack(side=tk.LEFT, padx=8)
+        tk.Label(status_strip, text="|", bg=Colors.SURFACE, fg="#CCCCCC",
+                 font=("SF Pro Text", 9)).pack(side=tk.LEFT)
         
         self.ocr_back_preview = tk.Label(
-            back_preview_border,
-            text="BACK\nNot captured",
-            font=("SF Pro Text", 12),
+            status_strip,
+            text="BACK: --",
+            font=("SF Pro Text", 9),
             bg=Colors.SURFACE,
             fg=Colors.TEXT_SECONDARY,
-            cursor="hand2",
-            relief=tk.FLAT,
+            padx=6
         )
-        self.ocr_back_preview.config(width=240, height=160)
-        self.ocr_back_preview.pack()
-        self.ocr_back_preview.pack_propagate(False) if hasattr(self.ocr_back_preview, 'pack_propagate') else None
-        self.ocr_back_preview.bind('<Button-1>', lambda e: self._review_ocr_capture(1))
+        self.ocr_back_preview.pack(side=tk.LEFT, padx=4)
+        
+        # Hidden thumb labels (for capture method compatibility)
+        self.ocr_front_thumb = tk.Label(self.ocr_frame)
+        self.ocr_back_thumb = tk.Label(self.ocr_frame)
+        
+        # ===== BOTTOM ACTION BAR - CAPTURE + SUBMIT buttons =====
+        action_bar = tk.Frame(main_container, bg=Colors.PRIMARY_DARK, height=50)
+        action_bar.pack(fill=tk.X, side=tk.BOTTOM)
+        action_bar.pack_propagate(False)
+        
+        btn_frame = tk.Frame(action_bar, bg=Colors.PRIMARY_DARK)
+        btn_frame.pack(expand=True, fill=tk.BOTH, padx=4, pady=4)
+        
+        btn_font = ("SF Pro Text", 10, "bold")
+        
+        self.ocr_capture_front_btn = tk.Button(
+            btn_frame,
+            text="CAPTURE FRONT",
+            font=btn_font,
+            bg=Colors.PRIMARY,
+            fg=Colors.TEXT_WHITE,
+            activebackground=Colors.PRIMARY_LIGHT,
+            activeforeground=Colors.TEXT_WHITE,
+            relief=tk.FLAT,
+            bd=0,
+            command=self._ocr_capture_front
+        )
+        self.ocr_capture_front_btn.pack(side=tk.LEFT, expand=True, fill=tk.BOTH, padx=2)
+        
+        self.ocr_capture_back_btn = tk.Button(
+            btn_frame,
+            text="CAPTURE BACK",
+            font=btn_font,
+            bg=Colors.PRIMARY,
+            fg=Colors.TEXT_WHITE,
+            activebackground=Colors.PRIMARY_LIGHT,
+            activeforeground=Colors.TEXT_WHITE,
+            relief=tk.FLAT,
+            bd=0,
+            command=self._ocr_capture_back,
+            state=tk.DISABLED
+        )
+        self.ocr_capture_back_btn.pack(side=tk.LEFT, expand=True, fill=tk.BOTH, padx=2)
+        
+        self.ocr_submit_btn = tk.Button(
+            btn_frame,
+            text="SUBMIT",
+            font=btn_font,
+            bg=Colors.SUCCESS,
+            fg=Colors.TEXT_WHITE,
+            activebackground="#43A047",
+            activeforeground=Colors.TEXT_WHITE,
+            relief=tk.FLAT,
+            bd=0,
+            command=self._ocr_submit_scan,
+            state=tk.DISABLED
+        )
+        self.ocr_submit_btn.pack(side=tk.LEFT, expand=True, fill=tk.BOTH, padx=2)
     
     def _setup_result_screen(self):
         """Setup the result screen with responsive layout for small screens"""
@@ -2699,7 +2675,7 @@ class KioskApp:
         )
         self.lto_check_label.pack(side=tk.LEFT, padx=5)
         
-        # Certificate ID row - CLICKABLE
+        # Certificate ID row (display only - no view certificate)
         cert_row = tk.Frame(left_col, bg=Colors.SURFACE)
         cert_row.pack(fill=tk.X, pady=4)
         
@@ -2716,30 +2692,11 @@ class KioskApp:
         self.cert_id_label = tk.Label(
             cert_row,
             text="-",
-            font=("SF Pro Text", 11, "underline"),
+            font=("SF Pro Text", 11),
             bg=Colors.SURFACE,
-            fg=Colors.ACCENT,
-            cursor="hand2"
+            fg=Colors.PRIMARY
         )
         self.cert_id_label.pack(side=tk.LEFT, padx=5)
-        self.cert_id_label.bind('<Button-1>', self._on_certificate_click)
-        
-        # VIEW CERTIFICATE BUTTON
-        self.view_cert_btn = tk.Button(
-            cert_row,
-            text="VIEW",
-            font=("SF Pro Text", 10, "bold"),
-            bg=Colors.ACCENT,
-            fg=Colors.TEXT_WHITE,
-            activebackground=Colors.PRIMARY,
-            activeforeground=Colors.TEXT_WHITE,
-            relief=tk.FLAT,
-            padx=10,
-            pady=2,
-            command=self._view_certificate,
-            cursor="hand2"
-        )
-        self.view_cert_btn.pack(side=tk.LEFT, padx=10)
         
         # RIGHT COLUMN: Dates and Status
         # Registration Date row
@@ -3201,93 +3158,111 @@ class KioskApp:
                 self.active_field_label.config(text="Typing into: LTO/BAI Number")
     
     def _setup_maintenance_screen(self):
-        """Setup the maintenance/offline mode screen - FULL SCREEN LOCKOUT"""
-        # FULL SCREEN RED BACKGROUND for maximum visibility
+        """Setup the offline/maintenance screen - sized for small Raspberry Pi screens.
+        Shows clear OFFLINE status, reconnect button, and auto-retry countdown."""
         self.maintenance_frame.config(bg=Colors.ERROR)
         
-        # Entire screen is one big warning
+        # Full-screen container
         center = tk.Frame(self.maintenance_frame, bg=Colors.ERROR)
         center.pack(fill=tk.BOTH, expand=True)
         
         content = tk.Frame(center, bg=Colors.ERROR)
         content.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
         
-        # Warning text instead of emoji for small screens
+        # Warning icon
         tk.Label(
             content,
             text="!",
-            font=("SF Pro Display", 80, "bold"),
+            font=("SF Pro Display", 36, "bold"),
             bg=Colors.ERROR,
             fg=Colors.TEXT_WHITE
-        ).pack(pady=(0, 20))
+        ).pack(pady=(0, 5))
         
-        # MASSIVE "OFFLINE" text
+        # OFFLINE text - large but fits small screen
         tk.Label(
             content,
             text="OFFLINE",
-            font=("SF Pro Display", 120, "bold"),
+            font=("SF Pro Display", 36, "bold"),
             bg=Colors.ERROR,
             fg=Colors.TEXT_WHITE
-        ).pack(pady=(0, 20))
+        ).pack(pady=(0, 3))
         
         tk.Label(
             content,
-            text="NO CONNECTION",
-            font=("SF Pro Display", 48, "bold"),
+            text="SERVER NOT CONNECTED",
+            font=("SF Pro Display", 14, "bold"),
             bg=Colors.ERROR,
-            fg=Colors.TEXT_WHITE
-        ).pack(pady=(0, 40))
+            fg="#FFCCCC"
+        ).pack(pady=(0, 10))
         
         # Sub-message
         self.maintenance_message = tk.Label(
             content,
-            text="Cannot connect to server",
-            font=("SF Pro Text", 32),
+            text="Cannot reach the RCV server",
+            font=("SF Pro Text", 11),
             bg=Colors.ERROR,
             fg=Colors.TEXT_WHITE
         )
-        self.maintenance_message.pack(pady=(0, 50))
+        self.maintenance_message.pack(pady=(0, 12))
         
-        # Status indicator box
-        status_frame = tk.Frame(content, bg="#D32F2F", padx=40, pady=25)
-        status_frame.pack()
+        # Status indicator
+        status_frame = tk.Frame(content, bg="#D32F2F", padx=15, pady=8)
+        status_frame.pack(fill=tk.X, padx=30)
         
         self.maintenance_status_icon = tk.Label(
             status_frame,
             text="...",
-            font=("SF Pro Text", 28, "bold"),
+            font=("SF Pro Text", 12, "bold"),
             bg="#D32F2F",
             fg=Colors.TEXT_WHITE
         )
-        self.maintenance_status_icon.pack(side=tk.LEFT, padx=(0, 20))
+        self.maintenance_status_icon.pack(side=tk.LEFT, padx=(0, 8))
         
         self.maintenance_status_label = tk.Label(
             status_frame,
             text="Checking connection...",
-            font=("SF Pro Text", 24, "bold"),
+            font=("SF Pro Text", 11, "bold"),
             bg="#D32F2F",
             fg=Colors.TEXT_WHITE
         )
-        self.maintenance_status_label.pack(side=tk.LEFT)
+        self.maintenance_status_label.pack(side=tk.LEFT, expand=True)
         
-        # Retry countdown - prominent
+        # ===== RECONNECT BUTTON - Big, touchable =====
+        self.maintenance_reconnect_btn = tk.Button(
+            content,
+            text="RECONNECT NOW",
+            font=("SF Pro Display", 14, "bold"),
+            bg=Colors.TEXT_WHITE,
+            fg=Colors.ERROR,
+            activebackground="#FFCCCC",
+            activeforeground=Colors.ERROR,
+            relief=tk.FLAT,
+            bd=0,
+            padx=30,
+            pady=12,
+            cursor="hand2",
+            command=self._manual_reconnect
+        )
+        self.maintenance_reconnect_btn.pack(pady=(15, 8))
+        
+        # Retry countdown
         self.maintenance_retry_label = tk.Label(
             content,
-            text="Next check in 10 seconds",
-            font=("SF Pro Text", 22),
+            text="Auto-retry in 10s",
+            font=("SF Pro Text", 10),
             bg=Colors.ERROR,
-            fg=Colors.TEXT_WHITE
+            fg="#FFCCCC"
         )
-        self.maintenance_retry_label.pack(pady=(40, 0))
+        self.maintenance_retry_label.pack(pady=(5, 0))
         
         # Bottom message
         tk.Label(
             content,
-            text="Kiosk will resume automatically when connection is restored",
-            font=("SF Pro Text", 18),
+            text="Will resume automatically on reconnect",
+            font=("SF Pro Text", 9),
             bg=Colors.ERROR,
-            fg="#FFCCCC"
-        ).pack(pady=(20, 0))
+            fg="#FF9999"
+        ).pack(pady=(8, 0))
     
     def _draw_qr_icon(self, canvas, size, color):
         """Draw a QR code icon on canvas"""
@@ -3357,7 +3332,8 @@ class KioskApp:
         for frame in [self.start_frame, self.scan_frame, self.ocr_frame,
                       self.loading_frame, self.result_frame, 
                       self.compliance_frame, self.manual_search_frame,
-                      self.error_frame, self.maintenance_frame]:
+                      self.error_frame, self.maintenance_frame,
+                      self.boot_frame]:
             frame.pack_forget()
         
         # Destroy dynamic OCR not-found screen if it exists
@@ -3996,16 +3972,183 @@ class KioskApp:
         self._show_error_screen(message, "A problem occurred. Please try again.")
     
     def initialize_kiosk(self):
-        """Initialize kiosk - check API, show start screen (camera off)"""
-        # Check API connection in background
-        thread = threading.Thread(target=self._check_api_connection, daemon=True)
-        thread.start()
+        """Initialize kiosk - show boot screen, ping server, then transition."""
+        # Boot screen is already showing from setup_ui.
+        # Start the server ping process in the background.
+        self._boot_ping_server()
+    
+    def _setup_boot_screen(self):
+        """Setup the boot/startup loading screen shown while connecting to server.
+        The kiosk is uninteractable until server responds or user taps Retry."""
+        center = tk.Frame(self.boot_frame, bg=Colors.PRIMARY)
+        center.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
         
-        # Show start screen (camera stays off until user taps)
+        # RCV Logo/title
+        tk.Label(
+            center,
+            text="RCV KIOSK",
+            font=("SF Pro Display", 28, "bold"),
+            bg=Colors.PRIMARY,
+            fg=Colors.TEXT_WHITE
+        ).pack(pady=(0, 5))
+        
+        tk.Label(
+            center,
+            text="Product Verification System",
+            font=("SF Pro Text", 12),
+            bg=Colors.PRIMARY,
+            fg="#AADDAA"
+        ).pack(pady=(0, 20))
+        
+        # Spinner
+        self.boot_canvas = tk.Canvas(
+            center, width=80, height=80,
+            bg=Colors.PRIMARY, highlightthickness=0
+        )
+        self.boot_canvas.pack(pady=(0, 15))
+        
+        # Status label
+        self.boot_status_label = tk.Label(
+            center,
+            text="Connecting to server...",
+            font=("SF Pro Text", 12, "bold"),
+            bg=Colors.PRIMARY,
+            fg=Colors.TEXT_WHITE
+        )
+        self.boot_status_label.pack(pady=(0, 5))
+        
+        # Detail label
+        self.boot_detail_label = tk.Label(
+            center,
+            text="Please wait",
+            font=("SF Pro Text", 10),
+            bg=Colors.PRIMARY,
+            fg="#AAAAAA"
+        )
+        self.boot_detail_label.pack(pady=(0, 15))
+        
+        # Retry button (hidden initially, shown on failure)
+        self.boot_retry_btn = tk.Button(
+            center,
+            text="RETRY CONNECTION",
+            font=("SF Pro Display", 12, "bold"),
+            bg=Colors.TEXT_WHITE,
+            fg=Colors.PRIMARY,
+            activebackground="#E0E0E0",
+            activeforeground=Colors.PRIMARY,
+            relief=tk.FLAT,
+            bd=0,
+            padx=25,
+            pady=10,
+            cursor="hand2",
+            command=self._boot_retry
+        )
+        # Don't pack yet - shown on failure
+        
+        # Boot animation state
+        self.boot_angle = 0
+        self.boot_anim_id = None
+        self.boot_attempt = 0
+        self.boot_max_attempts = 5  # Try 5 times (each ~3s timeout) = ~15s total
+    
+    def _show_boot_screen(self):
+        """Show the boot loading screen - kiosk is locked until server responds."""
+        self._hide_all_screens()
+        self.boot_frame.pack(fill=tk.BOTH, expand=True)
+        self.boot_status_label.config(text="Connecting to server...")
+        self.boot_detail_label.config(text="Please wait")
+        self.boot_retry_btn.pack_forget()  # Hide retry button
+        self._animate_boot_spinner()
+    
+    def _animate_boot_spinner(self):
+        """Animate the boot screen spinner."""
+        try:
+            self.boot_canvas.delete("all")
+            cx, cy, r = 40, 40, 30
+            
+            # Background ring
+            self.boot_canvas.create_oval(
+                cx - r, cy - r, cx + r, cy + r,
+                outline="#FFFFFF33", width=6
+            )
+            # Spinning arc
+            self.boot_canvas.create_arc(
+                cx - r, cy - r, cx + r, cy + r,
+                start=self.boot_angle, extent=80,
+                outline=Colors.TEXT_WHITE, width=6, style=tk.ARC
+            )
+            self.boot_angle = (self.boot_angle + 12) % 360
+            self.boot_anim_id = self.root.after(50, self._animate_boot_spinner)
+        except tk.TclError:
+            pass
+    
+    def _stop_boot_animation(self):
+        """Stop boot spinner animation."""
+        if self.boot_anim_id:
+            self.root.after_cancel(self.boot_anim_id)
+            self.boot_anim_id = None
+    
+    def _boot_ping_server(self):
+        """Ping the server during boot. Retries up to boot_max_attempts times."""
+        self.boot_attempt += 1
+        attempt = self.boot_attempt
+        
+        self.boot_status_label.config(text=f"Connecting to server... (attempt {attempt}/{self.boot_max_attempts})")
+        self.boot_detail_label.config(text="Attempting to reach server...")
+        
+        def do_ping():
+            result = self.api.health_check()
+            self.root.after(0, lambda: self._boot_ping_result(result))
+        
+        thread = threading.Thread(target=do_ping, daemon=True)
+        thread.start()
+    
+    def _boot_ping_result(self, result: dict):
+        """Handle boot ping result."""
+        if result.get("success"):
+            # Server is online - proceed to start screen
+            self.is_online = True
+            self.consecutive_failures = 0
+            self._stop_boot_animation()
+            self.boot_status_label.config(text="Connected!")
+            self.boot_detail_label.config(text="Starting kiosk...")
+            
+            # Short delay to show success, then transition
+            self.root.after(800, self._boot_complete)
+        else:
+            # Failed
+            if self.boot_attempt < self.boot_max_attempts:
+                # Retry after short delay
+                self.boot_detail_label.config(text="Server not responding, retrying...")
+                self.root.after(2000, self._boot_ping_server)
+            else:
+                # Max attempts reached - show retry button
+                self._stop_boot_animation()
+                self.is_online = False
+                self.boot_status_label.config(text="Server Offline")
+                self.boot_detail_label.config(text="Server unreachable. Tap to retry.")
+                self.boot_canvas.delete("all")
+                # Show X on canvas
+                self.boot_canvas.create_text(40, 40, text="X", font=("SF Pro Display", 28, "bold"), fill="#FF6666")
+                self.boot_retry_btn.pack(pady=(10, 0))
+    
+    def _boot_retry(self):
+        """User tapped retry on boot screen."""
+        self.boot_attempt = 0
+        self.boot_retry_btn.pack_forget()
+        self._animate_boot_spinner()
+        self._boot_ping_server()
+    
+    def _boot_complete(self):
+        """Boot sequence complete - server is online, show start screen."""
+        self._stop_boot_animation()
         self._show_start_screen()
         self.tts.speak(EnglishMessages.WELCOME)
         
-        # Start background connectivity monitoring (after initial delay)
+        # Update connection status on start screen
+        self.root.after(100, lambda: self._update_connection_status(True))
+        
+        # Start background connectivity monitoring
         self.root.after(5000, self._start_background_monitoring)
     
     def _start_background_monitoring(self):
@@ -4056,9 +4199,10 @@ class KioskApp:
                     text=" Server connected",
                     fg=Colors.SUCCESS
                 )
-                # Enable buttons when online
+                # Enable buttons when online (OCR only if Tesseract available)
                 self.start_camera_btn.config(state=tk.NORMAL)
-                self.start_ocr_btn.config(state=tk.NORMAL)
+                if TESSERACT_AVAILABLE:
+                    self.start_ocr_btn.config(state=tk.NORMAL)
             else:
                 self.connection_status_icon.config(fg=Colors.ERROR)
                 self.connection_status_label.config(
@@ -4147,6 +4291,32 @@ class KioskApp:
         
         countdown(interval_seconds)
     
+    def _manual_reconnect(self):
+        """User tapped RECONNECT button on maintenance screen."""
+        self.maintenance_reconnect_btn.config(text="CONNECTING...", state=tk.DISABLED)
+        self.maintenance_status_label.config(text="Checking connection...")
+        self.maintenance_status_icon.config(text="...")
+        
+        def do_check():
+            result = self.api.health_check()
+            self.root.after(0, lambda: self._manual_reconnect_result(result))
+        
+        thread = threading.Thread(target=do_check, daemon=True)
+        thread.start()
+    
+    def _manual_reconnect_result(self, result: dict):
+        """Handle result from manual reconnect attempt."""
+        try:
+            self.maintenance_reconnect_btn.config(text="RECONNECT NOW", state=tk.NORMAL)
+        except tk.TclError:
+            pass
+        
+        if result.get("success"):
+            self._update_maintenance_status(result)
+        else:
+            self.maintenance_status_icon.config(text="X")
+            self.maintenance_status_label.config(text="Still offline - try again")
+    
     def _recover_from_maintenance(self):
         """Recover from maintenance mode when server comes back online"""
         print("Server connection restored - recovering from maintenance mode")
@@ -4174,6 +4344,7 @@ class KioskApp:
         
         try:
             print("Searching for camera...")
+            self.health_service.log("Searching for camera...", category='camera')
             # Try different camera indices
             camera_indices = [0, 1, 2, -1]
             
@@ -4182,6 +4353,7 @@ class KioskApp:
                 self.camera = cv2.VideoCapture(idx)
                 if self.camera.isOpened():
                     print(f"Camera found at index {idx}")
+                    self.health_service.log(f"Camera found at index {idx}", category='camera')
                     break
                 self.camera.release()
             
@@ -4200,21 +4372,26 @@ class KioskApp:
             autofocus_set = self.camera.set(cv2.CAP_PROP_AUTOFOCUS, 1)
             if autofocus_set:
                 print("Camera autofocus ENABLED")
+                self.health_service.log("Camera autofocus ENABLED", category='camera')
             else:
                 print("Camera autofocus not supported by this camera - trying manual focus")
+                self.health_service.log("Camera autofocus not supported - trying manual focus", category='camera')
                 # Try setting focus to 0 (infinity/auto) as fallback
                 # Some cameras use CAP_PROP_FOCUS with 0 = auto
                 focus_set = self.camera.set(cv2.CAP_PROP_FOCUS, 0)
                 if focus_set:
                     print("Manual focus set to auto (0)")
+                    self.health_service.log("Manual focus set to auto (0)", category='camera')
                 else:
                     print("Focus control not available - camera uses fixed focus")
+                    self.health_service.log("Focus control not available - camera uses fixed focus", category='camera')
             
             # Set exposure and white balance to auto for better image quality
             self.camera.set(cv2.CAP_PROP_AUTO_EXPOSURE, 3)  # 3 = auto exposure
             self.camera.set(cv2.CAP_PROP_AUTO_WB, 1)  # Enable auto white balance
             
             print(f"Camera configured: 640x480")
+            self.health_service.log("Camera configured: 640x480", category='camera')
             
             self.is_running = True
             
@@ -4223,9 +4400,11 @@ class KioskApp:
             self.video_thread.start()
             
             print("Video loop started")
+            self.health_service.log("Video loop started", category='camera')
             
         except Exception as e:
             print(f"Camera initialization failed: {e}")
+            self.health_service.log(f"Camera initialization failed: {e}", level='error', category='camera')
             self.state = KioskState.ERROR
             self._show_error_screen(
                 f"Camera Error: {str(e)}",
@@ -4297,6 +4476,11 @@ class KioskApp:
             
             # Store current frame for OCR capture
             self.current_frame = frame.copy()
+            
+            # GUARD: Double-check slideshow is not active before processing
+            if self.slideshow_active:
+                time.sleep(0.1)
+                continue
             
             # Only process QR detection if in scanning state
             if self.state == KioskState.IDLE:
@@ -4376,7 +4560,15 @@ class KioskApp:
         return display_frame, qr_data
     
     def can_process_scan(self, data: str) -> bool:
-        """Check if enough time has passed since last scan"""
+        """Check if scan is allowed - blocks during slideshow, cooldown, etc."""
+        # GUARD: Never allow scanning during slideshow mode
+        if self.slideshow_active:
+            return False
+        
+        # GUARD: Only allow scanning when in IDLE state (actively scanning)
+        if self.state != KioskState.IDLE:
+            return False
+        
         current_time = time.time()
         time_since_last = current_time - self.last_scan_time
         
@@ -4392,7 +4584,17 @@ class KioskApp:
         return True
     
     def handle_qr_detection(self, qr_data: str):
-        """Handle detected QR code"""
+        """Handle detected QR code - with slideshow guard"""
+        # GUARD: Block if slideshow is active (prevents phantom scans)
+        if self.slideshow_active:
+            print("QR detection blocked - slideshow is active")
+            return
+        
+        # GUARD: Block if not in a scannable state
+        if self.state not in (KioskState.IDLE,):
+            print(f"QR detection blocked - state is {self.state.value}")
+            return
+        
         self.last_scan_time = time.time()
         self.last_scan_data = qr_data
         
@@ -4928,13 +5130,16 @@ class KioskApp:
         self.ocr_back_frame = None
         self.ocr_preview_photos = []  # Clear preview references
         
-        # Reset thumbnails
-        self.ocr_front_thumb.config(text="Front: -", image="")
-        self.ocr_back_thumb.config(text="Back: -", image="")
+        # Reset thumbnails (hidden references)
+        try:
+            self.ocr_front_thumb.config(text="Front: -", image="")
+            self.ocr_back_thumb.config(text="Back: -", image="")
+        except Exception:
+            pass
         
-        # Reset preview images (match the new pixel-based preview labels)
-        self.ocr_front_preview.config(text="FRONT\nNot captured", image="", bg=Colors.SURFACE)
-        self.ocr_back_preview.config(text="BACK\nNot captured", image="", bg=Colors.SURFACE)
+        # Reset preview indicators
+        self.ocr_front_preview.config(text="FRONT: --", image="", bg=Colors.SURFACE, fg=Colors.TEXT_SECONDARY)
+        self.ocr_back_preview.config(text="BACK: --", image="", bg=Colors.SURFACE, fg=Colors.TEXT_SECONDARY)
         
         # Update UI
         self._update_ocr_ui()
@@ -4943,34 +5148,49 @@ class KioskApp:
         """Update OCR UI based on captured images"""
         # Update button states based on what's captured
         if self.ocr_front_frame is None:
-            self.ocr_instruction_label.config(text="Position FRONT of label")
-            self.ocr_instruction_sub.config(text="Position the front of the product label")
+            self.ocr_instruction_label.config(text="Step 1: Capture FRONT")
             self.ocr_capture_front_btn.config(state=tk.NORMAL)
             self.ocr_capture_back_btn.config(state=tk.DISABLED)
             self.ocr_submit_btn.config(state=tk.DISABLED)
         
         elif self.ocr_front_frame is not None and self.ocr_back_frame is None:
-            self.ocr_instruction_label.config(text="Front captured! Now BACK")
-            self.ocr_instruction_sub.config(text="Front captured! Now position the back")
+            self.ocr_instruction_label.config(text="Step 2: Capture BACK")
             self.ocr_capture_front_btn.config(state=tk.NORMAL)  # Can retake
             self.ocr_capture_back_btn.config(state=tk.NORMAL)  # Now enabled
             self.ocr_submit_btn.config(state=tk.DISABLED)
         
         elif self.ocr_front_frame is not None and self.ocr_back_frame is not None:
-            self.ocr_instruction_label.config(text="Both sides captured!")
-            self.ocr_instruction_sub.config(text="Both sides captured!")
+            self.ocr_instruction_label.config(text="Ready! Tap SUBMIT")
             self.ocr_capture_front_btn.config(state=tk.NORMAL)  # Can retake
             self.ocr_capture_back_btn.config(state=tk.NORMAL)  # Can retake
             self.ocr_submit_btn.config(state=tk.NORMAL)  # Can submit
     
     def _display_ocr_frame(self, frame):
-        """Display frame in OCR capture camera preview"""
+        """Display frame in OCR capture camera preview - fixed size"""
         try:
-            print(f"OCR frame update - State: {self.state}, Frame shape: {frame.shape if frame is not None else 'None'}")
+            # Use the fixed container size
+            container_w = self.ocr_camera_container.winfo_width()
+            container_h = self.ocr_camera_container.winfo_height()
             
-            # Resize and convert
+            # Fallback if container not yet rendered
+            if container_w < 50 or container_h < 50:
+                container_w = min(400, self.screen_width - 20)
+                container_h = min(280, self.screen_height - 160)
+            
+            # Resize maintaining aspect ratio
+            frame_h, frame_w = frame.shape[:2]
+            frame_ratio = frame_w / frame_h
+            label_ratio = container_w / container_h
+            
+            if frame_ratio > label_ratio:
+                display_w = container_w
+                display_h = int(container_w / frame_ratio)
+            else:
+                display_h = container_h
+                display_w = int(container_h * frame_ratio)
+            
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            frame_resized = cv2.resize(frame_rgb, (400, 300))
+            frame_resized = cv2.resize(frame_rgb, (display_w, display_h), interpolation=cv2.INTER_LINEAR)
             
             pil_image = Image.fromarray(frame_resized)
             photo = ImageTk.PhotoImage(pil_image)
@@ -4991,20 +5211,24 @@ class KioskApp:
         frame_copy = self.current_frame.copy()
         self.ocr_front_frame = frame_copy
         
-        # Create thumbnail for sidebar
-        thumb = self._create_thumbnail(frame_copy, 150, 100)
-        self.ocr_front_thumb.config(image=thumb, text="")
-        self.ocr_front_thumb.image = thumb
+        # Create thumbnail for hidden ref
+        try:
+            thumb = self._create_thumbnail(frame_copy, 150, 100)
+            self.ocr_front_thumb.config(image=thumb, text="")
+            self.ocr_front_thumb.image = thumb
+        except Exception:
+            thumb = None
         
-        # Create larger preview image (240x160 to match the preview label size)
-        preview = self._create_thumbnail(frame_copy, 240, 160)
-        self.ocr_front_preview.config(image=preview, text="", bg=Colors.SUCCESS_LIGHT)
-        self.ocr_front_preview.image = preview
+        # Update status indicator text
+        self.ocr_front_preview.config(text="FRONT: OK", image="", bg=Colors.SUCCESS_LIGHT, fg=Colors.SUCCESS)
         
-        # Store in list to prevent garbage collection
-        self.ocr_preview_photos = [preview, thumb]
+        # Store refs to prevent garbage collection
+        self.ocr_preview_photos = []
+        if thumb:
+            self.ocr_preview_photos.append(thumb)
         
-        print(f"Front captured - Preview size: {preview.width()}x{preview.height()}")
+        print(f"Front captured")
+        self.health_service.log("Front captured", category='capture')
         
         # Update UI
         self._update_ocr_ui()
@@ -5019,23 +5243,23 @@ class KioskApp:
         frame_copy = self.current_frame.copy()
         self.ocr_back_frame = frame_copy
         
-        # Create thumbnail for sidebar
-        thumb = self._create_thumbnail(frame_copy, 150, 100)
-        self.ocr_back_thumb.config(image=thumb, text="")
-        self.ocr_back_thumb.image = thumb
+        # Create thumbnail for hidden ref
+        try:
+            thumb = self._create_thumbnail(frame_copy, 150, 100)
+            self.ocr_back_thumb.config(image=thumb, text="")
+            self.ocr_back_thumb.image = thumb
+        except Exception:
+            thumb = None
         
-        # Create larger preview image (240x160 to match the preview label size)
-        preview = self._create_thumbnail(frame_copy, 240, 160)
-        self.ocr_back_preview.config(image=preview, text="", bg=Colors.SUCCESS_LIGHT)
-        self.ocr_back_preview.image = preview
+        # Update status indicator text
+        self.ocr_back_preview.config(text="BACK: OK", image="", bg=Colors.SUCCESS_LIGHT, fg=Colors.SUCCESS)
         
-        # Add to list to prevent garbage collection (keep both previews)
-        if len(self.ocr_preview_photos) >= 2:
-            self.ocr_preview_photos.extend([preview, thumb])
-        else:
-            self.ocr_preview_photos = [preview, thumb]
+        # Add to list to prevent garbage collection
+        if thumb:
+            self.ocr_preview_photos.append(thumb)
         
-        print(f"Back captured - Preview size: {preview.width()}x{preview.height()}")
+        print(f"Back captured")
+        self.health_service.log("Back captured", category='capture')
         
         # Update UI
         self._update_ocr_ui()
@@ -5150,14 +5374,30 @@ class KioskApp:
             # Send to API using same endpoint as OCR
             print(f"Calling POST /api/v1/kiosk-scan/scanProduct (Manual Search)")
             print(f"Payload: blockOfText={len(combined_text)} chars")
+            self.health_service.log(
+                f"Manual Search: Calling POST /api/v1/kiosk-scan/scanProduct",
+                category='api',
+                extra_data={'cfpr': cfpr, 'lto': lto, 'payloadChars': len(combined_text)}
+            )
             response = self.api.scan_product_ocr(combined_text)
             print(f"API Response: success={response.get('success')}, found={response.get('found')}, isCompliant={response.get('isCompliant')}")
+            self.health_service.log(
+                f"Manual Search API Response: success={response.get('success')}, found={response.get('found')}, isCompliant={response.get('isCompliant')}",
+                category='api',
+                extra_data={
+                    'success': response.get('success'),
+                    'found': response.get('found'),
+                    'isCompliant': response.get('isCompliant')
+                }
+            )
             
             if response.get("success"):
                 print(f"Displaying compliance result to user")
+                self.health_service.log("Displaying compliance result to user (Manual Search)", category='scan')
                 self.root.after(0, lambda: self._display_compliance_result(response))
             else:
                 print(f"Search failed: {response.get('message')}")
+                self.health_service.log(f"Manual search failed: {response.get('message')}", level='warning', category='scan')
                 self.root.after(0, lambda: self._show_error_screen(
                     "Product Not Found",
                     response.get("message", "No product found with those registration numbers")
@@ -5342,6 +5582,7 @@ class KioskApp:
             scale = min_dimension / max(height, width)
             gray = cv2.resize(gray, (int(width * scale), int(height * scale)), interpolation=cv2.INTER_CUBIC)
             print(f"   Upscaled from {width}x{height} to {gray.shape[1]}x{gray.shape[0]}")
+            self.health_service.log(f"Upscaled from {width}x{height} to {gray.shape[1]}x{gray.shape[0]}", category='ocr')
         
         # 2. Light denoising (preserve edges)
         denoised = cv2.bilateralFilter(gray, 9, 75, 75)
@@ -5352,6 +5593,7 @@ class KioskApp:
         
         # Single OCR pass with best general settings
         print(f"   Running Tesseract OCR ({label})...")
+        self.health_service.log(f"Running Tesseract OCR ({label})...", category='ocr')
         try:
             raw_text = pytesseract.image_to_string(
                 Image.fromarray(enhanced),
@@ -5360,9 +5602,15 @@ class KioskApp:
             )
             print(f"   OCR result: {len(raw_text)} chars")
             print(f"   Preview: {raw_text[:200] if len(raw_text) > 200 else raw_text}")
+            self.health_service.log(
+                f"OCR result ({label}): {len(raw_text)} chars",
+                category='ocr',
+                extra_data={'charCount': len(raw_text), 'label': label, 'preview': raw_text[:200]}
+            )
             return raw_text.strip()
         except Exception as e:
             print(f"   OCR failed: {e}")
+            self.health_service.log(f"OCR failed ({label}): {e}", level='error', category='ocr')
             return ""
     
     def _clean_ocr_text(self, text: str) -> str:
@@ -5408,37 +5656,58 @@ class KioskApp:
             print("\n" + "="*60)
             print("OCR EXTRACTION - FRONT IMAGE")
             print("="*60)
+            self.health_service.log("OCR EXTRACTION - FRONT IMAGE", category='ocr')
             front_text = ""
             try:
                 front_text = self._enhanced_ocr_extraction(self.ocr_front_frame, "FRONT")
             except Exception as e:
                 print(f"Front OCR extraction failed: {e}")
+                self.health_service.log(f"Front OCR extraction failed: {e}", level='error', category='ocr')
                 front_text = ""
             print(f"Front text: {len(front_text)} chars")
+            self.health_service.log(f"Front text: {len(front_text)} chars", category='ocr', extra_data={'charCount': len(front_text)})
             
             self.root.after(0, lambda: self.loading_detail_label.config(text="Reading back label..."))
             
             print("\n" + "="*60)
             print("OCR EXTRACTION - BACK IMAGE")
             print("="*60)
+            self.health_service.log("OCR EXTRACTION - BACK IMAGE", category='ocr')
             back_text = ""
             try:
                 back_text = self._enhanced_ocr_extraction(self.ocr_back_frame, "BACK")
             except Exception as e:
                 print(f"Back OCR extraction failed: {e}")
+                self.health_service.log(f"Back OCR extraction failed: {e}", level='error', category='ocr')
                 back_text = ""
             print(f"Back text: {len(back_text)} chars")
+            self.health_service.log(f"Back text: {len(back_text)} chars", category='ocr', extra_data={'charCount': len(back_text)})
             
             # Combine with delimiters matching mobile app format
             combined_text = f"--- FRONT OF LABEL ---\n\n{front_text}\n\n--- BACK OF LABEL ---\n\n{back_text}"
             print(f"\n=== COMBINED RAW OCR TEXT ({len(combined_text)} chars) ===")
             print(combined_text[:500])
             print(f"=========================")
+            self.health_service.log(
+                f"Combined OCR text: {len(combined_text)} chars",
+                category='ocr',
+                extra_data={
+                    'totalChars': len(combined_text),
+                    'frontChars': len(front_text),
+                    'backChars': len(back_text),
+                    'preview': combined_text[:300]
+                }
+            )
             
             # GUARD: Check minimum text length (matching mobile app's validation)
             actual_text = front_text.strip() + back_text.strip()
             if len(actual_text) < 10:
                 print(f"Insufficient OCR text detected: {len(actual_text)} chars (minimum: 10)")
+                self.health_service.log(
+                    f"Insufficient OCR text: {len(actual_text)} chars (minimum: 10)",
+                    level='warning', category='ocr',
+                    extra_data={'actualChars': len(actual_text)}
+                )
                 self.root.after(0, lambda: self._show_ocr_not_found_screen(
                     "Could not read text from the label.\\n\\n"
                     "Tips:\\n"
@@ -5454,8 +5723,22 @@ class KioskApp:
             # Send to API - calling /scan/scanProduct endpoint
             print(f"Calling POST /api/v1/kiosk-scan/scanProduct")
             print(f"Payload: blockOfText={len(combined_text)} chars")
+            self.health_service.log(
+                f"Calling POST /api/v1/kiosk-scan/scanProduct",
+                category='api',
+                extra_data={'payloadChars': len(combined_text)}
+            )
             response = self.api.scan_product_ocr(combined_text)
             print(f"API Response: success={response.get('success')}, found={response.get('found')}, isCompliant={response.get('isCompliant')}")
+            self.health_service.log(
+                f"API Response: success={response.get('success')}, found={response.get('found')}, isCompliant={response.get('isCompliant')}",
+                category='api',
+                extra_data={
+                    'success': response.get('success'),
+                    'found': response.get('found'),
+                    'isCompliant': response.get('isCompliant')
+                }
+            )
             
             # GUARD: Handle connection errors
             if response.get("error") == "connection_error":
@@ -5485,17 +5768,20 @@ class KioskApp:
             
             if response.get("success"):
                 print(f"Displaying compliance result to user")
+                self.health_service.log("Displaying compliance result to user", category='scan')
                 self.root.after(0, lambda: self._display_compliance_result(response))
             else:
                 # API returned success=false - show not found with manual search option
                 msg = response.get("message", "Could not process the product label")
                 print(f"Scan returned not successful: {msg}")
+                self.health_service.log(f"Scan returned not successful: {msg}", level='warning', category='scan')
                 self.root.after(0, lambda: self._show_ocr_not_found_screen(
                     f"{msg}\\n\\nTry Manual Search to enter registration numbers directly."
                 ))
                 
         except requests.exceptions.ConnectionError:
             print("OCR processing error: Connection refused")
+            self.health_service.log("OCR processing error: Connection refused", level='error', category='api')
             self.root.after(0, lambda: self._show_error_screen(
                 "Server Unavailable",
                 "Cannot connect to RCV server. Check your connection."
@@ -5661,8 +5947,6 @@ class KioskApp:
                 bg=Colors.ERROR,
                 text="PRODUCT NOT FOUND"
             )
-            # Hide VIEW button when no product found
-            self.view_cert_btn.pack_forget()
             # Show MANUAL SEARCH button when product not found
             self.compliance_manual_search_frame.pack(fill=tk.X, padx=15, pady=(10, 0))
         else:
@@ -5673,11 +5957,6 @@ class KioskApp:
             )
             # Hide MANUAL SEARCH button when product is found
             self.compliance_manual_search_frame.pack_forget()
-            # Show VIEW button when product is found
-            if self.current_ocr_certificate_id:
-                self.view_cert_btn.pack(side=tk.LEFT, padx=10)
-            else:
-                self.view_cert_btn.pack_forget()
         
         # Product info - PROMINENT DISPLAY
         product_name = product_info.get("productName", "Unknown Product")
@@ -6641,8 +6920,11 @@ def main():
     """Main entry point"""
     root = tk.Tk()
     
-    # Hide cursor for kiosk mode
-    root.config(cursor="none")
+    # Hide cursor for kiosk mode (unless DEBUG_MODE is enabled)
+    if not DEBUG_MODE:
+        root.config(cursor="none")
+    else:
+        print("DEBUG MODE: Mouse cursor visible, keyboard input enabled")
     
     app = KioskApp(root)
     root.protocol("WM_DELETE_WINDOW", app.on_closing)
