@@ -1067,6 +1067,21 @@ class KioskHealthService:
             'error': False
         }
     
+    def log(self, message: str, level: str = 'info', category: str = 'general', extra_data: dict = None):
+        """
+        Send a log entry directly to Firebase.
+        Use this for key operational events to guarantee they are logged,
+        independent of the stdout interceptor.
+        
+        Args:
+            message: The log message
+            level: 'info', 'warning', 'error', 'debug'
+            category: 'camera', 'capture', 'ocr', 'scan', 'api', 'system', etc.
+            extra_data: Optional dict of additional context
+        """
+        if self._firebase:
+            self._firebase.send_log(level, message, category, extra_data)
+    
     def start(self):
         """Start the Firebase listener and heartbeat service"""
         if self._running:
@@ -4329,6 +4344,7 @@ class KioskApp:
         
         try:
             print("Searching for camera...")
+            self.health_service.log("Searching for camera...", category='camera')
             # Try different camera indices
             camera_indices = [0, 1, 2, -1]
             
@@ -4337,6 +4353,7 @@ class KioskApp:
                 self.camera = cv2.VideoCapture(idx)
                 if self.camera.isOpened():
                     print(f"Camera found at index {idx}")
+                    self.health_service.log(f"Camera found at index {idx}", category='camera')
                     break
                 self.camera.release()
             
@@ -4355,21 +4372,26 @@ class KioskApp:
             autofocus_set = self.camera.set(cv2.CAP_PROP_AUTOFOCUS, 1)
             if autofocus_set:
                 print("Camera autofocus ENABLED")
+                self.health_service.log("Camera autofocus ENABLED", category='camera')
             else:
                 print("Camera autofocus not supported by this camera - trying manual focus")
+                self.health_service.log("Camera autofocus not supported - trying manual focus", category='camera')
                 # Try setting focus to 0 (infinity/auto) as fallback
                 # Some cameras use CAP_PROP_FOCUS with 0 = auto
                 focus_set = self.camera.set(cv2.CAP_PROP_FOCUS, 0)
                 if focus_set:
                     print("Manual focus set to auto (0)")
+                    self.health_service.log("Manual focus set to auto (0)", category='camera')
                 else:
                     print("Focus control not available - camera uses fixed focus")
+                    self.health_service.log("Focus control not available - camera uses fixed focus", category='camera')
             
             # Set exposure and white balance to auto for better image quality
             self.camera.set(cv2.CAP_PROP_AUTO_EXPOSURE, 3)  # 3 = auto exposure
             self.camera.set(cv2.CAP_PROP_AUTO_WB, 1)  # Enable auto white balance
             
             print(f"Camera configured: 640x480")
+            self.health_service.log("Camera configured: 640x480", category='camera')
             
             self.is_running = True
             
@@ -4378,9 +4400,11 @@ class KioskApp:
             self.video_thread.start()
             
             print("Video loop started")
+            self.health_service.log("Video loop started", category='camera')
             
         except Exception as e:
             print(f"Camera initialization failed: {e}")
+            self.health_service.log(f"Camera initialization failed: {e}", level='error', category='camera')
             self.state = KioskState.ERROR
             self._show_error_screen(
                 f"Camera Error: {str(e)}",
@@ -5204,6 +5228,7 @@ class KioskApp:
             self.ocr_preview_photos.append(thumb)
         
         print(f"Front captured")
+        self.health_service.log("Front captured", category='capture')
         
         # Update UI
         self._update_ocr_ui()
@@ -5234,6 +5259,7 @@ class KioskApp:
             self.ocr_preview_photos.append(thumb)
         
         print(f"Back captured")
+        self.health_service.log("Back captured", category='capture')
         
         # Update UI
         self._update_ocr_ui()
@@ -5348,14 +5374,30 @@ class KioskApp:
             # Send to API using same endpoint as OCR
             print(f"Calling POST /api/v1/kiosk-scan/scanProduct (Manual Search)")
             print(f"Payload: blockOfText={len(combined_text)} chars")
+            self.health_service.log(
+                f"Manual Search: Calling POST /api/v1/kiosk-scan/scanProduct",
+                category='api',
+                extra_data={'cfpr': cfpr, 'lto': lto, 'payloadChars': len(combined_text)}
+            )
             response = self.api.scan_product_ocr(combined_text)
             print(f"API Response: success={response.get('success')}, found={response.get('found')}, isCompliant={response.get('isCompliant')}")
+            self.health_service.log(
+                f"Manual Search API Response: success={response.get('success')}, found={response.get('found')}, isCompliant={response.get('isCompliant')}",
+                category='api',
+                extra_data={
+                    'success': response.get('success'),
+                    'found': response.get('found'),
+                    'isCompliant': response.get('isCompliant')
+                }
+            )
             
             if response.get("success"):
                 print(f"Displaying compliance result to user")
+                self.health_service.log("Displaying compliance result to user (Manual Search)", category='scan')
                 self.root.after(0, lambda: self._display_compliance_result(response))
             else:
                 print(f"Search failed: {response.get('message')}")
+                self.health_service.log(f"Manual search failed: {response.get('message')}", level='warning', category='scan')
                 self.root.after(0, lambda: self._show_error_screen(
                     "Product Not Found",
                     response.get("message", "No product found with those registration numbers")
@@ -5540,6 +5582,7 @@ class KioskApp:
             scale = min_dimension / max(height, width)
             gray = cv2.resize(gray, (int(width * scale), int(height * scale)), interpolation=cv2.INTER_CUBIC)
             print(f"   Upscaled from {width}x{height} to {gray.shape[1]}x{gray.shape[0]}")
+            self.health_service.log(f"Upscaled from {width}x{height} to {gray.shape[1]}x{gray.shape[0]}", category='ocr')
         
         # 2. Light denoising (preserve edges)
         denoised = cv2.bilateralFilter(gray, 9, 75, 75)
@@ -5550,6 +5593,7 @@ class KioskApp:
         
         # Single OCR pass with best general settings
         print(f"   Running Tesseract OCR ({label})...")
+        self.health_service.log(f"Running Tesseract OCR ({label})...", category='ocr')
         try:
             raw_text = pytesseract.image_to_string(
                 Image.fromarray(enhanced),
@@ -5558,9 +5602,15 @@ class KioskApp:
             )
             print(f"   OCR result: {len(raw_text)} chars")
             print(f"   Preview: {raw_text[:200] if len(raw_text) > 200 else raw_text}")
+            self.health_service.log(
+                f"OCR result ({label}): {len(raw_text)} chars",
+                category='ocr',
+                extra_data={'charCount': len(raw_text), 'label': label, 'preview': raw_text[:200]}
+            )
             return raw_text.strip()
         except Exception as e:
             print(f"   OCR failed: {e}")
+            self.health_service.log(f"OCR failed ({label}): {e}", level='error', category='ocr')
             return ""
     
     def _clean_ocr_text(self, text: str) -> str:
@@ -5606,37 +5656,58 @@ class KioskApp:
             print("\n" + "="*60)
             print("OCR EXTRACTION - FRONT IMAGE")
             print("="*60)
+            self.health_service.log("OCR EXTRACTION - FRONT IMAGE", category='ocr')
             front_text = ""
             try:
                 front_text = self._enhanced_ocr_extraction(self.ocr_front_frame, "FRONT")
             except Exception as e:
                 print(f"Front OCR extraction failed: {e}")
+                self.health_service.log(f"Front OCR extraction failed: {e}", level='error', category='ocr')
                 front_text = ""
             print(f"Front text: {len(front_text)} chars")
+            self.health_service.log(f"Front text: {len(front_text)} chars", category='ocr', extra_data={'charCount': len(front_text)})
             
             self.root.after(0, lambda: self.loading_detail_label.config(text="Reading back label..."))
             
             print("\n" + "="*60)
             print("OCR EXTRACTION - BACK IMAGE")
             print("="*60)
+            self.health_service.log("OCR EXTRACTION - BACK IMAGE", category='ocr')
             back_text = ""
             try:
                 back_text = self._enhanced_ocr_extraction(self.ocr_back_frame, "BACK")
             except Exception as e:
                 print(f"Back OCR extraction failed: {e}")
+                self.health_service.log(f"Back OCR extraction failed: {e}", level='error', category='ocr')
                 back_text = ""
             print(f"Back text: {len(back_text)} chars")
+            self.health_service.log(f"Back text: {len(back_text)} chars", category='ocr', extra_data={'charCount': len(back_text)})
             
             # Combine with delimiters matching mobile app format
             combined_text = f"--- FRONT OF LABEL ---\n\n{front_text}\n\n--- BACK OF LABEL ---\n\n{back_text}"
             print(f"\n=== COMBINED RAW OCR TEXT ({len(combined_text)} chars) ===")
             print(combined_text[:500])
             print(f"=========================")
+            self.health_service.log(
+                f"Combined OCR text: {len(combined_text)} chars",
+                category='ocr',
+                extra_data={
+                    'totalChars': len(combined_text),
+                    'frontChars': len(front_text),
+                    'backChars': len(back_text),
+                    'preview': combined_text[:300]
+                }
+            )
             
             # GUARD: Check minimum text length (matching mobile app's validation)
             actual_text = front_text.strip() + back_text.strip()
             if len(actual_text) < 10:
                 print(f"Insufficient OCR text detected: {len(actual_text)} chars (minimum: 10)")
+                self.health_service.log(
+                    f"Insufficient OCR text: {len(actual_text)} chars (minimum: 10)",
+                    level='warning', category='ocr',
+                    extra_data={'actualChars': len(actual_text)}
+                )
                 self.root.after(0, lambda: self._show_ocr_not_found_screen(
                     "Could not read text from the label.\\n\\n"
                     "Tips:\\n"
@@ -5652,8 +5723,22 @@ class KioskApp:
             # Send to API - calling /scan/scanProduct endpoint
             print(f"Calling POST /api/v1/kiosk-scan/scanProduct")
             print(f"Payload: blockOfText={len(combined_text)} chars")
+            self.health_service.log(
+                f"Calling POST /api/v1/kiosk-scan/scanProduct",
+                category='api',
+                extra_data={'payloadChars': len(combined_text)}
+            )
             response = self.api.scan_product_ocr(combined_text)
             print(f"API Response: success={response.get('success')}, found={response.get('found')}, isCompliant={response.get('isCompliant')}")
+            self.health_service.log(
+                f"API Response: success={response.get('success')}, found={response.get('found')}, isCompliant={response.get('isCompliant')}",
+                category='api',
+                extra_data={
+                    'success': response.get('success'),
+                    'found': response.get('found'),
+                    'isCompliant': response.get('isCompliant')
+                }
+            )
             
             # GUARD: Handle connection errors
             if response.get("error") == "connection_error":
@@ -5683,17 +5768,20 @@ class KioskApp:
             
             if response.get("success"):
                 print(f"Displaying compliance result to user")
+                self.health_service.log("Displaying compliance result to user", category='scan')
                 self.root.after(0, lambda: self._display_compliance_result(response))
             else:
                 # API returned success=false - show not found with manual search option
                 msg = response.get("message", "Could not process the product label")
                 print(f"Scan returned not successful: {msg}")
+                self.health_service.log(f"Scan returned not successful: {msg}", level='warning', category='scan')
                 self.root.after(0, lambda: self._show_ocr_not_found_screen(
                     f"{msg}\\n\\nTry Manual Search to enter registration numbers directly."
                 ))
                 
         except requests.exceptions.ConnectionError:
             print("OCR processing error: Connection refused")
+            self.health_service.log("OCR processing error: Connection refused", level='error', category='api')
             self.root.after(0, lambda: self._show_error_screen(
                 "Server Unavailable",
                 "Cannot connect to RCV server. Check your connection."

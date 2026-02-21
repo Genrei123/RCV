@@ -365,12 +365,14 @@ class FirebaseLogInterceptor:
     
     # Keywords for auto-categorizing log messages
     CATEGORY_PATTERNS = {
-        'ocr': ['OCR', 'Tesseract', 'ocr_text', 'label scan', 'SCAN LABEL'],
-        'scan': ['QR', 'barcode', 'scanned', 'scan result', 'decoded', 'qr_data'],
-        'api': ['API', 'POST ', 'GET ', 'Response', 'endpoint', 'api/', 'scanProduct', 'Connection refused'],
+        'camera': ['camera', 'Camera', 'autofocus', 'Video loop', 'focus control', 'camera index', 'camera configured'],
+        'capture': ['captured', 'Front captured', 'Back captured', 'Front image', 'Back image', 'capture'],
+        'ocr': ['OCR', 'Tesseract', 'ocr_text', 'label scan', 'SCAN LABEL', 'OCR EXTRACTION', 'Upscaled from', 'OCR result', 'OCR API Payload', 'blockOfText'],
+        'scan': ['QR', 'barcode', 'scanned', 'scan result', 'decoded', 'qr_data', 'compliance result', 'MANUAL SEARCH'],
+        'api': ['API', 'POST ', 'GET ', 'Response', 'endpoint', 'api/', 'scanProduct', 'Connection refused', 'API Response', 'Calling POST', 'Payload:'],
         'gpio': ['GPIO', 'LED', 'gpio', 'led_', 'blink'],
         'command': ['Firebase command', 'Executing', 'command', '📥', '🔧'],
-        'system': ['heartbeat', 'restart', 'shutdown', 'Heartbeat', 'memory', 'cpu', 'boot', 'maintenance'],
+        'system': ['heartbeat', 'restart', 'shutdown', 'Heartbeat', 'memory', 'cpu', 'boot', 'maintenance', 'Status update sent'],
     }
     
     LEVEL_PATTERNS = {
