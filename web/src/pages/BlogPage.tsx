@@ -110,7 +110,7 @@ export function BlogPage() {
         </div>
       </header>
 
-      <div className="pt-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="pt-32 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Page Title */}
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold app-text-primary mb-4">
@@ -148,6 +148,9 @@ export function BlogPage() {
               {category.title}
             </Badge>
           ))}
+          <Badge variant="outline" className="cursor-pointer px-4 py-2" onClick={() => navigate("/gallery")}>
+            Gallery
+          </Badge>
         </div>
 
         {loading ? (

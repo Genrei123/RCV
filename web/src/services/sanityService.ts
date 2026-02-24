@@ -362,4 +362,20 @@ export class SanityService {
 
     return await sanityClient.fetch(query);
   }
+
+  static async getGallerySection() {
+    const query = `*[_type == "gallerySection"] {
+      _id,
+      title,
+      description,
+      image {
+        asset->{
+          _id,
+          url
+        }
+      }
+    }`;
+
+    return await sanityClient.fetch(query);
+  }
 }
