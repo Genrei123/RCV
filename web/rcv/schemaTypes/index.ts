@@ -10,6 +10,7 @@ import category from './category'
 import author from './author'
 import blogPost from './blogPost'
 import ctaSection from './ctaSection'
+import gallerySection from './gallerySection'
 
 export const schemaTypes = [
   heroSlide,
@@ -24,5 +25,6 @@ export const schemaTypes = [
   author,
   blogPost,
   ctaSection,
+  gallerySection,
 ]
 

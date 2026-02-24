@@ -1,11 +1,11 @@
-import { createClient } from '@sanity/client';
-import imageUrlBuilder from '@sanity/image-url';
+import { createClient } from "@sanity/client";
+import imageUrlBuilder from "@sanity/image-url";
 
 // Sanity client configuration
 export const sanityClient = createClient({
-  projectId: import.meta.env.VITE_SANITY_PROJECT_ID || 'your-project-id',
-  dataset: import.meta.env.VITE_SANITY_DATASET || 'production',
-  apiVersion: '2024-01-01',
+  projectId: import.meta.env.VITE_SANITY_PROJECT_ID || "your-project-id",
+  dataset: import.meta.env.VITE_SANITY_DATASET || "production",
+  apiVersion: "2024-01-01",
   useCdn: true,
   token: import.meta.env.VITE_SANITY_TOKEN, // Optional: for authenticated requests
 });
@@ -21,17 +21,17 @@ export interface SanityHeroSlide {
   subtitle: string;
   description: string;
   gradient: string;
-  mediaType?: 'image' | 'video';
+  mediaType?: "image" | "video";
   image?: {
     asset: {
       _ref: string;
-      _type: 'reference';
+      _type: "reference";
     };
   };
   video?: {
     asset: {
       _ref: string;
-      _type: 'reference';
+      _type: "reference";
       url?: string;
     };
   };
@@ -77,14 +77,14 @@ export interface SanityVideoSection {
   video: {
     asset: {
       _ref: string;
-      _type: 'reference';
+      _type: "reference";
       url?: string;
     };
   };
   thumbnail?: {
     asset: {
       _ref: string;
-      _type: 'reference';
+      _type: "reference";
     };
   };
 }
@@ -99,13 +99,13 @@ export interface SanityBlogPost {
   mainImage: {
     asset: {
       _ref: string;
-      _type: 'reference';
+      _type: "reference";
     };
   };
   featuredVideo?: {
     asset: {
       _ref: string;
-      _type: 'reference';
+      _type: "reference";
       url?: string;
     };
   };
@@ -138,7 +138,7 @@ export interface SanityMobileAppShowcase {
     image: {
       asset: {
         _ref: string;
-        _type: 'reference';
+        _type: "reference";
       };
     };
     hotspots?: Array<{
@@ -155,9 +155,9 @@ export interface SanityMobileAppShowcase {
 export interface SanityCtaButton {
   _key: string;
   label: string;
-  linkType: 'internal' | 'external' | 'scroll';
+  linkType: "internal" | "external" | "scroll";
   href: string;
-  variant: 'primary' | 'outline' | 'ghost';
+  variant: "primary" | "outline" | "ghost";
   backgroundColor?: string;
   textColor?: string;
   showArrow: boolean;
@@ -183,14 +183,14 @@ export interface SanityKioskShowcase {
     modelFile: {
       asset: {
         _ref: string;
-        _type: 'reference';
+        _type: "reference";
         url?: string;
       };
     };
     thumbnail?: {
       asset: {
         _ref: string;
-        _type: 'reference';
+        _type: "reference";
       };
     };
     hotspots?: Array<{
@@ -201,5 +201,16 @@ export interface SanityKioskShowcase {
       zPosition: number;
       icon?: string;
     }>;
+  };
+}
+export interface SanityGallerySection {
+  _id: string;
+  title: string;
+  description: string;
+  image: {
+    asset: {
+      _ref: string;
+      _type: "reference";
+    };
   };
 }

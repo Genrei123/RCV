@@ -37,6 +37,7 @@ import { BlogPage } from "./pages/BlogPage";
 import { BlogPostPage } from "./pages/BlogPostPage";
 import { MetaMaskProvider } from "./contexts/MetaMaskContext";
 import { Startup } from "./components/Startup";
+import { GalleryPage } from "./pages/GalleryPage";
 
 interface ProtectedRoutesProps {
   children: ReactNode;
@@ -255,7 +256,13 @@ function App() {
               </AccessibleRoute>
             }
           />
-
+          <Route
+            path="/gallery"
+            element={
+              <AccessibleRoute>
+                <GalleryPage />
+              </AccessibleRoute>
+            }/>
           {/* Protected Routes wrapped with AppLayout */}
           <Route
             path="/dashboard"
