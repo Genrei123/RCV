@@ -13,6 +13,8 @@ export class SanityService {
       description,
       gradient,
       mediaType,
+      buttonLink,
+      buttonText,
       image{
         asset->{
           _id,
