@@ -31,7 +31,16 @@ import { Chatbot } from "@/components/Chatbot";
 import landingData from "@/data/landinginfo.json";
 import { SanityService } from "@/services/sanityService";
 import { urlFor } from "@/lib/sanity";
-import type { SanityFeature, SanityAboutSection, SanityObjective, SanityVideoSection, SanityBlogPost, SanityMobileAppShowcase, SanityKioskShowcase, SanityCtaSection } from "@/lib/sanity";
+import type {
+  SanityFeature,
+  SanityAboutSection,
+  SanityObjective,
+  SanityVideoSection,
+  SanityBlogPost,
+  SanityMobileAppShowcase,
+  SanityKioskShowcase,
+  SanityCtaSection,
+} from "@/lib/sanity";
 import { MobileAppShowcase } from "@/components/MobileAppShowcase";
 import { KioskShowcase } from "@/components/KioskShowcase";
 import { AnimatedDiv } from "@/components/AnimatedDiv";
@@ -67,20 +76,29 @@ export function LandingPage() {
   const [api, setApi] = useState<any>(null);
   const [currentSlide, setCurrentSlide] = useState(0);
   const autoplayRef = useRef(
-    Autoplay({ delay: 5000, stopOnInteraction: true })
+    Autoplay({ delay: 5000, stopOnInteraction: true }),
   );
-  
+
   // Sanity CMS data with fallbacks
   const [heroSlides, setHeroSlides] = useState<any[]>(fallbackHeroSlides);
   const [features, setFeatures] = useState<any[]>(fallbackFeatures);
-  const [aboutSection, setAboutSection] = useState<SanityAboutSection | null>(null);
+  const [aboutSection, setAboutSection] = useState<SanityAboutSection | null>(
+    null,
+  );
   const [objectives, setObjectives] = useState<any[]>(fallbackObjectives);
-  const [videoSection, setVideoSection] = useState<SanityVideoSection | null>(null);
+  const [videoSection, setVideoSection] = useState<SanityVideoSection | null>(
+    null,
+  );
   const [featuredBlogs, setFeaturedBlogs] = useState<SanityBlogPost[]>([]);
-  const [mobileAppShowcase, setMobileAppShowcase] = useState<SanityMobileAppShowcase[]>([]);
-  const [kioskShowcase, setKioskShowcase] = useState<SanityKioskShowcase | null>(null);
+  const [mobileAppShowcase, setMobileAppShowcase] = useState<
+    SanityMobileAppShowcase[]
+  >([]);
+  const [kioskShowcase, setKioskShowcase] =
+    useState<SanityKioskShowcase | null>(null);
   const [ctaSection, setCtaSection] = useState<SanityCtaSection | null>(null);
-  const [showcaseView, setShowcaseView] = useState<'mobile' | 'kiosk'>('mobile');
+  const [showcaseView, setShowcaseView] = useState<"mobile" | "kiosk">(
+    "mobile",
+  );
   const [navbarScrolled, setNavbarScrolled] = useState(false);
   const [carouselScale, setCarouselScale] = useState(1);
   const [carouselOpacity, setCarouselOpacity] = useState(1);
@@ -95,26 +113,28 @@ export function LandingPage() {
 
     if (mobileMenuOpen) {
       // Set overflow hidden on both html and body
-      document.documentElement.style.overflow = 'hidden';
-      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = "hidden";
+      document.body.style.overflow = "hidden";
       // Prevent scroll on touch devices
-      document.addEventListener('touchmove', preventDefault, { passive: false });
+      document.addEventListener("touchmove", preventDefault, {
+        passive: false,
+      });
       // Prevent scroll on wheel
-      document.addEventListener('wheel', preventDefault, { passive: false });
+      document.addEventListener("wheel", preventDefault, { passive: false });
     } else {
       // Reset overflow
-      document.documentElement.style.overflow = 'auto';
-      document.body.style.overflow = 'auto';
+      document.documentElement.style.overflow = "auto";
+      document.body.style.overflow = "auto";
       // Remove event listeners
-      document.removeEventListener('touchmove', preventDefault);
-      document.removeEventListener('wheel', preventDefault);
+      document.removeEventListener("touchmove", preventDefault);
+      document.removeEventListener("wheel", preventDefault);
     }
 
     return () => {
-      document.documentElement.style.overflow = 'auto';
-      document.body.style.overflow = 'auto';
-      document.removeEventListener('touchmove', preventDefault);
-      document.removeEventListener('wheel', preventDefault);
+      document.documentElement.style.overflow = "auto";
+      document.body.style.overflow = "auto";
+      document.removeEventListener("touchmove", preventDefault);
+      document.removeEventListener("wheel", preventDefault);
     };
   }, [mobileMenuOpen]);
 
@@ -122,37 +142,47 @@ export function LandingPage() {
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-      
+
       // Show background when scrolled past 50px, transparent only at top
       if (currentScrollY > 50) {
         setNavbarScrolled(true);
       } else {
         setNavbarScrolled(false);
       }
-      
+
       // Show scroll to top button when scrolled down 500px
       if (currentScrollY > 500) {
         setShowScrollTop(true);
       } else {
         setShowScrollTop(false);
       }
-      
+
       // Carousel closing animation on scroll
       const maxScroll = 400; // How much scroll before fully "closed"
       const scrollProgress = Math.min(currentScrollY / maxScroll, 1);
-      setCarouselScale(1 - (scrollProgress * 0.1)); // Scale from 1 to 0.9
-      setCarouselOpacity(1 - (scrollProgress * 0.3)); // Opacity from 1 to 0.7
+      setCarouselScale(1 - scrollProgress * 0.1); // Scale from 1 to 0.9
+      setCarouselOpacity(1 - scrollProgress * 0.3); // Opacity from 1 to 0.7
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   // Fetch data from Sanity CMS
   useEffect(() => {
     const fetchSanityData = async () => {
       try {
-        const [slides, feats, about, objs, video, blogs, appShowcase, kioskData, ctaData] = await Promise.all([
+        const [
+          slides,
+          feats,
+          about,
+          objs,
+          video,
+          blogs,
+          appShowcase,
+          kioskData,
+          ctaData,
+        ] = await Promise.all([
           SanityService.getHeroSlides().catch(() => fallbackHeroSlides),
           SanityService.getFeatures().catch(() => []),
           SanityService.getAboutSection().catch(() => null),
@@ -164,32 +194,48 @@ export function LandingPage() {
           SanityService.getCtaSection().catch(() => null),
         ]);
 
+        console.log("Slides: ", slides);
+
         // Process hero slides with media URLs
-        const processedSlides = slides.length > 0 ? slides.map((slide: any) => ({
-          title: slide.title,
-          subtitle: slide.subtitle,
-          description: slide.description,
-          gradient: slide.gradient,
-          image: slide.mediaType === 'video' && slide.video?.asset?.url
-            ? slide.video.asset.url
-            : slide.image?.asset ? urlFor(slide.image).url() : '/logo_inv.svg',
-          isVideo: slide.mediaType === 'video',
-        })) : fallbackHeroSlides;
+        const processedSlides =
+          slides.length > 0
+            ? slides.map((slide: any) => ({
+                title: slide.title,
+                subtitle: slide.subtitle,
+                description: slide.description,
+                gradient: slide.gradient,
+                buttonLink: slide.buttonLink,
+                buttonText: slide.buttonText,
+                image:
+                  slide.mediaType === "video" && slide.video?.asset?.url
+                    ? slide.video.asset.url
+                    : slide.image?.asset
+                      ? urlFor(slide.image).url()
+                      : "/logo_inv.svg",
+                isVideo: slide.mediaType === "video",
+              }))
+            : fallbackHeroSlides;
 
         // Process features with icons
-        const processedFeatures = feats.length > 0 ? feats.map((feat: SanityFeature) => ({
-          title: feat.title,
-          description: feat.description,
-          icon: iconMap[feat.icon] || Shield,
-          color: feat.color,
-        })) : fallbackFeatures;
+        const processedFeatures =
+          feats.length > 0
+            ? feats.map((feat: SanityFeature) => ({
+                title: feat.title,
+                description: feat.description,
+                icon: iconMap[feat.icon] || Shield,
+                color: feat.color,
+              }))
+            : fallbackFeatures;
 
         // Process objectives with icons
-        const processedObjectives = objs.length > 0 ? objs.map((obj: SanityObjective) => ({
-          title: obj.title,
-          description: obj.description,
-          icon: iconMap[obj.icon] || Shield,
-        })) : fallbackObjectives;
+        const processedObjectives =
+          objs.length > 0
+            ? objs.map((obj: SanityObjective) => ({
+                title: obj.title,
+                description: obj.description,
+                icon: iconMap[obj.icon] || Shield,
+              }))
+            : fallbackObjectives;
 
         setHeroSlides(processedSlides);
         setFeatures(processedFeatures);
@@ -201,7 +247,7 @@ export function LandingPage() {
         setKioskShowcase(kioskData);
         setCtaSection(ctaData);
       } catch (error) {
-        console.error('Error fetching Sanity data:', error);
+        console.error("Error fetching Sanity data:", error);
         // Keep fallback data
       }
     };
@@ -228,35 +274,43 @@ export function LandingPage() {
   return (
     <div className="min-h-screen bg-white overflow-hidden">
       {/* Navbar */}
-      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        navbarScrolled 
-          ? 'bg-white/95 backdrop-blur-sm border-b border-gray-100' 
-          : 'bg-transparent'
-      }`}>
+      <nav
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+          navbarScrolled
+            ? "bg-white/95 backdrop-blur-sm border-b border-gray-100"
+            : "bg-transparent"
+        }`}
+      >
         {/* Header Backdrop Overlay when menu is open */}
         {mobileMenuOpen && (
           <div className="absolute inset-0 bg-black/30 md:hidden z-0 pointer-events-none" />
         )}
-        
-        <div className={`max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 transition-all duration-300 ${!navbarScrolled ? 'lg:mt-10' : ''}`}>
+
+        <div
+          className={`max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 transition-all duration-300 ${!navbarScrolled ? "lg:mt-10" : ""}`}
+        >
           <div className="flex items-center justify-between h-16">
             {/* Logo - Left */}
             <div className="flex items-center gap-3 flex-shrink-0">
-              <img 
-                src={navbarScrolled ? "/logo_inv.svg" : "/logo.png"} 
-                alt="RCV Logo" 
-                className="h-10 w-10 transition-all duration-300" 
+              <img
+                src={navbarScrolled ? "/logo_inv.svg" : "/logo.png"}
+                alt="RCV Logo"
+                className="h-10 w-10 transition-all duration-300"
                 draggable="false"
               />
               <div className="flex flex-col">
-                <span className={`font-bold text-lg leading-tight transition-colors duration-300 ${
-                  navbarScrolled ? 'app-text-primary' : 'text-white'
-                }`}>
+                <span
+                  className={`font-bold text-lg leading-tight transition-colors duration-300 ${
+                    navbarScrolled ? "app-text-primary" : "text-white"
+                  }`}
+                >
                   RCV
                 </span>
-                <span className={`text-[10px] leading-tight uppercase tracking-wider transition-colors duration-300 ${
-                  navbarScrolled ? 'app-text-primary' : 'text-white/80'
-                }`}>
+                <span
+                  className={`text-[10px] leading-tight uppercase tracking-wider transition-colors duration-300 ${
+                    navbarScrolled ? "app-text-primary" : "text-white/80"
+                  }`}
+                >
                   Regulatory Compliance Verification
                 </span>
               </div>
@@ -268,10 +322,14 @@ export function LandingPage() {
                 href="#features"
                 onClick={(e) => {
                   e.preventDefault();
-                  document.getElementById("features")?.scrollIntoView({ behavior: "smooth" });
+                  document
+                    .getElementById("features")
+                    ?.scrollIntoView({ behavior: "smooth" });
                 }}
                 className={`text-sm transition-colors cursor-pointer uppercase tracking-wider font-medium ${
-                  navbarScrolled ? 'text-text hover:text-primary' : 'text-white/90 hover:text-white'
+                  navbarScrolled
+                    ? "text-text hover:text-primary"
+                    : "text-white/90 hover:text-white"
                 }`}
               >
                 Features
@@ -280,10 +338,14 @@ export function LandingPage() {
                 href="#transparency"
                 onClick={(e) => {
                   e.preventDefault();
-                  document.getElementById("transparency")?.scrollIntoView({ behavior: "smooth" });
+                  document
+                    .getElementById("transparency")
+                    ?.scrollIntoView({ behavior: "smooth" });
                 }}
                 className={`text-sm transition-colors cursor-pointer uppercase tracking-wider font-medium ${
-                  navbarScrolled ? 'text-text hover:text-primary' : 'text-white/90 hover:text-white'
+                  navbarScrolled
+                    ? "text-text hover:text-primary"
+                    : "text-white/90 hover:text-white"
                 }`}
               >
                 Transparency
@@ -292,10 +354,14 @@ export function LandingPage() {
                 href="#about"
                 onClick={(e) => {
                   e.preventDefault();
-                  document.getElementById("about")?.scrollIntoView({ behavior: "smooth" });
+                  document
+                    .getElementById("about")
+                    ?.scrollIntoView({ behavior: "smooth" });
                 }}
                 className={`text-sm transition-colors cursor-pointer uppercase tracking-wider font-medium ${
-                  navbarScrolled ? 'text-text hover:text-primary' : 'text-white/90 hover:text-white'
+                  navbarScrolled
+                    ? "text-text hover:text-primary"
+                    : "text-white/90 hover:text-white"
                 }`}
               >
                 About
@@ -304,10 +370,14 @@ export function LandingPage() {
                 href="#mission"
                 onClick={(e) => {
                   e.preventDefault();
-                  document.getElementById("mission")?.scrollIntoView({ behavior: "smooth" });
+                  document
+                    .getElementById("mission")
+                    ?.scrollIntoView({ behavior: "smooth" });
                 }}
                 className={`text-sm transition-colors cursor-pointer uppercase tracking-wider font-medium ${
-                  navbarScrolled ? 'text-text hover:text-primary' : 'text-white/90 hover:text-white'
+                  navbarScrolled
+                    ? "text-text hover:text-primary"
+                    : "text-white/90 hover:text-white"
                 }`}
               >
                 Our Mission
@@ -320,21 +390,21 @@ export function LandingPage() {
                 onClick={() => navigate("/login")}
                 className={`hidden sm:block transition-all duration-300 ${
                   navbarScrolled
-                    ? 'app-bg-primary hover:app-bg-secondary app-text-white px-6 hover:text-white cursor-pointer'
-                    : 'app-bg-primary hover:app-bg-secondary app-text-white px-6 hover:text-white cursor-pointer'
+                    ? "app-bg-primary hover:app-bg-secondary app-text-white px-6 hover:text-white cursor-pointer"
+                    : "app-bg-primary hover:app-bg-secondary app-text-white px-6 hover:text-white cursor-pointer"
                 }`}
               >
                 Get Started
               </Button>
-              
+
               {/* Hamburger Menu - Mobile Only */}
-              <button 
+              <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="lg:hidden p-2"
               >
                 <svg
                   className={`w-6 h-6 transition-colors duration-300 ${
-                    navbarScrolled ? 'text-gray-800' : 'text-white'
+                    navbarScrolled ? "text-gray-800" : "text-white"
                   }`}
                   fill="none"
                   stroke="currentColor"
@@ -354,7 +424,7 @@ export function LandingPage() {
           {/* Sliding Drawer Menu */}
           <div
             className={`fixed top-0 right-0 h-screen w-64 bg-white shadow-2xl lg:hidden z-40 transform transition-transform duration-300 ease-out overflow-y-auto ${
-              mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
+              mobileMenuOpen ? "translate-x-0" : "translate-x-full"
             }`}
           >
             {/* Header with Title and Close Button */}
@@ -386,7 +456,9 @@ export function LandingPage() {
                 href="#features"
                 onClick={(e) => {
                   e.preventDefault();
-                  document.getElementById("features")?.scrollIntoView({ behavior: "smooth" });
+                  document
+                    .getElementById("features")
+                    ?.scrollIntoView({ behavior: "smooth" });
                   setMobileMenuOpen(false);
                 }}
                 className="block py-3 text-sm uppercase tracking-wider font-medium text-gray-800 hover:text-primary transition-colors cursor-pointer"
@@ -397,7 +469,9 @@ export function LandingPage() {
                 href="#transparency"
                 onClick={(e) => {
                   e.preventDefault();
-                  document.getElementById("transparency")?.scrollIntoView({ behavior: "smooth" });
+                  document
+                    .getElementById("transparency")
+                    ?.scrollIntoView({ behavior: "smooth" });
                   setMobileMenuOpen(false);
                 }}
                 className="block py-3 text-sm uppercase tracking-wider font-medium text-gray-800 hover:text-primary transition-colors cursor-pointer"
@@ -408,7 +482,9 @@ export function LandingPage() {
                 href="#about"
                 onClick={(e) => {
                   e.preventDefault();
-                  document.getElementById("about")?.scrollIntoView({ behavior: "smooth" });
+                  document
+                    .getElementById("about")
+                    ?.scrollIntoView({ behavior: "smooth" });
                   setMobileMenuOpen(false);
                 }}
                 className="block py-3 text-sm uppercase tracking-wider font-medium text-gray-800 hover:text-primary transition-colors cursor-pointer"
@@ -419,7 +495,9 @@ export function LandingPage() {
                 href="#mission"
                 onClick={(e) => {
                   e.preventDefault();
-                  document.getElementById("mission")?.scrollIntoView({ behavior: "smooth" });
+                  document
+                    .getElementById("mission")
+                    ?.scrollIntoView({ behavior: "smooth" });
                   setMobileMenuOpen(false);
                 }}
                 className="block py-3 text-sm uppercase tracking-wider font-medium text-gray-800 hover:text-primary transition-colors cursor-pointer"
@@ -451,12 +529,12 @@ export function LandingPage() {
       )}
 
       {/* Hero Carousel - Full Width with Closing Animation */}
-      <section 
+      <section
         className="relative w-full overflow-hidden"
         style={{
           transform: `scale(${carouselScale})`,
           opacity: carouselOpacity,
-          transition: 'transform 0.1s ease-out, opacity 0.1s ease-out',
+          transition: "transform 0.1s ease-out, opacity 0.1s ease-out",
           borderRadius: `${(1 - carouselScale) * 200}px`,
         }}
       >
@@ -474,7 +552,10 @@ export function LandingPage() {
               <CarouselItem key={index} className="p-0">
                 <div className="relative h-screen overflow-hidden">
                   {/* Background Image/Video */}
-                  <div className="absolute inset-0 z-0" style={{ boxShadow: 'inset 0 30px 40px rgba(0,0,0,0.5)' }}>
+                  <div
+                    className="absolute inset-0 z-0"
+                    style={{ boxShadow: "inset 0 30px 40px rgba(0,0,0,0.5)" }}
+                  >
                     {slide.isVideo ? (
                       <video
                         src={slide.image}
@@ -492,10 +573,10 @@ export function LandingPage() {
                       />
                     )}
                   </div>
-                  
+
                   {/* Gradient Overlay */}
                   <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-transparent z-10"></div>
-                  
+
                   {/* Content */}
                   <div className="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full">
                     <div className="flex items-center h-full">
@@ -511,14 +592,22 @@ export function LandingPage() {
                           {slide.description}
                         </p>
                         <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
-                          <Button
-                            onClick={() => navigate("/login")}
-                            size="lg"
-                            className="app-bg-primary hover:app-bg-secondary text-white font-semibold px-8 shadow-lg hover:shadow-xl cursor-pointer w-full sm:w-auto transition-all"
-                          >
-                            Get Started Free
-                            <ArrowRight className="ml-2 h-5 w-5" />
-                          </Button>
+                          {slide.buttonLink && slide.buttonText && (
+                            <Button
+                              onClick={() => {
+                                if (slide.buttonLink.startsWith("/")) {
+                                  navigate(slide.buttonLink);
+                                } else {
+                                  window.open(slide.buttonLink, "_blank");
+                                }
+                              }}
+                              className="app-bg-primary hover:app-bg-secondary text-white font-semibold px-8 shadow-lg hover:shadow-xl cursor-pointer w-full sm:w-auto transition-all"
+                              size="lg"
+                            >
+                              {slide.buttonText}
+                              <ArrowRight className="ml-2 h-5 w-5" />
+                            </Button>
+                          )}
                           <Button
                             variant="outline"
                             size="lg"
@@ -581,16 +670,23 @@ export function LandingPage() {
                 </p>
               )}
             </div>
-            
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
               {/* Video Player */}
               <div className="lg:col-span-2">
-                <AnimatedDiv animationClass="animate-fade-in-left" threshold={0.2}>
+                <AnimatedDiv
+                  animationClass="animate-fade-in-left"
+                  threshold={0.2}
+                >
                   <div className="relative aspect-video rounded-2xl overflow-hidden shadow-2xl">
                     <video
                       src={videoSection.video.asset.url}
                       controls
-                      poster={videoSection.thumbnail?.asset ? urlFor(videoSection.thumbnail).url() : undefined}
+                      poster={
+                        videoSection.thumbnail?.asset
+                          ? urlFor(videoSection.thumbnail).url()
+                          : undefined
+                      }
                       className="w-full h-full object-cover"
                     >
                       Your browser does not support the video tag.
@@ -598,22 +694,31 @@ export function LandingPage() {
                   </div>
                 </AnimatedDiv>
               </div>
-              
+
               {/* Infographic Card */}
               <div className="lg:col-span-1">
-                <AnimatedDiv animationClass="animate-fade-in-right" threshold={0.2}>
+                <AnimatedDiv
+                  animationClass="animate-fade-in-right"
+                  threshold={0.2}
+                >
                   <Card className="p-6 h-full bg-linear-to-br from-app-primary/10 to-app-secondary/10 border-app-primary/20 hover:shadow-lg transition-shadow flex flex-col">
                     <h3 className="text-xl font-bold text-text mb-4 flex items-center gap-2">
                       Inside the Trailer
                     </h3>
-                    
+
                     <p className="text-text-subtle leading-relaxed grow mb-6">
-                      The RCV trailer is equipped with cutting-edge technology designed for regulatory compliance verification. It features advanced camera systems for high-resolution document capture and OCR processing, intelligent LED displays for real-time guidance, and secure blockchain-integrated processing to ensure tamper-proof compliance records.
+                      The RCV trailer is equipped with cutting-edge technology
+                      designed for regulatory compliance verification. It
+                      features advanced camera systems for high-resolution
+                      document capture and OCR processing, intelligent LED
+                      displays for real-time guidance, and secure
+                      blockchain-integrated processing to ensure tamper-proof
+                      compliance records.
                     </p>
-                    
+
                     {/* Footer CTA */}
                     <div className="pt-4 border-t border-app-primary/20">
-                      <Button 
+                      <Button
                         onClick={() => navigate("/login")}
                         className="w-full app-bg-primary hover:app-bg-secondary text-white font-medium"
                       >
@@ -638,22 +743,22 @@ export function LandingPage() {
               <div className="flex justify-center mb-8">
                 <div className="inline-flex rounded-lg bg-white p-1 shadow-md">
                   <button
-                    onClick={() => setShowcaseView('mobile')}
+                    onClick={() => setShowcaseView("mobile")}
                     className={`flex items-center gap-2 px-6 py-3 rounded-md font-medium transition-all ${
-                      showcaseView === 'mobile'
-                        ? 'app-bg-primary text-white shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900'
+                      showcaseView === "mobile"
+                        ? "app-bg-primary text-white shadow-sm"
+                        : "text-gray-600 hover:text-gray-900"
                     }`}
                   >
                     <Smartphone className="w-5 h-5" />
                     <span>Mobile App</span>
                   </button>
                   <button
-                    onClick={() => setShowcaseView('kiosk')}
+                    onClick={() => setShowcaseView("kiosk")}
                     className={`flex items-center gap-2 px-6 py-3 rounded-md font-medium transition-all ${
-                      showcaseView === 'kiosk'
-                        ? 'app-bg-primary text-white shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900'
+                      showcaseView === "kiosk"
+                        ? "app-bg-primary text-white shadow-sm"
+                        : "text-gray-600 hover:text-gray-900"
                     }`}
                   >
                     <Package className="w-5 h-5" />
@@ -665,12 +770,12 @@ export function LandingPage() {
           </div>
 
           {/* Mobile App Showcase */}
-          {showcaseView === 'mobile' && mobileAppShowcase.length > 0 && (
+          {showcaseView === "mobile" && mobileAppShowcase.length > 0 && (
             <MobileAppShowcase data={mobileAppShowcase} />
           )}
 
           {/* Kiosk Showcase */}
-          {showcaseView === 'kiosk' && kioskShowcase && (
+          {showcaseView === "kiosk" && kioskShowcase && (
             <KioskShowcase data={kioskShowcase} />
           )}
         </section>
@@ -727,8 +832,9 @@ export function LandingPage() {
               Blockchain-Verified Records
             </h2>
             <p className="text-lg text-text-subtle max-w-2xl mx-auto">
-              All our verified products and companies are publicly recorded on the blockchain. 
-              Every transaction can be independently verified on Etherscan.
+              All our verified products and companies are publicly recorded on
+              the blockchain. Every transaction can be independently verified on
+              Etherscan.
             </p>
           </div>
 
@@ -742,16 +848,19 @@ export function LandingPage() {
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-12">
               <span className="inline-block px-4 py-1.5 app-bg-primary text-white rounded-full text-sm font-medium mb-4">
-                {aboutSection?.subtitle || 'About RCV'}
+                {aboutSection?.subtitle || "About RCV"}
               </span>
               <h2 className="text-3xl md:text-4xl font-bold app-text-primary mb-6">
-                {aboutSection?.title || 'Revolutionizing Product Verification'}
+                {aboutSection?.title || "Revolutionizing Product Verification"}
               </h2>
             </div>
-            
+
             {aboutSection?.description ? (
               aboutSection.description.map((para, index) => (
-                <p key={index} className="text-lg text-text-subtle mb-6 leading-relaxed text-center">
+                <p
+                  key={index}
+                  className="text-lg text-text-subtle mb-6 leading-relaxed text-center"
+                >
                   {para}
                 </p>
               ))
@@ -771,12 +880,14 @@ export function LandingPage() {
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12">
-              {(aboutSection?.highlights || [
-                "Blockchain-secured certificates",
-                "Real-time verification",
-                "Comprehensive analytics",
-                "Regulatory compliance tracking",
-              ]).map((item, index) => (
+              {(
+                aboutSection?.highlights || [
+                  "Blockchain-secured certificates",
+                  "Real-time verification",
+                  "Comprehensive analytics",
+                  "Regulatory compliance tracking",
+                ]
+              ).map((item, index) => (
                 <div
                   key={index}
                   className="flex items-center gap-3 app-text-primary"
@@ -843,7 +954,8 @@ export function LandingPage() {
                 Featured Blog Posts
               </h2>
               <p className="text-lg text-text-subtle max-w-2xl mx-auto">
-                Stay updated with the latest trends and insights in product verification and compliance.
+                Stay updated with the latest trends and insights in product
+                verification and compliance.
               </p>
             </div>
 
@@ -914,7 +1026,10 @@ export function LandingPage() {
                       <div className="flex items-center gap-2">
                         {post.author.image && (
                           <img
-                            src={urlFor(post.author.image).width(32).height(32).url()}
+                            src={urlFor(post.author.image)
+                              .width(32)
+                              .height(32)
+                              .url()}
                             alt={post.author.name}
                             className="w-8 h-8 rounded-full object-cover"
                           />
@@ -924,11 +1039,14 @@ export function LandingPage() {
                         </span>
                       </div>
                       <span className="text-xs text-text-subtle">
-                        {new Date(post.publishedAt).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                        })}
+                        {new Date(post.publishedAt).toLocaleDateString(
+                          "en-US",
+                          {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          },
+                        )}
                       </span>
                     </div>
                   </div>
@@ -942,7 +1060,7 @@ export function LandingPage() {
                 onClick={() => navigate("/blog")}
                 variant="outline"
                 size="lg"
-                className="app-border-primary app-text-primary hover:app-bg-primary hover:text-white transition-all"
+                className="app-border-primary app-text-primary hover:bg-primary hover:text-white transition-all"
               >
                 View All Blog Posts
                 <ArrowRight className="ml-2 h-5 w-5" />
@@ -955,14 +1073,19 @@ export function LandingPage() {
       {/* CTA Section */}
       <section
         className="py-20 app-bg-white"
-        style={ctaSection?.sectionBackground ? { background: ctaSection.sectionBackground } : undefined}
+        style={
+          ctaSection?.sectionBackground
+            ? { background: ctaSection.sectionBackground }
+            : undefined
+        }
       >
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl font-bold app-text-primary mb-4">
-            {ctaSection?.title || 'Ready to Get Started?'}
+            {ctaSection?.title || "Ready to Get Started?"}
           </h2>
           <p className="text-lg app-text-text/80 mb-8 max-w-2xl mx-auto">
-            {ctaSection?.description || 'Start to verify your products and ensure compliance today with RCV.'}
+            {ctaSection?.description ||
+              "Start to verify your products and ensure compliance today with RCV."}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             {ctaSection?.buttons && ctaSection.buttons.length > 0 ? (
@@ -970,30 +1093,62 @@ export function LandingPage() {
                 <Button
                   key={button._key}
                   onClick={() => {
-                    if (button.linkType === 'internal') {
+                    if (button.linkType === "internal") {
                       navigate(button.href);
-                    } else if (button.linkType === 'external') {
+                    } else if (button.linkType === "external") {
                       if (button.openInNewTab) {
-                        window.open(button.href, '_blank', 'noopener,noreferrer');
+                        window.open(
+                          button.href,
+                          "_blank",
+                          "noopener,noreferrer",
+                        );
                       } else {
                         window.location.href = button.href;
                       }
-                    } else if (button.linkType === 'scroll') {
-                      document.getElementById(button.href)?.scrollIntoView({ behavior: 'smooth' });
+                    } else if (button.linkType === "scroll") {
+                      document
+                        .getElementById(button.href)
+                        ?.scrollIntoView({ behavior: "smooth" });
                     }
                   }}
                   size="lg"
-                  variant={button.variant === 'outline' ? 'outline' : button.variant === 'ghost' ? 'ghost' : 'default'}
+                  variant={
+                    button.variant === "outline"
+                      ? "outline"
+                      : button.variant === "ghost"
+                        ? "ghost"
+                        : "default"
+                  }
                   className={[
-                    'px-8 cursor-pointer transition-all',
-                    button.backgroundColor?.startsWith('bg-') ? button.backgroundColor : button.variant === 'primary' || !button.variant ? 'app-bg-primary-light hover:bg-[#009b79]' : '',
-                    button.textColor?.startsWith('text-') ? button.textColor : button.variant === 'primary' || !button.variant ? 'app-text-text' : '',
-                    button.variant === 'outline' ? 'app-border-primary app-text-primary hover:app-bg-primary hover:text-white' : '',
-                    button.variant === 'ghost' ? 'app-text-primary hover:app-bg-primary-soft' : '',
-                  ].filter(Boolean).join(' ')}
+                    "px-8 cursor-pointer transition-all",
+                    button.backgroundColor?.startsWith("bg-")
+                      ? button.backgroundColor
+                      : button.variant === "primary" || !button.variant
+                        ? "app-bg-primary-light hover:bg-[#009b79]"
+                        : "",
+                    button.textColor?.startsWith("text-")
+                      ? button.textColor
+                      : button.variant === "primary" || !button.variant
+                        ? "app-text-text"
+                        : "",
+                    button.variant === "outline"
+                      ? "app-border-primary app-text-primary hover:app-bg-primary hover:text-white"
+                      : "",
+                    button.variant === "ghost"
+                      ? "app-text-primary hover:app-bg-primary-soft"
+                      : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
                   style={{
-                    ...(button.backgroundColor && !button.backgroundColor.startsWith('bg-') ? { backgroundColor: button.backgroundColor } : {}),
-                    ...(button.textColor && !button.textColor.startsWith('text-') ? { color: button.textColor } : {}),
+                    ...(button.backgroundColor &&
+                    !button.backgroundColor.startsWith("bg-")
+                      ? { backgroundColor: button.backgroundColor }
+                      : {}),
+                    ...(button.textColor &&
+                    !button.textColor.startsWith("text-")
+                      ? { color: button.textColor }
+                      : {}),
                   }}
                 >
                   {button.label}
@@ -1016,11 +1171,11 @@ export function LandingPage() {
 
       <Footer />
       <Chatbot />
-      
+
       {/* Scroll to Top Button */}
       {showScrollTop && (
         <button
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
           className="fixed bottom-8 left-8 z-50 p-4 bg-primary/70 hover:bg-primary/90 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 group backdrop-blur-sm"
           aria-label="Scroll to top"
         >
