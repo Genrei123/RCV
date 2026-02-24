@@ -12,19 +12,48 @@ export const Startup = () => {
   }, [words.length]);
 
   useEffect(() => {
+    // Store original values
+    const originalHtmlOverflow = document.documentElement.style.overflow;
+    const originalBodyOverflow = document.body.style.overflow;
+    const originalBodyPosition = document.body.style.position;
+    const originalBodyWidth = document.body.style.width;
+    
+    // Disable scrolling completely
     document.documentElement.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.width = "100%";
+    document.body.style.top = "0";
+    document.body.style.left = "0";
 
     const timer = setTimeout(() => {
       setIsVisible(false);
-      document.documentElement.style.overflow = "auto";
-      document.body.style.overflow = "auto";
+      
+      // Use requestAnimationFrame to ensure smooth restoration
+      requestAnimationFrame(() => {
+        // Restore styles gradually to prevent double scrollbar flash
+        document.body.style.position = originalBodyPosition || "static";
+        document.body.style.width = originalBodyWidth || "auto";
+        document.body.style.top = "";
+        document.body.style.left = "";
+        
+        // Restore overflow last to prevent flash
+        setTimeout(() => {
+          document.documentElement.style.overflow = originalHtmlOverflow || "auto";
+          document.body.style.overflow = originalBodyOverflow || "auto";
+        }, 50);
+      });
     }, 3500);
 
     return () => {
       clearTimeout(timer);
-      document.documentElement.style.overflow = "auto";
-      document.body.style.overflow = "auto";
+      // Cleanup - restore original values
+      document.body.style.position = originalBodyPosition || "static";
+      document.body.style.width = originalBodyWidth || "auto";
+      document.body.style.top = "";
+      document.body.style.left = "";
+      document.documentElement.style.overflow = originalHtmlOverflow || "auto";
+      document.body.style.overflow = originalBodyOverflow || "auto";
     };
   }, []);
 
