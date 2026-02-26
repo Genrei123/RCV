@@ -513,7 +513,7 @@ export function LandingPage() {
                             size="lg"
                             className="app-bg-primary hover:app-bg-secondary text-white font-semibold px-8 shadow-lg hover:shadow-xl cursor-pointer w-full sm:w-auto transition-all"
                           >
-                            Get Started Free
+                            Get Started
                             <ArrowRight className="ml-2 h-5 w-5" />
                           </Button>
                           <Button
@@ -978,7 +978,7 @@ export function LandingPage() {
       {showScrollTop && (
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="fixed bottom-8 left-8 z-50 p-4 bg-primary/70 hover:bg-primary/90 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 group backdrop-blur-sm"
+          className="fixed bottom-8 left-8 z-20 p-4 bg-primary/70 hover:bg-primary/90 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 group backdrop-blur-sm"
           aria-label="Scroll to top"
         >
           <svg
