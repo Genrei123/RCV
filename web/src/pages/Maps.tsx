@@ -8,8 +8,6 @@ import { KioskManagementService } from "@/services/kioskManagementService";
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
-import { Button } from "@/components/ui/button";
-import { Users, Monitor } from "lucide-react";
 
 export function Maps() {
   const [inspectors, setInspectors] = useState<Inspector[]>([]);

@@ -591,7 +591,7 @@ export function MapComponent({
       {/* Desktop Search panel */}
       <div 
         ref={searchContainerRef}
-        className={`hidden md:block ${isFullscreen ? 'fixed' : 'absolute'} top-24 lg:top-28 left-3 lg:left-4 z-[50] w-80 md:w-96 max-w-[28rem]`}
+        className={`hidden md:block ${isFullscreen ? 'fixed' : 'absolute'} top-20 lg:top-24 left-3 lg:left-4 z-[50] w-80 md:w-96 max-w-[28rem]`}
         style={{ pointerEvents: 'auto' }}
       >
         <Card className="bg-white rounded-none sm:rounded-lg border-0 shadow-xl m-0 sm:m-0" style={{ pointerEvents: 'auto' }}>

@@ -247,7 +247,7 @@ export function KioskMapComponent({
       </div>
 
       {/* Desktop Search */}
-      <div className="hidden md:block absolute top-24 lg:top-28 left-3 lg:left-4 right-4 md:right-auto z-10 w-full md:w-96 max-w-[28rem]">
+      <div className="hidden md:block absolute top-20 lg:top-24 left-3 lg:left-4 right-4 md:right-auto z-10 w-full md:w-96 max-w-[28rem]">
         <Card className="bg-white rounded-none sm:rounded-lg border-0 shadow-xl m-0">
           <div className="relative p-2 sm:p-2">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
