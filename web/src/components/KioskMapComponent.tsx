@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { GoogleMap, Marker, InfoWindow, useJsApiLoader } from "@react-google-maps/api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, RotateCw, Power, Lightbulb, MapPin, Clock, Monitor, Wifi, WifiOff } from "lucide-react";
+import { Search, RotateCw, Power, Lightbulb, MapPin, Clock, Monitor, Wifi, WifiOff, Users } from "lucide-react";
 import { KioskManagementService } from "@/services/kioskManagementService";
 
 export interface KioskMachine {
@@ -31,6 +31,9 @@ interface KioskMapComponentProps {
   onKioskClick: (kiosk: KioskMachine) => void;
   onSearch: (query: string) => void;
   loading?: boolean;
+  viewMode?: "agents" | "kiosks";
+  onViewModeChange?: (mode: "agents" | "kiosks") => void;
+  showViewToggle?: boolean;
 }
 
 const mapContainerStyle = {
@@ -47,11 +50,16 @@ export function KioskMapComponent({
   kiosks,
   onKioskClick,
   onSearch,
+  viewMode = "kiosks",
+  onViewModeChange,
+  showViewToggle = false,
 }: KioskMapComponentProps) {
   const [selectedKiosk, setSelectedKiosk] = useState<KioskMachine | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [commandLoading, setCommandLoading] = useState<string | null>(null);
   const [commandStatus, setCommandStatus] = useState<{ kioskId: string; message: string; success: boolean } | null>(null);
+  const toggleContainerRef = useRef<HTMLDivElement | null>(null);
+  const originalToggleParentRef = useRef<HTMLElement | null>(null);
 
   // Clear command status after 3 seconds
   useEffect(() => {
@@ -144,24 +152,114 @@ export function KioskMapComponent({
     };
   };
 
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const fullscreenElement =
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement;
+      const nowFullscreen = !!fullscreenElement;
+
+      setTimeout(() => {
+        if (!toggleContainerRef.current) return;
+
+        if (!originalToggleParentRef.current && toggleContainerRef.current.parentElement) {
+          originalToggleParentRef.current = toggleContainerRef.current.parentElement;
+        }
+
+        if (nowFullscreen) {
+          if (fullscreenElement && toggleContainerRef.current.parentElement !== fullscreenElement) {
+            fullscreenElement.appendChild(toggleContainerRef.current);
+          }
+        } else {
+          if (
+            originalToggleParentRef.current &&
+            toggleContainerRef.current.parentElement !== originalToggleParentRef.current
+          ) {
+            originalToggleParentRef.current.appendChild(toggleContainerRef.current);
+          }
+        }
+      }, 0);
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+    document.addEventListener("mozfullscreenchange", handleFullscreenChange);
+    document.addEventListener("MSFullscreenChange", handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
+      document.removeEventListener("mozfullscreenchange", handleFullscreenChange);
+      document.removeEventListener("MSFullscreenChange", handleFullscreenChange);
+    };
+  }, []);
+
   if (!isLoaded) {
     return <div className="h-full w-full flex items-center justify-center">Loading map...</div>;
   }
 
   return (
     <div className="relative h-full w-full">
-      {/* Search Bar - positioned to avoid map controls and tabs */}
-      <div className="absolute top-16 left-4 right-4 md:right-auto z-10 w-full md:w-96 max-w-md">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-          <Input
-            type="text"
-            placeholder="Search kiosk by name or location..."
-            value={searchQuery}
-            onChange={handleSearchChange}
-            className="pl-10 bg-white shadow-lg"
-          />
+      {showViewToggle && (
+        <div
+          ref={toggleContainerRef}
+          className="absolute top-20 left-3 md:top-2 md:right-16 lg:right-20 md:left-auto z-20"
+        >
+          <Card className="bg-white rounded-lg shadow-lg p-1 flex gap-1">
+            <Button
+              variant={viewMode === "agents" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => onViewModeChange?.("agents")}
+              className="gap-2"
+            >
+              <Users className="h-4 w-4" />
+              Inspectors
+            </Button>
+            <Button
+              variant={viewMode === "kiosks" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => onViewModeChange?.("kiosks")}
+              className="gap-2"
+            >
+              <Monitor className="h-4 w-4" />
+              Kiosks
+            </Button>
+          </Card>
         </div>
+      )}
+
+      {/* Mobile Search */}
+      <div className="md:hidden fixed top-48 left-2 z-50 w-64">
+        <Card className="bg-white rounded-lg shadow-lg">
+          <div className="relative p-2">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              type="text"
+              placeholder="Search kiosk by name or location..."
+              value={searchQuery}
+              onChange={handleSearchChange}
+              className="pl-10 pr-10 bg-white rounded-md shadow-none focus:outline-none focus:ring-1"
+            />
+          </div>
+        </Card>
+      </div>
+
+      {/* Desktop Search */}
+      <div className="hidden md:block absolute top-24 lg:top-28 left-3 lg:left-4 right-4 md:right-auto z-10 w-full md:w-96 max-w-[28rem]">
+        <Card className="bg-white rounded-none sm:rounded-lg border-0 shadow-xl m-0">
+          <div className="relative p-2 sm:p-2">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              type="text"
+              placeholder="Search kiosk by name or location..."
+              value={searchQuery}
+              onChange={handleSearchChange}
+              className="pl-12 pr-10 bg-white rounded-md border-0 shadow-none focus:outline-none focus:ring-0 focus-visible:ring-0"
+            />
+          </div>
+        </Card>
       </div>
 
       {/* Stats Card - positioned to avoid map controls */}

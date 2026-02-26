@@ -1,8 +1,9 @@
 // Google Maps Component - See GOOGLE_MAPS_SETUP.md for configuration
 import { useState, useEffect, useRef } from "react";
-import { Search, MapPin, X } from "lucide-react";
+import { Search, MapPin, X, Users, Monitor } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 export interface Inspector {
   id: string;
@@ -31,6 +32,9 @@ interface MapComponentProps {
   loading?: boolean;
   allInspectors?: Inspector[]; // for local suggestions when API results absent
   searchUsers?: Suggestion[]; // may include users without locations
+  viewMode?: "agents" | "kiosks";
+  onViewModeChange?: (mode: "agents" | "kiosks") => void;
+  showViewToggle?: boolean;
 }
 
 declare global {
@@ -46,6 +50,9 @@ export function MapComponent({
   loading = false,
   allInspectors = [],
   searchUsers = [],
+  viewMode = "agents",
+  onViewModeChange,
+  showViewToggle = false,
 }: MapComponentProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -62,6 +69,8 @@ export function MapComponent({
   const inspectorCountRef = useRef<HTMLDivElement>(null);
   const originalSearchParentRef = useRef<HTMLElement | null>(null);
   const originalCountParentRef = useRef<HTMLElement | null>(null);
+  const toggleContainerRef = useRef<HTMLDivElement | null>(null);
+  const originalToggleParentRef = useRef<HTMLElement | null>(null);
   const [elementsMovedDown, setElementsMovedDown] = useState(false);
   const elementsMovedDownRef = useRef(false);
 
@@ -248,6 +257,9 @@ export function MapComponent({
     if (inspectorCountRef.current?.parentElement && !originalCountParentRef.current) {
       originalCountParentRef.current = inspectorCountRef.current.parentElement;
     }
+    if (toggleContainerRef.current?.parentElement && !originalToggleParentRef.current) {
+      originalToggleParentRef.current = toggleContainerRef.current.parentElement;
+    }
   }, []);
 
   // Ensure elements stay in correct position after re-renders when in fullscreen
@@ -267,6 +279,9 @@ export function MapComponent({
       if (inspectorCountRef.current && inspectorCountRef.current.parentElement !== fullscreenElement) {
         fullscreenElement.appendChild(inspectorCountRef.current);
       }
+      if (toggleContainerRef.current && toggleContainerRef.current.parentElement !== fullscreenElement) {
+        fullscreenElement.appendChild(toggleContainerRef.current);
+      }
     }
   }, [isFullscreen, searchQuery, inspectors.length]);
 
@@ -282,13 +297,16 @@ export function MapComponent({
 
       // Use setTimeout to ensure DOM is ready after fullscreen transition
       setTimeout(() => {
-        if (searchContainerRef.current && inspectorCountRef.current) {
+        if (searchContainerRef.current && inspectorCountRef.current && toggleContainerRef.current) {
           // Ensure original parents are stored
           if (!originalSearchParentRef.current && searchContainerRef.current.parentElement) {
             originalSearchParentRef.current = searchContainerRef.current.parentElement;
           }
           if (!originalCountParentRef.current && inspectorCountRef.current.parentElement) {
             originalCountParentRef.current = inspectorCountRef.current.parentElement;
+          }
+          if (!originalToggleParentRef.current && toggleContainerRef.current.parentElement) {
+            originalToggleParentRef.current = toggleContainerRef.current.parentElement;
           }
 
           if (nowFullscreen) {
@@ -299,6 +317,9 @@ export function MapComponent({
             if (fullscreenElement && inspectorCountRef.current.parentElement !== fullscreenElement) {
               fullscreenElement.appendChild(inspectorCountRef.current);
             }
+            if (fullscreenElement && toggleContainerRef.current.parentElement !== fullscreenElement) {
+              fullscreenElement.appendChild(toggleContainerRef.current);
+            }
           } else {
             // Move back to original parents
             if (originalSearchParentRef.current && searchContainerRef.current.parentElement !== originalSearchParentRef.current) {
@@ -306,6 +327,9 @@ export function MapComponent({
             }
             if (originalCountParentRef.current && inspectorCountRef.current.parentElement !== originalCountParentRef.current) {
               originalCountParentRef.current.appendChild(inspectorCountRef.current);
+            }
+            if (originalToggleParentRef.current && toggleContainerRef.current.parentElement !== originalToggleParentRef.current) {
+              originalToggleParentRef.current.appendChild(toggleContainerRef.current);
             }
           }
         }
@@ -440,8 +464,36 @@ export function MapComponent({
     <div className="relative w-full h-full">
       <div ref={mapRef} className="w-full h-full" />
       
+      {showViewToggle && (
+        <div
+          ref={toggleContainerRef}
+          className={`${isFullscreen ? "fixed" : "absolute"} top-20 left-3 md:top-2 md:right-16 lg:right-20 md:left-auto z-[52]`}
+        >
+          <Card className="bg-white rounded-lg shadow-lg p-1 flex gap-1 max-w-xs md:max-w-none">
+            <Button
+              variant={viewMode === "agents" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => onViewModeChange?.("agents")}
+              className="gap-2"
+            >
+              <Users className="h-4 w-4" />
+              Inspectors
+            </Button>
+            <Button
+              variant={viewMode === "kiosks" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => onViewModeChange?.("kiosks")}
+              className="gap-2"
+            >
+              <Monitor className="h-4 w-4" />
+              Kiosks
+            </Button>
+          </Card>
+        </div>
+      )}
+      
       {/* Mobile Search - Form visible, compact static width */}
-      <div className="md:hidden fixed top-40 left-2 z-50 w-64">
+      <div className="md:hidden fixed top-48 left-2 z-50 w-64">
         <Card className="bg-white rounded-lg shadow-lg">
           <div className="relative p-2">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -539,7 +591,7 @@ export function MapComponent({
       {/* Desktop Search panel */}
       <div 
         ref={searchContainerRef}
-        className={`hidden md:block ${isFullscreen ? 'fixed' : 'absolute'} top-16 lg:top-16 left-3 lg:left-4 z-[50] w-80 md:w-96 max-w-[28rem]`}
+        className={`hidden md:block ${isFullscreen ? 'fixed' : 'absolute'} top-24 lg:top-28 left-3 lg:left-4 z-[50] w-80 md:w-96 max-w-[28rem]`}
         style={{ pointerEvents: 'auto' }}
       >
         <Card className="bg-white rounded-none sm:rounded-lg border-0 shadow-xl m-0 sm:m-0" style={{ pointerEvents: 'auto' }}>

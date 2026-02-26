@@ -219,30 +219,6 @@ export function Maps() {
 
   return (
     <div className="h-full w-full relative">
-      {/* Toggle Button - Upper Left Corner */}
-      <div className="absolute top-4 left-4 z-20">
-        <div className="bg-white rounded-lg shadow-lg p-1 flex gap-1">
-          <Button
-            variant={viewMode === "agents" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => handleViewModeChange("agents")}
-            className="gap-2"
-          >
-            <Users className="h-4 w-4" />
-            Inspectors
-          </Button>
-          <Button
-            variant={viewMode === "kiosks" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => handleViewModeChange("kiosks")}
-            className="gap-2"
-          >
-            <Monitor className="h-4 w-4" />
-            Kiosks
-          </Button>
-        </div>
-      </div>
-
       {/* Map Display */}
       {viewMode === "agents" ? (
         <MapComponent
@@ -252,6 +228,9 @@ export function Maps() {
           onInspectorClick={handleInspectorClick}
           onSearch={handleSearch}
           loading={loading}
+          showViewToggle
+          viewMode={viewMode}
+          onViewModeChange={handleViewModeChange}
         />
       ) : (
         <KioskMapComponent
@@ -259,6 +238,9 @@ export function Maps() {
           onKioskClick={handleKioskClick}
           onSearch={handleSearch}
           loading={kiosksLoading}
+          showViewToggle
+          viewMode={viewMode}
+          onViewModeChange={handleViewModeChange}
         />
       )}
     </div>

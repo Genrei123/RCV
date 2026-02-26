@@ -179,7 +179,7 @@ export function MapsWithKiosks() {
         onValueChange={(v) => setActiveTab(v as "inspectors" | "kiosks")}
         className="h-full w-full"
       >
-        <div className="absolute top-4 left-4 z-10">
+        <div className="absolute top-2 right-16 md:right-20 z-10">
           <TabsList className="bg-white shadow-lg">
             <TabsTrigger value="inspectors">Inspectors</TabsTrigger>
             <TabsTrigger value="kiosks">Kiosk Machines</TabsTrigger>
