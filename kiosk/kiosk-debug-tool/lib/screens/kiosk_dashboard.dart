@@ -6,6 +6,7 @@ import '../theme/app_theme.dart';
 import '../widgets/led_status_card.dart';
 import '../widgets/control_button_card.dart';
 import '../widgets/kiosk_info_card.dart';
+import 'log_viewer_screen.dart';
 
 class KioskDashboard extends StatefulWidget {
   const KioskDashboard({super.key});
@@ -14,10 +15,13 @@ class KioskDashboard extends StatefulWidget {
   State<KioskDashboard> createState() => _KioskDashboardState();
 }
 
-class _KioskDashboardState extends State<KioskDashboard> {
+class _KioskDashboardState extends State<KioskDashboard> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     // Start monitoring kiosk status
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<KioskService>().startMonitoring();
@@ -26,6 +30,7 @@ class _KioskDashboardState extends State<KioskDashboard> {
 
   @override
   void dispose() {
+    _tabController.dispose();
     context.read<KioskService>().stopMonitoring();
     super.dispose();
   }
@@ -73,6 +78,48 @@ class _KioskDashboardState extends State<KioskDashboard> {
             tooltip: 'Logout',
           ),
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: Colors.white,
+          tabs: [
+            const Tab(
+              icon: Icon(Icons.dashboard, size: 20),
+              text: 'Controls',
+            ),
+            Tab(
+              child: Consumer<KioskService>(
+                builder: (context, kiosk, _) {
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.receipt_long, size: 20),
+                      const SizedBox(width: 6),
+                      const Text('Logs'),
+                      if (kiosk.errorLogCount > 0) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppTheme.errorRed,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '${kiosk.errorLogCount}',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
       body: Consumer<KioskService>(
         builder: (context, kioskService, _) {
@@ -82,149 +129,194 @@ class _KioskDashboardState extends State<KioskDashboard> {
             );
           }
 
-          return RefreshIndicator(
-            onRefresh: () => kioskService.fetchAllKiosks(),
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Kiosk Selector
-                  _buildKioskSelector(kioskService),
-                  const SizedBox(height: 16),
-                  
-                  if (kioskService.selectedKioskId == null)
-                    _buildNoKioskSelected()
-                  else ...[
-                    // Kiosk Info Card
-                    KioskInfoCard(
-                      isOnline: kioskService.isOnline,
-                      lastSeen: kioskService.lastSeen,
-                      currentMode: kioskService.currentMode,
-                      kioskName: kioskService.kioskName,
-                      kioskCity: kioskService.kioskCity,
-                    ),
-                    const SizedBox(height: 16),
-                    
-                    // Show restart button prominently when offline
-                    if (!kioskService.isOnline)
-                      _buildOfflineRestartCard(kioskService),
-                    
-                    if (kioskService.isOnline) ...[
-                      // Command Queue Notice
-                      _buildCommandQueueNotice(),
-                    ],
-                    const SizedBox(height: 24),
-                    
-                    // LED Status Section
-                    const Text(
-                      'LED Status Indicators',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    LEDStatusCard(
-                      title: 'Processing LED',
-                      ledName: 'Yellow/Processing',
-                      isOn: kioskService.ledProcessing,
-                      color: AppTheme.warningOrange,
-                      onToggle: () => _handleCommand('Toggle Processing LED', 
-                        () => kioskService.toggleLED('processing')),
-                    ),
-                    const SizedBox(height: 12),
-                    LEDStatusCard(
-                      title: 'Success LED',
-                      ledName: 'Green/Success',
-                      isOn: kioskService.ledSuccess,
-                      color: AppTheme.successGreen,
-                      onToggle: () => _handleCommand('Toggle Success LED',
-                        () => kioskService.toggleLED('success')),
-                    ),
-                    const SizedBox(height: 12),
-                    LEDStatusCard(
-                      title: 'Error LED',
-                      ledName: 'Red/Error',
-                      isOn: kioskService.ledError,
-                      color: AppTheme.errorRed,
-                      onToggle: () => _handleCommand('Toggle Error LED',
-                        () => kioskService.toggleLED('error')),
-                    ),
-                    const SizedBox(height: 24),
-                    
-                    // Control Actions Section
-                    const Text(
-                      'Kiosk Controls',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    ControlButtonCard(
-                      icon: Icons.restart_alt,
-                      title: 'Restart Kiosk',
-                      subtitle: 'Reboot the entire kiosk application',
-                      color: AppTheme.primaryGreen,
-                      onPressed: () => _showConfirmDialog(
-                            context,
-                            'Restart Kiosk?',
-                            'This will restart the kiosk application. The command will be queued and executed on next heartbeat.',
-                            () => _handleCommand('Restart', kioskService.restartKiosk),
-                          ),
-                    ),
-                    const SizedBox(height: 12),
-                    ControlButtonCard(
-                      icon: Icons.slideshow,
-                      title: 'Force Slideshow Mode',
-                      subtitle: 'Switch to slideshow display',
-                      color: AppTheme.accentTeal,
-                      onPressed: () => _handleCommand('Set Slideshow Mode',
-                        () => kioskService.setMode('slideshow')),
-                    ),
-                    const SizedBox(height: 12),
-                    ControlButtonCard(
-                      icon: Icons.qr_code_scanner,
-                      title: 'Force Scanner Mode',
-                      subtitle: 'Switch to QR scanner mode',
-                      color: AppTheme.primaryLight,
-                      onPressed: () => _handleCommand('Set Scanner Mode',
-                        () => kioskService.setMode('scanner')),
-                    ),
-                    const SizedBox(height: 12),
-                    ControlButtonCard(
-                      icon: Icons.camera_alt,
-                      title: 'Force OCR Mode',
-                      subtitle: 'Switch to OCR capture mode',
-                      color: Colors.blue,
-                      onPressed: () => _handleCommand('Set OCR Mode',
-                        () => kioskService.setMode('ocr')),
-                    ),
-                    const SizedBox(height: 24),
-                    
-                    // Test All LEDs Button
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () => _handleCommand('Test All LEDs', kioskService.testAllLEDs),
-                        icon: const Icon(Icons.lightbulb_outline),
-                        label: const Text('Test All LEDs'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.warningOrange,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
+          return Column(
+            children: [
+              // Kiosk selector is always visible at top
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: _buildKioskSelector(kioskService),
               ),
-            ),
+              
+              // Tab content
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    // Tab 1: Controls (original dashboard content)
+                    _buildControlsTab(kioskService),
+                    // Tab 2: Logs
+                    const LogViewerScreen(),
+                  ],
+                ),
+              ),
+            ],
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildControlsTab(KioskService kioskService) {
+    if (kioskService.selectedKioskId == null) {
+      return _buildNoKioskSelected();
+    }
+
+    return RefreshIndicator(
+      onRefresh: () => kioskService.fetchAllKiosks(),
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Kiosk Info Card
+            KioskInfoCard(
+              isOnline: kioskService.isOnline,
+              lastSeen: kioskService.lastSeen,
+              currentMode: kioskService.currentMode,
+              kioskName: kioskService.kioskName,
+              kioskCity: kioskService.kioskCity,
+            ),
+            const SizedBox(height: 16),
+            
+            // Show restart button prominently when offline
+            if (!kioskService.isOnline)
+              _buildOfflineRestartCard(kioskService),
+            
+            if (kioskService.isOnline) ...[
+              // Command Queue Notice
+              _buildCommandQueueNotice(),
+            ],
+            const SizedBox(height: 24),
+            
+            // LED Status Section
+            const Text(
+              'LED Status Indicators',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            LEDStatusCard(
+              title: 'Processing LED',
+              ledName: 'Yellow/Processing',
+              isOn: kioskService.ledProcessing,
+              color: AppTheme.warningOrange,
+              onToggle: () => _handleCommand('Toggle Processing LED', 
+                () => kioskService.toggleLED('processing')),
+            ),
+            const SizedBox(height: 12),
+            LEDStatusCard(
+              title: 'Success LED',
+              ledName: 'Green/Success',
+              isOn: kioskService.ledSuccess,
+              color: AppTheme.successGreen,
+              onToggle: () => _handleCommand('Toggle Success LED',
+                () => kioskService.toggleLED('success')),
+            ),
+            const SizedBox(height: 12),
+            LEDStatusCard(
+              title: 'Error LED',
+              ledName: 'Red/Error',
+              isOn: kioskService.ledError,
+              color: AppTheme.errorRed,
+              onToggle: () => _handleCommand('Toggle Error LED',
+                () => kioskService.toggleLED('error')),
+            ),
+            const SizedBox(height: 24),
+            
+            // Control Actions Section
+            const Text(
+              'Kiosk Controls',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ControlButtonCard(
+              icon: Icons.restart_alt,
+              title: 'Restart Kiosk',
+              subtitle: 'Reboot the entire kiosk application',
+              color: AppTheme.primaryGreen,
+              onPressed: () => _showConfirmDialog(
+                    context,
+                    'Restart Kiosk?',
+                    'This will restart the kiosk application. The command will be queued and executed on next heartbeat.',
+                    () => _handleCommand('Restart', kioskService.restartKiosk),
+                  ),
+            ),
+            const SizedBox(height: 12),
+            ControlButtonCard(
+              icon: Icons.slideshow,
+              title: 'Force Slideshow Mode',
+              subtitle: 'Switch to slideshow display',
+              color: AppTheme.accentTeal,
+              onPressed: () => _handleCommand('Set Slideshow Mode',
+                () => kioskService.setMode('slideshow')),
+            ),
+            const SizedBox(height: 12),
+            ControlButtonCard(
+              icon: Icons.qr_code_scanner,
+              title: 'Force Scanner Mode',
+              subtitle: 'Switch to QR scanner mode',
+              color: AppTheme.primaryLight,
+              onPressed: () => _handleCommand('Set Scanner Mode',
+                () => kioskService.setMode('scanner')),
+            ),
+            const SizedBox(height: 12),
+            ControlButtonCard(
+              icon: Icons.camera_alt,
+              title: 'Force OCR Mode',
+              subtitle: 'Switch to OCR capture mode',
+              color: Colors.blue,
+              onPressed: () => _handleCommand('Set OCR Mode',
+                () => kioskService.setMode('ocr')),
+            ),
+            const SizedBox(height: 24),
+            
+            // Danger Zone
+            const Text(
+              'Maintenance',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ControlButtonCard(
+              icon: Icons.power_settings_new,
+              title: 'Close Application',
+              subtitle: 'Stop the kiosk for maintenance (will NOT auto-restart)',
+              color: AppTheme.errorRed,
+              onPressed: () => _showConfirmDialog(
+                context,
+                'Close Kiosk Application?',
+                'This will close the kiosk application completely. It will NOT auto-restart.\n\nTo start it again you will need to manually run the kiosk or reboot the device.',
+                () => _handleCommand('Close Application', kioskService.closeApp),
+              ),
+            ),
+            const SizedBox(height: 24),
+            
+            // Test All LEDs Button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _handleCommand('Test All LEDs', kioskService.testAllLEDs),
+                icon: const Icon(Icons.lightbulb_outline),
+                label: const Text('Test All LEDs'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.warningOrange,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -267,7 +359,7 @@ class _KioskDashboardState extends State<KioskDashboard> {
               )
             else
               DropdownButtonFormField<String>(
-                value: kioskService.selectedKioskId,
+                initialValue: kioskService.selectedKioskId,
                 decoration: InputDecoration(
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),

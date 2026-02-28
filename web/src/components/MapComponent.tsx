@@ -430,7 +430,7 @@ export function MapComponent({
       <div className="w-full h-full flex items-center justify-center">
         <Card className="p-8">
           <p className="text-red-600">
-            Map unavailable. Check GOOGLE_MAPS_SETUP.md
+            Map unavailable. Please come back later.
           </p>
         </Card>
       </div>
@@ -441,7 +441,7 @@ export function MapComponent({
       <div ref={mapRef} className="w-full h-full" />
       
       {/* Mobile Search - Form visible, compact static width */}
-      <div className="md:hidden fixed top-16 left-2 z-50 w-64">
+      <div className="md:hidden fixed top-40 left-2 z-50 w-64">
         <Card className="bg-white rounded-lg shadow-lg">
           <div className="relative p-2">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -639,7 +639,7 @@ export function MapComponent({
       {/* Inspector count container: bottom center */}
       <div 
         ref={inspectorCountRef}
-        className={`${isFullscreen ? 'fixed' : 'absolute'} bottom-16 md:bottom-10 left-1/2 -translate-x-1/2 z-[51]`}
+        className={`${isFullscreen ? 'fixed' : 'absolute'} bottom-20 md:bottom-16 left-1/2 -translate-x-1/2 z-[51]`}
         style={{ 
           pointerEvents: 'auto'
         }}

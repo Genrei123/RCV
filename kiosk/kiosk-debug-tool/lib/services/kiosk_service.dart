@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/kiosk_log.dart';
 
 /// KioskService - Firebase-based real-time kiosk management
 ///
@@ -38,6 +39,13 @@ class KioskService extends ChangeNotifier {
   // Firebase listeners
   StreamSubscription<QuerySnapshot>? _kiosksSubscription;
   StreamSubscription<DocumentSnapshot>? _selectedKioskSubscription;
+  StreamSubscription<QuerySnapshot>? _logsSubscription;
+  
+  // Real-time logs
+  List<KioskLog> _logs = [];
+  bool _isLogsPaused = false;
+  String _logFilter = 'all'; // 'all', 'error', 'warning', 'ocr', 'scan', 'api', 'system', 'command'
+  final int _maxLogs = 500; // Keep last 500 logs in memory
   
   // Getters
   String? get selectedKioskId => _selectedKioskId;
@@ -56,6 +64,27 @@ class KioskService extends ChangeNotifier {
   bool get ledError => _ledError;
   
   List<Map<String, dynamic>> get allKiosks => _allKiosks;
+  
+  // Log getters
+  List<KioskLog> get logs => _filteredLogs;
+  List<KioskLog> get allLogs => _logs;
+  bool get isLogsPaused => _isLogsPaused;
+  String get logFilter => _logFilter;
+  int get logCount => _logs.length;
+  int get errorLogCount => _logs.where((l) => l.level == 'error').length;
+  int get warningLogCount => _logs.where((l) => l.level == 'warning').length;
+  
+  List<KioskLog> get _filteredLogs {
+    if (_logFilter == 'all') return _logs;
+    
+    // Filter by level
+    if (_logFilter == 'error' || _logFilter == 'warning' || _logFilter == 'debug' || _logFilter == 'info') {
+      return _logs.where((l) => l.level == _logFilter).toList();
+    }
+    
+    // Filter by category
+    return _logs.where((l) => l.category == _logFilter).toList();
+  }
 
   void selectKiosk(String kioskId) {
     _selectedKioskId = kioskId;
@@ -115,8 +144,9 @@ class KioskService extends ChangeNotifier {
 
   /// Start listening to selected kiosk for real-time status
   void _startListeningToSelectedKiosk() {
-    // Cancel existing subscription
+    // Cancel existing subscriptions
     _selectedKioskSubscription?.cancel();
+    _stopListeningToLogs();
     
     if (_selectedKioskId == null) return;
     
@@ -136,6 +166,9 @@ class KioskService extends ChangeNotifier {
         }, onError: (e) {
           debugPrint('❌ Error listening to kiosk: $e');
         });
+    
+    // Also start listening to logs
+    _startListeningToLogs();
   }
 
   void stopMonitoring() {
@@ -143,6 +176,7 @@ class KioskService extends ChangeNotifier {
     _kiosksSubscription = null;
     _selectedKioskSubscription?.cancel();
     _selectedKioskSubscription = null;
+    _stopListeningToLogs();
   }
 
   /// Manual refresh - fetch all kiosks
@@ -349,6 +383,21 @@ class KioskService extends ChangeNotifier {
     return success;
   }
 
+  /// Close the kiosk application for maintenance (will NOT auto-restart)
+  Future<bool> closeApp() async {
+    if (_selectedKioskId == null) return false;
+    
+    const commandKey = 'close_app';
+    if (!_canSendCommand(commandKey)) {
+      debugPrint('Command $commandKey is in cooldown');
+      return false;
+    }
+    
+    final success = await _sendCommand('close_app');
+    if (success) _markCommandSent(commandKey);
+    return success;
+  }
+
   /// Change kiosk mode
   Future<bool> setMode(String mode) async {
     if (_selectedKioskId == null) return false;
@@ -364,9 +413,80 @@ class KioskService extends ChangeNotifier {
     return success;
   }
 
+  // =========================================================================
+  // LOG STREAMING - Real-time kiosk logs from Firebase
+  // =========================================================================
+
+  /// Start listening to logs for the selected kiosk
+  void _startListeningToLogs() {
+    _logsSubscription?.cancel();
+    _logs = [];
+    
+    if (_selectedKioskId == null) return;
+    
+    debugPrint('📋 Listening to logs for kiosk: $_selectedKioskId');
+    
+    _logsSubscription = _firestore
+        .collection('kiosks')
+        .doc(_selectedKioskId)
+        .collection('logs')
+        .orderBy('timestamp', descending: true)
+        .limit(_maxLogs)
+        .snapshots()
+        .listen((snapshot) {
+          if (_isLogsPaused) return;
+          
+          _logs = snapshot.docs
+              .map((doc) => KioskLog.fromFirestore(doc))
+              .toList();
+          
+          notifyListeners();
+        }, onError: (e) {
+          debugPrint('❌ Error listening to logs: $e');
+        });
+  }
+  
+  /// Stop listening to logs
+  void _stopListeningToLogs() {
+    _logsSubscription?.cancel();
+    _logsSubscription = null;
+  }
+
+  /// Set log filter
+  void setLogFilter(String filter) {
+    _logFilter = filter;
+    notifyListeners();
+  }
+
+  /// Pause/resume log streaming
+  void toggleLogsPaused() {
+    _isLogsPaused = !_isLogsPaused;
+    notifyListeners();
+  }
+
+  /// Clear all logs for the selected kiosk (sends command to kiosk)
+  Future<bool> clearLogs() async {
+    if (_selectedKioskId == null) return false;
+    
+    const commandKey = 'clear_logs';
+    if (!_canSendCommand(commandKey)) {
+      debugPrint('Command $commandKey is in cooldown');
+      return false;
+    }
+    
+    final success = await _sendCommand('clear_logs');
+    if (success) {
+      _markCommandSent(commandKey);
+      _logs = [];
+      notifyListeners();
+    }
+    return success;
+  }
+
   @override
   void dispose() {
     stopMonitoring();
+    _stopListeningToLogs();
     super.dispose();
   }
 }
