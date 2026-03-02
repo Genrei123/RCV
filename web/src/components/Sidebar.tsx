@@ -14,8 +14,6 @@ import {
   Power,
   Repeat2,
   HelpCircle,
-  Search,
-  X,
 } from "lucide-react";
 import { LogoutModal } from "./LogoutModal";
 import { AuthService } from "@/services/authService";
