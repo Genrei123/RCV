@@ -31,9 +31,6 @@ interface KioskMapComponentProps {
   onKioskClick: (kiosk: KioskMachine) => void;
   onSearch: (query: string) => void;
   loading?: boolean;
-  viewMode?: "agents" | "kiosks";
-  onViewModeChange?: (mode: "agents" | "kiosks") => void;
-  showViewToggle?: boolean;
 }
 
 const mapContainerStyle = {

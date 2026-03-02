@@ -279,9 +279,6 @@ export function Maps() {
           onInspectorClick={handleInspectorClick}
           onSearch={handleSearch}
           loading={loading}
-          showViewToggle
-          viewMode={viewMode}
-          onViewModeChange={handleViewModeChange}
         />
       ) : (
         <KioskMapComponent
@@ -289,9 +286,6 @@ export function Maps() {
           onKioskClick={handleKioskClick}
           onSearch={handleSearch}
           loading={kiosksLoading}
-          showViewToggle
-          viewMode={viewMode}
-          onViewModeChange={handleViewModeChange}
         />
       )}
     </div>
