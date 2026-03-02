@@ -869,7 +869,7 @@ export function LandingPage() {
                 <p className="text-lg text-text-subtle mb-6 leading-relaxed text-center">
                   The Regulatory Compliance Verification (RCV) system is a
                   cutting-edge platform designed to combat counterfeiting and
-                  ensure product authenticity through blockchain technology.
+                  ensure product authenticity through blockchain technologies.
                 </p>
                 <p className="text-lg text-text-subtle mb-8 leading-relaxed text-center">
                   Our system provides businesses with the tools to register
