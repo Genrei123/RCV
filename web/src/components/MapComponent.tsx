@@ -31,6 +31,8 @@ interface MapComponentProps {
   onSearch?: (query: string) => void;
   loading?: boolean;
   allInspectors?: Inspector[]; // for local suggestions when API results absent
+  searchUsers?: any[];
+
 }
 
 declare global {
