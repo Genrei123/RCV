@@ -75,7 +75,7 @@ export function Footer() {
               <h4 className="font-semibold text-white mb-3">Connect with us</h4>
               <div className="flex justify-center md:justify-start space-x-4 flex-wrap">
                 <a
-                  href="https://www.facebook.com/profile.php?id=61584477608125"
+                  href="https://www.facebook.com/profile.php?id=61584792475509"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-10 h-10 app-bg-primary rounded-lg flex items-center justify-center text-white hover:opacity-90 transition-colors"
