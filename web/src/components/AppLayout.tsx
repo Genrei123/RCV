@@ -137,55 +137,68 @@ export const AppLayout = ({
 
       {/* mobile search overlay - only on maps pages */}
       {isMapPage && mobileSearchOpen && (
-        <div className="lg:hidden fixed top-1 left-14 right-0 bg-white z-9999 border-b flex flex-col" style={{minHeight:'auto'}}>
+        <div
+          className="lg:hidden fixed top-1 left-14 right-0 bg-white border-b"
+          style={{ zIndex: 99999, pointerEvents: 'auto', touchAction: 'manipulation' }}
+        >
+          {/* Search input row */}
           <div className="flex items-center gap-2 px-4 py-3 h-14">
-            <input
-              type="text"
-              autoFocus
-              value={localSearchQuery}
-              onChange={(e) => handleMobileSearchChange(e.target.value)}
-              onClick={(e) => e.stopPropagation()}
-              onMouseDown={(e) => e.stopPropagation()}
-              onTouchStart={(e) => e.stopPropagation()}
-              placeholder={viewMode === "agents" ? "Search inspectors..." : "Search kiosk devices..."}
-              className="flex-1 px-3 py-2 border rounded-md focus:outline-none"
-              style={{ pointerEvents: 'auto' }}
-            />
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                autoFocus
+                value={localSearchQuery}
+                onChange={(e) => handleMobileSearchChange(e.target.value)}
+                placeholder={viewMode === "agents" ? "Search inspectors..." : "Search kiosk devices..."}
+                className="w-full px-3 py-2 border rounded-md focus:outline-none text-sm"
+                style={{ pointerEvents: 'auto', touchAction: 'manipulation' }}
+              />
+
+              {/* Suggestions — positioned absolutely inside the flex-1 container to match rounded input width */}
+              {mapSearchSuggestions.length > 0 && (
+                <div
+                  className="absolute left-0 right-0 top-full mt-1 bg-white border rounded-md shadow-lg overflow-y-auto"
+                  style={{ maxHeight: '12rem', pointerEvents: 'auto', touchAction: 'manipulation', zIndex: 1 }}
+                >
+                  {mapSearchSuggestions.map((s) => (
+                    <button
+                      key={s.id}
+                      onPointerDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const suggestion = s;
+                        handleMobileSearchChange("");
+                        setMobileSearchOpen(false);
+                        onMapSuggestionClick(suggestion);
+                      }}
+                      className="w-full text-left px-3 py-3 hover:bg-gray-50 active:bg-gray-100 flex flex-col gap-0.5 border-b last:border-b-0 text-sm"
+                      style={{ pointerEvents: 'auto', touchAction: 'manipulation' }}
+                    >
+                      <span className="font-medium text-gray-800">{s.name}</span>
+                      {s.location && (
+                        <p className="text-xs text-gray-500">
+                          {s.location.city || s.location.address}
+                        </p>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <button
-              onClick={() => setMobileSearchOpen(false)}
+              onPointerDown={(e) => {
+                e.preventDefault();
+                handleMobileSearchChange("");
+                setMobileSearchOpen(false);
+              }}
               className="p-2 shrink-0"
               aria-label="Close search"
+              style={{ pointerEvents: 'auto', touchAction: 'manipulation' }}
             >
-              {localSearchQuery ? (
-                <X className="w-5 h-5" onClick={(e) => { e.stopPropagation(); handleMobileSearchChange(""); }} />
-              ) : (
-                <X className="w-5 h-5" />
-              )}
+              <X className="w-5 h-5" />
             </button>
           </div>
-          {mapSearchSuggestions.length > 0 && (
-            <div className="mx-4 mb-2 overflow-y-auto max-h-48 border rounded-md shadow-sm bg-white">
-              {mapSearchSuggestions.map((s) => (
-                <button
-                  key={s.id}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    handleMobileSearchChange("");
-                    setMobileSearchOpen(false);
-                    s && onMapSuggestionClick && onMapSuggestionClick(s as any);
-                  }}
-                  className="w-full text-left px-3 py-2 hover:bg-gray-50 flex flex-col gap-1 focus:outline-none border-b last:border-b-0 text-sm"
-                >
-                  <span className="font-medium text-gray-800">{s.name}</span>
-                  {s.location && (
-                    <p className="text-xs text-gray-500">
-                      {s.location.city || s.location.address}
-                    </p>
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
       )}
 

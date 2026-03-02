@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useState, useRef, useCallback } from "react";
 import type { ReactNode } from "react";
 
 export type MapSearchSuggestion = {
@@ -16,7 +16,7 @@ interface MapSearchContextType {
   setMapSearchQuery: (query: string) => void;
   mapSearchSuggestions: MapSearchSuggestion[];
   setMapSearchSuggestions: (suggestions: MapSearchSuggestion[]) => void;
-  onMapSuggestionClick?: (suggestion: MapSearchSuggestion) => void;
+  onMapSuggestionClick: (suggestion: MapSearchSuggestion) => void;
   setOnMapSuggestionClick: (callback: (suggestion: MapSearchSuggestion) => void) => void;
 }
 
@@ -29,9 +29,19 @@ export const MapSearchProvider: React.FC<{ children: ReactNode }> = ({
   const [mapSearchSuggestions, setMapSearchSuggestions] = useState<
     MapSearchSuggestion[]
   >([]);
-  const [onMapSuggestionClick, setOnMapSuggestionClick] = useState<
-    ((suggestion: MapSearchSuggestion) => void) | undefined
-  >(undefined);
+
+  // Use a ref to store the callback — avoids triggering re-renders and infinite loops
+  const onMapSuggestionClickRef = useRef<(suggestion: MapSearchSuggestion) => void>(() => {});
+
+  // Stable setter that never changes identity (no infinite loops from useEffect deps)
+  const setOnMapSuggestionClick = useCallback((callback: (suggestion: MapSearchSuggestion) => void) => {
+    onMapSuggestionClickRef.current = callback;
+  }, []);
+
+  // Stable dispatcher that always calls the latest registered callback
+  const onMapSuggestionClick = useCallback((suggestion: MapSearchSuggestion) => {
+    onMapSuggestionClickRef.current(suggestion);
+  }, []);
 
   return (
     <MapSearchContext.Provider
