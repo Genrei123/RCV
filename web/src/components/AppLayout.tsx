@@ -25,8 +25,22 @@ export const AppLayout = ({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-  const { mapSearchQuery, setMapSearchQuery, mapSearchSuggestions, onMapSuggestionClick } = useMapSearch();
+  const [localSearchQuery, setLocalSearchQuery] = useState("");
+  const { setMapSearchQuery, mapSearchSuggestions, onMapSuggestionClick } = useMapSearch();
   const { viewMode, setViewMode } = useViewMode();
+
+  // Reset local query when overlay is closed
+  useEffect(() => {
+    if (!mobileSearchOpen) {
+      setLocalSearchQuery("");
+      setMapSearchQuery("");
+    }
+  }, [mobileSearchOpen, setMapSearchQuery]);
+
+  const handleMobileSearchChange = (value: string) => {
+    setLocalSearchQuery(value);
+    setMapSearchQuery(value);
+  };
 
   // Check if tutorial should be shown on first visit
   useEffect(() => {
@@ -123,33 +137,41 @@ export const AppLayout = ({
 
       {/* mobile search overlay - only on maps pages */}
       {isMapPage && mobileSearchOpen && (
-        <div className="lg:hidden fixed top-0 left-14 right-0 h-15 bg-white z-50 border-b flex flex-col" style={{minHeight:'auto'}}>
-          <div className="flex items-center gap-2 px-4 py-3 h-15">
+        <div className="lg:hidden fixed top-1 left-14 right-0 bg-white z-[9999] border-b flex flex-col" style={{minHeight:'auto'}}>
+          <div className="flex items-center gap-2 px-4 py-3 h-14">
             <input
               type="text"
               autoFocus
-              value={mapSearchQuery}
-              onChange={(e) => setMapSearchQuery(e.target.value)}
+              value={localSearchQuery}
+              onChange={(e) => handleMobileSearchChange(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
               placeholder={viewMode === "agents" ? "Search inspectors..." : "Search kiosk devices..."}
               className="flex-1 px-3 py-2 border rounded-md focus:outline-none"
+              style={{ pointerEvents: 'auto' }}
             />
             <button
               onClick={() => setMobileSearchOpen(false)}
-              className="p-2"
+              className="p-2 shrink-0"
               aria-label="Close search"
             >
-              <X className="w-5 h-5" />
+              {localSearchQuery ? (
+                <X className="w-5 h-5" onClick={(e) => { e.stopPropagation(); handleMobileSearchChange(""); }} />
+              ) : (
+                <X className="w-5 h-5" />
+              )}
             </button>
           </div>
           {mapSearchSuggestions.length > 0 && (
-            <div className="px-4 pb-2 overflow-y-auto max-h-24">
+            <div className="mx-4 mb-2 overflow-y-auto max-h-48 border rounded-md shadow-sm bg-white">
               {mapSearchSuggestions.map((s) => (
                 <button
                   key={s.id}
-                  onClick={() => {
-                    setMapSearchQuery("");
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    handleMobileSearchChange("");
                     setMobileSearchOpen(false);
-                    // invoke callback if provided
                     s && onMapSuggestionClick && onMapSuggestionClick(s as any);
                   }}
                   className="w-full text-left px-3 py-2 hover:bg-gray-50 flex flex-col gap-1 focus:outline-none border-b last:border-b-0 text-sm"

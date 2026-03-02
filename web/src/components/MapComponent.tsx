@@ -444,11 +444,11 @@ export function MapComponent({
       {/* Desktop Search panel */}
       <div 
         ref={searchContainerRef}
-        className={`hidden lg:block ${isFullscreen ? 'fixed' : 'absolute'} top-24 lg:top-24 left-3 lg:left-4 z-[50] w-80 md:w-96 max-w-[28rem]`}
+        className={`hidden lg:block ${isFullscreen ? 'fixed' : 'absolute'} top-24 lg:top-24 left-3 lg:left-4 z-[9999] w-80 md:w-96 max-w-[28rem]`}
         style={{ pointerEvents: 'auto' }}
       >
         <Card className="bg-white rounded-none sm:rounded-lg border-0 shadow-xl m-0 sm:m-0" style={{ pointerEvents: 'auto' }}>
-          <div className="relative p-2 sm:p-2">
+          <div className="relative p-2 sm:p-2" style={{ pointerEvents: 'auto' }}>
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
               placeholder="Search inspectors..."
@@ -458,14 +458,16 @@ export function MapComponent({
                 setSearchQuery(value);
                 setTimeout(() => onSearch?.(value), 50);
               }}
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+              style={{ pointerEvents: 'auto' }}
               className="pl-12 pr-10 bg-white rounded-md border-0 shadow-none focus:outline-none focus:ring-0 focus-visible:ring-0"
             />
             {searchQuery && (
               <button
-                onClick={() => {
-                  setSearchQuery("");
-                  onSearch?.("");
-                }}
+                onClick={(e) => { e.stopPropagation(); setSearchQuery(""); onSearch?.(""); }}
+                style={{ pointerEvents: 'auto' }}
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"
               >
                 <X className="h-4 w-4" />

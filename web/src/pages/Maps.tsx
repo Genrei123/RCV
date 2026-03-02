@@ -126,7 +126,7 @@ export function Maps() {
 
   const handleSearch = useCallback(async (query: string) => {
     setSearchQuery(query);
-    setMapSearchQuery(query);
+    // Do NOT call setMapSearchQuery here — it's already set by the caller to avoid feedback loops
 
     if (!query.trim()) {
       setFilteredInspectors(inspectors);
@@ -218,7 +218,7 @@ export function Maps() {
         setMapSearchSuggestions(fallbackSuggestions);
       }
     }
-  }, [inspectors, kiosks, viewMode, setMapSearchQuery, setMapSearchSuggestions]);
+  }, [inspectors, kiosks, viewMode, setMapSearchSuggestions]);
 
   // Sync map search query from context to handleSearch
   useEffect(() => {

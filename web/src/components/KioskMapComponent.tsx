@@ -147,22 +147,27 @@ export function KioskMapComponent({
   return (
     <div className="relative h-full w-full">
       {/* Search Bar - Large screens only */}
-      <div className="hidden lg:block absolute top-16 lg:top-16 left-3 lg:left-4 z-[50] w-80 md:w-96 max-w-[28rem]" style={{ pointerEvents: 'auto' }}>
+      <div className="hidden lg:block absolute top-16 lg:top-16 left-3 lg:left-4 z-[9999] w-80 md:w-96 max-w-[28rem]" style={{ pointerEvents: 'auto' }}>
 
         <Card className="bg-white rounded-none sm:rounded-lg border-0 shadow-xl m-0" style={{ pointerEvents: 'auto' }}>
-          <div className="relative p-2 sm:p-2">
+          <div className="relative p-2 sm:p-2" style={{ pointerEvents: 'auto' }}>
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
               type="text"
               placeholder="Search kiosk by name or location..."
               value={searchQuery}
               onChange={handleSearchChange}
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+              style={{ pointerEvents: 'auto' }}
               className="pl-12 pr-10 bg-white rounded-md border-0 shadow-none focus:outline-none focus:ring-0 focus-visible:ring-0"
             />
             {searchQuery && (
               <button
-                onClick={() => setSearchQuery("")}
+                onClick={(e) => { e.stopPropagation(); setSearchQuery(""); onSearch(""); }}
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"
+                style={{ pointerEvents: 'auto' }}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -172,7 +177,7 @@ export function KioskMapComponent({
       </div>
 
       {/* Stats Card - left on mobile, right on desktop */}
-      <Card className="absolute top-16 md:top-16 left-4 md:right-4 md:left-auto z-10 p-3 bg-white shadow-lg">
+      <Card className="absolute top-32 md:top-16 left-4 md:right-4 md:left-auto z-10 p-3 bg-white shadow-lg">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1">
             <div className="w-2 h-2 rounded-full bg-green-500"></div>
