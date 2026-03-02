@@ -529,8 +529,14 @@ class RCVApiService:
     
     def __init__(self, base_url: str = None):
         # Default to localhost, can be configured via environment variable
-        self.base_url = base_url or os.environ.get('RCV_API_URL', 'http://localhost:3000/api/v1')
+        raw_url = base_url or os.environ.get('RCV_API_URL', 'https://rcv-production-cbd6.up.railway.app/api/v1')
+        # Ensure base URL always includes /api/v1 path
+        raw_url = raw_url.rstrip('/')
+        if not raw_url.endswith('/api/v1'):
+            raw_url = raw_url + '/api/v1'
+        self.base_url = raw_url
         self.timeout = 30  # seconds
+        print(f"[RCVApiService] Base URL: {self.base_url}")
     
     def _construct_firebase_pdf_url(self, certificate_id: str) -> str:
         """
@@ -555,6 +561,7 @@ class RCVApiService:
     def _make_request(self, method: str, endpoint: str, data: dict = None, params: dict = None) -> dict:
         """Make HTTP request to API"""
         url = urljoin(self.base_url + '/', endpoint.lstrip('/'))
+        print(f"[RCVApiService] {method} {url}")
         
         try:
             if method.upper() == 'GET':
@@ -684,7 +691,9 @@ class RCVApiService:
     def health_check(self) -> dict:
         """Check if API is accessible"""
         try:
-            response = requests.get(urljoin(self.base_url.replace('/api/v1', ''), '/'), timeout=5)
+            health_url = urljoin(self.base_url.replace('/api/v1', ''), '/')
+            print(f"[RCVApiService] Health check URL: {health_url}")
+            response = requests.get(health_url, timeout=5)
             return response.json()
         except:
             return {"success": False, "message": "API not accessible"}
@@ -4345,7 +4354,7 @@ class KioskApp:
             self._update_maintenance_status(result)
         else:
             self.maintenance_status_icon.config(text="X")
-            self.maintenance_status_label.config(text="Still offline - try again")
+            self.maintenance_status_label.config(text="Still offline - try agains")
     
     def _recover_from_maintenance(self):
         """Recover from maintenance mode when server comes back online"""
