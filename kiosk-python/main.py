@@ -529,7 +529,7 @@ class RCVApiService:
     
     def __init__(self, base_url: str = None):
         # Default to localhost, can be configured via environment variable
-        raw_url = base_url or os.environ.get('RCV_API_URL', 'http://localhost:3000/api/v1')
+        raw_url = base_url or os.environ.get('RCV_API_URL', 'https://rcv-production-cbd6.up.railway.app/api/v1')
         # Ensure base URL always includes /api/v1 path
         raw_url = raw_url.rstrip('/')
         if not raw_url.endswith('/api/v1'):
