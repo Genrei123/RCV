@@ -1,6 +1,6 @@
 // Google Maps Component - See GOOGLE_MAPS_SETUP.md for configuration
 import { useState, useEffect, useRef } from "react";
-import { Search, MapPin, X } from "lucide-react";
+import { Search, MapPin, X, Users, Monitor } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { useMapSearch } from "@/contexts/MapSearchContext";
@@ -61,6 +61,8 @@ export function MapComponent({
   const inspectorCountRef = useRef<HTMLDivElement>(null);
   const originalSearchParentRef = useRef<HTMLElement | null>(null);
   const originalCountParentRef = useRef<HTMLElement | null>(null);
+  const toggleContainerRef = useRef<HTMLDivElement | null>(null);
+  const originalToggleParentRef = useRef<HTMLElement | null>(null);
   const [elementsMovedDown, setElementsMovedDown] = useState(false);
   const elementsMovedDownRef = useRef(false);
 
@@ -247,6 +249,9 @@ export function MapComponent({
     if (inspectorCountRef.current?.parentElement && !originalCountParentRef.current) {
       originalCountParentRef.current = inspectorCountRef.current.parentElement;
     }
+    if (toggleContainerRef.current?.parentElement && !originalToggleParentRef.current) {
+      originalToggleParentRef.current = toggleContainerRef.current.parentElement;
+    }
   }, []);
 
   // Ensure elements stay in correct position after re-renders when in fullscreen
@@ -266,6 +271,9 @@ export function MapComponent({
       if (inspectorCountRef.current && inspectorCountRef.current.parentElement !== fullscreenElement) {
         fullscreenElement.appendChild(inspectorCountRef.current);
       }
+      if (toggleContainerRef.current && toggleContainerRef.current.parentElement !== fullscreenElement) {
+        fullscreenElement.appendChild(toggleContainerRef.current);
+      }
     }
   }, [isFullscreen, searchQuery, inspectors.length]);
 
@@ -281,13 +289,16 @@ export function MapComponent({
 
       // Use setTimeout to ensure DOM is ready after fullscreen transition
       setTimeout(() => {
-        if (searchContainerRef.current && inspectorCountRef.current) {
+        if (searchContainerRef.current && inspectorCountRef.current && toggleContainerRef.current) {
           // Ensure original parents are stored
           if (!originalSearchParentRef.current && searchContainerRef.current.parentElement) {
             originalSearchParentRef.current = searchContainerRef.current.parentElement;
           }
           if (!originalCountParentRef.current && inspectorCountRef.current.parentElement) {
             originalCountParentRef.current = inspectorCountRef.current.parentElement;
+          }
+          if (!originalToggleParentRef.current && toggleContainerRef.current.parentElement) {
+            originalToggleParentRef.current = toggleContainerRef.current.parentElement;
           }
 
           if (nowFullscreen) {
@@ -298,6 +309,9 @@ export function MapComponent({
             if (fullscreenElement && inspectorCountRef.current.parentElement !== fullscreenElement) {
               fullscreenElement.appendChild(inspectorCountRef.current);
             }
+            if (fullscreenElement && toggleContainerRef.current.parentElement !== fullscreenElement) {
+              fullscreenElement.appendChild(toggleContainerRef.current);
+            }
           } else {
             // Move back to original parents
             if (originalSearchParentRef.current && searchContainerRef.current.parentElement !== originalSearchParentRef.current) {
@@ -305,6 +319,9 @@ export function MapComponent({
             }
             if (originalCountParentRef.current && inspectorCountRef.current.parentElement !== originalCountParentRef.current) {
               originalCountParentRef.current.appendChild(inspectorCountRef.current);
+            }
+            if (originalToggleParentRef.current && toggleContainerRef.current.parentElement !== originalToggleParentRef.current) {
+              originalToggleParentRef.current.appendChild(toggleContainerRef.current);
             }
           }
         }
@@ -431,7 +448,7 @@ export function MapComponent({
       <div className="w-full h-full flex items-center justify-center">
         <Card className="p-8">
           <p className="text-red-600">
-            Map unavailable. Check GOOGLE_MAPS_SETUP.md
+            Map unavailable. Please come back later.
           </p>
         </Card>
       </div>
@@ -546,7 +563,7 @@ export function MapComponent({
       {/* Inspector count container: bottom center */}
       <div 
         ref={inspectorCountRef}
-        className={`${isFullscreen ? 'fixed' : 'absolute'} bottom-16 md:bottom-10 left-1/2 -translate-x-1/2 z-[51]`}
+        className={`${isFullscreen ? 'fixed' : 'absolute'} bottom-20 md:bottom-16 left-1/2 -translate-x-1/2 z-[51]`}
         style={{ 
           pointerEvents: 'auto'
         }}

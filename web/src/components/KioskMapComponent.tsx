@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { GoogleMap, Marker, InfoWindow, useJsApiLoader } from "@react-google-maps/api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,9 @@ interface KioskMapComponentProps {
   onKioskClick: (kiosk: KioskMachine) => void;
   onSearch: (query: string) => void;
   loading?: boolean;
+  viewMode?: "agents" | "kiosks";
+  onViewModeChange?: (mode: "agents" | "kiosks") => void;
+  showViewToggle?: boolean;
 }
 
 const mapContainerStyle = {
@@ -47,11 +50,16 @@ export function KioskMapComponent({
   kiosks,
   onKioskClick,
   onSearch,
+  viewMode = "kiosks",
+  onViewModeChange,
+  showViewToggle = false,
 }: KioskMapComponentProps) {
   const [selectedKiosk, setSelectedKiosk] = useState<KioskMachine | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [commandLoading, setCommandLoading] = useState<string | null>(null);
   const [commandStatus, setCommandStatus] = useState<{ kioskId: string; message: string; success: boolean } | null>(null);
+  const toggleContainerRef = useRef<HTMLDivElement | null>(null);
+  const originalToggleParentRef = useRef<HTMLElement | null>(null);
 
   // Clear command status after 3 seconds
   useEffect(() => {
@@ -105,6 +113,10 @@ export function KioskMapComponent({
     handleCommand(kioskId, 'Shutdown', () => KioskManagementService.shutdownKiosk(kioskId));
   };
 
+  const handleCloseApp = (kioskId: string) => {
+    handleCommand(kioskId, 'Close Application', () => KioskManagementService.closeApp(kioskId));
+  };
+
   const handleTestLEDs = (kioskId: string) => {
     handleCommand(kioskId, 'Test LEDs', () => KioskManagementService.testAllLEDs(kioskId));
   };
@@ -139,6 +151,50 @@ export function KioskMapComponent({
       scaledSize: new window.google.maps.Size(40, 40),
     };
   };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const fullscreenElement =
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement;
+      const nowFullscreen = !!fullscreenElement;
+
+      setTimeout(() => {
+        if (!toggleContainerRef.current) return;
+
+        if (!originalToggleParentRef.current && toggleContainerRef.current.parentElement) {
+          originalToggleParentRef.current = toggleContainerRef.current.parentElement;
+        }
+
+        if (nowFullscreen) {
+          if (fullscreenElement && toggleContainerRef.current.parentElement !== fullscreenElement) {
+            fullscreenElement.appendChild(toggleContainerRef.current);
+          }
+        } else {
+          if (
+            originalToggleParentRef.current &&
+            toggleContainerRef.current.parentElement !== originalToggleParentRef.current
+          ) {
+            originalToggleParentRef.current.appendChild(toggleContainerRef.current);
+          }
+        }
+      }, 0);
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+    document.addEventListener("mozfullscreenchange", handleFullscreenChange);
+    document.addEventListener("MSFullscreenChange", handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
+      document.removeEventListener("mozfullscreenchange", handleFullscreenChange);
+      document.removeEventListener("MSFullscreenChange", handleFullscreenChange);
+    };
+  }, []);
 
   if (!isLoaded) {
     return <div className="h-full w-full flex items-center justify-center">Loading map...</div>;
@@ -304,6 +360,17 @@ export function KioskMapComponent({
                 >
                   <Power className="h-3 w-3 mr-1" />
                   Shutdown
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="w-full"
+                  onClick={() => handleCloseApp(selectedKiosk.id)}
+                  disabled={selectedKiosk.status === "offline" || commandLoading !== null}
+                  title="Close the kiosk app for maintenance. It will NOT auto-restart."
+                >
+                  <Power className="h-3 w-3 mr-1" />
+                  Close Application
                 </Button>
               </div>
             </div>

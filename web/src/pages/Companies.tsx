@@ -358,23 +358,23 @@ export function Companies(props: CompaniesProps) {
             emptyStateDescription="Try adjusting your search or add a new company to get started."
             customControls={
               <div className="flex flex-wrap items-center justify-between gap-3 w-full">
-                <div data-tutorial="companies-filter" className="flex bg-muted p-1 rounded-md">
+                <div data-tutorial="companies-filter" className="flex bg-gray-100 p-1 rounded-lg">
                   <button
                     onClick={() => setActiveTab("active")}
-                    className={`px-3 py-1 text-sm rounded-sm transition-all ${
+                    className={`px-3 py-1 text-sm font-medium rounded-md transition-all cursor-pointer ${
                       activeTab === "active"
-                        ? "bg-white shadow app-text-primary"
-                        : "text-muted-foreground hover:text-foreground"
+                        ? "bg-white app-text-primary shadow-sm"
+                        : "text-gray-500 hover:text-gray-900"
                     }`}
                   >
                     Active
                   </button>
                   <button
                     onClick={() => setActiveTab("archived")}
-                    className={`px-3 py-1 text-sm rounded-sm transition-all ${
+                    className={`px-3 py-1 text-sm font-medium rounded-md transition-all cursor-pointer ${
                       activeTab === "archived"
-                        ? "bg-white shadow app-text-archived"
-                        : "text-muted-foreground hover:text-foreground"
+                        ? "bg-white app-text-archived shadow-sm"
+                        : "text-gray-500 hover:text-gray-900"
                     }`}
                   >
                     Archived

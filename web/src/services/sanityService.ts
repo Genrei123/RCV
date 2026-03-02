@@ -13,6 +13,8 @@ export class SanityService {
       description,
       gradient,
       mediaType,
+      buttonLink,
+      buttonText,
       image{
         asset->{
           _id,
@@ -301,6 +303,31 @@ export class SanityService {
   }
 
   /**
+   * Fetch CTA section
+   */
+  static async getCtaSection() {
+    const query = `*[_type == "ctaSection"][0]{
+      _id,
+      title,
+      description,
+      buttons[]{
+        _key,
+        label,
+        linkType,
+        href,
+        variant,
+        backgroundColor,
+        textColor,
+        showArrow,
+        openInNewTab
+      },
+      sectionBackground
+    }`;
+
+    return await sanityClient.fetch(query);
+  }
+
+  /**
    * Fetch kiosk showcase with 3D model
    */
   static async getKioskShowcase() {
@@ -331,6 +358,22 @@ export class SanityService {
           yPosition,
           zPosition,
           icon
+        }
+      }
+    }`;
+
+    return await sanityClient.fetch(query);
+  }
+
+  static async getGallerySection() {
+    const query = `*[_type == "gallerySection"] {
+      _id,
+      title,
+      description,
+      image {
+        asset->{
+          _id,
+          url
         }
       }
     }`;

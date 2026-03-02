@@ -39,6 +39,7 @@ import { MetaMaskProvider } from "./contexts/MetaMaskContext";
 import { MapSearchProvider } from "./contexts/MapSearchContext";
 import { ViewModeProvider } from "./contexts/ViewModeContext";
 import { Startup } from "./components/Startup";
+import { GalleryPage } from "./pages/GalleryPage";
 
 interface ProtectedRoutesProps {
   children: ReactNode;
@@ -259,7 +260,13 @@ function App() {
               </AccessibleRoute>
             }
           />
-
+          <Route
+            path="/gallery"
+            element={
+              <AccessibleRoute>
+                <GalleryPage />
+              </AccessibleRoute>
+            }/>
           {/* Protected Routes wrapped with AppLayout */}
           <Route
             path="/dashboard"
