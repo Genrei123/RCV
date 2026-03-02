@@ -1,6 +1,6 @@
 // Google Maps Component - See GOOGLE_MAPS_SETUP.md for configuration
 import { useState, useEffect, useRef } from "react";
-import { Search, MapPin, X, Users, Monitor } from "lucide-react";
+import { Search, MapPin, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { useMapSearch } from "@/contexts/MapSearchContext";
@@ -205,7 +205,7 @@ export function MapComponent({
           ? `<p class="my-1 text-emerald-600 text-xs font-medium">Badge: ${inspector.badgeId}</p>`
           : "";
         infoWindowRef.current.setContent(
-          `<div class="p-4 font-sans min-w-[200px] rounded-lg">
+          `<div class="p-4 font-sans min-w-50 rounded-lg">
             <div class="flex items-center gap-2 mb-2">
               <div class="w-2 h-2 rounded-full" style="background-color: ${statusColor};"></div>
               <h3 class="m-0 text-base font-semibold text-gray-800">${inspector.name}</h3>
@@ -420,7 +420,7 @@ export function MapComponent({
         ? `<p class="my-1 text-emerald-600 text-xs font-medium">Badge: ${match.badgeId}</p>`
         : "";
       infoWindowRef.current.setContent(
-        `<div class="p-4 font-sans min-w-[200px] rounded-lg">
+        `<div class="p-4 font-sans min-w-50 rounded-lg">
             <div class="flex items-center gap-2 mb-2">
               <div class="w-2 h-2 rounded-full" style="background-color: ${statusColor};"></div>
               <h3 class="m-0 text-base font-semibold text-gray-800">${match.name}</h3>
@@ -461,7 +461,7 @@ export function MapComponent({
       {/* Desktop Search panel */}
       <div 
         ref={searchContainerRef}
-        className={`hidden lg:block ${isFullscreen ? 'fixed' : 'absolute'} top-24 lg:top-24 left-3 lg:left-4 z-[9999] w-80 md:w-96 max-w-[28rem]`}
+        className={`hidden lg:block ${isFullscreen ? 'fixed' : 'absolute'} top-24 lg:top-24 left-3 lg:left-4 z-9999 w-80 md:w-96 max-w-md`}
         style={{ pointerEvents: 'auto' }}
       >
         <Card className="bg-white rounded-none sm:rounded-lg border-0 shadow-xl m-0 sm:m-0" style={{ pointerEvents: 'auto' }}>
@@ -563,7 +563,7 @@ export function MapComponent({
       {/* Inspector count container: bottom center */}
       <div 
         ref={inspectorCountRef}
-        className={`${isFullscreen ? 'fixed' : 'absolute'} bottom-20 md:bottom-16 left-1/2 -translate-x-1/2 z-[51]`}
+        className={`${isFullscreen ? 'fixed' : 'absolute'} bottom-20 md:bottom-16 left-1/2 -translate-x-1/2 z-51`}
         style={{ 
           pointerEvents: 'auto'
         }}

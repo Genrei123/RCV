@@ -50,9 +50,6 @@ export function KioskMapComponent({
   kiosks,
   onKioskClick,
   onSearch,
-  viewMode = "kiosks",
-  onViewModeChange,
-  showViewToggle = false,
 }: KioskMapComponentProps) {
   const [selectedKiosk, setSelectedKiosk] = useState<KioskMachine | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -203,7 +200,7 @@ export function KioskMapComponent({
   return (
     <div className="relative h-full w-full">
       {/* Search Bar - Large screens only */}
-      <div className="hidden lg:block absolute top-16 lg:top-16 left-3 lg:left-4 z-[9999] w-80 md:w-96 max-w-[28rem]" style={{ pointerEvents: 'auto' }}>
+      <div className="hidden lg:block absolute top-16 lg:top-16 left-3 lg:left-4 z-9999 w-80 md:w-96 max-w-md" style={{ pointerEvents: 'auto' }}>
 
         <Card className="bg-white rounded-none sm:rounded-lg border-0 shadow-xl m-0" style={{ pointerEvents: 'auto' }}>
           <div className="relative p-2 sm:p-2" style={{ pointerEvents: 'auto' }}>
@@ -276,7 +273,7 @@ export function KioskMapComponent({
             position={selectedKiosk.location}
             onCloseClick={() => setSelectedKiosk(null)}
           >
-            <div className="p-3 min-w-[280px]">
+            <div className="p-3 min-w-70">
               <h3 className="font-bold text-lg mb-2">{selectedKiosk.name}</h3>
               
               {/* Command Status Message */}

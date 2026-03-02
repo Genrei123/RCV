@@ -72,7 +72,7 @@ export const AppLayout = ({
   return (
     <div className="w-full min-h-screen flex flex-col bg-white overflow-x-hidden">
       {/* Mobile top bar */}
-      <header className="lg:hidden sticky top-0 z-40 flex items-center gap-3 px-4 py-3 bg-white border-b flex-shrink-0">
+      <header className="lg:hidden sticky top-0 z-40 flex items-center gap-3 px-4 py-3 bg-white border-b shrink-0">
         <button
           type="button"
           aria-label="Open navigation menu"
@@ -137,7 +137,7 @@ export const AppLayout = ({
 
       {/* mobile search overlay - only on maps pages */}
       {isMapPage && mobileSearchOpen && (
-        <div className="lg:hidden fixed top-1 left-14 right-0 bg-white z-[9999] border-b flex flex-col" style={{minHeight:'auto'}}>
+        <div className="lg:hidden fixed top-1 left-14 right-0 bg-white z-9999 border-b flex flex-col" style={{minHeight:'auto'}}>
           <div className="flex items-center gap-2 px-4 py-3 h-14">
             <input
               type="text"

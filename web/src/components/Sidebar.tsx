@@ -240,7 +240,7 @@ export function Sidebar({
   return (
     <>
       {/* Desktop sidebar: sticky with page scroll (or preserve inner scroll via prop) */}
-      <aside className={`hidden lg:flex lg:flex-col lg:w-64 lg:sticky lg:top-0 bg-white border-r ${preserveInnerScroll ? 'lg:max-h-screen overflow-y-auto' : 'overflow-visible'} flex-shrink-0`}>
+      <aside className={`hidden lg:flex lg:flex-col lg:w-64 lg:sticky lg:top-0 bg-white border-r ${preserveInnerScroll ? 'lg:max-h-screen overflow-y-auto' : 'overflow-visible'} shrink-0`}>
 
         {/* Logo Section */}
         <div className="p-6 border-b border-neutral-200">
@@ -446,7 +446,7 @@ export function Sidebar({
 
       {/* mobile/tablet drawer: visible below lg, use visible & closeDrawer */}
       <div
-        className={`fixed inset-0 z-[1100] lg:hidden transition-opacity ${
+        className={`fixed inset-0 z-1100 lg:hidden transition-opacity ${
           visible
             ? "opacity-100 pointer-events-auto"
             : "opacity-0 pointer-events-none"
@@ -500,7 +500,7 @@ export function Sidebar({
               onClick={() => setShowProfileMenu((s) => !s)}
               className="w-full flex items-center gap-3 text-left focus:outline-none"
             >
-              <div className="w-10 h-10 rounded-full overflow-hidden bg-neutral-300 flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 rounded-full overflow-hidden bg-neutral-300 flex items-center justify-center shrink-0">
                 {avatarUrl ? (
                   <img
                     src={avatarUrl}
