@@ -5,11 +5,13 @@ import type { KioskMachine } from "@/components/KioskMapComponent";
 import { FirestoreService } from "@/services/firestore";
 import { DashboardService } from "@/services/dashboardService";
 import { KioskManagementService } from "@/services/kioskManagementService";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { Button } from "@/components/ui/button";
 import { Users, Monitor } from "lucide-react";
+import { useMapSearch } from "@/contexts/MapSearchContext";
+import { useViewMode } from "@/contexts/ViewModeContext";
 
 export function Maps() {
   const [inspectors, setInspectors] = useState<Inspector[]>([]);
@@ -19,9 +21,14 @@ export function Maps() {
   const [, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [kiosksLoading, setKiosksLoading] = useState(false);
-  const [searchUsers, setSearchUsers] = useState<any[]>([]);
-  const [viewMode, setViewMode] = useState<"agents" | "kiosks">("agents");
   const navigate = useNavigate();
+  const { viewMode, setViewMode } = useViewMode();
+  const {
+    mapSearchQuery,
+    setMapSearchQuery,
+    setMapSearchSuggestions,
+    setOnMapSuggestionClick,
+  } = useMapSearch();
   
   // Track Firebase unsubscribe function for kiosks
   const unsubscribeKiosksRef = useRef<(() => void) | null>(null);
@@ -105,11 +112,7 @@ export function Maps() {
     };
   }, []);
 
-  // Handle view mode change - kiosks are already loaded via real-time subscription
-  const handleViewModeChange = (mode: "agents" | "kiosks") => {
-    setViewMode(mode);
-  };
-
+  
   const handleInspectorClick = (inspector: Inspector) => {
     if (inspector?.id) {
       navigate(`/users/${inspector.id}`, { state: { userHint: inspector } });
@@ -121,13 +124,14 @@ export function Maps() {
     console.log("Kiosk clicked:", kiosk);
   };
 
-  const handleSearch = async (query: string) => {
+  const handleSearch = useCallback(async (query: string) => {
     setSearchQuery(query);
+    setMapSearchQuery(query);
 
     if (!query.trim()) {
       setFilteredInspectors(inspectors);
       setFilteredKiosks(kiosks);
-      setSearchUsers([]);
+      setMapSearchSuggestions([]);
       return;
     }
 
@@ -173,7 +177,7 @@ export function Maps() {
             location: match?.location,
           };
         });
-        setSearchUsers(suggestionUsers);
+        setMapSearchSuggestions(suggestionUsers);
       } else {
         // Search kiosks
         const q = query.toLowerCase();
@@ -184,6 +188,13 @@ export function Maps() {
             k.id.toLowerCase().includes(q)
         );
         setFilteredKiosks(filtered);
+
+        const kioskSuggestions = filtered.map((k) => ({
+          id: k.id,
+          name: k.name,
+          location: k.location,
+        }));
+        setMapSearchSuggestions(kioskSuggestions);
       }
     } catch (error) {
       console.error("Search error:", error);
@@ -194,7 +205,7 @@ export function Maps() {
           inspector?.name?.toLowerCase().includes(searchLower)
         );
         setFilteredInspectors(filtered);
-        setSearchUsers(
+        const fallbackSuggestions =
           filtered.map((i) => ({
             id: i.id,
             name: i.name,
@@ -203,11 +214,28 @@ export function Maps() {
             lastSeen: i.lastSeen,
             badgeId: i.badgeId,
             location: i.location,
-          }))
-        );
+          }));
+        setMapSearchSuggestions(fallbackSuggestions);
       }
     }
-  };
+  }, [inspectors, kiosks, viewMode, setMapSearchQuery, setMapSearchSuggestions]);
+
+  // Sync map search query from context to handleSearch
+  useEffect(() => {
+    handleSearch(mapSearchQuery);
+  }, [mapSearchQuery, handleSearch]);
+
+  // register suggestion click handler
+  useEffect(() => {
+    setOnMapSuggestionClick((suggestion) => {
+      if (viewMode === "agents") {
+        handleInspectorClick(suggestion as unknown as Inspector);
+      } else {
+        handleKioskClick(suggestion as unknown as KioskMachine);
+      }
+      setMapSearchQuery("");
+    });
+  }, [viewMode, handleInspectorClick, handleKioskClick, setOnMapSuggestionClick, setMapSearchQuery]);
 
   if (loading) {
     return (
@@ -219,13 +247,13 @@ export function Maps() {
 
   return (
     <div className="h-full w-full relative">
-      {/* Toggle Button - Upper Right Corner */}
-      <div className="absolute top-4 right-4 z-20">
+      {/* Toggle Button - Upper Right Corner (Desktop only) */}
+      <div className="hidden lg:block absolute top-4 right-4 z-20">
         <div className="bg-white rounded-lg shadow-lg p-1 flex gap-1">
           <Button
             variant={viewMode === "agents" ? "default" : "ghost"}
             size="sm"
-            onClick={() => handleViewModeChange("agents")}
+            onClick={() => setViewMode("agents")}
             className="gap-2"
           >
             <Users className="h-4 w-4" />
@@ -234,7 +262,7 @@ export function Maps() {
           <Button
             variant={viewMode === "kiosks" ? "default" : "ghost"}
             size="sm"
-            onClick={() => handleViewModeChange("kiosks")}
+            onClick={() => setViewMode("kiosks")}
             className="gap-2"
           >
             <Monitor className="h-4 w-4" />
@@ -248,7 +276,6 @@ export function Maps() {
         <MapComponent
           inspectors={filteredInspectors}
           allInspectors={inspectors}
-          searchUsers={searchUsers}
           onInspectorClick={handleInspectorClick}
           onSearch={handleSearch}
           loading={loading}

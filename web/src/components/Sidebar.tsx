@@ -14,6 +14,8 @@ import {
   Power,
   Repeat2,
   HelpCircle,
+  Search,
+  X,
 } from "lucide-react";
 import { LogoutModal } from "./LogoutModal";
 import { AuthService } from "@/services/authService";
@@ -99,6 +101,8 @@ export function Sidebar({
   const visible = open;
   const closeDrawer = () => onClose?.();
   const { isConnected, walletAddress, isAuthorized, isMetaMaskInstalled, connect, disconnect, switchAccount } = useMetaMask();
+  // removed map search context usage
+  // no search logic here; handled by header icon
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const walletMenuRef = useRef<HTMLDivElement>(null);
   const mobileProfileMenuRef = useRef<HTMLDivElement>(null);
@@ -488,6 +492,8 @@ export function Sidebar({
               </svg>
             </button>
           </div>
+
+
 
           {/* User Profile Section (Mobile) - Moved to top */}
           <div className="px-6 py-4 border-b border-neutral-200" ref={mobileProfileMenuRef}>

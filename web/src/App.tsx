@@ -36,6 +36,8 @@ import { LandingPage } from "./pages/LandingPage";
 import { BlogPage } from "./pages/BlogPage";
 import { BlogPostPage } from "./pages/BlogPostPage";
 import { MetaMaskProvider } from "./contexts/MetaMaskContext";
+import { MapSearchProvider } from "./contexts/MapSearchContext";
+import { ViewModeProvider } from "./contexts/ViewModeContext";
 import { Startup } from "./components/Startup";
 
 interface ProtectedRoutesProps {
@@ -167,9 +169,11 @@ function App() {
 
   return (
     <MetaMaskProvider>
-      <Startup />
-      <div className="min-h-screen bg-background flex flex-col">
-        <GlobalLoadingIndicator />
+      <MapSearchProvider>
+        <ViewModeProvider>
+          <Startup />
+          <div className="min-h-screen bg-background flex flex-col">
+          <GlobalLoadingIndicator />
         <ToastContainer
           position="top-right"
           autoClose={3000}
@@ -431,6 +435,8 @@ function App() {
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </div>
+        </ViewModeProvider>
+      </MapSearchProvider>
     </MetaMaskProvider>
   );
 }
