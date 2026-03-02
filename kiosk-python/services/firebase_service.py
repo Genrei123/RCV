@@ -95,6 +95,51 @@ class FirebaseKioskService:
             print(f"❌ Firebase initialization failed: {e}")
             return False
     
+    def upload_image(self, image_data: bytes, path: str) -> Optional[str]:
+        """
+        Upload an image to Firebase Storage.
+        
+        Args:
+            image_data: JPEG image bytes
+            path: Storage path (e.g., 'scans/kiosk-reports/kiosk-123/front.jpg')
+        
+        Returns:
+            Firebase Storage download URL, or None if upload failed
+        """
+        try:
+            from firebase_admin import storage as fb_storage
+            import urllib.parse
+            import uuid as _uuid
+            
+            # Get bucket (use the RCV Flutter bucket)
+            bucket = fb_storage.bucket('rcv-flutter.firebasestorage.app')
+            blob = bucket.blob(path)
+            
+            # Upload the image
+            blob.upload_from_string(image_data, content_type='image/jpeg')
+            
+            # Set a download token so the URL is accessible
+            token = str(_uuid.uuid4())
+            blob.metadata = {'firebaseStorageDownloadTokens': token}
+            blob.patch()
+            
+            # Build Firebase Storage download URL (matches the format the API validator expects)
+            encoded_path = urllib.parse.quote(path, safe='')
+            url = (
+                f"https://firebasestorage.googleapis.com/v0/b/{bucket.name}"
+                f"/o/{encoded_path}?alt=media&token={token}"
+            )
+            
+            print(f"✓ Image uploaded to Firebase Storage: {path}")
+            return url
+            
+        except ImportError:
+            print("❌ firebase_admin.storage not available — cannot upload images")
+            return None
+        except Exception as e:
+            print(f"❌ Firebase image upload failed: {e}")
+            return None
+    
     def update_kiosk_info(self, name: str, lat: float, lng: float, address: str, city: str):
         """Update kiosk information for status updates"""
         self.kiosk_name = name

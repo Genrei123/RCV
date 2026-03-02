@@ -12,25 +12,25 @@ import CustomError from '../utils/CustomError';
 
 const requestCounts = new Map<string, { count: number; resetTime: number }>();
 
-const NOW = Date.now();
 const WINDOWMS = 15 * 60 * 1000; // 15 minutes
-const MAXREQUESTS = 10000; // 100 requests per window
+const MAXREQUESTS = 10000; // max requests per window
 
 const rateLimit = (req: Request, res: Response, next: NextFunction) => {
     const ip = req.ip || 'unknown';
+    const now = Date.now(); // Use current time on each request
 
     // Get current data for this IP
     const currentData = requestCounts.get(ip);
 
     // If no data exists or window has expired, reset
-    if (!currentData || NOW > currentData.resetTime) {
-        requestCounts.set(ip, { count: 1, resetTime: NOW + WINDOWMS });
+    if (!currentData || now > currentData.resetTime) {
+        requestCounts.set(ip, { count: 1, resetTime: now + WINDOWMS });
 
         // Set headers
         res.set({
             'X-RateLimit-Limit': MAXREQUESTS.toString(),
             'X-RateLimit-Remaining': (MAXREQUESTS - 1).toString(),
-            'X-RateLimit-Reset': Math.ceil((NOW + WINDOWMS) / 1000).toString()
+            'X-RateLimit-Reset': Math.ceil((now + WINDOWMS) / 1000).toString()
         });
 
         return next();
@@ -38,7 +38,7 @@ const rateLimit = (req: Request, res: Response, next: NextFunction) => {
 
     // Check if limit exceeded
     if (currentData.count >= MAXREQUESTS) {
-        const retryAfter = Math.ceil((currentData.resetTime - NOW) / 1000);
+        const retryAfter = Math.ceil((currentData.resetTime - now) / 1000);
         res.set('Retry-After', retryAfter.toString());
         return next(CustomError.security(429, 'Too many requests. Please try again later.'));
     }
