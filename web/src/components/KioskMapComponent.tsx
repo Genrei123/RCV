@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, RotateCw, Power, Lightbulb, MapPin, Clock, Monitor, Wifi, WifiOff, Users } from "lucide-react";
+import { Search, X, RotateCw, Power, Lightbulb, MapPin, Clock, Monitor, Wifi, WifiOff } from "lucide-react";
 import { KioskManagementService } from "@/services/kioskManagementService";
 
 export interface KioskMachine {
@@ -31,9 +31,6 @@ interface KioskMapComponentProps {
   onKioskClick: (kiosk: KioskMachine) => void;
   onSearch: (query: string) => void;
   loading?: boolean;
-  viewMode?: "agents" | "kiosks";
-  onViewModeChange?: (mode: "agents" | "kiosks") => void;
-  showViewToggle?: boolean;
 }
 
 const mapContainerStyle = {
@@ -50,9 +47,6 @@ export function KioskMapComponent({
   kiosks,
   onKioskClick,
   onSearch,
-  viewMode = "kiosks",
-  onViewModeChange,
-  showViewToggle = false,
 }: KioskMapComponentProps) {
   const [selectedKiosk, setSelectedKiosk] = useState<KioskMachine | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -202,68 +196,38 @@ export function KioskMapComponent({
 
   return (
     <div className="relative h-full w-full">
-      {showViewToggle && (
-        <div
-          ref={toggleContainerRef}
-          className="absolute top-20 left-3 md:top-2 md:right-16 lg:right-20 md:left-auto z-20"
-        >
-          <Card className="bg-white rounded-lg shadow-lg p-1 flex gap-1">
-            <Button
-              variant={viewMode === "agents" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => onViewModeChange?.("agents")}
-              className="gap-2"
-            >
-              <Users className="h-4 w-4" />
-              Inspectors
-            </Button>
-            <Button
-              variant={viewMode === "kiosks" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => onViewModeChange?.("kiosks")}
-              className="gap-2"
-            >
-              <Monitor className="h-4 w-4" />
-              Kiosks
-            </Button>
-          </Card>
-        </div>
-      )}
+      {/* Search Bar - Large screens only */}
+      <div className="hidden lg:block absolute top-16 lg:top-16 left-3 lg:left-4 z-9999 w-80 md:w-96 max-w-md" style={{ pointerEvents: 'auto' }}>
 
-      {/* Mobile Search */}
-      <div className="md:hidden fixed top-48 left-2 z-50 w-64">
-        <Card className="bg-white rounded-lg shadow-lg">
-          <div className="relative p-2">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              type="text"
-              placeholder="Search kiosk by name or location..."
-              value={searchQuery}
-              onChange={handleSearchChange}
-              className="pl-10 pr-10 bg-white rounded-md shadow-none focus:outline-none focus:ring-1"
-            />
-          </div>
-        </Card>
-      </div>
-
-      {/* Desktop Search */}
-      <div className="hidden md:block absolute top-20 lg:top-24 left-3 lg:left-4 right-4 md:right-auto z-10 w-full md:w-96 max-w-[28rem]">
-        <Card className="bg-white rounded-none sm:rounded-lg border-0 shadow-xl m-0">
-          <div className="relative p-2 sm:p-2">
+        <Card className="bg-white rounded-none sm:rounded-lg border-0 shadow-xl m-0" style={{ pointerEvents: 'auto' }}>
+          <div className="relative p-2 sm:p-2" style={{ pointerEvents: 'auto' }}>
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
               type="text"
               placeholder="Search kiosk by name or location..."
               value={searchQuery}
               onChange={handleSearchChange}
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+              style={{ pointerEvents: 'auto' }}
               className="pl-12 pr-10 bg-white rounded-md border-0 shadow-none focus:outline-none focus:ring-0 focus-visible:ring-0"
             />
+            {searchQuery && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setSearchQuery(""); onSearch(""); }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"
+                style={{ pointerEvents: 'auto' }}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
         </Card>
       </div>
 
-      {/* Stats Card - positioned to avoid map controls */}
-      <Card className="absolute bottom-20 md:bottom-16 left-1/2 -translate-x-1/2 z-10 p-3 bg-white shadow-lg">
+      {/* Stats Card - left on mobile, right on desktop */}
+      <Card className="absolute top-32 md:top-16 left-4 md:right-4 md:left-auto z-10 p-3 bg-white shadow-lg">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1">
             <div className="w-2 h-2 rounded-full bg-green-500"></div>
@@ -306,7 +270,7 @@ export function KioskMapComponent({
             position={selectedKiosk.location}
             onCloseClick={() => setSelectedKiosk(null)}
           >
-            <div className="p-3 min-w-[280px]">
+            <div className="p-3 min-w-70">
               <h3 className="font-bold text-lg mb-2">{selectedKiosk.name}</h3>
               
               {/* Command Status Message */}
