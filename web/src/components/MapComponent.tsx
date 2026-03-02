@@ -1,9 +1,9 @@
 // Google Maps Component - See GOOGLE_MAPS_SETUP.md for configuration
 import { useState, useEffect, useRef } from "react";
-import { Search, MapPin, X, Users, Monitor } from "lucide-react";
+import { Search, MapPin, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useMapSearch } from "@/contexts/MapSearchContext";
 
 export interface Inspector {
   id: string;
@@ -31,10 +31,8 @@ interface MapComponentProps {
   onSearch?: (query: string) => void;
   loading?: boolean;
   allInspectors?: Inspector[]; // for local suggestions when API results absent
-  searchUsers?: Suggestion[]; // may include users without locations
-  viewMode?: "agents" | "kiosks";
-  onViewModeChange?: (mode: "agents" | "kiosks") => void;
-  showViewToggle?: boolean;
+  searchUsers?: any[];
+
 }
 
 declare global {
@@ -49,10 +47,6 @@ export function MapComponent({
   onSearch,
   loading = false,
   allInspectors = [],
-  searchUsers = [],
-  viewMode = "agents",
-  onViewModeChange,
-  showViewToggle = false,
 }: MapComponentProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -213,7 +207,7 @@ export function MapComponent({
           ? `<p class="my-1 text-emerald-600 text-xs font-medium">Badge: ${inspector.badgeId}</p>`
           : "";
         infoWindowRef.current.setContent(
-          `<div class="p-4 font-sans min-w-[200px] rounded-lg">
+          `<div class="p-4 font-sans min-w-50 rounded-lg">
             <div class="flex items-center gap-2 mb-2">
               <div class="w-2 h-2 rounded-full" style="background-color: ${statusColor};"></div>
               <h3 class="m-0 text-base font-semibold text-gray-800">${inspector.name}</h3>
@@ -387,6 +381,8 @@ export function MapComponent({
   }, [elementsMovedDown]);
 
   // Build suggestions from API results first, then local lists
+  const { mapSearchSuggestions } = useMapSearch();
+
   useEffect(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) {
@@ -394,8 +390,8 @@ export function MapComponent({
       return;
     }
     const base: Suggestion[] = (
-      searchUsers?.length
-        ? searchUsers
+      mapSearchSuggestions?.length
+        ? mapSearchSuggestions
         : allInspectors?.length
         ? allInspectors
         : inspectors
@@ -404,7 +400,7 @@ export function MapComponent({
       .filter((i) => i?.name?.toLowerCase().includes(q))
       .slice(0, 10);
     setSuggestions(next);
-  }, [searchQuery, searchUsers, allInspectors, inspectors]);
+  }, [searchQuery, mapSearchSuggestions, allInspectors, inspectors]);
 
   // Focus a marker once it's rendered after filtering
   useEffect(() => {
@@ -426,7 +422,7 @@ export function MapComponent({
         ? `<p class="my-1 text-emerald-600 text-xs font-medium">Badge: ${match.badgeId}</p>`
         : "";
       infoWindowRef.current.setContent(
-        `<div class="p-4 font-sans min-w-[200px] rounded-lg">
+        `<div class="p-4 font-sans min-w-50 rounded-lg">
             <div class="flex items-center gap-2 mb-2">
               <div class="w-2 h-2 rounded-full" style="background-color: ${statusColor};"></div>
               <h3 class="m-0 text-base font-semibold text-gray-800">${match.name}</h3>
@@ -464,138 +460,14 @@ export function MapComponent({
     <div className="relative w-full h-full">
       <div ref={mapRef} className="w-full h-full" />
       
-      {showViewToggle && (
-        <div
-          ref={toggleContainerRef}
-          className={`${isFullscreen ? "fixed" : "absolute"} top-20 left-3 md:top-2 md:right-16 lg:right-20 md:left-auto z-[52]`}
-        >
-          <Card className="bg-white rounded-lg shadow-lg p-1 flex gap-1 max-w-xs md:max-w-none">
-            <Button
-              variant={viewMode === "agents" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => onViewModeChange?.("agents")}
-              className="gap-2"
-            >
-              <Users className="h-4 w-4" />
-              Inspectors
-            </Button>
-            <Button
-              variant={viewMode === "kiosks" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => onViewModeChange?.("kiosks")}
-              className="gap-2"
-            >
-              <Monitor className="h-4 w-4" />
-              Kiosks
-            </Button>
-          </Card>
-        </div>
-      )}
-      
-      {/* Mobile Search - Form visible, compact static width */}
-      <div className="md:hidden fixed top-48 left-2 z-50 w-64">
-        <Card className="bg-white rounded-lg shadow-lg">
-          <div className="relative p-2">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Search inspectors..."
-              value={searchQuery}
-              onChange={(e) => {
-                const value = e.target.value;
-                setSearchQuery(value);
-                setTimeout(() => onSearch?.(value), 50);
-              }}
-              className="pl-10 pr-10 bg-white rounded-md shadow-none focus:outline-none focus:ring-1"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => {
-                  setSearchQuery("");
-                  onSearch?.("");
-                }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-          
-          {searchQuery && (
-            <div className="max-h-60 overflow-y-auto bg-white rounded-b-lg">
-              {suggestions.length > 0 ? (
-                suggestions.map((i) => (
-                  <button
-                    key={i.id}
-                    onClick={() => {
-                      if (i.location) {
-                        const marker = markersByIdRef.current.get(i.id);
-                        if (marker && googleMapRef.current) {
-                          googleMapRef.current.panTo({
-                            lat: i.location.lat,
-                            lng: i.location.lng,
-                          });
-                          const statusColor =
-                            i.status === "active" ? "#10b981" : "#6b7280";
-                          const lastSeenText = i.lastSeen
-                            ? `<p class=\"my-1 text-gray-500 text-xs\">Last Seen: ${new Date(
-                                i.lastSeen
-                              ).toLocaleString()}</p>`
-                            : "";
-                          const badgeText = i.badgeId
-                            ? `<p class=\"my-1 text-emerald-600 text-xs font-medium\">Badge: ${i.badgeId}</p>`
-                            : "";
-                          infoWindowRef.current.setContent(
-                            `<div class=\"p-4 font-sans min-w-[200px] rounded-lg\">\n            <div class=\"flex items-center gap-2 mb-2\">\n              <div class=\"w-2 h-2 rounded-full\" style=\"background-color: ${statusColor};\"></div>\n              <h3 class=\"m-0 text-base font-semibold text-gray-800\">${
-                              i.name
-                            }</h3>\n            </div>\n            <p class=\"my-1 text-emerald-600 font-medium text-sm\">${
-                              i.role || ""
-                            }</p>\n            ${badgeText}\n            <p class=\"my-1 text-gray-600 text-xs\">Location: ${
-                              i.location.address
-                            }</p>\n            ${lastSeenText}\n          </div>`
-                          );
-                          infoWindowRef.current.open(
-                            googleMapRef.current,
-                            marker
-                          );
-                          setSearchQuery("");
-                        } else {
-                          setPendingFocusId(i.id);
-                          onSearch?.(i.name);
-                        }
-                      } else {
-                        onSearch?.(i.name);
-                        setSearchQuery("");
-                      }
-                      onInspectorClick?.(i as unknown as Inspector);
-                    }}
-                    className="w-full text-left px-4 py-3 hover:bg-gray-50 flex flex-col gap-1 focus:outline-none border-b last:border-b-0 text-sm"
-                  >
-                    <span className="font-medium text-gray-800">
-                      {i.name}
-                    </span>
-                    <p className="text-xs text-gray-500">
-                      {i.location?.city || "No live location"}
-                    </p>
-                  </button>
-                ))
-              ) : (
-                <div className="px-4 py-3 text-sm text-gray-500">
-                  No matches
-                </div>
-              )}
-            </div>
-          )}
-        </Card>
-      </div>
-
       {/* Desktop Search panel */}
       <div 
         ref={searchContainerRef}
-        className={`hidden md:block ${isFullscreen ? 'fixed' : 'absolute'} top-20 lg:top-24 left-3 lg:left-4 z-[50] w-80 md:w-96 max-w-[28rem]`}
+        className={`hidden lg:block ${isFullscreen ? 'fixed' : 'absolute'} top-24 lg:top-24 left-3 lg:left-4 z-9999 w-80 md:w-96 max-w-md`}
         style={{ pointerEvents: 'auto' }}
       >
         <Card className="bg-white rounded-none sm:rounded-lg border-0 shadow-xl m-0 sm:m-0" style={{ pointerEvents: 'auto' }}>
-          <div className="relative p-2 sm:p-2">
+          <div className="relative p-2 sm:p-2" style={{ pointerEvents: 'auto' }}>
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
               placeholder="Search inspectors..."
@@ -605,14 +477,16 @@ export function MapComponent({
                 setSearchQuery(value);
                 setTimeout(() => onSearch?.(value), 50);
               }}
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+              style={{ pointerEvents: 'auto' }}
               className="pl-12 pr-10 bg-white rounded-md border-0 shadow-none focus:outline-none focus:ring-0 focus-visible:ring-0"
             />
             {searchQuery && (
               <button
-                onClick={() => {
-                  setSearchQuery("");
-                  onSearch?.("");
-                }}
+                onClick={(e) => { e.stopPropagation(); setSearchQuery(""); onSearch?.(""); }}
+                style={{ pointerEvents: 'auto' }}
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"
               >
                 <X className="h-4 w-4" />
@@ -691,7 +565,7 @@ export function MapComponent({
       {/* Inspector count container: bottom center */}
       <div 
         ref={inspectorCountRef}
-        className={`${isFullscreen ? 'fixed' : 'absolute'} bottom-20 md:bottom-16 left-1/2 -translate-x-1/2 z-[51]`}
+        className={`${isFullscreen ? 'fixed' : 'absolute'} bottom-20 md:bottom-16 left-1/2 -translate-x-1/2 z-51`}
         style={{ 
           pointerEvents: 'auto'
         }}

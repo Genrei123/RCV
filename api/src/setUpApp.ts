@@ -33,6 +33,7 @@ import PublicRouter from "./routes/v1/public";
 import BlockchainRecoveryRouter from "./routes/v1/blockchainRecovery";
 import ChatRouter from "./routes/v1/chat";
 import KioskRouter from "./routes/kiosk";
+import KioskReportRouter from "./routes/v1/kioskReport";
 import { verifyUser } from "./middleware/verifyUser";
 import { verifyMobileUser } from "./middleware/verifyMobileUser";
 import helmet from "helmet";
@@ -62,6 +63,7 @@ const setUpApp = async () => {
   app.use("/api/v1/mobile", MobileRouter); // Mobile-specific routes (no cookies)
   app.use("/api/v1/scan", verifyMobileUser, ScanRouter);
   app.use("/api/v1/kiosk-scan", ScanRouter); // Kiosk scanner - no auth required (public device)
+  app.use("/api/v1/kiosk-report", KioskReportRouter); // Kiosk report submission - no auth required
   app.use("/api/v1/user", verifyUser, UserRouter);
   app.use("/api/v1/product", verifyUser, ProductRouter);
   app.use("/api/v1/company", verifyUser, CompanyRouter);

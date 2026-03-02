@@ -12,7 +12,8 @@ import { ComplianceStatus, NonComplianceReason } from '../../types/enums';
 
 export const ComplianceReportValidation = z.object({
   _id: z.string().uuid().optional(),
-  agentId: z.string().uuid(),
+  agentId: z.string().uuid().optional().nullable(), // Optional for kiosk reports
+  kioskId: z.string().max(100).optional().nullable(), // Kiosk machine identifier
   status: z.nativeEnum(ComplianceStatus),
   isVerified: z.boolean().optional(),
   scannedData: z.record(z.string(), z.any()),
@@ -31,17 +32,39 @@ export const ComplianceReportValidation = z.object({
   createdAt: z.date().optional(),
 });
 
+// Separate validation for kiosk machine reports (no user auth)
+export const KioskReportValidation = z.object({
+  kioskId: z.string().max(100),
+  status: z.nativeEnum(ComplianceStatus),
+  scannedData: z.record(z.string(), z.any()),
+  productSearchResult: z.record(z.string(), z.any()).optional().nullable(),
+  nonComplianceReason: z.nativeEnum(NonComplianceReason).optional().nullable(),
+  additionalNotes: z.string().max(500).optional().nullable(),
+  frontImageUrl: z.string().url(),
+  backImageUrl: z.string().url(),
+  ocrBlobText: z.string().optional().nullable(),
+  location: z.object({
+    latitude: z.number().optional(),
+    longitude: z.number().optional(),
+    address: z.string().optional(),
+  }).optional().nullable(),
+});
+
 @Entity()
 export class ComplianceReport {
   @PrimaryGeneratedColumn('uuid')
   _id!: string;
 
-  @ManyToOne(() => User, user => user._id)
+  @ManyToOne(() => User, user => user._id, { nullable: true })
   @JoinColumn({ name: 'agentId' })
-  agent!: User;
+  agent?: User | null;
 
-  @Column()
-  agentId!: string;
+  @Column({ nullable: true })
+  agentId?: string | null;
+
+  // Kiosk machine identifier (for reports from public kiosk devices)
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  kioskId?: string | null;
 
   @Column({
     type: 'enum',

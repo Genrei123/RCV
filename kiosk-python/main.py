@@ -468,6 +468,7 @@ class KioskState(Enum):
     DISPLAY_CERTIFICATE = "certificate" # Showing certificate info - MASSIVE display
     DISPLAY_PRODUCT = "product"        # Showing product info - MASSIVE display
     DISPLAY_COMPLIANCE = "compliance"  # Showing OCR compliance report
+    REPORT_FORM = "report_form"        # Filling out product report form
     ERROR = "error"                    # Error state - 10 second timeout
     MAINTENANCE = "maintenance"        # Server offline/unreachable - polling for recovery
 
@@ -646,7 +647,7 @@ class RCVApiService:
         print(f"   - backImageUrl: {back_image_url if back_image_url else 'Not provided'}")
         print(f"   - First 100 chars: {ocr_text[:100]}...")
         
-        return self._make_request('POST', 'api/v1/kiosk-scan/scanProduct', data)
+        return self._make_request('POST', '/kiosk-scan/scanProduct', data)
     
     def search_product(self, product_name: str = None, lto_number: str = None, 
                        cfpr_number: str = None, brand_name: str = None,
@@ -668,6 +669,15 @@ class RCVApiService:
             data['manufacturer'] = manufacturer
         
         return self._make_request('POST', '/scan/searchProduct', data)
+    
+    # ============ Kiosk Report API ============
+    
+    def submit_kiosk_report(self, report_data: dict) -> dict:
+        """
+        Submit a product compliance report from the kiosk machine
+        POST /api/v1/kiosk-report/report (public endpoint for kiosk)
+        """
+        return self._make_request('POST', '/kiosk-report/report', report_data)
     
     # ============ Health Check ============
     
@@ -1706,6 +1716,13 @@ class KioskApp:
         self.current_ocr_product = None  # Store OCR-identified product info
         self.current_ocr_certificate_id = None  # Certificate/CFPR ID for PDF viewing
         
+        # Report form state
+        self.report_status = None          # 'COMPLIANT', 'NON_COMPLIANT', 'FRAUDULENT'
+        self.report_reason = None          # NonComplianceReason value
+        self.report_notes = ""             # Additional notes text
+        self.ocr_front_text = ""           # OCR text extracted from front capture
+        self.ocr_back_text = ""            # OCR text extracted from back capture
+        
         # Services
         self.tts = TTSService()
         self.api = RCVApiService()  # RCV API Service
@@ -1798,6 +1815,9 @@ class KioskApp:
         # ============ COMPLIANCE SCREEN (OCR results) ============
         self.compliance_frame = tk.Frame(self.main_frame, bg=Colors.BACKGROUND)
         
+        # ============ REPORT FORM SCREEN (Product report form) ============
+        self.report_form_frame = tk.Frame(self.main_frame, bg=Colors.BACKGROUND)
+        
         # ============ MANUAL SEARCH SCREEN ============
         self.manual_search_frame = tk.Frame(self.main_frame, bg=Colors.BACKGROUND)
         
@@ -1817,6 +1837,7 @@ class KioskApp:
         self._setup_loading_screen()
         self._setup_result_screen()
         self._setup_compliance_screen()
+        self._setup_report_form_screen()
         self._setup_manual_search_screen()
         self._setup_error_screen()
         self._setup_maintenance_screen()
@@ -1873,7 +1894,7 @@ class KioskApp:
         
         self.start_ocr_btn = tk.Button(
             sidebar,
-            text="SCAN\nLABEL",
+            text="REPORT\nPRODUCT",
             font=("SF Pro Display", 11, "bold"),
             bg=Colors.ACCENT if TESSERACT_AVAILABLE else "#999999",
             fg=Colors.TEXT_WHITE,
@@ -2015,7 +2036,7 @@ class KioskApp:
         
         self.scan_product_btn = tk.Button(
             sidebar,
-            text="SCAN\nLABEL",
+            text="REPORT\nPRODUCT",
             font=("SF Pro Text", 9, "bold"),
             bg=Colors.ACCENT if TESSERACT_AVAILABLE else "#999999",
             fg=Colors.TEXT_WHITE,
@@ -2192,7 +2213,7 @@ class KioskApp:
         
         self.ocr_header_label = tk.Label(
             top_bar,
-            text="SCAN LABEL",
+            text="REPORT PRODUCT",
             font=("SF Pro Display", 10, "bold"),
             bg=Colors.ACCENT,
             fg=Colors.TEXT_WHITE
@@ -2325,7 +2346,7 @@ class KioskApp:
         
         self.ocr_submit_btn = tk.Button(
             btn_frame,
-            text="SUBMIT",
+            text="NEXT",
             font=btn_font,
             bg=Colors.SUCCESS,
             fg=Colors.TEXT_WHITE,
@@ -2333,7 +2354,7 @@ class KioskApp:
             activeforeground=Colors.TEXT_WHITE,
             relief=tk.FLAT,
             bd=0,
-            command=self._ocr_submit_scan,
+            command=self._show_report_form,
             state=tk.DISABLED
         )
         self.ocr_submit_btn.pack(side=tk.LEFT, expand=True, fill=tk.BOTH, padx=2)
@@ -3331,7 +3352,8 @@ class KioskApp:
         """Hide all screen frames"""
         for frame in [self.start_frame, self.scan_frame, self.ocr_frame,
                       self.loading_frame, self.result_frame, 
-                      self.compliance_frame, self.manual_search_frame,
+                      self.compliance_frame, self.report_form_frame,
+                      self.manual_search_frame,
                       self.error_frame, self.maintenance_frame,
                       self.boot_frame]:
             frame.pack_forget()
@@ -3343,6 +3365,14 @@ class KioskApp:
             except:
                 pass
             self._ocr_not_found_frame = None
+        
+        # Destroy dynamic report success screen if it exists
+        if hasattr(self, '_report_success_frame') and self._report_success_frame:
+            try:
+                self._report_success_frame.destroy()
+            except:
+                pass
+            self._report_success_frame = None
         
         # Cancel any running timers
         if self.processing_timeout_id:
@@ -5160,7 +5190,7 @@ class KioskApp:
             self.ocr_submit_btn.config(state=tk.DISABLED)
         
         elif self.ocr_front_frame is not None and self.ocr_back_frame is not None:
-            self.ocr_instruction_label.config(text="Ready! Tap SUBMIT")
+            self.ocr_instruction_label.config(text="Ready! Tap NEXT")
             self.ocr_capture_front_btn.config(state=tk.NORMAL)  # Can retake
             self.ocr_capture_back_btn.config(state=tk.NORMAL)  # Can retake
             self.ocr_submit_btn.config(state=tk.NORMAL)  # Can submit
@@ -5202,14 +5232,58 @@ class KioskApp:
             self.ocr_camera_label.config(text=f"Camera error: {str(e)[:50]}")
     
     
+    def _quick_ocr_check(self, frame):
+        """Quick OCR check to verify captured image contains readable text.
+        Returns extracted text string — empty string means no text detected."""
+        global TESSERACT_AVAILABLE
+        if not TESSERACT_AVAILABLE:
+            return "OCR_UNAVAILABLE"
+        try:
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            text = pytesseract.image_to_string(gray, lang='eng', config='--psm 6 --oem 1')
+            return text.strip()
+        except Exception as e:
+            print(f"Quick OCR check failed: {e}")
+            return ""
+    
     def _ocr_capture_front(self):
-        """Capture PICTURE 1 (front of label)"""
+        """Capture PICTURE 1 (front of label) with OCR text validation"""
         if self.current_frame is None:
             return
         
-        # Capture the current frame
         frame_copy = self.current_frame.copy()
+        
+        # Show validating state
+        self.ocr_front_preview.config(text="FRONT: Checking...", image="",
+                                       bg=Colors.WARNING_LIGHT, fg=Colors.WARNING)
+        self.ocr_capture_front_btn.config(state=tk.DISABLED)
+        self.ocr_capture_back_btn.config(state=tk.DISABLED)
+        
+        # Run OCR validation in background thread to avoid freezing UI
+        def validate():
+            text = self._quick_ocr_check(frame_copy)
+            self.root.after(0, lambda: self._on_front_validated(frame_copy, text))
+        
+        thread = threading.Thread(target=validate, daemon=True)
+        thread.start()
+    
+    def _on_front_validated(self, frame_copy, text):
+        """Callback after front image OCR validation completes"""
+        # If Tesseract is not installed, skip validation
+        if text == "OCR_UNAVAILABLE":
+            text = ""
+        elif len(text.strip()) < 5:
+            # Not enough text detected — reject the capture
+            self.ocr_front_preview.config(text="FRONT: No text!", image="",
+                                           bg=Colors.ERROR_LIGHT, fg=Colors.ERROR)
+            self.ocr_capture_front_btn.config(state=tk.NORMAL)
+            self.tts.speak("No text detected. Please retake with better positioning and lighting.")
+            self.health_service.log("Front capture rejected — no text detected", level='warning', category='capture')
+            return
+        
+        # Valid capture — save frame and OCR text
         self.ocr_front_frame = frame_copy
+        self.ocr_front_text = text
         
         # Create thumbnail for hidden ref
         try:
@@ -5227,21 +5301,52 @@ class KioskApp:
         if thumb:
             self.ocr_preview_photos.append(thumb)
         
-        print(f"Front captured")
-        self.health_service.log("Front captured", category='capture')
+        print(f"Front captured ({len(text)} chars detected)")
+        self.health_service.log(f"Front captured ({len(text)} chars)", category='capture')
         
-        # Update UI
+        # Re-enable buttons and update UI
+        self.ocr_capture_front_btn.config(state=tk.NORMAL)
         self._update_ocr_ui()
         self.tts.speak("Front captured. Now capture the back.")
     
     def _ocr_capture_back(self):
-        """Capture PICTURE 2 (back of label)"""
+        """Capture PICTURE 2 (back of label) with OCR text validation"""
         if self.current_frame is None:
             return
         
-        # Capture the current frame
         frame_copy = self.current_frame.copy()
+        
+        # Show validating state
+        self.ocr_back_preview.config(text="BACK: Checking...", image="",
+                                      bg=Colors.WARNING_LIGHT, fg=Colors.WARNING)
+        self.ocr_capture_front_btn.config(state=tk.DISABLED)
+        self.ocr_capture_back_btn.config(state=tk.DISABLED)
+        
+        # Run OCR validation in background thread
+        def validate():
+            text = self._quick_ocr_check(frame_copy)
+            self.root.after(0, lambda: self._on_back_validated(frame_copy, text))
+        
+        thread = threading.Thread(target=validate, daemon=True)
+        thread.start()
+    
+    def _on_back_validated(self, frame_copy, text):
+        """Callback after back image OCR validation completes"""
+        if text == "OCR_UNAVAILABLE":
+            text = ""
+        elif len(text.strip()) < 5:
+            # Not enough text detected — reject the capture
+            self.ocr_back_preview.config(text="BACK: No text!", image="",
+                                          bg=Colors.ERROR_LIGHT, fg=Colors.ERROR)
+            self.ocr_capture_back_btn.config(state=tk.NORMAL)
+            self.ocr_capture_front_btn.config(state=tk.NORMAL)
+            self.tts.speak("No text detected. Please retake with better positioning and lighting.")
+            self.health_service.log("Back capture rejected — no text detected", level='warning', category='capture')
+            return
+        
+        # Valid capture — save frame and OCR text
         self.ocr_back_frame = frame_copy
+        self.ocr_back_text = text
         
         # Create thumbnail for hidden ref
         try:
@@ -5258,12 +5363,14 @@ class KioskApp:
         if thumb:
             self.ocr_preview_photos.append(thumb)
         
-        print(f"Back captured")
-        self.health_service.log("Back captured", category='capture')
+        print(f"Back captured ({len(text)} chars detected)")
+        self.health_service.log(f"Back captured ({len(text)} chars)", category='capture')
         
-        # Update UI
+        # Re-enable buttons and update UI
+        self.ocr_capture_front_btn.config(state=tk.NORMAL)
+        self.ocr_capture_back_btn.config(state=tk.NORMAL)
         self._update_ocr_ui()
-        self.tts.speak("Back captured. Tap Submit to analyze.")
+        self.tts.speak("Back captured. Tap Next to fill out the report.")
     
     def _create_thumbnail(self, frame, width, height):
         """Create a thumbnail from a frame"""
@@ -5287,6 +5394,540 @@ class KioskApp:
         """Cancel OCR capture and return to start screen"""
         self._reset_ocr_capture()
         self._show_start_screen()
+    
+    # ============ Report Form Methods ============
+    
+    def _setup_report_form_screen(self):
+        """Setup the product report form screen — user selects status, reason, notes"""
+        main_container = tk.Frame(self.report_form_frame, bg=Colors.BACKGROUND)
+        main_container.pack(fill=tk.BOTH, expand=True)
+        
+        # LEFT SIDEBAR
+        sidebar = tk.Frame(main_container, bg=Colors.ACCENT, width=140)
+        sidebar.pack(side=tk.LEFT, fill=tk.Y)
+        sidebar.pack_propagate(False)
+        
+        tk.Label(sidebar, text="REPORT", font=("SF Pro Display", 14, "bold"),
+                 bg=Colors.ACCENT, fg=Colors.TEXT_WHITE).pack(pady=(10, 3))
+        tk.Label(sidebar, text="PRODUCT", font=("SF Pro Text", 10),
+                 bg=Colors.ACCENT, fg="#E0F2F1").pack(pady=(0, 15))
+        
+        # Back button (return to camera capture)
+        tk.Button(
+            sidebar, text="BACK\nTO CAMERA", font=("SF Pro Text", 9, "bold"),
+            bg=Colors.TEXT_SECONDARY, fg=Colors.TEXT_WHITE,
+            activebackground="#555555", activeforeground=Colors.TEXT_WHITE,
+            relief=tk.FLAT, bd=0, width=12, pady=10,
+            command=self._report_form_back
+        ).pack(pady=5, padx=8, fill=tk.X)
+        
+        # Cancel button (return to home)
+        tk.Button(
+            sidebar, text="CANCEL", font=("SF Pro Text", 9, "bold"),
+            bg=Colors.ERROR, fg=Colors.TEXT_WHITE,
+            activebackground="#D32F2F", activeforeground=Colors.TEXT_WHITE,
+            relief=tk.FLAT, bd=0, width=12, pady=10,
+            command=self._show_start_screen
+        ).pack(pady=5, padx=8, fill=tk.X)
+        
+        # Spacer
+        tk.Frame(sidebar, bg=Colors.ACCENT).pack(fill=tk.BOTH, expand=True)
+        
+        # RIGHT CONTENT AREA — scrollable
+        content_area = tk.Frame(main_container, bg=Colors.BACKGROUND)
+        content_area.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        report_canvas = tk.Canvas(content_area, bg=Colors.BACKGROUND, highlightthickness=0)
+        report_scrollbar = tk.Scrollbar(content_area, orient=tk.VERTICAL, command=report_canvas.yview)
+        report_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        report_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        report_canvas.configure(yscrollcommand=report_scrollbar.set)
+        
+        content = tk.Frame(report_canvas, bg=Colors.BACKGROUND)
+        report_canvas.create_window((0, 0), window=content, anchor=tk.NW)
+        content.bind('<Configure>', lambda e: report_canvas.configure(scrollregion=report_canvas.bbox('all')))
+        
+        # Touch scroll support
+        report_canvas.bind('<Button-1>', lambda e: setattr(self, '_report_scroll_y', e.y))
+        report_canvas.bind('<B1-Motion>', lambda e: report_canvas.yview_scroll(
+            int((getattr(self, '_report_scroll_y', e.y) - e.y) / 20), "units"))
+        
+        # ===== STATUS SELECTION =====
+        tk.Label(content, text="What is the status of this product?",
+                 font=("SF Pro Display", 16, "bold"),
+                 bg=Colors.BACKGROUND, fg=Colors.TEXT_PRIMARY
+                 ).pack(anchor=tk.W, padx=15, pady=(15, 8))
+        
+        status_frame = tk.Frame(content, bg=Colors.BACKGROUND)
+        status_frame.pack(fill=tk.X, padx=15, pady=(0, 10))
+        
+        self.report_status_btns = {}
+        statuses = [
+            ('COMPLIANT', 'COMPLIANT', Colors.SUCCESS),
+            ('NON_COMPLIANT', 'NON-COMPLIANT', Colors.WARNING),
+            ('FRAUDULENT', 'FRAUDULENT', Colors.ERROR),
+        ]
+        for status_val, label_text, color in statuses:
+            btn = tk.Button(
+                status_frame, text=label_text,
+                font=("SF Pro Display", 13, "bold"),
+                bg=Colors.SURFACE, fg=Colors.TEXT_PRIMARY,
+                activebackground=color, activeforeground=Colors.TEXT_WHITE,
+                relief=tk.RAISED, bd=2, padx=20, pady=18,
+                cursor="hand2",
+                command=lambda sv=status_val: self._on_report_status_select(sv)
+            )
+            btn.pack(side=tk.LEFT, expand=True, fill=tk.BOTH, padx=4)
+            self.report_status_btns[status_val] = btn
+        
+        # ===== REASON SELECTION (shown conditionally) =====
+        self.report_reason_container = tk.Frame(content, bg=Colors.BACKGROUND)
+        # Don't pack yet — shown only when NON_COMPLIANT or FRAUDULENT
+        
+        tk.Label(self.report_reason_container, text="Reason for non-compliance:",
+                 font=("SF Pro Display", 13, "bold"),
+                 bg=Colors.BACKGROUND, fg=Colors.TEXT_PRIMARY
+                 ).pack(anchor=tk.W, padx=15, pady=(5, 5))
+        
+        reason_frame = tk.Frame(self.report_reason_container, bg=Colors.BACKGROUND)
+        reason_frame.pack(fill=tk.X, padx=15)
+        
+        self.report_reason_btns = {}
+        reasons = [
+            ('NO_LTO_NUMBER', 'No LTO Number'),
+            ('NO_CFPR_NUMBER', 'No CFPR Number'),
+            ('EXPIRED_PRODUCT', 'Expired Product'),
+            ('COUNTERFEIT', 'Counterfeit'),
+            ('MISLABELED', 'Mislabeled'),
+            ('OTHERS', 'Others'),
+        ]
+        
+        row1 = tk.Frame(reason_frame, bg=Colors.BACKGROUND)
+        row1.pack(fill=tk.X, pady=2)
+        row2 = tk.Frame(reason_frame, bg=Colors.BACKGROUND)
+        row2.pack(fill=tk.X, pady=2)
+        
+        for i, (reason_val, label_text) in enumerate(reasons):
+            parent = row1 if i < 3 else row2
+            btn = tk.Button(
+                parent, text=label_text,
+                font=("SF Pro Text", 10, "bold"),
+                bg=Colors.SURFACE, fg=Colors.TEXT_PRIMARY,
+                relief=tk.RAISED, bd=1, padx=10, pady=10,
+                cursor="hand2",
+                command=lambda rv=reason_val: self._on_report_reason_select(rv)
+            )
+            btn.pack(side=tk.LEFT, expand=True, fill=tk.BOTH, padx=3)
+            self.report_reason_btns[reason_val] = btn
+        
+        # ===== ADDITIONAL NOTES =====
+        tk.Label(content, text="Additional notes (optional):",
+                 font=("SF Pro Display", 12, "bold"),
+                 bg=Colors.BACKGROUND, fg=Colors.TEXT_PRIMARY
+                 ).pack(anchor=tk.W, padx=15, pady=(12, 5))
+        
+        notes_frame = tk.Frame(content, bg=Colors.BACKGROUND)
+        notes_frame.pack(fill=tk.X, padx=15)
+        
+        self.report_notes_entry = tk.Entry(
+            notes_frame, font=("SF Pro Text", 14),
+            bd=2, relief=tk.SOLID,
+            highlightbackground=Colors.PRIMARY, highlightcolor=Colors.PRIMARY,
+            highlightthickness=1
+        )
+        self.report_notes_entry.pack(fill=tk.X, pady=(0, 5), ipady=8)
+        
+        # On-screen keyboard for notes input
+        self.report_keyboard = OnScreenKeyboard(
+            content, target_entry=self.report_notes_entry
+        )
+        self.report_keyboard_frame = self.report_keyboard.create_keyboard(content)
+        
+        # ===== IMAGE PREVIEWS =====
+        tk.Label(content, text="Captured images:",
+                 font=("SF Pro Display", 12, "bold"),
+                 bg=Colors.BACKGROUND, fg=Colors.TEXT_PRIMARY
+                 ).pack(anchor=tk.W, padx=15, pady=(10, 5))
+        
+        images_frame = tk.Frame(content, bg=Colors.BACKGROUND)
+        images_frame.pack(padx=15, pady=(0, 10))
+        
+        # Front image preview
+        front_frame = tk.Frame(images_frame, bg=Colors.SURFACE, padx=3, pady=3)
+        front_frame.pack(side=tk.LEFT, padx=8)
+        tk.Label(front_frame, text="FRONT", font=("SF Pro Text", 8, "bold"),
+                 bg=Colors.SURFACE, fg=Colors.TEXT_SECONDARY).pack()
+        self.report_front_thumb = tk.Label(
+            front_frame, text="No image", font=("SF Pro Text", 9),
+            bg=Colors.SURFACE, width=22, height=7
+        )
+        self.report_front_thumb.pack()
+        
+        # Back image preview
+        back_frame = tk.Frame(images_frame, bg=Colors.SURFACE, padx=3, pady=3)
+        back_frame.pack(side=tk.LEFT, padx=8)
+        tk.Label(back_frame, text="BACK", font=("SF Pro Text", 8, "bold"),
+                 bg=Colors.SURFACE, fg=Colors.TEXT_SECONDARY).pack()
+        self.report_back_thumb = tk.Label(
+            back_frame, text="No image", font=("SF Pro Text", 9),
+            bg=Colors.SURFACE, width=22, height=7
+        )
+        self.report_back_thumb.pack()
+        
+        # ===== SUBMIT BUTTON =====
+        self.report_submit_btn = tk.Button(
+            content, text="SUBMIT REPORT",
+            font=("SF Pro Display", 18, "bold"),
+            bg=Colors.SUCCESS, fg=Colors.TEXT_WHITE,
+            activebackground="#43A047", activeforeground=Colors.TEXT_WHITE,
+            relief=tk.FLAT, bd=0, padx=40, pady=18,
+            cursor="hand2", state=tk.DISABLED,
+            command=self._submit_report
+        )
+        self.report_submit_btn.pack(padx=15, pady=(10, 20), fill=tk.X)
+    
+    def _show_report_form(self):
+        """Show the report form after both images are captured"""
+        if self.ocr_front_frame is None or self.ocr_back_frame is None:
+            return
+        
+        # Stop camera while filling form
+        if self.camera and self.camera.isOpened():
+            self.is_running = False
+            self.camera.release()
+            self.camera = None
+        
+        # Reset report state
+        self.report_status = None
+        self.report_reason = None
+        self.report_notes = ""
+        
+        # Reset button styles
+        for btn in self.report_status_btns.values():
+            btn.config(bg=Colors.SURFACE, fg=Colors.TEXT_PRIMARY, relief=tk.RAISED)
+        for btn in self.report_reason_btns.values():
+            btn.config(bg=Colors.SURFACE, fg=Colors.TEXT_PRIMARY, relief=tk.RAISED)
+        self.report_reason_container.pack_forget()
+        self.report_notes_entry.delete(0, tk.END)
+        self.report_submit_btn.config(state=tk.DISABLED)
+        
+        # Update image previews in the form
+        try:
+            front_thumb = self._create_thumbnail(self.ocr_front_frame, 180, 120)
+            self.report_front_thumb.config(image=front_thumb, text="")
+            self.report_front_thumb.image = front_thumb
+        except Exception:
+            self.report_front_thumb.config(text="Front captured")
+        
+        try:
+            back_thumb = self._create_thumbnail(self.ocr_back_frame, 180, 120)
+            self.report_back_thumb.config(image=back_thumb, text="")
+            self.report_back_thumb.image = back_thumb
+        except Exception:
+            self.report_back_thumb.config(text="Back captured")
+        
+        # Show the form screen
+        self._hide_all_screens()
+        self.report_form_frame.pack(fill=tk.BOTH, expand=True)
+        self.state = KioskState.REPORT_FORM
+        
+        self.tts.speak("Select the product status and tap Submit Report.")
+    
+    def _report_form_back(self):
+        """Go back to camera capture from report form"""
+        self._start_ocr_capture()
+    
+    def _on_report_status_select(self, status):
+        """Handle report status button press"""
+        self.report_status = status
+        
+        # Highlight selected button, reset others
+        status_colors = {
+            'COMPLIANT': Colors.SUCCESS,
+            'NON_COMPLIANT': Colors.WARNING,
+            'FRAUDULENT': Colors.ERROR,
+        }
+        for key, btn in self.report_status_btns.items():
+            if key == status:
+                btn.config(bg=status_colors[key], fg=Colors.TEXT_WHITE, relief=tk.SUNKEN)
+            else:
+                btn.config(bg=Colors.SURFACE, fg=Colors.TEXT_PRIMARY, relief=tk.RAISED)
+        
+        # Show/hide reason selection
+        if status in ('NON_COMPLIANT', 'FRAUDULENT'):
+            self.report_reason_container.pack(fill=tk.X, pady=(5, 0))
+            # Reset reason selection
+            self.report_reason = None
+            for btn in self.report_reason_btns.values():
+                btn.config(bg=Colors.SURFACE, fg=Colors.TEXT_PRIMARY, relief=tk.RAISED)
+        else:
+            self.report_reason_container.pack_forget()
+            self.report_reason = None
+        
+        # Enable submit button
+        self.report_submit_btn.config(state=tk.NORMAL)
+    
+    def _on_report_reason_select(self, reason):
+        """Handle report reason button press"""
+        self.report_reason = reason
+        
+        # Highlight selected button, reset others
+        for key, btn in self.report_reason_btns.items():
+            if key == reason:
+                btn.config(bg=Colors.WARNING, fg=Colors.TEXT_WHITE, relief=tk.SUNKEN)
+            else:
+                btn.config(bg=Colors.SURFACE, fg=Colors.TEXT_PRIMARY, relief=tk.RAISED)
+    
+    def _submit_report(self):
+        """Submit the product report — validates and starts background submission"""
+        if not self.report_status:
+            self.tts.speak("Please select a report status first.")
+            return
+        
+        # Get notes text
+        self.report_notes = self.report_notes_entry.get().strip()
+        
+        # Show loading screen
+        self._show_loading_screen("Submitting report...")
+        
+        # Process in background thread
+        thread = threading.Thread(target=self._process_report_submission, daemon=True)
+        thread.start()
+    
+    def _process_report_submission(self):
+        """Background thread: run full OCR, upload images, submit report to API"""
+        try:
+            # Step 1: Run full OCR extraction on both images
+            self.root.after(0, lambda: self.loading_detail_label.config(
+                text="Extracting text from labels..."))
+            
+            front_text = ""
+            back_text = ""
+            if TESSERACT_AVAILABLE:
+                try:
+                    front_text = self._enhanced_ocr_extraction(self.ocr_front_frame, "FRONT")
+                except Exception as e:
+                    print(f"Front OCR failed: {e}")
+                    front_text = self.ocr_front_text  # Fall back to quick OCR text
+                
+                try:
+                    back_text = self._enhanced_ocr_extraction(self.ocr_back_frame, "BACK")
+                except Exception as e:
+                    print(f"Back OCR failed: {e}")
+                    back_text = self.ocr_back_text
+            
+            combined_text = (
+                f"--- FRONT OF LABEL ---\n\n{front_text}\n\n"
+                f"--- BACK OF LABEL ---\n\n{back_text}"
+            )
+            print(f"Combined OCR text: {len(combined_text)} chars")
+            
+            # Step 2: Upload images to Firebase Storage
+            self.root.after(0, lambda: self.loading_detail_label.config(
+                text="Uploading images..."))
+            
+            front_url = self._upload_report_image(self.ocr_front_frame, "front")
+            back_url = self._upload_report_image(self.ocr_back_frame, "back")
+            
+            if not front_url or not back_url:
+                self.root.after(0, lambda: self._show_error_screen(
+                    "Upload Failed",
+                    "Could not upload images to server. Please check internet connection and try again."
+                ))
+                return
+            
+            # Step 3: Submit report to API
+            self.root.after(0, lambda: self.loading_detail_label.config(
+                text="Submitting report to server..."))
+            
+            report_data = {
+                'kioskId': KIOSK_ID,
+                'status': self.report_status,
+                'scannedData': {
+                    'ocrFrontText': front_text,
+                    'ocrBackText': back_text,
+                    'kioskId': KIOSK_ID,
+                    'kioskName': KIOSK_NAME,
+                    'capturedAt': datetime.now().isoformat(),
+                },
+                'nonComplianceReason': self.report_reason,
+                'additionalNotes': self.report_notes if self.report_notes else None,
+                'frontImageUrl': front_url,
+                'backImageUrl': back_url,
+                'ocrBlobText': combined_text,
+                'location': {
+                    'latitude': KIOSK_LAT,
+                    'longitude': KIOSK_LNG,
+                    'address': KIOSK_ADDRESS,
+                },
+            }
+            
+            print(f"Submitting kiosk report: status={self.report_status}, kioskId={KIOSK_ID}")
+            self.health_service.log(
+                f"Submitting kiosk report: {self.report_status}",
+                category='api',
+                extra_data={'kioskId': KIOSK_ID, 'status': self.report_status}
+            )
+            
+            response = self.api.submit_kiosk_report(report_data)
+            
+            if response.get("success"):
+                report_id = response.get("data", {}).get("_id", "Unknown")
+                print(f"Report submitted successfully: {report_id}")
+                self.health_service.log(
+                    f"Report submitted: {report_id}",
+                    category='api',
+                    extra_data={'reportId': report_id}
+                )
+                self.root.after(0, lambda: self._show_report_success(report_id))
+            else:
+                error_msg = response.get("message", "Failed to submit report")
+                print(f"Report submission failed: {error_msg}")
+                self.health_service.log(
+                    f"Report submission failed: {error_msg}",
+                    level='error', category='api'
+                )
+                self.root.after(0, lambda msg=error_msg: self._show_error_screen(
+                    "Report Failed", msg
+                ))
+        
+        except requests.exceptions.ConnectionError:
+            print("Report submission: connection error")
+            self.root.after(0, lambda: self._show_error_screen(
+                "Server Unavailable",
+                "Cannot connect to RCV server. Check your internet connection."
+            ))
+        except Exception as e:
+            error_msg = str(e)
+            print(f"Report submission error: {error_msg}")
+            self.root.after(0, lambda msg=error_msg: self._show_error_screen(
+                "Error", f"Report submission failed: {msg}"
+            ))
+    
+    def _upload_report_image(self, frame, side: str):
+        """Upload a captured frame to Firebase Storage and return the download URL"""
+        try:
+            # Convert OpenCV frame to JPEG bytes
+            _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+            image_bytes = buffer.tobytes()
+            
+            # Generate unique storage path
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            path = f"scans/kiosk-reports/{KIOSK_ID}/{timestamp}_{side}.jpg"
+            
+            # Upload via Firebase service
+            from services.firebase_service import get_firebase_service
+            firebase = get_firebase_service()
+            if firebase:
+                url = firebase.upload_image(image_bytes, path)
+                if url:
+                    print(f"Uploaded {side} image: {path}")
+                    return url
+            
+            print(f"Firebase service not available for {side} image upload")
+            return None
+        except Exception as e:
+            print(f"Image upload error ({side}): {e}")
+            return None
+    
+    def _show_report_success(self, report_id: str):
+        """Show a success screen after report submission"""
+        self._hide_all_screens()
+        self.state = KioskState.DISPLAY_COMPLIANCE
+        
+        # GPIO success LED
+        self.gpio_led.show_success()
+        
+        # Build dynamic success screen
+        success_frame = tk.Frame(self.main_frame, bg=Colors.BACKGROUND)
+        success_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Green header
+        header = tk.Frame(success_frame, bg=Colors.SUCCESS, height=120)
+        header.pack(fill=tk.X)
+        header.pack_propagate(False)
+        tk.Label(
+            header, text="REPORT SUBMITTED",
+            font=("SF Pro Display", 36, "bold"),
+            bg=Colors.SUCCESS, fg=Colors.TEXT_WHITE
+        ).pack(expand=True)
+        
+        # Center content
+        content = tk.Frame(success_frame, bg=Colors.BACKGROUND)
+        content.pack(fill=tk.BOTH, expand=True)
+        
+        center = tk.Frame(content, bg=Colors.BACKGROUND)
+        center.place(relx=0.5, rely=0.4, anchor=tk.CENTER)
+        
+        # Checkmark icon
+        icon_canvas = tk.Canvas(center, width=120, height=120,
+                                bg=Colors.BACKGROUND, highlightthickness=0)
+        icon_canvas.pack(pady=(0, 20))
+        icon_canvas.create_oval(10, 10, 110, 110, outline=Colors.SUCCESS, width=6)
+        icon_canvas.create_text(60, 55, text="OK", font=("SF Pro Display", 36, "bold"),
+                                fill=Colors.SUCCESS)
+        
+        tk.Label(center, text="Thank you for your report!",
+                 font=("SF Pro Display", 24, "bold"),
+                 bg=Colors.BACKGROUND, fg=Colors.TEXT_PRIMARY).pack(pady=(0, 10))
+        
+        # Show report ID (truncated for display)
+        display_id = report_id[:8] + "..." if len(report_id) > 8 else report_id
+        tk.Label(center, text=f"Report ID: {display_id}",
+                 font=("SF Pro Text", 16),
+                 bg=Colors.BACKGROUND, fg=Colors.TEXT_SECONDARY).pack(pady=(0, 5))
+        
+        # Show selected status
+        status_display = (self.report_status or "").replace('_', ' ')
+        status_color = {
+            'COMPLIANT': Colors.SUCCESS,
+            'NON_COMPLIANT': Colors.WARNING,
+            'FRAUDULENT': Colors.ERROR,
+        }.get(self.report_status, Colors.TEXT_SECONDARY)
+        tk.Label(center, text=f"Status: {status_display}",
+                 font=("SF Pro Text", 16, "bold"),
+                 bg=Colors.BACKGROUND, fg=status_color).pack(pady=(0, 20))
+        
+        tk.Label(center, text="Your report will be reviewed by our team.\nThank you for helping keep products safe.",
+                 font=("SF Pro Text", 14),
+                 bg=Colors.BACKGROUND, fg=Colors.TEXT_SECONDARY,
+                 justify=tk.CENTER).pack(pady=(0, 30))
+        
+        # Back to home button
+        tk.Button(
+            center, text="BACK TO HOME",
+            font=("SF Pro Display", 18, "bold"),
+            bg=Colors.PRIMARY, fg=Colors.TEXT_WHITE,
+            activebackground=Colors.PRIMARY_LIGHT, activeforeground=Colors.TEXT_WHITE,
+            relief=tk.FLAT, bd=0, padx=40, pady=15, cursor="hand2",
+            command=lambda: [success_frame.destroy(), self._show_start_screen()]
+        ).pack(pady=(0, 10))
+        
+        # Submit another report button
+        tk.Button(
+            center, text="SUBMIT ANOTHER REPORT",
+            font=("SF Pro Text", 14, "bold"),
+            bg=Colors.ACCENT, fg=Colors.TEXT_WHITE,
+            activebackground="#00A895", activeforeground=Colors.TEXT_WHITE,
+            relief=tk.FLAT, bd=0, padx=30, pady=12, cursor="hand2",
+            command=lambda: [success_frame.destroy(), self._start_ocr_capture()]
+        ).pack()
+        
+        # Store reference for cleanup
+        self._report_success_frame = success_frame
+        
+        # Auto-return to home after 30 seconds
+        self.start_display_timer(30, is_error=False)
+        
+        self.tts.speak("Report submitted successfully. Thank you for your report.")
+    
+    def _reset_report_state(self):
+        """Reset all report form state variables"""
+        self.report_status = None
+        self.report_reason = None
+        self.report_notes = ""
+        self.ocr_front_text = ""
+        self.ocr_back_text = ""
     
     # ============ Manual Search Methods ============
     

@@ -170,10 +170,11 @@ export interface SignupForm {
 // Analytics
 export interface AnalyticsComplianceReport {
   _id: string;
-  agentId: string;
+  agentId?: string | null;
+  kioskId?: string | null;
   status: ComplianceStatus;
   scannedData: Record<string, any>;
-  nonComplianceReason?: string | null;
+  nonComplianceReason?: NonComplianceReason | string | null;
   additionalNotes?: string | null;
   frontImageUrl: string;
   backImageUrl: string;

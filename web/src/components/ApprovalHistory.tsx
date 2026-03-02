@@ -382,14 +382,6 @@ const ApprovalHistory: React.FC<ApprovalHistoryProps> = ({ isAdmin = false }) =>
                   </div>
                 </div>
               )}
-
-              {/* PDF Hash */}
-              <div className="space-y-3">
-                <h4 className="font-semibold text-sm uppercase text-muted-foreground">PDF Hash</h4>
-                <code className="block p-3 bg-muted rounded text-xs break-all">
-                  {selectedApproval.pdfHash}
-                </code>
-              </div>
             </div>
           )}
         </DialogContent>

@@ -120,6 +120,13 @@ class RCVApiService:
         
         return self._make_request('POST', '/scan/searchProduct', data)
     
+    # ============ Kiosk Report API ============
+    
+    def submit_kiosk_report(self, report_data: dict) -> dict:
+        """Submit a product compliance report from the kiosk machine
+        POST /api/v1/kiosk-report/report (public endpoint, no auth)"""
+        return self._make_request('POST', '/kiosk-report/report', report_data)
+    
     # ============ Health Check ============
     
     def health_check(self) -> dict:
