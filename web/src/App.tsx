@@ -38,6 +38,7 @@ import { BlogPostPage } from "./pages/BlogPostPage";
 import { MetaMaskProvider } from "./contexts/MetaMaskContext";
 import { MapSearchProvider } from "./contexts/MapSearchContext";
 import { ViewModeProvider } from "./contexts/ViewModeContext";
+import { ChatbotProvider } from "./context/ChatbotContext";
 import { Startup } from "./components/Startup";
 import { GalleryPage } from "./pages/GalleryPage";
 
@@ -172,8 +173,9 @@ function App() {
     <MetaMaskProvider>
       <MapSearchProvider>
         <ViewModeProvider>
-          <Startup />
-          <div className="min-h-screen bg-background flex flex-col">
+          <ChatbotProvider>
+            <Startup />
+            <div className="min-h-screen bg-background flex flex-col">
           <GlobalLoadingIndicator />
         <ToastContainer
           position="top-right"
@@ -442,6 +444,7 @@ function App() {
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </div>
+          </ChatbotProvider>
         </ViewModeProvider>
       </MapSearchProvider>
     </MetaMaskProvider>
