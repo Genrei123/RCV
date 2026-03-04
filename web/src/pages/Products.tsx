@@ -5,16 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataTable, type Column } from "@/components/DataTable";
 import { truncateText } from "@/utils/textTruncate";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-  PaginationEllipsis,
-} from "@/components/ui/pagination";
-import { Pagination as PaginationControls } from "@/components/Pagination";
+import { Pagination as SimplePagination } from "@/components/Pagination";
 import type { Product } from "@/typeorm/entities/product.entity";
 import { ProductCard } from "@/components/ProductCard";
 import { AddProductModal } from "@/components/AddProductModal";
@@ -418,105 +409,24 @@ export function Products(props: ProductsProps) {
                   {currentPage} of {totalPages}
                 </div>
 
-                <Pagination className="mx-0 w-auto">
-                  <PaginationContent className="gap-1">
-                    <PaginationItem>
-                      <PaginationPrevious
-                        onClick={() =>
-                          currentPage > 1 && fetchProductsPage(currentPage - 1)
-                        }
-                        className={
-                          currentPage <= 1
-                            ? "pointer-events-none opacity-50"
-                            : "cursor-pointer"
-                        }
-                      />
-                    </PaginationItem>
-
-                    {currentPage > 2 && (
-                      <PaginationItem>
-                        <PaginationLink
-                          onClick={() => fetchProductsPage(1)}
-                          className="cursor-pointer"
-                        >
-                          1
-                        </PaginationLink>
-                      </PaginationItem>
-                    )}
-
-                    {currentPage > 3 && (
-                      <PaginationItem>
-                        <PaginationEllipsis />
-                      </PaginationItem>
-                    )}
-
-                    {currentPage > 1 && (
-                      <PaginationItem>
-                        <PaginationLink
-                          onClick={() => fetchProductsPage(currentPage - 1)}
-                          className="cursor-pointer"
-                        >
-                          {currentPage - 1}
-                        </PaginationLink>
-                      </PaginationItem>
-                    )}
-
-                    <PaginationItem>
-                      <PaginationLink isActive className="cursor-pointer">
-                        {currentPage}
-                      </PaginationLink>
-                    </PaginationItem>
-
-                    {currentPage < totalPages && (
-                      <PaginationItem>
-                        <PaginationLink
-                          onClick={() => fetchProductsPage(currentPage + 1)}
-                          className="cursor-pointer"
-                        >
-                          {currentPage + 1}
-                        </PaginationLink>
-                      </PaginationItem>
-                    )}
-
-                    {currentPage < totalPages - 2 && (
-                      <PaginationItem>
-                        <PaginationEllipsis />
-                      </PaginationItem>
-                    )}
-
-                    {currentPage < totalPages - 1 && (
-                      <PaginationItem>
-                        <PaginationLink
-                          onClick={() => fetchProductsPage(totalPages)}
-                          className="cursor-pointer"
-                        >
-                          {totalPages}
-                        </PaginationLink>
-                      </PaginationItem>
-                    )}
-
-                    <PaginationItem>
-                      <PaginationNext
-                        onClick={() =>
-                          currentPage < totalPages &&
-                          fetchProductsPage(currentPage + 1)
-                        }
-                        className={
-                          currentPage >= totalPages
-                            ? "pointer-events-none opacity-50"
-                            : "cursor-pointer"
-                        }
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
+                <div>
+                  <SimplePagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={totalItems}
+                    itemsPerPage={pageSize}
+                    onPageChange={(p: number) => fetchProductsPage(p)}
+                    alwaysShowControls
+                    showingText={null}
+                  />
+                </div>
               </div>
             </>
           ) : (
             <div className="space-y-6">
               <div className="flex flex-row flex-nowrap items-center justify-end gap-2 sm:gap-3">
                 {/* Mobile: flexible width; Desktop: fixed width */}
-                <div className="relative flex-1 sm:flex-none max-w-[70%] min-w-[140px] sm:max-w-none sm:w-64 group rounded-md border-2 border-gray-200 focus-within:border-gray-400 focus-within:shadow-md transition-all flex items-center">
+                <div className="relative flex-1 sm:flex-none max-w-[70%] min-w-35 sm:max-w-none sm:w-64 group rounded-md border-2 border-gray-200 focus-within:border-gray-400 focus-within:shadow-md transition-all flex items-center">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 group-focus-within:text-gray-700 transition-colors" />
                   <Input
                     type="text"
@@ -590,11 +500,11 @@ export function Products(props: ProductsProps) {
                 {pagedProducts && pagedProducts.length > 0 && (
                   <div className="mt-4 flex items-center justify-between w-full px-6 pb-6">
                     <div className="text-sm text-muted-foreground">
-                      Showing {pagedProducts.length} of {totalItems} products •
-                      Page {currentPage} of {totalPages}
+                      Showing {pagedProducts.length} of {totalItems} products • Page{" "}
+                      {currentPage} of {totalPages}
                     </div>
                     <div>
-                      <PaginationControls
+                      <SimplePagination
                         currentPage={currentPage}
                         totalPages={totalPages}
                         totalItems={totalItems}
