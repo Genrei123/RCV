@@ -18,6 +18,7 @@ class ApiConfig {
   static const String scanProduct = '/api/$apiVersion/mobile/scan';
   static const String getScans = '/api/$apiVersion/mobile/scan/history';
   static String getScanById(String id) => '/api/$apiVersion/mobile/scan/history/$id';
+  static const String syncProducts = '/api/$apiVersion/mobile/products/sync';
   
   // Headers
   static Map<String, String> get headers => {

@@ -7,6 +7,8 @@ import 'config/firebase_config.dart';
 import 'services/remote_config_service.dart';
 import 'services/update_modal_service.dart';
 import 'services/update_service.dart';
+import 'services/local_product_database.dart';
+import 'services/product_sync_service.dart';
 
 // Import all your pages
 import 'auth/landing_page.dart';
@@ -49,11 +51,24 @@ Future<void> main() async {
       
       // Initialize Update Service for Firebase App Distribution
       await UpdateService.initialize();
+
+      // Initialize local product database for offline fuzzy search
+      await LocalProductDatabase.instance.initialize();
+
+      // Trigger background product sync (fire-and-forget)
+      ProductSyncService.instance.syncIfNeeded();
     } catch (e) {
       debugPrint('Initialization error: $e');
       // If Firebase fails, treat as no connection
       runApp(const MyApp(hasConnection: false));
       return;
+    }
+  } else {
+    // Initialize local product database even offline (for cached products)
+    try {
+      await LocalProductDatabase.instance.initialize();
+    } catch (e) {
+      debugPrint('Local DB init error (offline): $e');
     }
   }
 

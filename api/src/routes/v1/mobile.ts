@@ -31,6 +31,9 @@ import { createComplianceReport } from '../../controllers/compliance/CreateCompl
 import { searchProduct } from '../../controllers/compliance/SearchProduct';
 import { getComplianceReports, getComplianceReportById } from '../../controllers/compliance/GetComplianceReports';
 
+// Import product sync controller (for local database sync)
+import { syncProducts } from '../../controllers/sync/ProductSync';
+
 const MobileRouter = Router();
 
 // ============================================
@@ -79,6 +82,13 @@ MobileRouter.post('/compliance/search-product', verifyMobileUser, searchProduct)
 MobileRouter.post('/compliance/report', verifyMobileUser, createComplianceReport);
 MobileRouter.get('/compliance/reports', verifyMobileUser, getComplianceReports);
 MobileRouter.get('/compliance/reports/:id', verifyMobileUser, getComplianceReportById);
+
+// ============================================
+// MOBILE PRODUCT SYNC ROUTES
+// Sync product catalog for local OCR fuzzy search
+// Supports incremental sync via ?since=<ISO timestamp>
+// ============================================
+MobileRouter.get('/products/sync', verifyMobileUser, syncProducts);
 
 // ============================================
 // FUTURE MOBILE ROUTES

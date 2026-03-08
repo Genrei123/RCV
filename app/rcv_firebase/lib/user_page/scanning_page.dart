@@ -16,6 +16,10 @@ import '../widgets/title_logo_header_app_bar.dart';
 import '../widgets/navigation_bar.dart';
 import '../services/api_service.dart';
 import '../services/audit_log_service.dart';
+import '../services/local_fuzzy_search_service.dart';
+import '../services/product_sync_service.dart';
+import '../services/local_product_database.dart';
+import '../models/local_product.dart';
 import '../services/remote_config_service.dart';
 import '../widgets/feature_disabled_screen.dart';
 import '../utils/tab_history.dart';
@@ -56,6 +60,11 @@ class _QRScannerPageState extends State<QRScannerPage>
   // Scanning category
   ScanningCategory? _selectedCategory;
 
+  // Manual search controllers
+  final TextEditingController _cfprController = TextEditingController();
+  final TextEditingController _ltoController = TextEditingController();
+  bool _isManualSearching = false;
+
   // For dual image OCR
   String? _frontImagePath;
   String? _backImagePath;
@@ -82,11 +91,15 @@ class _QRScannerPageState extends State<QRScannerPage>
     // Set OCR mode for product categories, QR mode for qrScan
     if (_selectedCategory == ScanningCategory.qrScan) {
       isOCRMode = false;
+    } else if (_selectedCategory == ScanningCategory.manualSearch) {
+      isOCRMode = false; // Not OCR mode, it's a form
     } else if (_selectedCategory != null) {
       isOCRMode = true;
     }
 
-    _requestCameraPermission();
+    if (_selectedCategory != ScanningCategory.manualSearch) {
+      _requestCameraPermission();
+    }
   }
 
   @override
@@ -695,6 +708,11 @@ class _QRScannerPageState extends State<QRScannerPage>
       );
     }
 
+    // Manual Search view
+    if (_selectedCategory == ScanningCategory.manualSearch) {
+      return _buildManualSearchView();
+    }
+
     // Default QR scanner view
     return Stack(
       children: [
@@ -736,6 +754,540 @@ class _QRScannerPageState extends State<QRScannerPage>
           ),
         ),
       ],
+    );
+  }
+
+  // =========================================================================
+  // MANUAL SEARCH FEATURE
+  // =========================================================================
+
+  Widget _buildManualSearchView() {
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF005440), Color(0xFF00796B)],
+        ),
+      ),
+      child: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 20,
+            bottom: 40,
+          ),
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          child: Column(
+            children: [
+              // Header section
+              const Icon(Icons.search, size: 64, color: Colors.white),
+              const SizedBox(height: 16),
+              const Text(
+                'Manual Product Search',
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: const Text(
+                  'Enter the exact CFPR Number and/or LTO Number\nto search for a product in the database',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.amber,
+                    fontWeight: FontWeight.w500,
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Form card
+              Container(
+                width: double.infinity,
+                constraints: const BoxConstraints(maxWidth: 500),
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // CFPR Number field
+                    const Text(
+                      'CFPR Number',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF005440),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _cfprController,
+                      textCapitalization: TextCapitalization.characters,
+                      decoration: InputDecoration(
+                        hintText: 'e.g. CFPR-1234567890',
+                        prefixIcon: const Icon(
+                          Icons.badge_outlined,
+                          color: Color(0xFF005440),
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey.shade50,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF005440),
+                            width: 2,
+                          ),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // LTO Number field
+                    const Text(
+                      'LTO Number',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF005440),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _ltoController,
+                      textCapitalization: TextCapitalization.characters,
+                      decoration: InputDecoration(
+                        hintText: 'e.g. LTO-1234567890',
+                        prefixIcon: const Icon(
+                          Icons.assignment_outlined,
+                          color: Color(0xFF005440),
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey.shade50,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF005440),
+                            width: 2,
+                          ),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Hint text
+                    Text(
+                      'Enter at least one of the fields above to search.\nThe value must match exactly as registered.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Search button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton.icon(
+                        onPressed: _isManualSearching
+                            ? null
+                            : () => _performManualSearch(),
+                        icon: _isManualSearching
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.search, size: 24),
+                        label: Text(
+                          _isManualSearching
+                              ? 'Searching...'
+                              : 'Search Product',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF005440),
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor:
+                              const Color(0xFF005440).withValues(alpha: 0.6),
+                          disabledForegroundColor:
+                              Colors.white.withValues(alpha: 0.7),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _performManualSearch() async {
+    final cfpr = _cfprController.text.trim();
+    final lto = _ltoController.text.trim();
+
+    if (cfpr.isEmpty && lto.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter at least a CFPR or LTO number'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isManualSearching = true);
+
+    try {
+      developer.log('🔍 [ManualSearch] CFPR: "$cfpr", LTO: "$lto"');
+
+      // Build a synthetic OCR text from the entered values (for compliance checks)
+      final searchText = [if (cfpr.isNotEmpty) cfpr, if (lto.isNotEmpty) lto]
+          .join(' ');
+
+      // ---- Try LOCAL database first ----
+      if (LocalFuzzySearchService.isReady) {
+        developer.log('⚡ [ManualSearch] Searching local DB...');
+        final db = LocalProductDatabase.instance;
+
+        List<LocalProduct> results = [];
+
+        if (cfpr.isNotEmpty && lto.isNotEmpty) {
+          // Both provided — search with AND first
+          results = await db.searchByCfprAndLto(cfpr, lto);
+          if (results.isEmpty) {
+            // Try each individually
+            results = await db.searchByCfpr(cfpr);
+            if (results.isEmpty) {
+              results = await db.searchByLto(lto);
+            }
+          }
+        } else if (cfpr.isNotEmpty) {
+          results = await db.searchByCfpr(cfpr);
+        } else {
+          results = await db.searchByLto(lto);
+        }
+
+        if (results.isNotEmpty) {
+          final product = results.first;
+          developer.log(
+            '⚡ [ManualSearch] Local match: ${product.productName}',
+          );
+
+          // Build compliance result (same format as OCR scan)
+          final response = LocalFuzzySearchService.buildComplianceResult(
+            product,
+            searchText,
+            packageType: 'MANUAL_SEARCH',
+          );
+          response['matchDetails'] = {
+            'searchType': 'manual',
+            'cfprQueried': cfpr.isNotEmpty ? cfpr : null,
+            'ltoQueried': lto.isNotEmpty ? lto : null,
+            'matchedLocally': true,
+            'totalResults': results.length,
+          };
+
+          _handleManualSearchResult(response, searchText);
+          return;
+        }
+
+        developer.log(
+          '⚠️ [ManualSearch] No local match, falling back to server...',
+        );
+      }
+
+      // ---- Fallback: Search server ----
+      developer.log('🌐 [ManualSearch] Searching server...');
+      final serverResponse = await _apiService.searchProduct(
+        cfprNumber: cfpr.isNotEmpty ? cfpr : null,
+        ltoNumber: lto.isNotEmpty ? lto : null,
+      );
+
+      if (serverResponse.found && serverResponse.products.isNotEmpty) {
+        final product = serverResponse.products.first;
+        developer.log(
+          '🌐 [ManualSearch] Server match: ${product.productName}',
+        );
+
+        // Wrap the server response in the same format
+        final response = <String, dynamic>{
+          'success': true,
+          'found': true,
+          'productIdentified': true,
+          'isCompliant': true,
+          'productInfo': {
+            'productName': product.productName,
+            'brandName': product.brandName,
+            'manufacturer': product.companyName ?? product.company?.name ?? 'Unknown',
+            'CFPRNumber': product.cfprNumber,
+            'LTONumber': product.ltoNumber,
+            'certificateId': product.cfprNumber,
+            'registrationNumber': product.cfprNumber,
+            'dateOfRegistration': product.dateOfRegistration.toIso8601String(),
+            'productCategory': product.productClassification,
+            'productType': product.productSubClassification,
+            'lotNumber': product.lotNumber,
+            'companyId': product.companyId,
+            'productId': product.id,
+          },
+          'packagingCompliance': {
+            'cfpr': {
+              'required': product.cfprNumber,
+              'foundOnPackaging': cfpr.isNotEmpty,
+              'status': cfpr.isNotEmpty ? 'COMPLIANT' : 'NOT_CHECKED',
+            },
+            'lto': {
+              'required': product.ltoNumber,
+              'foundOnPackaging': lto.isNotEmpty,
+              'status': lto.isNotEmpty ? 'COMPLIANT' : 'NOT_CHECKED',
+            },
+          },
+          'matchDetails': {
+            'searchType': 'manual',
+            'cfprQueried': cfpr.isNotEmpty ? cfpr : null,
+            'ltoQueried': lto.isNotEmpty ? lto : null,
+            'matchedLocally': false,
+          },
+          'source': 'server_search',
+        };
+
+        _handleManualSearchResult(response, searchText);
+      } else {
+        // Not found anywhere
+        developer.log('❌ [ManualSearch] Product not found');
+        _showManualSearchNotFoundModal(cfpr, lto);
+      }
+    } catch (e) {
+      developer.log('❌ [ManualSearch] Error: $e');
+      if (mounted) {
+        _showErrorModal(
+          title: 'Search Error',
+          message:
+              'An error occurred while searching for the product.\n\n'
+              'Please check your internet connection and try again.',
+          error: e.toString(),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isManualSearching = false);
+      }
+    }
+  }
+
+  void _handleManualSearchResult(
+    Map<String, dynamic> response,
+    String searchText,
+  ) {
+    final productInfo = response['productInfo'] ?? {};
+    final packagingCompliance = response['packagingCompliance'] ?? {};
+    final violations = response['violations'] as List<dynamic>? ?? [];
+    final warnings = response['warnings'] as List<dynamic>? ?? [];
+
+    final extractedInfo = {
+      'productName': productInfo['productName'] ?? 'Not found',
+      'brandName': productInfo['brandName'] ?? 'Not found',
+      'manufacturer':
+          productInfo['manufacturer'] ??
+          productInfo['company'] ??
+          productInfo['companyName'] ??
+          'Not found',
+      'company':
+          productInfo['company'] ??
+          productInfo['companyName'] ??
+          productInfo['manufacturer'] ??
+          'Not found',
+      'LTONumber': packagingCompliance['lto']?['required'] ?? 'N/A',
+      'CFPRNumber': packagingCompliance['cfpr']?['required'] ?? 'N/A',
+      'isCompliant': response['isCompliant'] ?? false,
+      'violations': violations,
+      'warnings': warnings,
+    };
+
+    setState(() {
+      _ocrBlobText = searchText;
+      _extractedInfo = extractedInfo;
+    });
+
+    // Log to audit trail
+    AuditLogService.logScanProduct(
+      scanData: {
+        'searchType': 'MANUAL_SEARCH',
+        'cfprQueried': _cfprController.text.trim(),
+        'ltoQueried': _ltoController.text.trim(),
+        'extractionSuccess': true,
+        'extractedInfo': extractedInfo,
+        'isCompliant': extractedInfo['isCompliant'],
+      },
+    );
+
+    _showExtractedInfoModal(extractedInfo, searchText);
+  }
+
+  void _showManualSearchNotFoundModal(String cfpr, String lto) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.search_off,
+                    size: 48,
+                    color: Colors.orange.shade700,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Product Not Found',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'No product found matching:\n'
+                  '${cfpr.isNotEmpty ? '• CFPR: $cfpr\n' : ''}'
+                  '${lto.isNotEmpty ? '• LTO: $lto\n' : ''}'
+                  '\nWould you like to scan the product label instead?',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: Colors.black54,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(dialogContext).pop();
+                      // Pop back from manual search page, then open scanning category
+                      Navigator.of(context).pop();
+                    },
+                    icon: const Icon(Icons.camera_alt, size: 20),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF005440),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    label: const Text(
+                      'Scan Product Instead',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF005440),
+                      side: const BorderSide(color: Color(0xFF005440)),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Try Again',
+                      style: TextStyle(fontSize: 14),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -800,11 +1352,16 @@ class _QRScannerPageState extends State<QRScannerPage>
       if (response['success'] == true && response['certificate'] != null) {
         final pdfUrl = response['certificate']['pdfUrl'] as String?;
         if (pdfUrl != null && pdfUrl.isNotEmpty) {
-          // Open PDF in browser
+          // Open PDF in browser — launch directly without canLaunchUrl
+          // (canLaunchUrl can return false on Android 11+ if queries not declared)
           final uri = Uri.parse(pdfUrl);
-          if (await canLaunchUrl(uri)) {
-            await launchUrl(uri, mode: LaunchMode.externalApplication);
-          } else {
+          try {
+            final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+            if (!launched) {
+              _showErrorSnackBar('Could not open PDF — no browser available');
+            }
+          } catch (launchError) {
+            developer.log('Error launching PDF URL: $launchError');
             _showErrorSnackBar('Could not open PDF');
           }
         } else {
@@ -2266,7 +2823,7 @@ class _QRScannerPageState extends State<QRScannerPage>
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          isCompliant ? 'Product Compliant' : 't in',
+                          isCompliant ? 'Product Compliant' : 'Found inconsitencies',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 20,
@@ -3570,6 +4127,8 @@ class _QRScannerPageState extends State<QRScannerPage>
         return Icons.card_giftcard;
       case ScanningCategory.qrScan:
         return Icons.qr_code_scanner;
+      case ScanningCategory.manualSearch:
+        return Icons.search;
     }
   }
 
@@ -3586,6 +4145,8 @@ class _QRScannerPageState extends State<QRScannerPage>
         return 'Box Product';
       case ScanningCategory.qrScan:
         return 'QR Scan';
+      case ScanningCategory.manualSearch:
+        return 'Manual Search';
     }
   }
 
@@ -4576,7 +5137,10 @@ class _QRScannerPageState extends State<QRScannerPage>
         // Continue with OCR even if upload fails - we still have local paths
       }
 
-      // Send to backend API for OCR processing
+      // ================================================================
+      // LOCAL FUZZY SEARCH — runs on-device for instant results
+      // Reporting / scan history / AI summary still go to the server.
+      // ================================================================
       final apiService = ApiService();
       Map<String, dynamic> response;
 
@@ -4600,13 +5164,46 @@ class _QRScannerPageState extends State<QRScannerPage>
             case ScanningCategory.qrScan:
               packageTypeString = 'QR_SCAN';
               break;
+            case ScanningCategory.manualSearch:
+              packageTypeString = 'MANUAL_SEARCH';
+              break;
           }
         }
 
-        response = await apiService.scanProduct(
-          combinedText,
-          packageType: packageTypeString,
-        );
+        // Try LOCAL fuzzy search first (instant, no network needed)
+        if (LocalFuzzySearchService.isReady) {
+          developer.log('⚡ Using LOCAL fuzzy search (${LocalFuzzySearchService.productCount} products)');
+          final localResult = await LocalFuzzySearchService.searchProductsFuzzy(combinedText);
+
+          if (localResult.product != null) {
+            // Build response in the same shape as the server endpoint
+            response = LocalFuzzySearchService.buildComplianceResult(
+              localResult.product!,
+              combinedText,
+              frontImageUrl: _frontImageUrl,
+              backImageUrl: _backImageUrl,
+              packageType: packageTypeString,
+            );
+            response['matchDetails'] = localResult.searchDetails;
+            developer.log('⚡ Local match: ${localResult.product!.productName}');
+          } else {
+            // No local match — fall back to server
+            developer.log('⚠️ No local match, falling back to server...');
+            response = await apiService.scanProduct(
+              combinedText,
+              packageType: packageTypeString,
+            );
+          }
+        } else {
+          // Local DB not ready yet — use server (triggers sync in background)
+          developer.log('⚠️ Local DB empty, using server scan...');
+          response = await apiService.scanProduct(
+            combinedText,
+            packageType: packageTypeString,
+          );
+          // Trigger background sync so next scan is local
+          ProductSyncService.instance.syncIfNeeded();
+        }
       } on ApiException catch (apiError) {
         // Close loading dialog
         if (mounted) Navigator.pop(context);
@@ -4817,6 +5414,8 @@ class _QRScannerPageState extends State<QRScannerPage>
     WidgetsBinding.instance.removeObserver(this);
     cameraController.dispose();
     _textRecognizer.close();
+    _cfprController.dispose();
+    _ltoController.dispose();
     super.dispose();
   }
 
@@ -4876,7 +5475,9 @@ class _QRScannerPageState extends State<QRScannerPage>
         appBar: TitleLogoHeaderAppBar(
           title: _selectedCategory == ScanningCategory.qrScan
               ? 'QR Scanner'
-              : 'OCR Scanner',
+              : _selectedCategory == ScanningCategory.manualSearch
+                  ? 'Manual Search'
+                  : 'OCR Scanner',
           showBackButton: false,
         ),
         body: Column(
@@ -4885,12 +5486,14 @@ class _QRScannerPageState extends State<QRScannerPage>
               flex: 5,
               child: Container(
                 width: double.infinity,
-                margin: isOCRMode ? EdgeInsets.zero : const EdgeInsets.all(16),
+                margin: (isOCRMode || _selectedCategory == ScanningCategory.manualSearch)
+                    ? EdgeInsets.zero
+                    : const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  borderRadius: isOCRMode
+                  borderRadius: (isOCRMode || _selectedCategory == ScanningCategory.manualSearch)
                       ? BorderRadius.zero
                       : BorderRadius.circular(20),
-                  boxShadow: isOCRMode
+                  boxShadow: (isOCRMode || _selectedCategory == ScanningCategory.manualSearch)
                       ? []
                       : [
                           BoxShadow(
@@ -4901,7 +5504,7 @@ class _QRScannerPageState extends State<QRScannerPage>
                         ],
                 ),
                 child: ClipRRect(
-                  borderRadius: isOCRMode
+                  borderRadius: (isOCRMode || _selectedCategory == ScanningCategory.manualSearch)
                       ? BorderRadius.zero
                       : BorderRadius.circular(20),
                   child: _buildQrView(context),
@@ -4910,7 +5513,28 @@ class _QRScannerPageState extends State<QRScannerPage>
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
+              child: _selectedCategory == ScanningCategory.manualSearch
+                  ? Center(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                        icon: const Icon(Icons.arrow_back, size: 18),
+                        label: const Text('Back to Category'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF005440),
+                          side: const BorderSide(color: Color(0xFF005440)),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    )
+                  : Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   IconButton(
