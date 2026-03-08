@@ -442,6 +442,10 @@ export function AnalyticsMapComponent() {
 
         const reportId = (point as any)._id ?? (point as any).report?._id ?? null;
 
+        const reporterLabel = (point as any).scannedBy 
+          ?? (point as any).report?.agentId 
+          ?? ((point as any).report?.kioskId ? `Kiosk: ${(point as any).report.kioskId}` : "");
+
         clusterPoints.push({
           position: [lng, lat],
           reportId: reportId,
@@ -449,8 +453,8 @@ export function AnalyticsMapComponent() {
             (point as any).product ??
             (point as any).report?.scannedData?.productName ??
             "Report",
-          scannedBy:
-            (point as any).scannedBy ?? (point as any).report?.agentId ?? "",
+          scannedBy: reporterLabel,
+          kioskId: (point as any).report?.kioskId ?? null,
           clusterId: cluster.cluster_id,
           color: color,
           tooltip: `<strong>${
@@ -458,7 +462,7 @@ export function AnalyticsMapComponent() {
             (point as any).report?.scannedData?.productName ??
             "Report"
           }</strong><br/>Cluster: ${cluster.cluster_id}<br/>Scanned by: ${
-            (point as any).scannedBy ?? (point as any).report?.agentId ?? ""
+            reporterLabel
           }<br/>Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}${
             reportId ? `<br/>Report ID: ${reportId}` : ""
           }`,
@@ -484,6 +488,10 @@ export function AnalyticsMapComponent() {
 
         const reportId = (point as any)._id ?? (point as any).report?._id ?? null;
 
+        const noiseReporterLabel = (point as any).scannedBy 
+          ?? (point as any).report?.agentId 
+          ?? ((point as any).report?.kioskId ? `Kiosk: ${(point as any).report.kioskId}` : "");
+
         noisePoints.push({
           position: [lng, lat],
           reportId: reportId,
@@ -491,14 +499,14 @@ export function AnalyticsMapComponent() {
             (point as any).product ??
             (point as any).report?.scannedData?.productName ??
             "Report",
-          scannedBy:
-            (point as any).scannedBy ?? (point as any).report?.agentId ?? "",
+          scannedBy: noiseReporterLabel,
+          kioskId: (point as any).report?.kioskId ?? null,
           tooltip: `<strong>${
             (point as any).product ??
             (point as any).report?.scannedData?.productName ??
             "Report"
           }</strong><br/>Noise Point<br/>Scanned by: ${
-            (point as any).scannedBy ?? (point as any).report?.agentId ?? ""
+            noiseReporterLabel
           }<br/>Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}${
             reportId ? `<br/>Report ID: ${reportId}` : ""
           }`,
@@ -1249,11 +1257,31 @@ export function AnalyticsMapComponent() {
               )}
 
               {/* Reporter Info */}
-              {(selectedReport.agent || selectedReport.agentId) && (
+              {(selectedReport.agent || selectedReport.agentId || selectedReport.kioskId) && (
                 <div className="border-b pb-3">
                   <p className="text-sm font-medium text-neutral-500 mb-1">
                     Reported By
                   </p>
+                  {selectedReport.kioskId && !selectedReport.agentId ? (
+                    <div className="bg-emerald-50 p-3 rounded-lg border border-emerald-200">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-medium">
+                          KIOSK
+                        </span>
+                        <p className="text-base font-semibold text-emerald-900">
+                          {selectedReport.scannedData?.kioskName || selectedReport.kioskId}
+                        </p>
+                      </div>
+                      <p className="text-xs text-emerald-600 font-mono">
+                        Kiosk ID: {selectedReport.kioskId}
+                      </p>
+                      {selectedReport.location?.address && (
+                        <p className="text-xs text-emerald-700 mt-1">
+                          📍 {selectedReport.location.address}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
                   <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
                     {selectedReport.agent ? (
                       <>
@@ -1275,6 +1303,7 @@ export function AnalyticsMapComponent() {
                       </p>
                     )}
                   </div>
+                  )}
                 </div>
               )}
 
@@ -1391,7 +1420,7 @@ export function AnalyticsMapComponent() {
               {selectedReport.additionalNotes && (
                 <div className="border-b pb-3">
                   <p className="text-sm font-medium text-neutral-500 mb-1">
-                    Agent Notes
+                    {selectedReport.kioskId && !selectedReport.agentId ? 'Notes' : 'Agent Notes'}
                   </p>
                   <p className="text-sm text-neutral-900 bg-gray-50 p-2 rounded">
                     {selectedReport.additionalNotes}

@@ -10,6 +10,7 @@ enum ScanningCategory {
   packProduct,
   boxProduct,
   qrScan,
+  manualSearch,
 }
 
 class ScanningCategoryPage extends StatelessWidget {
@@ -146,6 +147,26 @@ class ScanningCategoryPage extends StatelessWidget {
                       MaterialPageRoute(
                         builder: (context) => const QRScannerPage(
                           category: ScanningCategory.qrScan,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Manual Search Option
+                _buildCategoryCard(
+                  context,
+                  title: 'Manual Search',
+                  description: 'Search by CFPR or LTO number',
+                  icon: Icons.search,
+                  color: const Color(0xFF0D47A1),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const QRScannerPage(
+                          category: ScanningCategory.manualSearch,
                         ),
                       ),
                     );

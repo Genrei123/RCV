@@ -588,41 +588,47 @@ class ApiService {
     }
   }
 
-  /// Get certificate PDF URL from blockchain
+  /// Get certificate PDF URL from Firebase Storage
   ///
-  /// Retrieves the Firebase Storage URL for a certificate PDF
-  /// so users can view/download the original electronic certificate
+  /// Constructs the Firebase Storage URL directly for a certificate PDF
+  /// without relying on the blockchain API. The PDF lives in Firebase Storage
+  /// at: certificates/{product|company}/{CERTIFICATE_ID}.pdf
+  static const String _firebaseBucket = 'rcv-flutter.firebasestorage.app';
+
   static Future<Map<String, dynamic>> getCertificatePDFUrl(String certificateId) async {
     try {
-      developer.log('Fetching PDF URL for certificate: $certificateId');
+      developer.log('Constructing Firebase Storage PDF URL for certificate: $certificateId');
 
-      final response = await http.get(
-        Uri.parse('$baseUrl/certificate-blockchain/pdf/$certificateId'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-      ).timeout(const Duration(seconds: 15));
-
-      developer.log('Certificate PDF URL Response Status: ${response.statusCode}');
-
-      if (response.statusCode == 200) {
-        final responseData = json.decode(response.body);
-        return {
-          'success': true,
-          'certificate': responseData['certificate'],
-          'message': responseData['message'],
-        };
+      // Determine certificate type from ID prefix
+      String certType;
+      if (certificateId.startsWith('CERT-PROD-')) {
+        certType = 'product';
+      } else if (certificateId.startsWith('CERT-COMP-')) {
+        certType = 'company';
       } else {
-        final errorData = json.decode(response.body);
-        return {
-          'success': false,
-          'message': errorData['message'] ?? 'Certificate not found',
-        };
+        certType = 'product'; // Default to product
       }
+
+      // Construct Firebase Storage URL directly (same approach as kiosk Python app)
+      // Format: https://firebasestorage.googleapis.com/v0/b/{bucket}/o/{encoded_path}?alt=media
+      final filePath = 'certificates/$certType/$certificateId.pdf';
+      final encodedPath = Uri.encodeComponent(filePath);
+      final pdfUrl =
+          'https://firebasestorage.googleapis.com/v0/b/$_firebaseBucket/o/$encodedPath?alt=media';
+
+      developer.log('Constructed PDF URL: $pdfUrl');
+
+      return {
+        'success': true,
+        'certificate': {
+          'certificateId': certificateId,
+          'pdfUrl': pdfUrl,
+        },
+        'message': 'Certificate PDF URL constructed',
+      };
     } catch (e) {
-      developer.log('Error fetching certificate PDF URL: $e');
-      return {'success': false, 'message': 'Network error: ${e.toString()}'};
+      developer.log('Error constructing certificate PDF URL: $e');
+      return {'success': false, 'message': 'Error: ${e.toString()}'};
     }
   }
 }

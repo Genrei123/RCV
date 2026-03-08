@@ -84,6 +84,7 @@ export const analyzeCompliance = async (req: Request, res: Response, next: NextF
       .map(report => ({
         _id: report._id,
         agentId: report.agentId,
+        kioskId: report.kioskId,
         status: report.status,
         scannedData: report.scannedData,
         nonComplianceReason: report.nonComplianceReason,
