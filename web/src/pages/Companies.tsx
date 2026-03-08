@@ -9,15 +9,7 @@ import { AddCompanyModal } from "@/components/AddCompanyModal";
 import { CompanyDetailsModal } from "@/components/CompanyDetailsModal";
 import { ArchiveConfirmationModal } from "@/components/ArchiveConfirmationModal";
 import { CompanyService } from "@/services/companyService";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
+import { Pagination as SimplePagination } from "@/components/Pagination";
 import { PDFGenerationService } from "@/services/pdfGenerationService";
 import { toast } from "react-toastify";
 import { TutorialHelper } from "@/components/TutorialHelper";
@@ -399,98 +391,17 @@ export function Companies(props: CompaniesProps) {
               {currentPage} of {totalPages}
             </div>
 
-            <Pagination className="mx-0 w-auto">
-              <PaginationContent className="gap-1">
-                <PaginationItem>
-                  <PaginationPrevious
-                    onClick={() =>
-                      currentPage > 1 && fetchCompaniesPage(currentPage - 1)
-                    }
-                    className={
-                      currentPage <= 1
-                        ? "pointer-events-none opacity-50"
-                        : "cursor-pointer"
-                    }
-                  />
-                </PaginationItem>
-
-                {currentPage > 2 && (
-                  <PaginationItem>
-                    <PaginationLink
-                      onClick={() => fetchCompaniesPage(1)}
-                      className="cursor-pointer"
-                    >
-                      1
-                    </PaginationLink>
-                  </PaginationItem>
-                )}
-
-                {currentPage > 3 && (
-                  <PaginationItem>
-                    <PaginationEllipsis />
-                  </PaginationItem>
-                )}
-
-                {currentPage > 1 && (
-                  <PaginationItem>
-                    <PaginationLink
-                      onClick={() => fetchCompaniesPage(currentPage - 1)}
-                      className="cursor-pointer"
-                    >
-                      {currentPage - 1}
-                    </PaginationLink>
-                  </PaginationItem>
-                )}
-
-                <PaginationItem>
-                  <PaginationLink isActive className="cursor-pointer">
-                    {currentPage}
-                  </PaginationLink>
-                </PaginationItem>
-
-                {currentPage < totalPages && (
-                  <PaginationItem>
-                    <PaginationLink
-                      onClick={() => fetchCompaniesPage(currentPage + 1)}
-                      className="cursor-pointer"
-                    >
-                      {currentPage + 1}
-                    </PaginationLink>
-                  </PaginationItem>
-                )}
-
-                {currentPage < totalPages - 2 && (
-                  <PaginationItem>
-                    <PaginationEllipsis />
-                  </PaginationItem>
-                )}
-
-                {currentPage < totalPages - 1 && (
-                  <PaginationItem>
-                    <PaginationLink
-                      onClick={() => fetchCompaniesPage(totalPages)}
-                      className="cursor-pointer"
-                    >
-                      {totalPages}
-                    </PaginationLink>
-                  </PaginationItem>
-                )}
-
-                <PaginationItem>
-                  <PaginationNext
-                    onClick={() =>
-                      currentPage < totalPages &&
-                      fetchCompaniesPage(currentPage + 1)
-                    }
-                    className={
-                      currentPage >= totalPages
-                        ? "pointer-events-none opacity-50"
-                        : "cursor-pointer"
-                    }
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
+            <div>
+              <SimplePagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                itemsPerPage={pageSize}
+                onPageChange={(p: number) => fetchCompaniesPage(p)}
+                alwaysShowControls
+                showingText={null}
+              />
+            </div>
           </div>
         </>
       </PageContainer>

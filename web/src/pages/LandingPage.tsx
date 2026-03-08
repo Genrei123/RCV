@@ -28,6 +28,7 @@ import {
 import { Footer } from "@/components/Footer";
 import { TransparencyTables } from "@/components/TransparencyTables";
 import { Chatbot } from "@/components/Chatbot";
+import { useChatbot } from "@/context/ChatbotContext";
 import landingData from "@/data/landinginfo.json";
 import { SanityService } from "@/services/sanityService";
 import { urlFor } from "@/lib/sanity";
@@ -104,6 +105,7 @@ export function LandingPage() {
   const [carouselOpacity, setCarouselOpacity] = useState(1);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const { isExpanded: isChatbotExpanded } = useChatbot();
 
   // Disable scroll when mobile menu is open
   useEffect(() => {
@@ -1176,7 +1178,7 @@ export function LandingPage() {
       {showScrollTop && (
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          className="fixed bottom-8 left-8 z-50 p-4 bg-primary/70 hover:bg-primary/90 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 group backdrop-blur-sm"
+          className={`fixed bottom-8 left-8 p-4 bg-primary/70 hover:bg-primary/90 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 group backdrop-blur-sm ${isChatbotExpanded ? "z-30" : "z-50"}`}
           aria-label="Scroll to top"
         >
           <svg
