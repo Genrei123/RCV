@@ -5462,7 +5462,7 @@ class _QRScannerPageState extends State<QRScannerPage>
           children: [
             Expanded(
               child: (isOCRMode || _selectedCategory == ScanningCategory.manualSearch)
-                  ? Container(
+                  ? SizedBox(
                       width: double.infinity,
                       child: _buildQrView(context),
                     )

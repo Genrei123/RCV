@@ -553,10 +553,10 @@ class LocalFuzzySearchService {
         final ratio = nameHits / nameWords.length;
         if (ratio >= 0.8) {
           score += 150;
-          reasons.add('Name strong (${nameHits}/${nameWords.length} words)');
+          reasons.add('Name strong ($nameHits/${nameWords.length} words)');
         } else if (ratio >= 0.5) {
           score += 80;
-          reasons.add('Name partial (${nameHits}/${nameWords.length} words)');
+          reasons.add('Name partial ($nameHits/${nameWords.length} words)');
         } else if (nameHits >= 2) {
           score += 40;
           reasons.add('Name $nameHits words');
