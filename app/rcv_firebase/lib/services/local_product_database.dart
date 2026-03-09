@@ -131,7 +131,7 @@ class LocalProductDatabase {
       );
     }
 
-    final results = await batch.commit(noResult: true);
+    await batch.commit(noResult: true);
     developer.log('✅ [LocalDB] Upserted ${products.length} products');
     return products.length;
   }
