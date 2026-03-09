@@ -18,7 +18,6 @@
 
 import 'dart:async';
 import 'dart:developer' as developer;
-import '../config/api_constants.dart';
 import '../models/local_product.dart';
 import 'api_client.dart';
 import 'local_product_database.dart';

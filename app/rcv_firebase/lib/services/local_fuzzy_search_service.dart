@@ -199,8 +199,12 @@ class LocalFuzzySearchService {
     final m = s1.length;
     final n = s2.length;
     final dp = List.generate(m + 1, (_) => List.filled(n + 1, 0));
-    for (var i = 0; i <= m; i++) dp[i][0] = i;
-    for (var j = 0; j <= n; j++) dp[0][j] = j;
+    for (var i = 0; i <= m; i++) {
+      dp[i][0] = i;
+    }
+    for (var j = 0; j <= n; j++) {
+      dp[0][j] = j;
+    }
     for (var i = 1; i <= m; i++) {
       for (var j = 1; j <= n; j++) {
         if (s1[i - 1] == s2[j - 1]) {
@@ -553,10 +557,10 @@ class LocalFuzzySearchService {
         final ratio = nameHits / nameWords.length;
         if (ratio >= 0.8) {
           score += 150;
-          reasons.add('Name strong (${nameHits}/${nameWords.length} words)');
+          reasons.add('Name strong ($nameHits/${nameWords.length} words)');
         } else if (ratio >= 0.5) {
           score += 80;
-          reasons.add('Name partial (${nameHits}/${nameWords.length} words)');
+          reasons.add('Name partial ($nameHits/${nameWords.length} words)');
         } else if (nameHits >= 2) {
           score += 40;
           reasons.add('Name $nameHits words');

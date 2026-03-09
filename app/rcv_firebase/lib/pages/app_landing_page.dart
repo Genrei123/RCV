@@ -129,20 +129,16 @@ class _AppLandingPageState extends State<AppLandingPage>
                         ),
                       ],
                     ),
-                    // Close button on right
+                    // Skip button on right
                     GestureDetector(
                       onTap: _completeLanding,
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withAlpha((0.9 * 255).toInt()),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.close,
+                      child: const Text(
+                        'Skip',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
                           color: Colors.white,
-                          size: 24,
+                          letterSpacing: 0.5,
                         ),
                       ),
                     ),
