@@ -596,13 +596,7 @@ export function LandingPage() {
                         <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
                           {slide.buttonLink && slide.buttonText && (
                             <Button
-                              onClick={() => {
-                                if (slide.buttonLink.startsWith("/")) {
-                                  navigate(slide.buttonLink);
-                                } else {
-                                  window.open(slide.buttonLink, "_blank");
-                                }
-                              }}
+                              onClick={() => navigate("/login")}
                               className="app-bg-primary hover:app-bg-secondary text-white font-semibold px-8 shadow-lg hover:shadow-xl cursor-pointer w-full sm:w-auto transition-all"
                               size="lg"
                             >
@@ -1178,7 +1172,7 @@ export function LandingPage() {
       {showScrollTop && (
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          className={`fixed bottom-8 left-8 p-4 bg-primary/70 hover:bg-primary/90 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 group backdrop-blur-sm ${isChatbotExpanded ? "z-30" : "z-50"}`}
+          className={`fixed bottom-8 left-8 p-4 app-bg-primary hover:app-bg-secondary text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 group backdrop-blur-sm ${isChatbotExpanded ? "z-30" : "z-50"}`}
           aria-label="Scroll to top"
         >
           <svg
