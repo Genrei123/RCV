@@ -105,7 +105,13 @@ export function LandingPage() {
   const [carouselOpacity, setCarouselOpacity] = useState(1);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
   const { isExpanded: isChatbotExpanded } = useChatbot();
+
+  const navigateWithSwipe = (path: string) => {
+    setIsNavigating(true);
+    setTimeout(() => navigate(path), 480);
+  };
 
   // Disable scroll when mobile menu is open
   useEffect(() => {
@@ -274,7 +280,7 @@ export function LandingPage() {
   }, [api]);
 
   return (
-    <div className="min-h-screen bg-white overflow-hidden">
+    <div className="min-h-screen bg-white overflow-hidden page-fade-in">
       {/* Navbar */}
       <nav
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
@@ -328,7 +334,7 @@ export function LandingPage() {
                     .getElementById("features")
                     ?.scrollIntoView({ behavior: "smooth" });
                 }}
-                className={`text-sm transition-colors cursor-pointer uppercase tracking-wider font-medium ${
+                className={`nav-glow text-sm transition-colors cursor-pointer uppercase tracking-wider font-medium ${
                   navbarScrolled
                     ? "text-text hover:text-primary"
                     : "text-white/90 hover:text-white"
@@ -344,7 +350,7 @@ export function LandingPage() {
                     .getElementById("transparency")
                     ?.scrollIntoView({ behavior: "smooth" });
                 }}
-                className={`text-sm transition-colors cursor-pointer uppercase tracking-wider font-medium ${
+                className={`nav-glow text-sm transition-colors cursor-pointer uppercase tracking-wider font-medium ${
                   navbarScrolled
                     ? "text-text hover:text-primary"
                     : "text-white/90 hover:text-white"
@@ -360,7 +366,7 @@ export function LandingPage() {
                     .getElementById("about")
                     ?.scrollIntoView({ behavior: "smooth" });
                 }}
-                className={`text-sm transition-colors cursor-pointer uppercase tracking-wider font-medium ${
+                className={`nav-glow text-sm transition-colors cursor-pointer uppercase tracking-wider font-medium ${
                   navbarScrolled
                     ? "text-text hover:text-primary"
                     : "text-white/90 hover:text-white"
@@ -376,7 +382,7 @@ export function LandingPage() {
                     .getElementById("mission")
                     ?.scrollIntoView({ behavior: "smooth" });
                 }}
-                className={`text-sm transition-colors cursor-pointer uppercase tracking-wider font-medium ${
+                className={`nav-glow text-sm transition-colors cursor-pointer uppercase tracking-wider font-medium ${
                   navbarScrolled
                     ? "text-text hover:text-primary"
                     : "text-white/90 hover:text-white"
@@ -389,7 +395,7 @@ export function LandingPage() {
             {/* Get Started Button + Hamburger - Right */}
             <div className="flex items-center gap-4 flex-shrink-0">
               <Button
-                onClick={() => navigate("/login")}
+                onClick={() => navigateWithSwipe("/login")}
                 className={`hidden sm:block transition-all duration-300 ${
                   navbarScrolled
                     ? "app-bg-primary hover:app-bg-secondary app-text-white px-6 hover:text-white cursor-pointer"
@@ -463,7 +469,7 @@ export function LandingPage() {
                     ?.scrollIntoView({ behavior: "smooth" });
                   setMobileMenuOpen(false);
                 }}
-                className="block py-3 text-sm uppercase tracking-wider font-medium text-gray-800 hover:text-primary transition-colors cursor-pointer"
+                className="nav-glow block py-3 text-sm uppercase tracking-wider font-medium text-gray-800 hover:text-primary transition-colors cursor-pointer"
               >
                 Features
               </a>
@@ -476,7 +482,7 @@ export function LandingPage() {
                     ?.scrollIntoView({ behavior: "smooth" });
                   setMobileMenuOpen(false);
                 }}
-                className="block py-3 text-sm uppercase tracking-wider font-medium text-gray-800 hover:text-primary transition-colors cursor-pointer"
+                className="nav-glow block py-3 text-sm uppercase tracking-wider font-medium text-gray-800 hover:text-primary transition-colors cursor-pointer"
               >
                 Transparency
               </a>
@@ -489,7 +495,7 @@ export function LandingPage() {
                     ?.scrollIntoView({ behavior: "smooth" });
                   setMobileMenuOpen(false);
                 }}
-                className="block py-3 text-sm uppercase tracking-wider font-medium text-gray-800 hover:text-primary transition-colors cursor-pointer"
+                className="nav-glow block py-3 text-sm uppercase tracking-wider font-medium text-gray-800 hover:text-primary transition-colors cursor-pointer"
               >
                 About
               </a>
@@ -502,15 +508,15 @@ export function LandingPage() {
                     ?.scrollIntoView({ behavior: "smooth" });
                   setMobileMenuOpen(false);
                 }}
-                className="block py-3 text-sm uppercase tracking-wider font-medium text-gray-800 hover:text-primary transition-colors cursor-pointer"
+                className="nav-glow block py-3 text-sm uppercase tracking-wider font-medium text-gray-800 hover:text-primary transition-colors cursor-pointer"
               >
                 Our Mission
               </a>
               <div className="pt-4 border-t border-gray-200">
                 <Button
                   onClick={() => {
-                    navigate("/login");
                     setMobileMenuOpen(false);
+                    navigateWithSwipe("/login");
                   }}
                   className="w-full transition-all duration-300 app-bg-primary hover:app-bg-secondary app-text-white hover:text-white cursor-pointer mt-2"
                 >
@@ -596,7 +602,7 @@ export function LandingPage() {
                         <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
                           {slide.buttonLink && slide.buttonText && (
                             <Button
-                              onClick={() => navigate("/login")}
+                              onClick={() => navigateWithSwipe("/login")}
                               className="app-bg-primary hover:app-bg-secondary text-white font-semibold px-8 shadow-lg hover:shadow-xl cursor-pointer w-full sm:w-auto transition-all"
                               size="lg"
                             >
@@ -715,7 +721,7 @@ export function LandingPage() {
                     {/* Footer CTA */}
                     <div className="pt-4 border-t border-app-primary/20">
                       <Button
-                        onClick={() => navigate("/login")}
+                        onClick={() => navigateWithSwipe("/login")}
                         className="w-full app-bg-primary hover:app-bg-secondary text-white font-medium"
                       >
                         Explore More
@@ -1153,7 +1159,7 @@ export function LandingPage() {
               ))
             ) : (
               <Button
-                onClick={() => navigate("/login")}
+                onClick={() => navigateWithSwipe("/login")}
                 size="lg"
                 className="app-bg-primary-light hover:bg-[#009b79] app-text-text px-8 cursor-pointer"
               >
@@ -1168,15 +1174,18 @@ export function LandingPage() {
       <Footer />
       <Chatbot />
 
+      {/* Page swipe transition overlay */}
+      {isNavigating && <div className="page-swipe-overlay" />}
+
       {/* Scroll to Top Button */}
       {showScrollTop && (
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          className={`fixed bottom-8 left-8 p-4 app-bg-primary hover:app-bg-secondary text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 group backdrop-blur-sm ${isChatbotExpanded ? "z-30" : "z-50"}`}
+          className={`fixed bottom-4 left-4 sm:bottom-6 sm:left-6 p-4 app-bg-primary hover:app-bg-secondary animate-bounce text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 group backdrop-blur-sm ${isChatbotExpanded ? "z-30" : "z-50"}`}
           aria-label="Scroll to top"
         >
           <svg
-            className="w-6 h-6 transform group-hover:-translate-y-1 transition-transform"
+            className="w-6 h-6"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"

@@ -56,7 +56,7 @@ function Hotspot3DMarker({
   const Icon = getIcon(hotspot.icon);
 
   return (
-    <Html position={position} style={{ pointerEvents: 'all' }}>
+    <Html position={position} style={{ pointerEvents: 'all' }} zIndexRange={[40, 0]}>
       <div className="relative">
         <button
           onClick={onClick}
