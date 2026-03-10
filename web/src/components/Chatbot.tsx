@@ -42,12 +42,6 @@ export function Chatbot() {
     };
   }, []);
 
-  // Check if modal should be expanded based on content
-  useEffect(() => {
-    const totalChars = messages.reduce((sum, msg) => sum + msg.text.length, 0);
-    setIsExpanded(totalChars > 500 || messages.length > 5);
-  }, [messages]);
-
   const streamText = (fullText: string, messageId: string) => {
     let currentIndex = 0;
     const charsPerInterval = 1; // Characters to show per interval (letter by letter)
@@ -172,12 +166,12 @@ export function Chatbot() {
           {/* Dark backdrop when expanded */}
           {isExpanded && (
             <div 
-              className="fixed inset-0 bg-black/60 z-40 transition-opacity duration-300"
+              className="fixed inset-0 bg-black/60 z-[55] transition-opacity duration-300"
               onClick={() => setIsExpanded(false)}
             />
           )}
           <div 
-            className={`fixed bg-white rounded-2xl shadow-2xl flex flex-col z-50 border border-gray-200 transition-all duration-300 ${
+            className={`fixed bg-white rounded-2xl shadow-2xl flex flex-col z-[60] border border-gray-200 transition-all duration-300 ${
               isExpanded 
                 ? "inset-2 sm:inset-4 md:inset-8" 
                 : "bottom-4 right-4 sm:bottom-6 sm:right-6 w-[calc(100vw-2rem)] sm:w-96 h-[calc(100vh-8rem)] sm:h-[32rem]"
