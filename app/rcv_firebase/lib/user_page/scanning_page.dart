@@ -44,7 +44,6 @@ class _QRScannerPageState extends State<QRScannerPage>
     with WidgetsBindingObserver {
   MobileScannerController cameraController = MobileScannerController();
   String result = '';
-  bool isFlashOn = false;
   bool isScanning = true;
   bool isOCRMode = false;
   final ImagePicker _picker = ImagePicker();
@@ -757,10 +756,6 @@ class _QRScannerPageState extends State<QRScannerPage>
     );
   }
 
-  // =========================================================================
-  // MANUAL SEARCH FEATURE
-  // =========================================================================
-
   Widget _buildManualSearchView() {
     return Container(
       width: double.infinity,
@@ -784,16 +779,7 @@ class _QRScannerPageState extends State<QRScannerPage>
           child: Column(
             children: [
               // Header section
-              const Icon(Icons.search, size: 64, color: Colors.white),
               const SizedBox(height: 16),
-              const Text(
-                'Manual Product Search',
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(16),
@@ -4646,13 +4632,6 @@ class _QRScannerPageState extends State<QRScannerPage>
     return '${date.day}/${date.month}/${date.year}';
   }
 
-  void _toggleFlash() async {
-    await cameraController.toggleTorch();
-    setState(() {
-      isFlashOn = !isFlashOn;
-    });
-  }
-
   Future<void> _openCanRotationCapture() async {
     final result = await Navigator.push<Map<dynamic, String?>>(
       context,
@@ -5101,7 +5080,6 @@ class _QRScannerPageState extends State<QRScannerPage>
               '• Ensure good lighting\n'
               '• Hold the camera steady\n'
               '• Make sure the text is in focus\n'
-              '• Try using flash if needed\n'
               '• Make sure labels are clearly visible',
         );
 
@@ -5483,38 +5461,38 @@ class _QRScannerPageState extends State<QRScannerPage>
         body: Column(
           children: [
             Expanded(
-              flex: 5,
-              child: Container(
-                width: double.infinity,
-                margin: (isOCRMode || _selectedCategory == ScanningCategory.manualSearch)
-                    ? EdgeInsets.zero
-                    : const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  borderRadius: (isOCRMode || _selectedCategory == ScanningCategory.manualSearch)
-                      ? BorderRadius.zero
-                      : BorderRadius.circular(20),
-                  boxShadow: (isOCRMode || _selectedCategory == ScanningCategory.manualSearch)
-                      ? []
-                      : [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                ),
-                child: ClipRRect(
-                  borderRadius: (isOCRMode || _selectedCategory == ScanningCategory.manualSearch)
-                      ? BorderRadius.zero
-                      : BorderRadius.circular(20),
-                  child: _buildQrView(context),
-                ),
-              ),
+              child: (isOCRMode || _selectedCategory == ScanningCategory.manualSearch)
+                  ? SizedBox(
+                      width: double.infinity,
+                      child: _buildQrView(context),
+                    )
+                  : Center(
+                      child: Container(
+                        width: double.infinity,
+                        height: MediaQuery.of(context).size.height * 0.45,
+                        margin: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.1),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: _buildQrView(context),
+                        ),
+                      ),
+                    ),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: _selectedCategory == ScanningCategory.manualSearch
-                  ? Center(
+                  ? Align(
+                      alignment: Alignment.centerLeft,
                       child: OutlinedButton.icon(
                         onPressed: () {
                           Navigator.pop(context);
@@ -5537,14 +5515,6 @@ class _QRScannerPageState extends State<QRScannerPage>
                   : Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  IconButton(
-                    icon: Icon(
-                      isFlashOn ? Icons.flash_on : Icons.flash_off,
-                      color: const Color(0xFF005440),
-                    ),
-                    onPressed: _toggleFlash,
-                    tooltip: 'Toggle Flash',
-                  ),
                   // Resolved version combining both branches
                   Row(
                     children: [
