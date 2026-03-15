@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import Cropper, { type Area } from "react-easy-crop";
 import {
   Dialog,
@@ -14,6 +14,7 @@ interface AvatarCropDialogProps {
   imageSrc: string;
   onCancel: () => void;
   onSave: (dataUrl: string) => void;
+  isUploading?: boolean;
 }
 
 export function AvatarCropDialog({
@@ -21,18 +22,26 @@ export function AvatarCropDialog({
   imageSrc,
   onCancel,
   onSave,
+  isUploading = false,
 }: AvatarCropDialogProps) {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // Reset saving state when upload completes
+  useEffect(() => {
+    if (!isUploading && saving) {
+      setSaving(false);
+    }
+  }, [isUploading, saving]);
+
   const onCropComplete = useCallback((_area: Area, areaPixels: Area) => {
     setCroppedAreaPixels(areaPixels);
   }, []);
 
   const handleSave = useCallback(async () => {
-    if (!croppedAreaPixels) return;
+    if (!croppedAreaPixels || isUploading) return;
     setSaving(true);
     try {
       const dataUrl = await getCroppedImg(
@@ -50,10 +59,10 @@ export function AvatarCropDialog({
     } catch (e) {
       // eslint-disable-next-line no-console
       console.error("Avatar crop save error", e);
-    } finally {
-      setSaving(false);
+      setSaving(false); // Only reset saving state on error
     }
-  }, [croppedAreaPixels, imageSrc, onSave]);
+    // Note: Don't reset saving state on success - let parent component control this via isUploading
+  }, [croppedAreaPixels, imageSrc, onSave, isUploading]);
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onCancel()}>
@@ -87,15 +96,15 @@ export function AvatarCropDialog({
           />
         </div>
         <div className="flex justify-end gap-2 mt-4">
-          <Button variant="outline" onClick={onCancel} disabled={saving}>
+          <Button variant="outline" onClick={onCancel} disabled={saving || isUploading}>
             Cancel
           </Button>
           <Button
             className="bg-teal-600 hover:bg-teal-700 text-white"
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || isUploading}
           >
-            {saving ? "Processing..." : "Save"}
+            {isUploading ? "Saving..." : saving ? "Processing..." : "Save"}
           </Button>
         </div>
       </DialogContent>

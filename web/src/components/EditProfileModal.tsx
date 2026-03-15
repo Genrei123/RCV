@@ -911,6 +911,7 @@ export function EditProfileModal({
           imageSrc={cropImageSrc}
           onCancel={onCancelCrop}
           onSave={onSaveCropped}
+          isUploading={uploadingAvatar}
         />
       )}
     </div>
