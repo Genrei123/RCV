@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:rcv_firebase/themes/app_colors.dart';
 import 'package:rcv_firebase/services/api_service.dart';
 import 'package:location/location.dart';
@@ -51,6 +52,14 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
   final TextEditingController notesController = TextEditingController();
   bool isSubmitting = false;
 
+  // Background Upload State
+  bool isUploading = false;
+  double uploadProgress = 0.0;
+  String? frontUrl;
+  String? backUrl;
+  List<String> additionalUrls = [];
+  final Map<String, double> _uploadStates = {};
+
   final List<Map<String, String>> nonComplianceReasons = [
     {'value': 'NO_LTO_NUMBER', 'label': 'No LTO Number'},
     {'value': 'NO_CFPR_NUMBER', 'label': 'No CFPR Number'},
@@ -87,6 +96,125 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
 
     // Don't prepopulate notes - let agent write their own observations
     // OCR text is automatically saved in backend
+
+    // Start background uploads if local paths are provided
+    _startBackgroundUploads();
+  }
+
+  void _startBackgroundUploads() async {
+    final localFront = widget.localFrontPath;
+    final localBack = widget.localBackPath;
+    final localAdditional = widget.localAdditionalPaths;
+
+    // If we already have URLs, no need to upload
+    if (widget.frontImageUrl != null && widget.backImageUrl != null) {
+      setState(() {
+        frontUrl = widget.frontImageUrl;
+        backUrl = widget.backImageUrl;
+        additionalUrls = widget.additionalImageUrls ?? [];
+      });
+      return;
+    }
+
+    if (localFront == null || localBack == null) return;
+
+    setState(() {
+      isUploading = true;
+      uploadProgress = 0.0;
+    });
+
+    try {
+      final scanId = 'scan_${DateTime.now().millisecondsSinceEpoch}';
+
+      // 1. Start Front Image Upload
+      final frontTask = FirebaseStorageService.startUpload(
+        scanId: scanId,
+        image: File(localFront),
+        imageName: 'front',
+      );
+
+      // 2. Start Back Image Upload
+      final backTask = FirebaseStorageService.startUpload(
+        scanId: scanId,
+        image: File(localBack),
+        imageName: 'back',
+      );
+
+      final List<UploadTask> additionalTasks = [];
+      if (localAdditional != null) {
+        for (int i = 0; i < localAdditional.length; i++) {
+          final task = FirebaseStorageService.startUpload(
+            scanId: scanId,
+            image: File(localAdditional[i]),
+            imageName: 'side_$i',
+          );
+          if (task != null) additionalTasks.add(task);
+        }
+      }
+
+      final List<UploadTask> validTasks = [];
+      if (frontTask != null) validTasks.add(frontTask);
+      if (backTask != null) validTasks.add(backTask);
+      validTasks.addAll(additionalTasks);
+
+      if (validTasks.isEmpty) {
+        throw Exception('No images were found for upload');
+      }
+
+      // Track progress of all tasks
+      _monitorUploads(validTasks);
+
+      // Wait for completion and get URLs
+      final List<Future<String>> urlFutures = validTasks.map((t) => t.then((s) => s.ref.getDownloadURL())).toList();
+      final results = await Future.wait(urlFutures);
+
+      if (mounted) {
+        setState(() {
+          int resultIdx = 0;
+          if (frontTask != null) frontUrl = results[resultIdx++];
+          if (backTask != null) backUrl = results[resultIdx++];
+          if (additionalTasks.isNotEmpty) {
+            additionalUrls = results.sublist(resultIdx);
+          }
+          isUploading = false;
+          uploadProgress = 1.0;
+        });
+        developer.log('✅ Background uploads complete');
+      }
+    } catch (e) {
+      developer.log('❌ Background upload failed: $e');
+      if (mounted) {
+        setState(() {
+          isUploading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Image upload failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _monitorUploads(List<UploadTask> tasks) {
+    for (int i = 0; i < tasks.length; i++) {
+      final task = tasks[i];
+      final taskId = 'task_$i';
+      _uploadStates[taskId] = 0.0;
+
+      task.snapshotEvents.listen((TaskSnapshot snapshot) {
+        if (mounted) {
+          setState(() {
+            _uploadStates[taskId] =
+                snapshot.bytesTransferred / snapshot.totalBytes;
+            // Calculate aggregate progress
+            uploadProgress =
+                _uploadStates.values.reduce((a, b) => a + b) / tasks.length;
+          });
+        }
+      });
+    }
   }
 
   @override
@@ -123,54 +251,14 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
     });
 
     try {
-      // 1. Handle Deferred Upload if needed
-      String? finalFrontUrl = widget.frontImageUrl;
-      String? finalBackUrl = widget.backImageUrl;
-      List<String>? finalAdditionalUrls = widget.additionalImageUrls;
+      // Use the background-uploaded URLs
+      final finalFrontUrl = frontUrl ?? widget.frontImageUrl;
+      final finalBackUrl = backUrl ?? widget.backImageUrl;
+      final finalAdditionalUrls =
+          additionalUrls.isNotEmpty ? additionalUrls : widget.additionalImageUrls;
 
-      if ((finalFrontUrl == null || finalBackUrl == null) &&
-          (widget.localFrontPath != null && widget.localBackPath != null)) {
-        developer.log('🚀 Uploading deferred images...');
-        final scanId = 'scan_${DateTime.now().millisecondsSinceEpoch}';
-        final uploadResults = await FirebaseStorageService.uploadScanImages(
-          scanId: scanId,
-          frontImage: File(widget.localFrontPath!),
-          backImage: File(widget.localBackPath!),
-        );
-
-        if (uploadResults['frontUrl'] == null ||
-            uploadResults['backUrl'] == null) {
-          throw Exception('Failed to upload images');
-        }
-
-        finalFrontUrl = uploadResults['frontUrl'];
-        finalBackUrl = uploadResults['backUrl'];
-      }
-
-      // Upload additional images if they exist as local paths
-      if (widget.localAdditionalPaths != null &&
-          widget.localAdditionalPaths!.isNotEmpty &&
-          (finalAdditionalUrls == null || finalAdditionalUrls.isEmpty)) {
-        developer.log(
-          '🚀 Uploading ${widget.localAdditionalPaths!.length} additional images...',
-        );
-        finalAdditionalUrls = [];
-        for (int i = 0; i < widget.localAdditionalPaths!.length; i++) {
-          final path = widget.localAdditionalPaths![i];
-          final additionalScanId =
-              'scan_additional_${i}_${DateTime.now().millisecondsSinceEpoch}';
-          final uploadResult = await FirebaseStorageService.uploadSingleImage(
-            scanId: additionalScanId,
-            image: File(path),
-            imageName: 'side_$i',
-          );
-          if (uploadResult != null) {
-            finalAdditionalUrls.add(uploadResult);
-          }
-        }
-        developer.log(
-          '✅ Uploaded ${finalAdditionalUrls.length} additional images',
-        );
+      if (finalFrontUrl == null || finalBackUrl == null) {
+        throw Exception('Image uploads are not complete yet.');
       }
 
       // Get current location
@@ -363,8 +451,17 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
         ),
         body: Stack(
           children: [
-            SingleChildScrollView(
-              child: Padding(
+            Column(
+              children: [
+                if (isUploading)
+                  LinearProgressIndicator(
+                    value: uploadProgress,
+                    backgroundColor: Colors.blue.shade50,
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                  ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -959,6 +1056,9 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
                 ),
               ),
             ),
+          ),
+        ],
+      ),
 
             // Submit Button (Fixed at bottom)
             Positioned(
@@ -999,7 +1099,8 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: isSubmitting ? null : _submitReport,
+                        onPressed:
+                            (isSubmitting || isUploading) ? null : _submitReport,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
@@ -1020,9 +1121,11 @@ class _ComplianceReportPageState extends State<ComplianceReportPage> {
                                   ),
                                 ),
                               )
-                            : const Text(
-                                'Submit Report',
-                                style: TextStyle(
+                            : Text(
+                                isUploading
+                                    ? 'Uploading Images (${(uploadProgress * 100).toStringAsFixed(0)}%)...'
+                                    : 'Submit Report',
+                                style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                 ),
