@@ -81,6 +81,10 @@ class _QRScannerPageState extends State<QRScannerPage>
   DateTime? _lastErrorTime; // Debounce errors to prevent spam
   Map<String, dynamic>? _extractedInfo; // Store extracted info for re-display
 
+  // For OCR Progress UI
+  final ValueNotifier<Map<String, dynamic>> _ocrProgressNotifier =
+      ValueNotifier({'value': 0.0, 'status': 'Initializing...'});
+
   @override
   void initState() {
     super.initState();
@@ -170,10 +174,10 @@ class _QRScannerPageState extends State<QRScannerPage>
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.1),
+                          color: Colors.white.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.3),
+                            color: Colors.white.withOpacity(0.3),
                           ),
                         ),
                         child: const Text(
@@ -264,10 +268,10 @@ class _QRScannerPageState extends State<QRScannerPage>
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.1),
+                          color: Colors.white.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.3),
+                            color: Colors.white.withOpacity(0.3),
                           ),
                         ),
                         child: const Text(
@@ -358,10 +362,10 @@ class _QRScannerPageState extends State<QRScannerPage>
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.1),
+                          color: Colors.white.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.3),
+                            color: Colors.white.withOpacity(0.3),
                           ),
                         ),
                         child: const Text(
@@ -452,10 +456,10 @@ class _QRScannerPageState extends State<QRScannerPage>
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.1),
+                          color: Colors.white.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.3),
+                            color: Colors.white.withOpacity(0.3),
                           ),
                         ),
                         child: const Text(
@@ -545,10 +549,10 @@ class _QRScannerPageState extends State<QRScannerPage>
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.1),
+                        color: Colors.white.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.3),
+                          color: Colors.white.withOpacity(0.3),
                         ),
                       ),
                       child: const Text(
@@ -580,7 +584,7 @@ class _QRScannerPageState extends State<QRScannerPage>
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
+                            color: Colors.black.withOpacity(0.1),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
@@ -784,10 +788,10 @@ class _QRScannerPageState extends State<QRScannerPage>
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.1),
+                  color: Colors.white.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.3),
+                    color: Colors.white.withOpacity(0.3),
                   ),
                 ),
                 child: const Text(
@@ -813,7 +817,7 @@ class _QRScannerPageState extends State<QRScannerPage>
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
+                      color: Colors.black.withOpacity(0.1),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -1460,7 +1464,7 @@ class _QRScannerPageState extends State<QRScannerPage>
                             decoration: BoxDecoration(
                               color: const Color(
                                 0xFF005440,
-                              ).withValues(alpha: 0.1),
+                              ).withOpacity(0.1),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
                                 color: const Color(0xFF005440),
@@ -1639,149 +1643,112 @@ class _QRScannerPageState extends State<QRScannerPage>
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
-          child: Container(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.9,
-              maxHeight: MediaQuery.of(context).size.height * 0.8,
-            ),
-            child: Column(
-              children: [
-                // Header
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Colors.red.shade400, Colors.red.shade700],
+          child: Material(
+            type: MaterialType.transparency,
+            child: Container(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.9,
+                maxHeight: MediaQuery.of(context).size.height * 0.8,
+              ),
+              child: Column(
+                children: [
+                  // Header
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Colors.red.shade400, Colors.red.shade700],
+                      ),
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(20),
+                        topRight: Radius.circular(20),
+                      ),
                     ),
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.error_outline,
-                        color: Colors.white,
-                        size: 32,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          title,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white),
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
-                    ],
-                  ),
-                ),
-                // Content - Wrapped in SingleChildScrollView to prevent overflow
-                Flexible(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
                       children: [
                         const Icon(
-                          Icons.warning_amber_rounded,
-                          size: 64,
-                          color: Colors.orange,
+                          Icons.error_outline,
+                          color: Colors.white,
+                          size: 32,
                         ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Something went wrong',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          message,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.black54,
-                            height: 1.5,
-                          ),
-                        ),
-                        if (error != null) ...[
-                          const SizedBox(height: 16),
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.grey.shade300),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.code,
-                                      size: 16,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'Technical Details',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.grey.shade700,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  error,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.grey.shade600,
-                                    fontFamily: 'monospace',
-                                  ),
-                                ),
-                              ],
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                        ],
-                        const SizedBox(height: 24),
-                        // Action Button
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: () => Navigator.of(context).pop(),
-                            icon: const Icon(Icons.refresh, size: 20),
-                            label: const Text('Try Again'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF005440),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 2,
-                            ),
-                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.white),
+                          onPressed: () => Navigator.of(context).pop(),
                         ),
                       ],
                     ),
                   ),
-                ),
-              ],
+                  // Content
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            message,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Colors.black87,
+                              height: 1.5,
+                            ),
+                          ),
+                          if (error != null) ...[
+                            const SizedBox(height: 16),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                error,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade700,
+                                  fontFamily: 'monospace',
+                                ),
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 24),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () => Navigator.of(context).pop(),
+                              icon: const Icon(Icons.refresh, size: 20),
+                              label: const Text('Try Again'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF005440),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 2,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -1797,186 +1764,111 @@ class _QRScannerPageState extends State<QRScannerPage>
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
-          child: Container(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.9,
-              maxHeight: MediaQuery.of(context).size.height * 0.8,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Header
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Colors.orange.shade400, Colors.orange.shade700],
+          child: Material(
+            type: MaterialType.transparency,
+            child: Container(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.9,
+                maxHeight: MediaQuery.of(context).size.height * 0.8,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Header
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Colors.orange.shade400, Colors.orange.shade700],
+                      ),
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(20),
+                        topRight: Radius.circular(20),
+                      ),
                     ),
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.warning_amber_rounded,
-                        color: Colors.white,
-                        size: 32,
-                      ),
-                      const SizedBox(width: 12),
-                      const Expanded(
-                        child: Text(
-                          'Extraction Incomplete',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white),
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
-                    ],
-                  ),
-                ),
-                // Content
-                Flexible(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
                       children: [
                         const Icon(
-                          Icons.info_outline,
-                          size: 64,
-                          color: Colors.orange,
+                          Icons.warning_amber_rounded,
+                          color: Colors.white,
+                          size: 32,
                         ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Could not extract product information',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'We were able to scan the text, but could not automatically extract the product details.\n\n'
-                          'This could be because:\n'
-                          '• The label format is non-standard\n'
-                          '• Required information is missing or unclear\n'
-                          '• Text quality needs improvement\n\n'
-                          'You can still view the raw OCR text below.',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.black54,
-                            height: 1.5,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        // Action Buttons
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                              // Show OCR modal with individual texts if available
-                              if (_frontOcrText != null) {
-                                _showOCRModal(
-                                  _frontOcrText!,
-                                  _backOcrText,
-                                  _additionalOcrTexts,
-                                );
-                              } else {
-                                _showOCRModal(ocrText);
-                              }
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF005440),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 14,
-                                horizontal: 12,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 2,
-                            ),
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                mainAxisSize: MainAxisSize.min,
-                                children: const [
-                                  Icon(Icons.article_outlined, size: 18),
-                                  SizedBox(width: 6),
-                                  Text(
-                                    'View Raw OCR Text',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            'Extraction Failed',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
-                        const SizedBox(height: 10),
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton(
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                              // Reset to allow user to try again
-                              setState(() {
-                                _frontImagePath = null;
-                                _backImagePath = null;
-                                _frontOcrText = null;
-                                _backOcrText = null;
-                                _additionalOcrTexts = null;
-                                _additionalImagePaths = null;
-                              });
-                            },
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.grey.shade700,
-                              side: BorderSide(
-                                color: Colors.grey.shade400,
-                                width: 1.5,
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: const [
-                                Icon(Icons.refresh, size: 20),
-                                SizedBox(width: 8),
-                                Text(
-                                  'Try Again',
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.white),
+                          onPressed: () => Navigator.of(context).pop(),
                         ),
                       ],
                     ),
                   ),
-                ),
-              ],
+                  // Content
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.error_outline,
+                            size: 64,
+                            color: Colors.orange,
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'We couldn\'t extract enough information',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Please try scanning the product again, ensuring that all registration numbers and category details are clearly visible.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.black54,
+                              height: 1.5,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () => Navigator.of(context).pop(),
+                              icon: const Icon(Icons.refresh, size: 20),
+                              label: const Text('Try Again'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF005440),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 2,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -2654,103 +2546,108 @@ class _QRScannerPageState extends State<QRScannerPage>
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            constraints: const BoxConstraints(maxWidth: 400),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.search_off,
-                    size: 48,
-                    color: Colors.orange.shade700,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  'No Results Found',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'We couldn\'t find a matching product in our database based on the scanned text.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.black54,
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 32),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF005440),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 14,
-                        horizontal: 12,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+          child: Material(
+            type: MaterialType.transparency,
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade50,
+                      shape: BoxShape.circle,
                     ),
-                    child: const Text(
-                      'Scan Again',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    child: Icon(
+                      Icons.search_off,
+                      size: 48,
+                      color: Colors.orange.shade700,
                     ),
                   ),
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      // Show OCR modal with individual texts if available
-                      if (_frontOcrText != null) {
-                        _showOCRModal(
-                          _frontOcrText!,
-                          _backOcrText,
-                          _additionalOcrTexts,
-                        );
-                      } else {
-                        _showOCRModal(ocrText);
-                      }
-                    },
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF005440),
-                      side: const BorderSide(color: Color(0xFF005440)),
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 14,
-                        horizontal: 12,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      'View Scanned Text',
-                      style: TextStyle(fontSize: 14),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'No Results Found',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  const Text(
+                    'We couldn\'t find a matching product in our database based on the scanned text.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.black54,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF005440),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 14,
+                          horizontal: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Scan Again',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        if (_frontOcrText != null) {
+                          _showOCRModal(
+                            _frontOcrText!,
+                            _backOcrText,
+                            _additionalOcrTexts,
+                          );
+                        } else {
+                          _showOCRModal(ocrText);
+                        }
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF005440),
+                        side: const BorderSide(color: Color(0xFF005440)),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 14,
+                          horizontal: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'View Raw OCR Text',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -2773,498 +2670,414 @@ class _QRScannerPageState extends State<QRScannerPage>
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
-          child: Container(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.85,
-              maxWidth: MediaQuery.of(context).size.width * 0.95,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Header
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: isCompliant
-                          ? [Color(0xFF00A47D), Color(0xFF005440)]
-                          : [Colors.orange.shade600, Colors.red.shade600],
-                    ),
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(20),
-                      topRight: Radius.circular(20),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        isCompliant
-                            ? Icons.check_circle_outline
-                            : Icons.warning_amber_rounded,
-                        color: Colors.white,
-                        size: 28,
+          child: Material(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            elevation: 24,
+            child: Container(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.85,
+                maxWidth: MediaQuery.of(context).size.width * 0.95,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Header
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: isCompliant
+                            ? [const Color(0xFF00A47D), const Color(0xFF005440)]
+                            : [Colors.orange.shade600, Colors.red.shade600],
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          isCompliant ? 'Product Compliant' : 'Found inconsitencies',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(20),
+                        topRight: Radius.circular(20),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          isCompliant
+                              ? Icons.check_circle_outline
+                              : Icons.warning_amber_rounded,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            isCompliant ? 'Product Compliant' : 'Found errors',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white),
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
-                    ],
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.white),
+                          onPressed: () => _handleCloseOCRResults(extractedInfo, ocrText),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                // Content - Scrollable
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Violations Section
-                        if (violations.isNotEmpty) ...[
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.red.shade50,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: Colors.red.shade300,
-                                width: 2,
+                  // Content - Scrollable
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Violations Section
+                          if (violations.isNotEmpty) ...[
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.red.shade50,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: Colors.red.shade300,
+                                  width: 2,
+                                ),
                               ),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.error_outline,
-                                      color: Colors.red.shade700,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'VIOLATIONS FOUND',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.red.shade900,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.error_outline,
+                                        color: Colors.red.shade700,
+                                        size: 20,
                                       ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                ...violations.map(
-                                  (v) => Padding(
-                                    padding: const EdgeInsets.only(top: 4),
-                                    child: Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        const Text(
-                                          '• ',
-                                          style: TextStyle(fontSize: 16),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'VIOLATIONS FOUND',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.red.shade900,
                                         ),
-                                        Expanded(
-                                          child: Text(
-                                            v.toString(),
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              color: Colors.red.shade900,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  ...violations.map(
+                                    (v) => Padding(
+                                      padding: const EdgeInsets.only(top: 4),
+                                      child: Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            '• ',
+                                            style: TextStyle(fontSize: 16),
+                                          ),
+                                          Expanded(
+                                            child: Text(
+                                              v.toString(),
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                color: Colors.red.shade900,
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                        ],
-
-                        // Warnings Section
-                        if (warnings.isNotEmpty) ...[
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.orange.shade50,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.orange.shade300),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.warning_amber,
-                                      color: Colors.orange.shade700,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'WARNINGS',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.orange.shade900,
+                                        ],
                                       ),
                                     ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                ...warnings.map(
-                                  (w) => Padding(
-                                    padding: const EdgeInsets.only(top: 4),
-                                    child: Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        const Text(
-                                          '• ',
-                                          style: TextStyle(fontSize: 16),
-                                        ),
-                                        Expanded(
-                                          child: Text(
-                                            w.toString(),
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              color: Colors.orange.shade900,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                        ],
-
-                        // Display category if available
-                        if (_selectedCategory != null &&
-                            _selectedCategory != ScanningCategory.qrScan) ...[
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  const Color(
-                                    0xFF005440,
-                                  ).withValues(alpha: 0.1),
-                                  const Color(
-                                    0xFF005440,
-                                  ).withValues(alpha: 0.5),
                                 ],
                               ),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: const Color(
-                                  0xFF005440,
-                                ).withValues(alpha: 0.3),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+
+                          // Warnings Section
+                          if (warnings.isNotEmpty) ...[
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.shade50,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.orange.shade300),
                               ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.warning_amber,
+                                        color: Colors.orange.shade700,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'WARNINGS',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.orange.shade900,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  ...warnings.map(
+                                    (w) => Padding(
+                                      padding: const EdgeInsets.only(top: 4),
+                                      child: Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            '• ',
+                                            style: TextStyle(fontSize: 16),
+                                          ),
+                                          Expanded(
+                                            child: Text(
+                                              w.toString(),
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                color: Colors.orange.shade900,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+
+                          // Display category if available
+                          if (_selectedCategory != null &&
+                              _selectedCategory != ScanningCategory.qrScan) ...[
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF005440).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: const Color(0xFF005440).withOpacity(0.3),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    _getCategoryIcon(_selectedCategory!),
+                                    color: const Color(0xFF005440),
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'Packaging Type',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.black45,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          _getCategoryLabel(_selectedCategory!),
+                                          style: const TextStyle(
+                                            fontSize: 15,
+                                            color: Color(0xFF005440),
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+
+                          Text(
+                            isCompliant
+                                ? 'Packaging information verified:'
+                                : 'Information found on packaging:',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.black54,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Product Name
+                          _buildExtractedField(
+                            'Product Name',
+                            extractedInfo['productName'] ?? 'Not found',
+                            Icons.inventory_2,
+                            Colors.blue,
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Brand Name
+                          _buildExtractedField(
+                            'Brand Name',
+                            extractedInfo['brandName'] ?? 'Not found',
+                            Icons.branding_watermark,
+                            Colors.indigo,
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Company
+                          _buildExtractedField(
+                            'Company',
+                            extractedInfo['company'] ?? 'Not found',
+                            Icons.business,
+                            Colors.deepPurple,
+                          ),
+                          const SizedBox(height: 12),
+
+                          // LTO Number
+                          _buildComplianceField(
+                            'LTO Number',
+                            extractedInfo['LTONumber'] ?? 'Not found',
+                            Icons.badge,
+                            extractedInfo['LTONumber']?.toString().contains(
+                                      'NOT FOUND',
+                                    ) ==
+                                    true
+                                ? Colors.red
+                                : Colors.orange,
+                            extractedInfo['LTONumber']?.toString().contains(
+                                  'NOT FOUND',
+                                ) ==
+                                true,
+                          ),
+                          const SizedBox(height: 12),
+
+                          // CFPR Number
+                          _buildComplianceField(
+                            'CFPR Number',
+                            extractedInfo['CFPRNumber'] ?? 'Not found',
+                            Icons.assignment,
+                            extractedInfo['CFPRNumber']?.toString().contains(
+                                      'NOT FOUND',
+                                    ) ==
+                                    true
+                                ? Colors.red
+                                : Colors.teal,
+                            extractedInfo['CFPRNumber']?.toString().contains(
+                                  'NOT FOUND',
+                                ) ==
+                                true,
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Manufacturer
+                          _buildExtractedField(
+                            'Manufacturer',
+                            extractedInfo['manufacturer'] ?? 'Not found',
+                            Icons.factory,
+                            Colors.purple,
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          // Info Message
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.blue.shade200),
                             ),
                             child: Row(
                               children: [
                                 Icon(
-                                  _getCategoryIcon(_selectedCategory!),
-                                  color: const Color(0xFF005440),
+                                  Icons.info_rounded,
                                   size: 20,
+                                  color: Colors.blue.shade700,
                                 ),
-                                const SizedBox(width: 12),
+                                const SizedBox(width: 8),
                                 Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      const Text(
-                                        'Packaging Type',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.black45,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        _getCategoryLabel(_selectedCategory!),
-                                        style: const TextStyle(
-                                          fontSize: 15,
-                                          color: Color(0xFF005440),
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ],
+                                  child: Text(
+                                    'Review the compliance information above. Verify the registration numbers match what is printed on the product packaging.',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.blue.shade900,
+                                      height: 1.4,
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 20),
                         ],
-
-                        Text(
-                          isCompliant
-                              ? 'Packaging information verified:'
-                              : 'Information found on packaging:',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.black54,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Product Name
-                        _buildExtractedField(
-                          'Product Name',
-                          extractedInfo['productName'] ?? 'Not found',
-                          Icons.inventory_2,
-                          Colors.blue,
-                        ),
-                        const SizedBox(height: 12),
-
-                        // Brand Name
-                        _buildExtractedField(
-                          'Brand Name',
-                          extractedInfo['brandName'] ?? 'Not found',
-                          Icons.branding_watermark,
-                          Colors.indigo,
-                        ),
-                        const SizedBox(height: 12),
-
-                        // Company
-                        _buildExtractedField(
-                          'Company',
-                          extractedInfo['company'] ?? 'Not found',
-                          Icons.business,
-                          Colors.deepPurple,
-                        ),
-                        const SizedBox(height: 12),
-
-                        // LTO Number
-                        _buildComplianceField(
-                          'LTO Number',
-                          extractedInfo['LTONumber'] ?? 'Not found',
-                          Icons.badge,
-                          extractedInfo['LTONumber']?.toString().contains(
-                                    'NOT FOUND',
-                                  ) ==
-                                  true
-                              ? Colors.red
-                              : Colors.orange,
-                          extractedInfo['LTONumber']?.toString().contains(
-                                'NOT FOUND',
-                              ) ==
-                              true,
-                        ),
-                        const SizedBox(height: 12),
-
-                        // CFPR Number
-                        _buildComplianceField(
-                          'CFPR Number',
-                          extractedInfo['CFPRNumber'] ?? 'Not found',
-                          Icons.assignment,
-                          extractedInfo['CFPRNumber']?.toString().contains(
-                                    'NOT FOUND',
-                                  ) ==
-                                  true
-                              ? Colors.red
-                              : Colors.teal,
-                          extractedInfo['CFPRNumber']?.toString().contains(
-                                'NOT FOUND',
-                              ) ==
-                              true,
-                        ),
-                        const SizedBox(height: 12),
-
-                        // NOTE: Expiration date removed - database stores certificate expiration,
-                        // not product expiration. Physical product expiration should be checked visually.
-                        const SizedBox(height: 12),
-
-                        // Manufacturer
-                        _buildExtractedField(
-                          'Manufacturer',
-                          extractedInfo['manufacturer'] ?? 'Not found',
-                          Icons.factory,
-                          Colors.purple,
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // Info Message
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.shade50,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.blue.shade200),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.info_rounded,
-                                size: 20,
-                                color: Colors.blue.shade700,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Review the compliance information above. Verify the registration numbers match what is printed on the product packaging.',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.blue.shade900,
-                                    height: 1.4,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // Action Buttons
-                        Column(
-                          children: [
-                            // Conduct Report Button (Primary Action)
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: () =>
-                                    _conductReport(extractedInfo, ocrText),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF005440),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 14,
-                                    horizontal: 12,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  elevation: 2,
-                                ),
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: const [
-                                      Icon(Icons.assignment, size: 18),
-                                      SizedBox(width: 6),
-                                      Text(
-                                        'Conduct Report',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                      ),
+                    ),
+                  ),
+                  // Sticky Action Buttons
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () => _conductReport(extractedInfo, ocrText),
+                            icon: const Icon(Icons.assignment, size: 18),
+                            label: const Text(
+                              'Conduct Report',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
-                            const SizedBox(height: 10),
-                            // Set as Draft Button
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: () =>
-                                    _saveAsDraft(extractedInfo, ocrText),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF005440),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 2,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () => _saveAsDraft(extractedInfo, ocrText),
+                                icon: const Icon(Icons.save_outlined, size: 18),
+                                label: const Text('Save Draft'),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.orange.shade600,
                                   foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 14,
-                                    horizontal: 12,
-                                  ),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  elevation: 2,
-                                ),
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: const [
-                                      Icon(Icons.save_outlined, size: 18),
-                                      SizedBox(width: 6),
-                                      Text(
-                                        'Set as Draft',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
                                   ),
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 10),
-                            // More Details Button (AI Summary) - DISABLED: Problematic feature
-                            // SizedBox(
-                            //   width: double.infinity,
-                            //   child: ElevatedButton(
-                            //     onPressed: () => _summarizeProduct(ocrText),
-                            //     style: ElevatedButton.styleFrom(
-                            //       backgroundColor: Colors.blue.shade600,
-                            //       foregroundColor: Colors.white,
-                            //       padding: const EdgeInsets.symmetric(
-                            //         vertical: 14,
-                            //         horizontal: 12,
-                            //       ),
-                            //       shape: RoundedRectangleBorder(
-                            //         borderRadius: BorderRadius.circular(12),
-                            //       ),
-                            //       elevation: 2,
-                            //     ),
-                            //     child: FittedBox(
-                            //       fit: BoxFit.scaleDown,
-                            //       child: Row(
-                            //         mainAxisAlignment: MainAxisAlignment.center,
-                            //         mainAxisSize: MainAxisSize.min,
-                            //         children: [
-                            //           Icon(Icons.auto_awesome, size: 18),
-                            //           SizedBox(width: 6),
-                            //           Text(
-                            //             'More Details (AI)',
-                            //             style: TextStyle(
-                            //               fontSize: 14,
-                            //               fontWeight: FontWeight.w600,
-                            //             ),
-                            //           ),
-                            //         ],
-                            //       ),
-                            //     ),
-                            //   ),
-                            // ),
-                            // const SizedBox(height: 10),
-                            // View OCR Text Button (Secondary Action)
-                            SizedBox(
-                              width: double.infinity,
-                              child: OutlinedButton(
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: OutlinedButton.icon(
                                 onPressed: () {
-                                  // Don't close parent modal - just show OCR text on top
-                                  // Show OCR modal with individual texts if available
                                   if (_frontOcrText != null) {
                                     _showOCRModal(
                                       _frontOcrText!,
@@ -3275,105 +3088,25 @@ class _QRScannerPageState extends State<QRScannerPage>
                                     _showOCRModal(ocrText);
                                   }
                                 },
+                                icon: const Icon(Icons.article_outlined, size: 18),
+                                label: const Text('Raw Text'),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: const Color(0xFF005440),
-                                  side: const BorderSide(
-                                    color: Color(0xFF005440),
-                                    width: 1.5,
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 14,
-                                    horizontal: 12,
-                                  ),
+                                  side: const BorderSide(color: Color(0xFF005440)),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                 ),
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(Icons.article_outlined, size: 18),
-                                      SizedBox(width: 6),
-                                      Text(
-                                        'View Raw OCR Text',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
                               ),
                             ),
-                            // Manual Input Button - DISABLED: Feature commented out
-                            // if (extractedInfo['LTONumber']?.toString().contains(
-                            //           'NOT FOUND',
-                            //         ) ==
-                            //         true ||
-                            //     extractedInfo['CFPRNumber']
-                            //             ?.toString()
-                            //             .contains('NOT FOUND') ==
-                            //         true) ...[
-                            //   const SizedBox(height: 10),
-                            //   SizedBox(
-                            //     width: double.infinity,
-                            //     child: OutlinedButton(
-                            //       onPressed: () {
-                            //         Navigator.pop(
-                            //           context,
-                            //         ); // Close current modal
-                            //         _showManualInputModal(
-                            //           extractedInfo,
-                            //           ocrText,
-                            //         );
-                            //       },
-                            //       style: OutlinedButton.styleFrom(
-                            //         foregroundColor: Colors.purple.shade700,
-                            //         side: BorderSide(
-                            //           color: Colors.purple.shade700,
-                            //           width: 1.5,
-                            //         ),
-                            //         padding: const EdgeInsets.symmetric(
-                            //           vertical: 14,
-                            //           horizontal: 12,
-                            //         ),
-                            //         shape: RoundedRectangleBorder(
-                            //           borderRadius: BorderRadius.circular(12),
-                            //         ),
-                            //       ),
-                            //       child: FittedBox(
-                            //         fit: BoxFit.scaleDown,
-                            //         child: Row(
-                            //           mainAxisAlignment:
-                            //               MainAxisAlignment.center,
-                            //           mainAxisSize: MainAxisSize.min,
-                            //           children: [
-                            //             Icon(Icons.edit, size: 18),
-                            //             SizedBox(width: 6),
-                            //             Text(
-                            //               'Manual Input',
-                            //               style: TextStyle(
-                            //                 fontSize: 14,
-                            //                 fontWeight: FontWeight.w600,
-                            //               ),
-                            //             ),
-                            //           ],
-                            //         ),
-                            //       ),
-                            //     ),
-                            //   ),
-                            // ],
                           ],
                         ),
                       ],
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
@@ -3902,7 +3635,7 @@ class _QRScannerPageState extends State<QRScannerPage>
         border: Border.all(color: Colors.grey[300]!),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: Colors.black.withOpacity(0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -3970,8 +3703,8 @@ class _QRScannerPageState extends State<QRScannerPage>
         boxShadow: [
           BoxShadow(
             color: isViolation
-                ? Colors.red.withValues(alpha: 0.1)
-                : Colors.black.withValues(alpha: 0.03),
+                ? Colors.red.withOpacity(0.1)
+                : Colors.black.withOpacity(0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -4222,92 +3955,24 @@ class _QRScannerPageState extends State<QRScannerPage>
       // Close the extracted info modal
       Navigator.of(context).pop();
 
-      // Show loading dialog while uploading images
-      if (mounted) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => Center(
-            child: Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: const [
-                  CircularProgressIndicator(color: Color(0xFF005440)),
-                  SizedBox(height: 16),
-                  Text(
-                    'Uploading images...',
-                    style: TextStyle(
-                      color: Color(0xFF005440),
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      }
-
-      // Upload images to Firebase before conducting report
-      String? uploadedFrontUrl;
-      String? uploadedBackUrl;
-
-      try {
-        final scanId = DateTime.now().millisecondsSinceEpoch.toString();
-        final uploadResult = await FirebaseStorageService.uploadScanImages(
-          scanId: scanId,
-          frontImage: File(_frontImagePath!),
-          backImage: File(_backImagePath!),
-        );
-
-        uploadedFrontUrl = uploadResult['frontUrl'];
-        uploadedBackUrl = uploadResult['backUrl'];
-
-        developer.log(
-          '📤 Images uploaded - Front: $uploadedFrontUrl, Back: $uploadedBackUrl',
-        );
-      } catch (uploadError) {
-        developer.log('⚠️ Image upload failed: $uploadError');
-        // Continue with local paths if upload fails
-      }
-
-      // Close loading dialog
-      if (mounted) Navigator.of(context).pop();
-
-      // Navigate to compliance report page with Firebase URLs (or local paths as fallback)
-      await _navigateToComplianceReport(
+      // Navigate to compliance report page with local paths for background upload
+      final success = await _navigateToComplianceReport(
         extractedInfo,
         {'found': false, 'product': null},
         'NON_COMPLIANT',
-        frontImageUrl: uploadedFrontUrl,
-        backImageUrl: uploadedBackUrl,
-        additionalImageUrls: _additionalImageUrls,
+        frontImageUrl: null,
+        backImageUrl: null,
+        additionalImageUrls: null,
         localFrontPath: _frontImagePath,
         localBackPath: _backImagePath,
         localAdditionalPaths: _additionalImagePaths,
         ocrBlobText: _ocrBlobText,
       );
 
-      // Reset state for next scan after successful navigation
-      setState(() {
-        _frontImagePath = null;
-        _backImagePath = null;
-        _additionalImagePaths = null;
-        _frontImageUrl = null;
-        _backImageUrl = null;
-        _additionalImageUrls = null;
-        _ocrBlobText = null;
-        _extractedInfo = null;
-        _frontOcrText = null;
-        _backOcrText = null;
-        _additionalOcrTexts = null;
-      });
+      // If the user cancelled the report (pressed back), reopen the modal
+      if (!success && mounted) {
+        _showExtractedInfoModal(extractedInfo, ocrText);
+      }
     } catch (e) {
       developer.log('Error conducting report: $e');
 
@@ -4330,7 +3995,80 @@ class _QRScannerPageState extends State<QRScannerPage>
   }
 
   // Navigate to compliance report page
-  Future<void> _navigateToComplianceReport(
+  // Handle the close button with double confirmation
+  Future<void> _handleCloseOCRResults(
+    Map<String, dynamic> extractedInfo,
+    String ocrText,
+  ) async {
+    // First Confirmation: Are you sure you want to exit?
+    final bool? exitConfirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Discard Scan?'),
+        content: const Text(
+          'Are you sure you want to close? You will lose the current scan results.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text(
+              'Exit',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (exitConfirmed != true) return;
+
+    // Second Confirmation: Save as Draft or Discard?
+    if (mounted) {
+      final String? result = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Save Results?'),
+          content: const Text(
+            'Would you like to save this scan as a draft before closing?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop('discard'),
+              child: const Text(
+                'Discard',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop('save'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF005440),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Save Draft'),
+            ),
+          ],
+        ),
+      );
+
+      if (result == 'save') {
+        await _saveAsDraft(extractedInfo, ocrText);
+        if (mounted) {
+          Navigator.of(context).pop(); // Close the OCR results modal
+        }
+      } else if (result == 'discard') {
+        if (mounted) {
+          Navigator.of(context).pop(); // Close the OCR results modal
+        }
+      }
+    }
+  }
+
+  Future<bool> _navigateToComplianceReport(
     Map<String, dynamic> extractedInfo,
     Map<String, dynamic> searchResponse,
     String status, {
@@ -4376,7 +4114,7 @@ class _QRScannerPageState extends State<QRScannerPage>
           _additionalOcrTexts = null;
         });
 
-        if (!mounted) return;
+        if (!mounted) return success == true;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Compliance report submitted successfully'),
@@ -4385,6 +4123,7 @@ class _QRScannerPageState extends State<QRScannerPage>
           ),
         );
       }
+      return success == true;
     } catch (e) {
       developer.log('Error navigating to compliance report: $e');
       if (mounted) {
@@ -4396,6 +4135,7 @@ class _QRScannerPageState extends State<QRScannerPage>
           ),
         );
       }
+      return false;
     }
   }
 
@@ -4542,7 +4282,7 @@ class _QRScannerPageState extends State<QRScannerPage>
         border: Border.all(color: Colors.grey[300]!),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: Colors.black.withOpacity(0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -4826,39 +4566,138 @@ class _QRScannerPageState extends State<QRScannerPage>
         // Do NOT clear image paths here as we need them for processing
       });
 
-      // Show loading indicator
+      // Show dynamic loading indicator with progress bar
       if (!mounted) return;
+      _ocrProgressNotifier.value = {'value': 0.0, 'status': 'Initializing...'};
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => Center(
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: const [
-                CircularProgressIndicator(color: Color(0xFF005440)),
-                SizedBox(height: 16),
-                Text(
-                  'Processing images...',
-                  style: TextStyle(
-                    color: Color(0xFF005440),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+        builder: (context) => ValueListenableBuilder<Map<String, dynamic>>(
+          valueListenable: _ocrProgressNotifier,
+          builder: (context, progress, child) {
+            final double value = progress['value'];
+            final String status = progress['status'];
+
+            return Center(
+              child: Dialog(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                child: Container(
+                  width: 320,
+                  padding: const EdgeInsets.all(28),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF005440).withOpacity(0.15),
+                        blurRadius: 30,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Animated Icon container
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF005440).withOpacity(0.05),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.insights_rounded,
+                          color: Color(0xFF005440),
+                          size: 48,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Analyzing Packaging',
+                        style: TextStyle(
+                          color: Color(0xFF005440),
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Scanning product details...',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      // Premium Progress Bar
+                      Stack(
+                        children: [
+                          Container(
+                            height: 12,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[100],
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 500),
+                            height: 12,
+                            width: 320 * value, // Approximate width
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF00A47D), Color(0xFF005440)],
+                              ),
+                              borderRadius: BorderRadius.circular(10),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF00A47D).withOpacity(0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        status,
+                        style: const TextStyle(
+                          color: Colors.black87,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 12),
+                      // Percentage Badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF005440).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '${(value * 100).toInt()}% Done',
+                          style: const TextStyle(
+                            color: Color(0xFF005440),
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                SizedBox(height: 8),
-                Text(
-                  'Running OCR engines',
-                  style: TextStyle(color: Colors.grey, fontSize: 12),
-                ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         ),
       );
 
@@ -4870,16 +4709,19 @@ class _QRScannerPageState extends State<QRScannerPage>
 
       // Use ML Kit as primary engine (faster and more accurate on mobile)
       developer.log('🔍 Processing images with ML Kit (Latin script)...');
-      try {
-        final frontInputImage = InputImage.fromFilePath(frontImagePath);
-        final RecognizedText frontRecognizedText = await _textRecognizer
-            .processImage(frontInputImage);
-        frontText = frontRecognizedText.text;
+      _ocrProgressNotifier.value = {'value': 0.1, 'status': 'Starting OCR engines...'};
 
-        final backInputImage = InputImage.fromFilePath(backImagePath);
-        final RecognizedText backRecognizedText = await _textRecognizer
-            .processImage(backInputImage);
-        backText = backRecognizedText.text;
+      try {
+        _ocrProgressNotifier.value = {'value': 0.2, 'status': 'Analyzing labels (ML Kit)...'};
+        
+        // Parallelize ML Kit for front and back
+        final mlKitResults = await Future.wait([
+          _textRecognizer.processImage(InputImage.fromFilePath(frontImagePath)),
+          _textRecognizer.processImage(InputImage.fromFilePath(backImagePath)),
+        ]);
+        
+        frontText = mlKitResults[0].text;
+        backText = mlKitResults[1].text;
 
         developer.log(
           '📊 ML Kit Results - Front: ${frontText.length} chars, Back: ${backText.length} chars',
@@ -4894,28 +4736,24 @@ class _QRScannerPageState extends State<QRScannerPage>
         developer.log(
           '🔍 Running Tesseract for enhanced accuracy (higher DPI)...',
         );
+        _ocrProgressNotifier.value = {'value': 0.4, 'status': 'Deep scanning labels (Tesseract)...'};
 
         try {
-          // Process both images with Tesseract at higher DPI for better accuracy
-          final ocrFront = await _ocrService.smartOcr(
-            File(frontImagePath),
-            dpi: 300, // Higher DPI for better accuracy
-            saveResult: false,
-          );
-          tesseractFrontText = ocrFront.text;
-
-          final ocrBack = await _ocrService.smartOcr(
-            File(backImagePath),
-            dpi: 300,
-            saveResult: false,
-          );
-          tesseractBackText = ocrBack.text;
+          // Parallelize Tesseract for front and back
+          final tesseractResults = await Future.wait([
+            _ocrService.smartOcr(File(frontImagePath), dpi: 300, saveResult: false),
+            _ocrService.smartOcr(File(backImagePath), dpi: 300, saveResult: false),
+          ]);
+          
+          tesseractFrontText = tesseractResults[0].text;
+          tesseractBackText = tesseractResults[1].text;
 
           developer.log(
             '📊 Tesseract Results - Front: ${tesseractFrontText.length} chars, Back: ${tesseractBackText.length} chars',
           );
 
           // Smart merge: Combine unique content from both engines
+          _ocrProgressNotifier.value = {'value': 0.65, 'status': 'Merging OCR data...'};
           frontText = _mergeOcrResults(frontText, tesseractFrontText);
           backText = _mergeOcrResults(backText, tesseractBackText);
 
@@ -4927,29 +4765,7 @@ class _QRScannerPageState extends State<QRScannerPage>
           // Continue with ML Kit results
         }
       }
-      // Upload images to Firebase immediately after OCR extraction
-      developer.log('📤 Uploading images to Firebase...');
-      try {
-        final scanId = DateTime.now().millisecondsSinceEpoch.toString();
-        final uploadResult = await FirebaseStorageService.uploadScanImages(
-          scanId: scanId,
-          frontImage: File(frontImagePath),
-          backImage: File(backImagePath),
-        );
-
-        // Store the uploaded URLssss
-        setState(() {
-          _frontImageUrl = uploadResult['frontUrl'];
-          _backImageUrl = uploadResult['backUrl'];
-        });
-
-        developer.log('✅ Images uploaded successfully');
-        developer.log('   Front URL: $_frontImageUrl');
-        developer.log('   Back URL: $_backImageUrl');
-      } catch (uploadError) {
-        developer.log('⚠️ Image upload failed: $uploadError');
-        // Continue with OCR even if upload fails - we still have local paths
-      }
+      // NOTE: Image upload deferred to ComplianceReportPage for faster OCR results
 
       developer.log(
         '📊 Final OCR Results - Front: ${frontText.length} chars, Back: ${backText.length} chars',
@@ -4972,45 +4788,45 @@ class _QRScannerPageState extends State<QRScannerPage>
         List<MapEntry<String, String>> additionalTexts = [];
         final sideLabels = ['Top', 'Bottom', 'Left', 'Right'];
 
-        for (
-          int i = 0;
-          i < _additionalImagePaths!.length && i < sideLabels.length;
-          i++
-        ) {
-          try {
-            final imagePath = _additionalImagePaths![i];
-            String sideText = '';
-
-            // Process with ML Kit
-            try {
-              final inputImage = InputImage.fromFilePath(imagePath);
-              final recognizedText = await _textRecognizer.processImage(
-                inputImage,
-              );
-              sideText = recognizedText.text;
-            } catch (e) {
-              developer.log('⚠️ ML Kit failed for ${sideLabels[i]}: $e');
-            }
-
-            // Also try Tesseract if enabled
-            if (_useTesseract) {
+        // Parallelize additional views OCR
+        _ocrProgressNotifier.value = {'value': 0.7, 'status': 'Processing additional views...'};
+        
+        try {
+          final additionalResults = await Future.wait(
+            _additionalImagePaths!.asMap().entries.map((entry) async {
+              final i = entry.key;
+              final path = entry.value;
+              if (i >= sideLabels.length) return const MapEntry<String, String>('', '');
+              
+              String text = '';
+              // ML Kit First
               try {
-                final ocrResult = await _ocrService.smartOcr(
-                  File(imagePath),
-                  dpi: 300,
-                  saveResult: false,
-                );
-                sideText = _mergeOcrResults(sideText, ocrResult.text);
+                final inputImage = InputImage.fromFilePath(path);
+                final recognizedText = await _textRecognizer.processImage(inputImage);
+                text = recognizedText.text;
               } catch (e) {
-                developer.log('⚠️ Tesseract failed for ${sideLabels[i]}: $e');
+                developer.log('⚠️ ML Kit failed for ${sideLabels[i]}: $e');
               }
-            }
-
-            additionalTexts.add(MapEntry(sideLabels[i], sideText));
-            developer.log('📊 ${sideLabels[i]} OCR: ${sideText.length} chars');
-          } catch (e) {
-            developer.log('⚠️ Failed to process ${sideLabels[i]} image: $e');
-          }
+              
+              // Tesseract second
+              if (_useTesseract) {
+                try {
+                  final tesseractResult = await _ocrService.smartOcr(File(path), dpi: 300, saveResult: false);
+                  text = _mergeOcrResults(text, tesseractResult.text);
+                } catch (e) {
+                  developer.log('⚠️ Tesseract failed for ${sideLabels[i]}: $e');
+                }
+              }
+              
+              developer.log('📊 ${sideLabels[i]} OCR: ${text.length} chars');
+              return MapEntry<String, String>(sideLabels[i], text);
+            }),
+          );
+          
+          additionalTexts = additionalResults.where((e) => e.key.isNotEmpty).toList();
+          developer.log('✅ Additional views processed: ${additionalTexts.length}');
+        } catch (e) {
+          developer.log('⚠️ Failed to process additional views: $e');
         }
 
         // Store additional OCR texts
@@ -5018,33 +4834,7 @@ class _QRScannerPageState extends State<QRScannerPage>
           _additionalOcrTexts = additionalTexts;
         });
 
-        // Upload additional images
-        developer.log('📤 Uploading additional images to Firebase...');
-        try {
-          List<String> additionalUrls = [];
-          final scanId = DateTime.now().millisecondsSinceEpoch.toString();
-
-          for (int i = 0; i < _additionalImagePaths!.length; i++) {
-            final url = await FirebaseStorageService.uploadSingleImage(
-              scanId: scanId,
-              image: File(_additionalImagePaths![i]),
-              imageName: sideLabels[i].toLowerCase(),
-            );
-            if (url != null) {
-              additionalUrls.add(url);
-            }
-          }
-
-          setState(() {
-            _additionalImageUrls = additionalUrls;
-          });
-
-          developer.log(
-            '✅ Additional images uploaded: ${additionalUrls.length}',
-          );
-        } catch (e) {
-          developer.log('⚠️ Failed to upload additional images: $e');
-        }
+        // NOTE: Additional images upload deferred to ComplianceReportPage
 
         // Add additional texts to combined text
         String additionalCombined = '';
@@ -5091,34 +4881,14 @@ class _QRScannerPageState extends State<QRScannerPage>
         return;
       }
 
-      // Upload images to Firebase immediately after successful OCR
-      developer.log('📤 Uploading images to Firebase...');
-      try {
-        final scanId = DateTime.now().millisecondsSinceEpoch.toString();
-        final uploadResult = await FirebaseStorageService.uploadScanImages(
-          scanId: scanId,
-          frontImage: File(frontImagePath),
-          backImage: File(backImagePath),
-        );
-
-        // Store the uploaded URLs
-        setState(() {
-          _frontImageUrl = uploadResult['frontUrl'];
-          _backImageUrl = uploadResult['backUrl'];
-        });
-
-        developer.log('✅ Images uploaded successfully');
-        developer.log('   Front URL: $_frontImageUrl');
-        developer.log('   Back URL: $_backImageUrl');
-      } catch (uploadError) {
-        developer.log('⚠️ Image upload failed: $uploadError');
-        // Continue with OCR even if upload fails - we still have local paths
-      }
+      // NOTE: Image upload deferred to ComplianceReportPage
 
       // ================================================================
       // LOCAL FUZZY SEARCH — runs on-device for instant results
       // Reporting / scan history / AI summary still go to the server.
       // ================================================================
+      _ocrProgressNotifier.value = {'value': 0.9, 'status': 'Searching local product DB...'};
+      developer.log('🔍 Performing local fuzzy search...');
       final apiService = ApiService();
       Map<String, dynamic> response;
 
@@ -5297,7 +5067,10 @@ class _QRScannerPageState extends State<QRScannerPage>
           },
         );
 
-        // Show extracted information to user with compliance violations
+        // Close loading dialog before showing info
+        _ocrProgressNotifier.value = {'value': 1.0, 'status': 'Processing complete!'};
+        
+        // Modal will be shown on the current page
         _showExtractedInfoModal(extractedInfo, combinedText);
       } else if (response['success'] == true &&
           response['extractedInfo'] != null) {
@@ -5323,7 +5096,6 @@ class _QRScannerPageState extends State<QRScannerPage>
               'extractedInfo': extractedInfo,
             },
           );
-
           // Show extracted information to user with "Search Product" button
           _showExtractedInfoModal(extractedInfo, combinedText);
         } else {
@@ -5343,6 +5115,11 @@ class _QRScannerPageState extends State<QRScannerPage>
           },
         );
 
+        // Close loading dialog
+        _ocrProgressNotifier.value = {'value': 1.0, 'status': 'Processing complete!'};
+        // The pop is removed here as the modal will be shown on the current page
+        // if (mounted) Navigator.of(context).pop();
+
         // Extraction failed - show info modal with option to view OCR text
         _showExtractionFailedModal(combinedText);
       }
@@ -5353,9 +5130,12 @@ class _QRScannerPageState extends State<QRScannerPage>
 
       // NOTE: Do NOT reset image paths here - user may still need them for Conduct Report
     } catch (e) {
-      // Close loading dialog if open
+      // Close loading dialog if it's still open
       if (mounted) {
-        Navigator.of(context).popUntil((route) => route.isFirst);
+        // If we are still processing, try to pop the loading dialog
+        if (_isProcessingOCR) {
+          Navigator.of(context).pop();
+        }
       }
 
       developer.log('❌ Error in dual OCR: $e');
@@ -5394,6 +5174,7 @@ class _QRScannerPageState extends State<QRScannerPage>
     _textRecognizer.close();
     _cfprController.dispose();
     _ltoController.dispose();
+    _ocrProgressNotifier.dispose();
     super.dispose();
   }
 
@@ -5475,7 +5256,7 @@ class _QRScannerPageState extends State<QRScannerPage>
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
+                              color: Colors.black.withOpacity(0.1),
                               blurRadius: 10,
                               offset: const Offset(0, 4),
                             ),
@@ -5622,7 +5403,7 @@ class ScannerOverlayPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.black.withValues(alpha: 0.5)
+      ..color = Colors.black.withOpacity(0.5)
       ..style = PaintingStyle.fill;
 
     final scanAreaSize = size.width * 0.7;

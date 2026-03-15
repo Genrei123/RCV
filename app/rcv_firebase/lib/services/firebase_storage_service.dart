@@ -265,6 +265,44 @@ class FirebaseStorageService {
     }
   }
 
+  /// Starts an upload and returns the UploadTask for progress monitoring
+  static UploadTask? startUpload({
+    required String scanId,
+    required File image,
+    required String imageName,
+  }) {
+    try {
+      developer.log('📤 [Storage] Starting upload task: $imageName for scan: $scanId');
+      
+      // Get file info
+      final fileInfo = _getFileInfo(image);
+      
+      // Sanitize scanId and imageName
+      final safeScanId = _sanitizeScanId(scanId);
+      final safeImageName = _sanitizeScanId(imageName);
+      
+      // Create reference with proper extension
+      final ref = _storage.ref().child('scans/$safeScanId/$safeImageName${fileInfo['extension']}');
+      
+      // Create metadata
+      final metadata = SettableMetadata(
+        contentType: fileInfo['contentType']!,
+        customMetadata: {
+          'scanId': safeScanId,
+          'imageName': safeImageName,
+          'originalName': path.basename(image.path),
+          'uploadedAt': DateTime.now().toIso8601String(),
+        },
+      );
+      
+      // Return the UploadTask
+      return ref.putFile(image, metadata);
+    } catch (e) {
+      developer.log('❌ [Storage] Failed to start upload task: $e');
+      return null;
+    }
+  }
+
   /// Delete user's avatar from Firebase Storage
   static Future<bool> deleteAvatar(String userId) async {
     try {
