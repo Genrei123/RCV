@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { BarChart3, RefreshCw, MapPin, Activity, Menu, X, Search, Filter } from "lucide-react";
+import { BarChart3, RefreshCw, MapPin, Activity, Menu, X, Search, Filter, ChevronDown, Check } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -48,6 +48,10 @@ export function AnalyticsMapComponent() {
   const [resolutionStatus, setResolutionStatus] = useState<string>("COMPLIANT");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState<'below' | 'above'>('below');
+  const statusDropdownRef = useRef<HTMLDivElement>(null);
+  const triggerButtonRef = useRef<HTMLButtonElement>(null);
   const hamburgerRef = useRef<HTMLDivElement | null>(null);
   const drawerRef = useRef<HTMLDivElement | null>(null);
   const hamburgerOriginalParentRef = useRef<HTMLElement | null>(null);
@@ -687,6 +691,45 @@ export function AnalyticsMapComponent() {
     }
   }, [apiResponse, mapLoaded, show3DHeatmap]);
 
+  // Close status dropdown when clicking outside and handle positioning
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      
+      if (statusDropdownRef.current && !statusDropdownRef.current.contains(target)) {
+        setShowStatusDropdown(false);
+      }
+    };
+
+    const calculatePosition = () => {
+      if (triggerButtonRef.current && showStatusDropdown) {
+        const rect = triggerButtonRef.current.getBoundingClientRect();
+        const dropdownHeight = 160; // Approximate height of dropdown
+        const viewportHeight = window.innerHeight;
+        const spaceBelow = viewportHeight - rect.bottom;
+        
+        if (spaceBelow < dropdownHeight && rect.top > dropdownHeight) {
+          setDropdownPosition('above');
+        } else {
+          setDropdownPosition('below');
+        }
+      }
+    };
+
+    if (showStatusDropdown) {
+      document.addEventListener("click", handleClickOutside);
+      calculatePosition();
+      window.addEventListener("resize", calculatePosition);
+      window.addEventListener("scroll", calculatePosition);
+    }
+
+    return () => {
+      document.removeEventListener("click", handleClickOutside);
+      window.removeEventListener("resize", calculatePosition);
+      window.removeEventListener("scroll", calculatePosition);
+    };
+  }, [showStatusDropdown]);
+
   if (mapError) {
     return (
       <div className="w-full h-full flex items-center justify-center">
@@ -973,44 +1016,131 @@ export function AnalyticsMapComponent() {
                       className="pl-8 h-8 text-xs"
                     />
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 relative" ref={statusDropdownRef}>
                     <Filter className="h-3.5 w-3.5 text-gray-500 flex-shrink-0" />
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ALL">All Reports</SelectItem>
-                        <SelectItem value="COMPLIANT">Compliant</SelectItem>
-                        <SelectItem value="NON_COMPLIANT">Non-Compliant</SelectItem>
-                        <SelectItem value="FRAUDULENT">Fraudulent</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <button
+                      ref={triggerButtonRef}
+                      type="button"
+                      onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+                      className="h-8 px-3 text-xs border border-input bg-background hover:bg-accent hover:text-accent-foreground flex items-center justify-between gap-2 rounded-md min-w-[120px] focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <span className="truncate text-left">
+                        {statusFilter === "ALL" ? "All Reports" :
+                         statusFilter === "COMPLIANT" ? "Compliant" :
+                         statusFilter === "NON_COMPLIANT" ? "Non-Compliant" :
+                         statusFilter === "FRAUDULENT" ? "Fraudulent" : "All Reports"}
+                      </span>
+                      <ChevronDown 
+                        className={`h-4 w-4 opacity-50 transition-transform ${showStatusDropdown ? 'rotate-180' : ''}`} 
+                      />
+                    </button>
+                    
+                    {showStatusDropdown && (
+                      <div 
+                        className={`absolute left-5 w-[120px] bg-popover border border-border rounded-md shadow-md overflow-hidden z-50 ${
+                          dropdownPosition === 'above' 
+                            ? 'bottom-full mb-1' 
+                            : 'top-full mt-1'
+                        }`}
+                        style={{ minWidth: triggerButtonRef.current?.offsetWidth || 120 }}
+                      >
+                        <div className="p-1">
+                          {[
+                            { value: "ALL", label: "All Reports" },
+                            { value: "COMPLIANT", label: "Compliant" },
+                            { value: "NON_COMPLIANT", label: "Non-Compliant" },
+                            { value: "FRAUDULENT", label: "Fraudulent" }
+                          ].map((option) => (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() => {
+                                setStatusFilter(option.value);
+                                setShowStatusDropdown(false);
+                              }}
+                              className={`w-full px-2 py-1.5 text-left text-xs rounded-sm hover:bg-accent hover:text-accent-foreground focus:outline-none focus:bg-accent focus:text-accent-foreground flex items-center justify-between ${
+                                statusFilter === option.value ? 'bg-accent text-accent-foreground' : ''
+                              }`}
+                            >
+                              <span>{option.label}</span>
+                              {statusFilter === option.value && (
+                                <Check className="h-3 w-3" />
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                <div className="space-y-2 max-h-80 overflow-y-auto">
-                  {apiResponse?.results?.clusters?.map((cluster) => {
-                    // Filter reports based on search and status
-                    const filteredReports = cluster.points?.filter((report: any) => {
-                      const reportId = report._id ?? report.report?._id;
-                      const productName = report.product ?? report.report?.scannedData?.productName ?? "Unknown Product";
-                      const reportStatus = report.status ?? report.report?.status ?? "NON_COMPLIANT";
+                <div className="space-y-2">
+                  {(() => {
+                    // Calculate total filtered reports across all clusters
+                    const allFilteredReports = apiResponse?.results?.clusters?.reduce((total, cluster) => {
+                      const filteredReports = cluster.points?.filter((report: any) => {
+                        const reportId = report._id ?? report.report?._id;
+                        const productName = report.product ?? report.report?.scannedData?.productName ?? "Unknown Product";
+                        const reportStatus = report.status ?? report.report?.status ?? "NON_COMPLIANT";
+                        
+                        // Search filter
+                        const matchesSearch = searchQuery === "" || 
+                          productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          reportId?.toLowerCase().includes(searchQuery.toLowerCase());
+                        
+                        // Status filter
+                        const matchesStatus = statusFilter === "ALL" || reportStatus === statusFilter;
+                        
+                        return matchesSearch && matchesStatus;
+                      }) ?? [];
                       
-                      // Search filter
-                      const matchesSearch = searchQuery === "" || 
-                        productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        reportId?.toLowerCase().includes(searchQuery.toLowerCase());
-                      
-                      // Status filter
-                      const matchesStatus = statusFilter === "ALL" || reportStatus === statusFilter;
-                      
-                      return matchesSearch && matchesStatus;
-                    }) ?? [];
+                      return total + filteredReports.length;
+                    }, 0) ?? 0;
 
-                    if (filteredReports.length === 0) return null;
+                    // Show empty state if no reports match filters
+                    if (allFilteredReports === 0) {
+                      return (
+                        <Card className="p-4 text-center">
+                          <div className="flex flex-col items-center gap-2 text-gray-500">
+                            <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+                              <Search className="h-6 w-6" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-sm">No reports found</p>
+                              <p className="text-xs">
+                                {searchQuery || statusFilter !== "ALL" 
+                                  ? "Try adjusting your search or filters"
+                                  : "No reports available"
+                                }
+                              </p>
+                            </div>
+                          </div>
+                        </Card>
+                      );
+                    }
 
-                    return (
+                    // Show filtered clusters
+                    return apiResponse?.results?.clusters?.map((cluster) => {
+                      // Filter reports based on search and status
+                      const filteredReports = cluster.points?.filter((report: any) => {
+                        const reportId = report._id ?? report.report?._id;
+                        const productName = report.product ?? report.report?.scannedData?.productName ?? "Unknown Product";
+                        const reportStatus = report.status ?? report.report?.status ?? "NON_COMPLIANT";
+                        
+                        // Search filter
+                        const matchesSearch = searchQuery === "" || 
+                          productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          reportId?.toLowerCase().includes(searchQuery.toLowerCase());
+                        
+                        // Status filter
+                        const matchesStatus = statusFilter === "ALL" || reportStatus === statusFilter;
+                        
+                        return matchesSearch && matchesStatus;
+                      }) ?? [];
+
+                      if (filteredReports.length === 0) return null;
+
+                      return (
                     <div key={cluster.cluster_id} className="space-y-1">
                       <div className="text-xs font-medium text-gray-700 sticky top-0 bg-white py-1">
                         Cluster {cluster.cluster_id} ({filteredReports.length} reports)
@@ -1075,7 +1205,8 @@ export function AnalyticsMapComponent() {
                       })}
                     </div>
                     );
-                  })}
+                  });
+                })()}
 
                   {/* Noise Points Section */}
                   {(() => {
@@ -1181,7 +1312,7 @@ export function AnalyticsMapComponent() {
           </DialogHeader>
 
           {selectedReport && (
-            <div className="space-y-4 max-h-[70vh] overflow-y-auto">
+            <div className="space-y-4">
               {/* Report Images */}
               {(selectedReport.frontImageUrl || selectedReport.backImageUrl || (selectedReport.additionalImageUrls && selectedReport.additionalImageUrls.length > 0)) && (
                 <div className="border-b pb-3">
