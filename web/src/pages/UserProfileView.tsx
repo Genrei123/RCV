@@ -362,7 +362,7 @@ export function UserProfileView() {
                 </h2>
                 <p className="text-sm text-neutral-600">Read-only view</p>
               </div>
-              {isAdmin() && (
+              {isAdmin() && !userHint && (
                 <Button
                   onClick={() => setShowEditModal(true)}
                   className="flex items-center gap-2 app-bg-primary text-white hover:app-bg-secondary hover:opacity-90"

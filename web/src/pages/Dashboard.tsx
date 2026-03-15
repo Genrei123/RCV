@@ -685,7 +685,11 @@ export function Dashboard(props: DashboardProps) {
   })();
 
   // Filter users by status - exclude rejected users from main list (they have their own tab)
+  // Also exclude superadmin accounts from the table
   const filteredUsers = usersArray.filter((user) => {
+    // Exclude superadmin accounts
+    if (user.email === 'super@gmail.com' || user.isSuperAdmin) return false;
+    
     // Don't filter out rejected users - display all users
     if (statusFilter === "all") return true;
     return user.status === statusFilter;
