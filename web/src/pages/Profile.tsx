@@ -32,6 +32,7 @@ import { AuditLogService, type AuditLog } from "@/services/auditLogService";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import { AuthService } from "@/services/authService";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 import {
   Dialog,
   DialogContent,
@@ -657,13 +658,20 @@ export function Profile({
         <Card className="w-full" data-tutorial="recent-activities">
           <CardContent className="p-4 sm:p-6 w-full">
             <div className="mb-4 w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <h2 className="text-xl font-semibold text-neutral-900">
-                Your Recent Activities
-              </h2>
+              <div className="flex items-center gap-3">
+                <h2 className="text-xl font-semibold text-neutral-900">
+                  Your Recent Activities
+                </h2>
+                {logsLoading && (
+                  <div className="scale-75 origin-left">
+                    <LoadingSpinner size="sm" showText={false} />
+                  </div>
+                )}
+              </div>
               <div className="flex items-center gap-2 relative z-10">
                 <label
                   htmlFor="activity-sort"
-                  className="text-sm text-neutral-600 hidden sm:blockcursor-pointer"
+                  className="text-sm text-neutral-600 hidden sm:block cursor-pointer"
                 >
                   Sort:
                 </label>
@@ -796,7 +804,7 @@ export function Profile({
             </div>
 
             {/* Activities Table */}
-            <div className="mb-6 w-full ">
+            <div className="mb-6 w-full min-h-[520px]">
               <DataTable
                 title=""
                 columns={activityColumns}
