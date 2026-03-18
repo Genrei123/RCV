@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import type { ReactNode } from "react";
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { LoadingSpinner } from "./LoadingSpinner";
 
 export interface Column {
@@ -75,6 +75,7 @@ export function DataTable({
     key: string;
     direction: "asc" | "desc";
   } | null>(null);
+  const [lastStableData, setLastStableData] = useState<any[] | null>(null);
 
   // Handle search
   const handleSearch = (value: string) => {
@@ -150,6 +151,17 @@ export function DataTable({
     return filtered;
   }, [data, searchQuery, columns, sortConfig]);
 
+  useEffect(() => {
+    if (!loading) {
+      setLastStableData(processedData);
+    }
+  }, [loading, processedData]);
+
+  const dataToRender =
+    loading && lastStableData && lastStableData.length > 0
+      ? lastStableData
+      : processedData;
+
   const renderCellContent = (column: Column, row: any) => {
     const value = row[column.key];
 
@@ -219,12 +231,13 @@ export function DataTable({
           )}
         </div>
       </CardHeader>
-      <CardContent className="p-4">
-        {loading ? (
+      <CardContent className="p-4 relative">
+        {/* Initial load: no previous rows to hold height */}
+        {loading && (!lastStableData || lastStableData.length === 0) ? (
           <div className="flex flex-col items-center justify-center py-16">
             <LoadingSpinner />
           </div>
-        ) : processedData.length === 0 ? (
+        ) : dataToRender.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="w-16 h-16 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center mb-4">
               {emptyStateIcon}
@@ -235,7 +248,13 @@ export function DataTable({
             <p className="text-gray-500 max-w-sm">{emptyStateDescription}</p>
           </div>
         ) : (
-          <div className="w-full overflow-x-auto">
+          <div className="w-full overflow-x-auto relative">
+            {loading && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60">
+                <LoadingSpinner />
+              </div>
+            )}
+            <div className={loading ? "opacity-50 pointer-events-none" : ""}>
             <Table>
               <TableHeader>
                 <TableRow className="border-b border-gray-200">
@@ -270,7 +289,7 @@ export function DataTable({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {processedData.map((row, rowIndex) => (
+                {dataToRender.map((row, rowIndex) => (
                   <TableRow
                     key={rowIndex}
                     className={`border-b border-gray-100 hover:app-bg-primary-soft ${
@@ -294,6 +313,7 @@ export function DataTable({
                 ))}
               </TableBody>
             </Table>
+            </div>
           </div>
         )}
       </CardContent>

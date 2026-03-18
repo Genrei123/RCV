@@ -136,18 +136,19 @@ export async function submitCertificateForApproval(input: SubmitCertificateInput
     where: { _id: input.submittedBy },
   });
 
-  const isSubmitterAdmin = submitter?.role === 'ADMIN' && submitter?.walletAuthorized && submitter?.walletAddress;
+  const submitterWallet = input.submitterWallet || submitter?.walletAddress;
+  const isSubmitterAdmin = (submitter?.role === 'ADMIN' || submitter?.isSuperAdmin) && submitter?.walletAuthorized && submitter?.walletAddress;
   
   // Initialize approvers array and count
   let initialApprovers: any[] = [];
   let initialApprovalCount = 0;
 
   // If submitter is an admin, automatically count their submission as the first approval
-  if (isSubmitterAdmin && input.submitterWallet) {
+  if (isSubmitterAdmin && submitterWallet) {
     initialApprovers = [{
       approverId: submitter._id,
       approverName: input.submitterName || `${submitter.firstName} ${submitter.lastName}`,
-      approverWallet: input.submitterWallet,
+      approverWallet: submitterWallet,
       approvalDate: new Date().toISOString(),
       signature: 'submission-auto-approval', // Marker for auto-approval on submission
     }];
@@ -165,17 +166,17 @@ export async function submitCertificateForApproval(input: SubmitCertificateInput
     status: 'pending',
     submittedBy: input.submittedBy,
     submitterName: input.submitterName,
-    submitterWallet: input.submitterWallet,
+    submitterWallet,
     pendingEntityData: input.pendingEntityData, // Store entity data for creation after approval
     entityCreated: false, // Entity will be created after full approval
     approvers: initialApprovers,
     approvalCount: initialApprovalCount,
     requiredApprovals,
     // Also set legacy first approver fields if submitter is admin
-    ...(isSubmitterAdmin && input.submitterWallet ? {
+    ...(isSubmitterAdmin && submitterWallet ? {
       firstApproverId: submitter._id,
       firstApproverName: input.submitterName || `${submitter.firstName} ${submitter.lastName}`,
-      firstApproverWallet: input.submitterWallet,
+      firstApproverWallet: submitterWallet,
       firstApprovalDate: new Date(),
       firstApprovalSignature: 'submission-auto-approval',
     } : {}),
@@ -326,8 +327,8 @@ export async function processApproval(input: ProcessApprovalInput): Promise<Cert
     throw new CustomError(403, 'Approver does not have an authorized wallet');
   }
 
-  // Check approver role - must be ADMIN
-  if (approver.role !== 'ADMIN') {
+  // Check approver role - must be ADMIN (or super admin)
+  if (approver.role !== 'ADMIN' && !approver.isSuperAdmin) {
     throw new CustomError(403, 'Only Admins can approve certificates');
   }
 

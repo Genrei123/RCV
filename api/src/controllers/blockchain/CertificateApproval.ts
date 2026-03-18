@@ -36,6 +36,8 @@ export async function submitForApproval(req: Request, res: Response, next: NextF
       throw new CustomError(401, 'User not authenticated');
     }
 
+    const authUser = req.user as any;
+
     const {
       certificateId,
       entityType,
@@ -70,8 +72,8 @@ export async function submitForApproval(req: Request, res: Response, next: NextF
       pdfHash,
       pdfUrl,
       submittedBy: userId,
-      submitterName,
-      submitterWallet,
+      submitterName: submitterName || `${authUser.firstName || ''} ${authUser.lastName || ''}`.trim() || authUser.email,
+      submitterWallet: submitterWallet || authUser.walletAddress,
       pendingEntityData, // Pass entity data for deferred creation
     });
 
