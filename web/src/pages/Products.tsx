@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Plus, Grid, List, Search, Download, Link2, HelpCircle, ShieldCheck, Loader2, CheckCircle2, AlertCircle, XCircle, X, FileSpreadsheet } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { Plus, Grid, List, Search, Download, Link2, HelpCircle, ShieldCheck, Loader2,   } from "lucide-react";
 import { PageContainer } from "@/components/PageContainer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +20,7 @@ import {
   IntegrityService,
   type BulkIntegrityResult,
 } from "@/services/integrityService";
-import * as XLSX from "xlsx";
+import { BulkIntegrityResultsModal } from "@/components/BulkIntegrityResultsModal";
 
 type PageTab = "products" | "stats";
 
@@ -34,6 +35,8 @@ export interface ProductsProps {
 }
 
 export function Products(props: ProductsProps) {
+  const [searchParams] = useSearchParams();
+  const defaultSearchQuery = searchParams.get('search') || "";
   const [pageTab] = useState<PageTab>("products");
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [showAddModal, setShowAddModal] = useState(false);
@@ -45,7 +48,7 @@ export function Products(props: ProductsProps) {
   const [pagination, setPagination] = useState<any | null>(null);
   const pageSize = 10;
   // Unified search term (server-side for both list & grid views)
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(defaultSearchQuery);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [productStatus, setProductStatus] = useState<"active" | "archived">(
     "active",
@@ -53,8 +56,32 @@ export function Products(props: ProductsProps) {
   const [showPageTutorial, setShowPageTutorial] = useState(false);
 
   // Bulk integrity check state
+  const [showBulkModal, setShowBulkModal] = useState(false);
   const [bulkResult, setBulkResult] = useState<BulkIntegrityResult | null>(null);
   const [isCheckingAll, setIsCheckingAll] = useState(false);
+
+  const handleCheckAllIntegrity = async (isRefresh = false) => {
+    if (!isRefresh) {
+      setShowBulkModal(true);
+      setBulkResult(null);
+    }
+    setIsCheckingAll(true);
+    try {
+      const result = await IntegrityService.checkAllProductsIntegrity();
+      setBulkResult(result);
+      if (!isRefresh) {
+        if (result.tamperedCount === 0 && result.dataLossCount === 0) {
+          toast.success(`All ${result.intactCount} blockchain-verified product(s) passed integrity check.`);
+        } else {
+          toast.warning(`Issues found: ${result.tamperedCount} tampered, ${result.dataLossCount} missing!`);
+        }
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to check integrity");
+    } finally {
+      setIsCheckingAll(false);
+    }
+  };
 
   // Disable body scroll when a modal is open
   useEffect(() => {
@@ -356,126 +383,7 @@ export function Products(props: ProductsProps) {
             </div>
           </div>
 
-          {/* Bulk Integrity Results Banner */}
-          {bulkResult && (
-            <div className={`mb-4 p-4 rounded-lg border ${
-              bulkResult.tamperedCount > 0
-                ? 'bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800'
-                : 'bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800'
-            }`}>
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2 mb-2">
-                  {bulkResult.tamperedCount > 0 ? (
-                    <AlertCircle className="h-5 w-5 text-red-600" />
-                  ) : (
-                    <CheckCircle2 className="h-5 w-5 text-green-600" />
-                  )}
-                  <span className={`text-sm font-semibold ${
-                    bulkResult.tamperedCount > 0
-                      ? 'text-red-700 dark:text-red-300'
-                      : 'text-green-700 dark:text-green-300'
-                  }`}>
-                    Bulk Integrity Check Results
-                  </span>
-                </div>
-                <button
-                  onClick={() => setBulkResult(null)}
-                  className="p-1 hover:bg-black/10 rounded transition-colors"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs mb-2">
-                <div className="flex items-center gap-1">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
-                  <span>Intact: <strong>{bulkResult.intactCount}</strong></span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <XCircle className="h-3.5 w-3.5 text-red-500" />
-                  <span>Tampered: <strong>{bulkResult.tamperedCount}</strong></span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <AlertCircle className="h-3.5 w-3.5 text-yellow-500" />
-                  <span>No Blockchain: <strong>{bulkResult.noBlockchainCount}</strong></span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <AlertCircle className="h-3.5 w-3.5 text-gray-400" />
-                  <span>Errors: <strong>{bulkResult.errorCount}</strong></span>
-                </div>
-              </div>
-              {bulkResult.results.length > 0 && (
-                <div className="mt-2 text-xs">
-                  <span className="font-medium text-red-700 dark:text-red-300">Affected products:</span>
-                  <ul className="mt-1 space-y-0.5 list-disc list-inside">
-                    {bulkResult.results.map(r => (
-                      <li key={r.productId} className="text-red-600 dark:text-red-400">
-                        {r.productName} — {r.mismatchCount} field(s) differ
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {/* Download Excel Report button */}
-              <div className="mt-3 pt-2 border-t border-current/10">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    // Build rows: one row per mismatched field per product
-                    const detailRows: Record<string, string>[] = [];
-                    for (const product of bulkResult.results) {
-                      for (const field of product.fields) {
-                        detailRows.push({
-                          'Product Name': product.productName,
-                          'Product ID': product.productId,
-                          'Status': product.status === 'tampered' ? 'TAMPERED' : 'ERROR',
-                          'Field': field.label,
-                          'Current DB Value': field.dbValue || '—',
-                          'Original Blockchain Value': field.blockchainValue || '—',
-                          'Match': field.match ? 'Yes' : 'NO — ALTERED',
-                          'Tx Hash': product.txHash || '',
-                          'Etherscan URL': product.etherscanUrl || '',
-                        });
-                      }
-                    }
-
-                    // Summary sheet
-                    const summaryRows = [
-                      { 'Metric': 'Total Products', 'Value': String(bulkResult.totalProducts) },
-                      { 'Metric': 'Checked (with Blockchain)', 'Value': String(bulkResult.checkedProducts) },
-                      { 'Metric': 'Intact', 'Value': String(bulkResult.intactCount) },
-                      { 'Metric': 'Tampered', 'Value': String(bulkResult.tamperedCount) },
-                      { 'Metric': 'No Blockchain Record', 'Value': String(bulkResult.noBlockchainCount) },
-                      { 'Metric': 'Errors', 'Value': String(bulkResult.errorCount) },
-                      { 'Metric': 'Report Generated At', 'Value': new Date().toLocaleString() },
-                    ];
-
-                    const wb = XLSX.utils.book_new();
-                    const summaryWs = XLSX.utils.json_to_sheet(summaryRows);
-                    summaryWs['!cols'] = [{ wch: 30 }, { wch: 20 }];
-                    XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
-
-                    if (detailRows.length > 0) {
-                      const detailWs = XLSX.utils.json_to_sheet(detailRows);
-                      detailWs['!cols'] = [
-                        { wch: 30 }, { wch: 38 }, { wch: 12 }, { wch: 22 },
-                        { wch: 30 }, { wch: 30 }, { wch: 16 }, { wch: 68 }, { wch: 60 },
-                      ];
-                      XLSX.utils.book_append_sheet(wb, detailWs, 'Tampered Details');
-                    }
-
-                    const timestamp = new Date().toISOString().split('T')[0];
-                    XLSX.writeFile(wb, `integrity-report-${timestamp}.xlsx`);
-                    toast.success('Excel report downloaded!');
-                  }}
-                  className="cursor-pointer"
-                >
-                  <FileSpreadsheet className="h-4 w-4 mr-2" />
-                  Download Excel Report
-                </Button>
-              </div>
-            </div>
-          )}
+          {/* Bulk Integrity Results Modal is mounted at the bottom of the page */}
 
           {/* Content */}
           {viewMode === "list" ? (
@@ -530,23 +438,7 @@ export function Products(props: ProductsProps) {
                     </Button>
                     <Button
                       variant="outline"
-                      onClick={async () => {
-                        setIsCheckingAll(true);
-                        setBulkResult(null);
-                        try {
-                          const result = await IntegrityService.checkAllProductsIntegrity();
-                          setBulkResult(result);
-                          if (result.tamperedCount === 0) {
-                            toast.success(`All ${result.intactCount} blockchain-verified product(s) passed integrity check.`);
-                          } else {
-                            toast.warning(`${result.tamperedCount} product(s) have been tampered with!`);
-                          }
-                        } catch (err: any) {
-                          toast.error(err.response?.data?.message || 'Failed to check integrity');
-                        } finally {
-                          setIsCheckingAll(false);
-                        }
-                      }}
+                      onClick={() => handleCheckAllIntegrity()}
                       disabled={isCheckingAll}
                       className="whitespace-nowrap cursor-pointer"
                     >
@@ -708,6 +600,20 @@ export function Products(props: ProductsProps) {
         <TutorialHelper 
           mode="page" 
           onClose={() => setShowPageTutorial(false)} 
+        />
+      )}
+
+      {/* Bulk Results Modal */}
+      {showBulkModal && (
+        <BulkIntegrityResultsModal
+          isOpen={showBulkModal}
+          isLoading={isCheckingAll}
+          onClose={() => setShowBulkModal(false)}
+          bulkResult={bulkResult}
+          onRefreshRequested={() => {
+            handleCheckAllIntegrity(true);
+            fetchProductsPage(currentPage);
+          }}
         />
       )}
     </PageContainer>

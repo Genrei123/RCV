@@ -72,8 +72,9 @@ export class DashboardService {
 
 
       // All endpoints now return { success, data, pagination }
+      // Subtract 1 from totalUsers to exclude the hidden superadmin account
       return {
-        totalUsers: usersResponse.data.pagination?.total_items || 0,
+        totalUsers: Math.max(0, (usersResponse.data.pagination?.total_items || 0) - 1),
         totalProducts: productsResponse.data.pagination?.total_items || 0,
         totalCompanies: companiesResponse.data.pagination?.total_items || 0,
         // kioskStatus: {

@@ -1,5 +1,12 @@
-import { ProductRepo, CompanyRepo } from '../typeorm/data-source';
+import { DB } from '../typeorm/data-source';
+import { ComplianceReport } from '../typeorm/entities/complianceReport.entity';
+import { ProductRepo, CompanyRepo, UserRepo } from '../typeorm/data-source';
 import { verifyTransactionOnBlockchain } from './sepoliaBlockchainService';
+import {
+  getWalletTransactions,
+  decodeTransactionData,
+  getServerWalletAddress,
+} from './blockchainRecoveryService';
 
 /**
  * Data Integrity Check Service
@@ -19,7 +26,7 @@ export interface FieldComparison {
 export interface IntegrityCheckResult {
   productId: string;
   productName: string;
-  status: 'intact' | 'tampered' | 'no_blockchain' | 'error';
+  status: 'intact' | 'tampered' | 'no_blockchain' | 'error' | 'data_loss';
   message: string;
   txHash: string | null;
   etherscanUrl: string | null;
@@ -257,6 +264,101 @@ export const revertProductFromBlockchain = async (
 };
 
 // ---------------------------------------------------------------------------
+// Restore Deleted Product
+// ---------------------------------------------------------------------------
+
+/**
+ * Restores a deleted product from the blockchain record.
+ * This re-creates the product in the database using the payload from the blockchain.
+ */
+export const restoreDeletedProduct = async (
+  productId: string,
+  txHash: string
+): Promise<{ success: boolean; message: string; product?: any }> => {
+  // 1. Check if the product already exists
+  const existingProduct = await ProductRepo.findOne({ where: { _id: productId } });
+  if (existingProduct) {
+    return { success: false, message: 'Product already exists in the database. Use revert instead.' };
+  }
+
+  // 2. Fetch the blockchain transaction data
+  const verification = await verifyTransactionOnBlockchain(txHash);
+
+  if (!verification.isValid || !verification.data) {
+    return { success: false, message: 'Could not fetch or verify blockchain data for this transaction.' };
+  }
+
+  const bcData = verification.data;
+  const entityPayload = bcData.entity || bcData;
+
+  // 3. Find an admin user to assign as the registeredBy (required field)
+  const adminUser = await UserRepo.findOne({ where: { role: 'ADMIN' } }) || await UserRepo.findOne({ where: {} });
+  if (!adminUser) {
+    return { success: false, message: 'System error: Cannot restore product as no users exist in the database to assign registration to.' };
+  }
+  
+  // Recreate the product instance using the exact same ID
+  const newProduct = ProductRepo.create({
+    _id: productId, // Restore original ID
+    sepoliaTransactionId: txHash,
+    LTONumber: entityPayload.LTONumber || '',
+    CFPRNumber: entityPayload.CFPRNumber || '',
+    lotNumber: entityPayload.lotNumber || '',
+    brandName: entityPayload.brandName || '',
+    productName: entityPayload.productName || bcData.entityName || 'Restored Product',
+    productClassification: entityPayload.classification || entityPayload.productClassification || '',
+    productSubClassification: entityPayload.subClassification || entityPayload.productSubClassification || '',
+    productImageFront: entityPayload.productImageFront || '',
+    productImageBack: entityPayload.productImageBack || '',
+    expirationDate: entityPayload.expirationDate ? new Date(entityPayload.expirationDate) : new Date('2099-12-31'),
+    isArchived: false,
+    dateOfRegistration: new Date(bcData.timestamp || Date.now()),
+    registeredById: adminUser._id,
+    registeredAt: new Date(),
+  });
+
+  // 4. Try to re-link the company if it still exists
+  let companyFound = false;
+  if (entityPayload.companyName) {
+    const company = await CompanyRepo.findOne({ where: { name: entityPayload.companyName } });
+    if (company) {
+      newProduct.companyId = company._id;
+      newProduct.company = company;
+      companyFound = true;
+    }
+  }
+  
+  // If no company found but it's required, we need a fallback
+  if (!companyFound) {
+    let fallbackCompany = await CompanyRepo.findOne({ where: { name: 'Restored Company' } });
+    if (!fallbackCompany) {
+      fallbackCompany = CompanyRepo.create({
+        name: 'Restored Company',
+        address: 'Restored from blockchain',
+        licenseNumber: 'RESTORED-123'
+      });
+      await CompanyRepo.save(fallbackCompany);
+    }
+    newProduct.companyId = fallbackCompany._id;
+    newProduct.company = fallbackCompany;
+  }
+
+  // 5. Save the restored product to DB
+  try {
+    await ProductRepo.save(newProduct);
+  } catch (error) {
+    console.error("RESTORE ERROR:", error);
+    return { success: false, message: "RESTORE ERROR: " + (error instanceof Error ? error.message : String(error)) };
+  }
+
+  return {
+    success: true,
+    message: 'Product successfully restored from the blockchain record.',
+    product: newProduct,
+  };
+};
+
+// ---------------------------------------------------------------------------
 // Bulk integrity check
 // ---------------------------------------------------------------------------
 
@@ -267,7 +369,8 @@ export interface BulkIntegrityResult {
   tamperedCount: number;
   noBlockchainCount: number;
   errorCount: number;
-  /** Only products with issues (tampered / error) are included for brevity */
+  dataLossCount: number;
+  /** Full list of all product validation outcomes (used for exhaustive investigation excel reports) */
   results: IntegrityCheckResult[];
 }
 
@@ -288,17 +391,30 @@ export const checkAllProductsIntegrity = async (): Promise<BulkIntegrityResult> 
     tamperedCount: 0,
     noBlockchainCount: 0,
     errorCount: 0,
+    dataLossCount: 0,
     results: [],
   };
 
   for (const product of allProducts) {
     if (!product.sepoliaTransactionId) {
       summary.noBlockchainCount++;
+      summary.results.push({
+        productId: product._id,
+        productName: product.productName,
+        status: 'no_blockchain',
+        message: 'This product has not been registered on the blockchain yet.',
+        txHash: null,
+        etherscanUrl: null,
+        blockTimestamp: null,
+        fields: [],
+        mismatchCount: 0,
+      });
       continue;
     }
 
     const result = await checkProductIntegrity(product._id);
     summary.checkedProducts++;
+    summary.results.push(result); // push everything
 
     switch (result.status) {
       case 'intact':
@@ -306,16 +422,198 @@ export const checkAllProductsIntegrity = async (): Promise<BulkIntegrityResult> 
         break;
       case 'tampered':
         summary.tamperedCount++;
-        summary.results.push(result);
         break;
       case 'error':
         summary.errorCount++;
-        summary.results.push(result);
         break;
       default:
         break;
     }
   }
 
+  // Detect Data Loss
+  try {
+    const walletAddress = getServerWalletAddress();
+    if (walletAddress) {
+      const transactions = await getWalletTransactions(walletAddress);
+      
+      // Use a Map to keep only the latest transaction for each certificateId
+      // (in case a record was updated multiple times)
+      const blockchainProducts = new Map<string, any>();
+
+      for (const tx of transactions) {
+        if (tx.isError !== '0') continue; // Skip failed txs
+
+        const decoded = decodeTransactionData(tx.input);
+        if (decoded && decoded.entityType === 'product') {
+          // It's a valid RCV product certificate
+          blockchainProducts.set(decoded.certificateId, {
+            ...decoded,
+            txHash: tx.hash,
+            timestamp: new Date(parseInt(tx.timeStamp) * 1000)
+          });
+        }
+      }
+
+      // Check which blockchain products are missing in the DB
+      // Create a Set of existing DB product IDs for fast lookup
+      const existingProductIds = new Set(allProducts.map(p => p._id.toString()));
+
+      for (const [certId, bcData] of blockchainProducts.entries()) {
+        if (!existingProductIds.has(certId)) {
+          // Data Loss Detected!
+          summary.dataLossCount++;
+          
+          // Construct the missing fields for the UI/Excel report
+          const missingFields = buildComparisons({}, bcData.entityData || bcData);
+          // They won't "match" because DB value is null/empty
+          missingFields.forEach(f => f.match = false);
+
+          summary.results.push({
+            productId: certId,
+            productName: bcData.entityName || 'Unknown Product',
+            status: 'data_loss',
+            message: 'Product detected on blockchain but missing from database (Data Loss).',
+            txHash: bcData.txHash,
+            etherscanUrl: `https://sepolia.etherscan.io/tx/${bcData.txHash}`,
+            blockTimestamp: bcData.timestamp,
+            fields: missingFields,
+            mismatchCount: missingFields.length,
+          });
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error during data loss detection:', err);
+  }
+
   return summary;
+};
+
+
+export interface ReportIntegrityCheckResult {
+  reportId: string;
+  status: 'intact' | 'tampered' | 'no_blockchain' | 'error' | 'data_loss';
+  message: string;
+  txHash: string | null;
+  etherscanUrl: string | null;
+  blockTimestamp: Date | null;
+  fields: FieldComparison[];
+  mismatchCount: number;
+}
+
+export const checkReportIntegrity = async (
+  reportId: string
+): Promise<ReportIntegrityCheckResult> => {
+  try {
+    const complianceRepo = DB.getRepository(ComplianceReport);
+    const report = await complianceRepo.findOne({ where: { _id: reportId } });
+
+    if (!report) {
+      return {
+        reportId,
+        status: 'error',
+        message: 'Report not found in database',
+        txHash: null,
+        etherscanUrl: null,
+        blockTimestamp: null,
+        fields: [],
+        mismatchCount: 0,
+      };
+    }
+
+    if (!report.txHash) {
+      return {
+        reportId,
+        status: 'no_blockchain',
+        message: 'No blockchain record found for this report (never resolved on-chain).',
+        txHash: null,
+        etherscanUrl: null,
+        blockTimestamp: null,
+        fields: [],
+        mismatchCount: 0,
+      };
+    }
+
+    // Verify on Sepolia via existing method
+    const validationResult = await verifyTransactionOnBlockchain(report.txHash);
+    
+    if (!validationResult.isValid || !validationResult.data) {
+      return {
+        reportId,
+        status: 'error',
+        message: 'Failed to retrieve transaction data from Sepolia blockchain.',
+        txHash: report.txHash,
+        etherscanUrl: `https://sepolia.etherscan.io/tx/${report.txHash}`,
+        blockTimestamp: null,
+        fields: [],
+        mismatchCount: 0,
+      };
+    }
+
+    const onChainData = validationResult.data;
+    if (onChainData.type !== 'RCV_REPORT_RESOLUTION') {
+      return {
+        reportId,
+        status: 'error',
+        message: 'Transaction found, but does not identify as a Report Resolution.',
+        txHash: report.txHash,
+        etherscanUrl: `https://sepolia.etherscan.io/tx/${report.txHash}`,
+        blockTimestamp: new Date(validationResult.timestamp || Date.now()),
+        fields: [],
+        mismatchCount: 0,
+      };
+    }
+
+    const { reportData } = onChainData;
+    const comparisons: FieldComparison[] = [];
+    let mismatches = 0;
+
+    const addComparison = (
+      field: string,
+      label: string,
+      dbVal: string | null,
+      bcVal: string | null
+    ) => {
+      const dbStr = dbVal || 'N/A';
+      const bcStr = bcVal || 'N/A';
+      const match = dbStr === bcStr;
+      if (!match) mismatches++;
+      comparisons.push({
+        field,
+        label,
+        dbValue: dbStr,
+        blockchainValue: bcStr,
+        match,
+      });
+    };
+
+    addComparison('status', 'Status', report.status, reportData.newStatus);
+    // You could test original status if it was kept, notes, etc.
+
+    return {
+      reportId,
+      status: mismatches === 0 ? 'intact' : 'tampered',
+      message: mismatches === 0
+        ? 'Report resolution matches immutable blockchain record.'
+        : `Found ${mismatches} discrepancy(ies) between database and blockchain.`,
+      txHash: report.txHash,
+      etherscanUrl: `https://sepolia.etherscan.io/tx/${report.txHash}`,
+      blockTimestamp: new Date(validationResult.timestamp || Date.now()),
+      fields: comparisons,
+      mismatchCount: mismatches,
+    };
+  } catch (err: any) {
+    console.error('Integrity check error for report', reportId, err);
+    return {
+      reportId,
+      status: 'error',
+      message: err.message || 'Error occurred during integrity check.',
+      txHash: null,
+      etherscanUrl: null,
+      blockTimestamp: null,
+      fields: [],
+      mismatchCount: 0,
+    };
+  }
 };

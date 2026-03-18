@@ -1,5 +1,6 @@
 import { PageContainer } from "@/components/PageContainer";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,15 +10,45 @@ import { MetaMaskService } from "@/services/metaMaskService";
 import { toast } from "react-toastify";
 
 export function CertificateVerifier() {
+  const [searchParams] = useSearchParams();
+  const urlTxHash = searchParams.get('txHash');
   const [certificateId, setCertificateId] = useState("");
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [verifying, setVerifying] = useState(false);
   const [verificationResult, setVerificationResult] = useState<any>(null);
   
   // Sepolia transaction verification
-  const [txHash, setTxHash] = useState("");
+  const [txHash, setTxHash] = useState(urlTxHash || "");
   const [sepoliaVerifying, setSepoliaVerifying] = useState(false);
   const [sepoliaResult, setSepoliaResult] = useState<any>(null);
+
+  useEffect(() => {
+    if (urlTxHash && urlTxHash !== txHash) {
+      setTxHash(urlTxHash);
+      
+      // Auto verify if hash is valid length (0x + 64 chars)
+      if (/^0x[a-fA-F0-9]{64}$/.test(urlTxHash.trim()) && !sepoliaVerifying) {
+        // Need to wrap in setTimeout to allow txHash state to update before handle
+        setTimeout(() => {
+          document.getElementById('auto-verify-btn')?.click();
+        }, 100);
+      }
+    }
+  }, [urlTxHash]);
+
+  useEffect(() => {
+    if (urlTxHash && urlTxHash !== txHash) {
+      setTxHash(urlTxHash);
+      
+      // Auto verify if hash is valid length (0x + 64 chars)
+      if (/^0x[a-fA-F0-9]{64}$/.test(urlTxHash.trim()) && !sepoliaVerifying) {
+        // Need to wrap in setTimeout to allow txHash state to update before handle
+        setTimeout(() => {
+          document.getElementById('auto-verify-btn')?.click();
+        }, 100);
+      }
+    }
+  }, [urlTxHash]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -414,6 +445,7 @@ export function CertificateVerifier() {
               {/* Action Buttons */}
               <div className="flex gap-3 pt-2">
                 <Button
+                  id="auto-verify-btn"
                   onClick={handleSepoliaVerify}
                   disabled={!txHash.trim() || sepoliaVerifying}
                   className="flex-1 bg-purple-600 hover:bg-purple-700"

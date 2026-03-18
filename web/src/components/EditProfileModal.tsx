@@ -7,6 +7,8 @@ import {
   Hash,
   Camera,
   ChevronDown,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -758,7 +760,7 @@ export function EditProfileModal({
       {cropImageSrc && (
         <AvatarCropDialog
           open={cropOpen}
-          imageSrc={cropImageSrc}
+          imageSrc={cropImageSrc!}
           onCancel={onCancelCrop}
           onSave={onSaveCropped}
           isUploading={uploadingAvatar}

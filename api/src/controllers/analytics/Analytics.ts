@@ -39,13 +39,11 @@ export const analyzeCompliance = async (req: Request, res: Response, next: NextF
     }
     
     // Build query for reports with valid location data
-    // Only include NON_COMPLIANT and FRAUDULENT reports for analysis
     let query = ComplianceReportRepo.createQueryBuilder('report')
       .where('report.location IS NOT NULL')
       .andWhere("report.location::jsonb ? 'latitude'")
-      .andWhere("report.location::jsonb ? 'longitude'")
-      .andWhere("report.status IN ('NON_COMPLIANT', 'FRAUDULENT')");
-    
+      .andWhere("report.location::jsonb ? 'longitude'");
+
     // Filter by agent if provided
     if (agentId && typeof agentId === 'string') {
       query = query.andWhere('report.agentId = :agentId', { agentId });

@@ -98,11 +98,29 @@ export class UserPageService {
     }
   }
 
+  static async revokeUser(userId: string): Promise<void> {
+    try {
+      await apiClient.patch(`/user/users/${userId}/revoke`);
+    } catch (error) {
+      console.error("Error revoking user:", error);
+      throw error;
+    }
+  }
+
   static async unrejectUser(userId: string): Promise<void> {
     try {
       await apiClient.patch(`/user/users/${userId}/unreject`);
     } catch (error) {
       console.error("Error unrejecting user:", error);
+      throw error;
+    }
+  }
+
+  static async unrevokeUser(userId: string): Promise<void> {
+    try {
+      await apiClient.patch(`/user/users/${userId}/unrevoke`);
+    } catch (error) {
+      console.error("Error unrevoking user:", error);
       throw error;
     }
   }
