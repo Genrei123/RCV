@@ -143,15 +143,15 @@ class ScanProductResponse {
     
     if (json['Product'] != null && json['Product'] is List) {
       productsList = (json['Product'] as List)
-          .where((item) => item is Map)
+          .whereType<Map>()
           .map((item) =>
-              Product.fromJson(Map<String, dynamic>.from(item as Map)))
+              Product.fromJson(Map<String, dynamic>.from(item)))
           .toList();
     } else if (json['data'] != null && json['data'] is List) {
       productsList = (json['data'] as List)
-          .where((item) => item is Map)
+          .whereType<Map>()
           .map((item) =>
-              Product.fromJson(Map<String, dynamic>.from(item as Map)))
+              Product.fromJson(Map<String, dynamic>.from(item)))
           .toList();
     }
     
