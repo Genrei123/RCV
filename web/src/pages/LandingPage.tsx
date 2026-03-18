@@ -602,7 +602,7 @@ export function LandingPage() {
                         <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
                           {slide.buttonLink && slide.buttonText && (
                             <Button
-                              onClick={() => navigateWithSwipe("/login")}
+                              onClick={() => navigateWithSwipe("https://uccingo.tech/")}
                               className="app-bg-primary hover:app-bg-secondary text-white font-semibold px-8 shadow-lg hover:shadow-xl cursor-pointer w-full sm:w-auto transition-all"
                               size="lg"
                             >
@@ -721,7 +721,7 @@ export function LandingPage() {
                     {/* Footer CTA */}
                     <div className="pt-4 border-t border-app-primary/20">
                       <Button
-                        onClick={() => navigateWithSwipe("/login")}
+                        onClick={() => navigateWithSwipe("https://www.youtube.com/watch?v=2bcglsJrDOY&t=111s")}
                         className="w-full app-bg-primary hover:app-bg-secondary text-white font-medium"
                       >
                         Explore More

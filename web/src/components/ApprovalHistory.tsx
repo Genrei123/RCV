@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Table,
   TableBody,
@@ -22,7 +22,6 @@ import {
   Clock,
   Eye,
   ExternalLink,
-  Loader2,
   AlertTriangle,
   RefreshCw,
   FileText,
@@ -34,6 +33,7 @@ import {
   type ApprovalStatus,
 } from '@/services/approvalService';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
 
 interface ApprovalHistoryProps {
   isAdmin?: boolean;
@@ -45,6 +45,7 @@ const ApprovalHistory: React.FC<ApprovalHistoryProps> = ({ isAdmin = false }) =>
   const [error, setError] = useState<string | null>(null);
   const [selectedApproval, setSelectedApproval] = useState<CertificateApproval | null>(null);
   const [activeTab, setActiveTab] = useState<ApprovalStatus | 'all'>('all');
+  const [lastStableApprovals, setLastStableApprovals] = useState<CertificateApproval[] | null>(null);
 
   const fetchApprovals = async (status?: ApprovalStatus) => {
     try {
@@ -83,6 +84,12 @@ const ApprovalHistory: React.FC<ApprovalHistoryProps> = ({ isAdmin = false }) =>
     }
   }, [activeTab, isAdmin]);
 
+  useEffect(() => {
+    if (!loading) {
+      setLastStableApprovals(approvals);
+    }
+  }, [loading, approvals]);
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
@@ -111,19 +118,17 @@ const ApprovalHistory: React.FC<ApprovalHistoryProps> = ({ isAdmin = false }) =>
     }
   };
 
-  const filteredApprovals = approvals.filter((approval) => {
-    if (activeTab === 'all') return true;
-    return approval.status === activeTab;
-  });
+  const approvalsToRender =
+    loading && lastStableApprovals && lastStableApprovals.length > 0
+      ? lastStableApprovals
+      : approvals;
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        <span className="ml-2">Loading history...</span>
-      </div>
-    );
-  }
+  const filteredApprovals = useMemo(() => {
+    return approvalsToRender.filter((approval) => {
+      if (activeTab === 'all') return true;
+      return approval.status === activeTab;
+    });
+  }, [approvalsToRender, activeTab]);
 
   return (
     <div className="space-y-4">
@@ -158,6 +163,12 @@ const ApprovalHistory: React.FC<ApprovalHistoryProps> = ({ isAdmin = false }) =>
         </TabsList>
 
         <TabsContent value={activeTab} className="mt-4">
+          {loading && (!lastStableApprovals || lastStableApprovals.length === 0) ? (
+            <div className="flex items-center justify-center p-8">
+              <LoadingSpinner text="Loading history..." />
+            </div>
+          ) : null}
+
           {filteredApprovals.length === 0 ? (
             <div className="text-center py-8">
               <FileText className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
@@ -169,7 +180,13 @@ const ApprovalHistory: React.FC<ApprovalHistoryProps> = ({ isAdmin = false }) =>
               </p>
             </div>
           ) : (
-            <div className="rounded-md border">
+            <div className="rounded-md border relative">
+              {loading && lastStableApprovals && lastStableApprovals.length > 0 && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60">
+                  <LoadingSpinner text="Loading history..." />
+                </div>
+              )}
+              <div className={loading ? 'opacity-50 pointer-events-none' : ''}>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -233,6 +250,7 @@ const ApprovalHistory: React.FC<ApprovalHistoryProps> = ({ isAdmin = false }) =>
                   ))}
                 </TableBody>
               </Table>
+              </div>
             </div>
           )}
         </TabsContent>

@@ -7,8 +7,6 @@ import {
   Hash,
   Camera,
   ChevronDown,
-  Eye,
-  EyeOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +15,6 @@ import type { ProfileUser } from "@/pages/Profile";
 import { AvatarCropDialog } from "@/components/AvatarCropDialog";
 import { FirebaseStorageService } from "@/services/firebaseStorageService";
 import { toast } from "react-toastify";
-import { AuthService } from "@/services/authService";
 
 interface PhilippineCity {
   name: string;
@@ -57,16 +54,6 @@ export function EditProfileModal({
   const [initialData, setInitialData] = useState<Partial<ProfileUser> | null>(
     null
   );
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-  });
-  const [passwordErrors, setPasswordErrors] = useState<Record<string, string>>({});
-  const [changingPassword, setChangingPassword] = useState(false);
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   /**
    * Normalize phone number for display/editing
@@ -279,54 +266,6 @@ export function EditProfileModal({
     }
   };
 
-  const handlePasswordChange = async () => {
-    // Validate password fields
-    const errors: Record<string, string> = {};
-
-    if (!passwordData.currentPassword) {
-      errors.currentPassword = 'Current password is required';
-    }
-
-    if (!passwordData.newPassword) {
-      errors.newPassword = 'New password is required';
-    } else if (passwordData.newPassword.length < 6) {
-      errors.newPassword = 'Password must be at least 6 characters';
-    }
-
-    if (!passwordData.confirmPassword) {
-      errors.confirmPassword = 'Please confirm your new password';
-    } else if (passwordData.newPassword !== passwordData.confirmPassword) {
-      errors.confirmPassword = 'Passwords do not match';
-    }
-
-    if (Object.keys(errors).length > 0) {
-      setPasswordErrors(errors);
-      return;
-    }
-
-    setChangingPassword(true);
-    try {
-      await AuthService.changePassword(
-        passwordData.currentPassword,
-        passwordData.newPassword
-      );
-      toast.success('Password changed successfully!');
-      
-      // Reset password form
-      setPasswordData({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: '',
-      });
-      setPasswordErrors({});
-    } catch (error: any) {
-      const message =
-        error.response?.data?.message || 'Failed to change password';
-      toast.error(message);
-    } finally {
-      setChangingPassword(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -789,162 +728,6 @@ export function EditProfileModal({
               </div>
             </div>
 
-            {/* Password Section */}
-            <div className="border-t pt-6">
-              <div className="mb-2 flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-800">
-                  Password
-                </h3>
-              </div>
-              <p className="text-sm text-gray-600 mb-4">
-                Need to reset your password? Use the{" "}
-                <a
-                  href="/forgot-password"
-                  className="text-teal-600 hover:text-teal-700 font-semibold underline-offset-2 hover:underline"
-                >
-                  Forgot Password
-                </a>{" "}
-                feature on the login screen.
-              </p>
-
-              {/* Password change form is hidden for now per requirements */}
-              {/* eslint-disable-next-line no-constant-binary-expression */}
-              {false && (
-                <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">
-                      Current Password <span className="text-red-500">*</span>
-                    </label>
-                  <div className="relative">
-                    <Input
-                      type={showCurrentPassword ? "text" : "password"}
-                      value={passwordData.currentPassword}
-                      onChange={(e) => {
-                        setPasswordData((prev) => ({
-                          ...prev,
-                          currentPassword: e.target.value,
-                        }));
-                        if (passwordErrors.currentPassword) {
-                          setPasswordErrors((prev) => ({
-                            ...prev,
-                            currentPassword: "",
-                          }));
-                        }
-                      }}
-                      placeholder="Enter current password"
-                      className={`${passwordErrors.currentPassword ? "border-red-500" : ""} pr-10`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowCurrentPassword((prev) => !prev)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      aria-label={showCurrentPassword ? "Hide password" : "Show password"}
-                    >
-                      {showCurrentPassword ? (
-                        <EyeOff className="w-4 h-4" />
-                      ) : (
-                        <Eye className="w-4 h-4" />
-                      )}
-                    </button>
-                  </div>
-                  {passwordErrors.currentPassword && (
-                    <p className="text-sm text-red-500">{passwordErrors.currentPassword}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">
-                    New Password <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <Input
-                      type={showNewPassword ? "text" : "password"}
-                      value={passwordData.newPassword}
-                      onChange={(e) => {
-                        setPasswordData((prev) => ({
-                          ...prev,
-                          newPassword: e.target.value,
-                        }));
-                        if (passwordErrors.newPassword) {
-                          setPasswordErrors((prev) => ({
-                            ...prev,
-                            newPassword: "",
-                          }));
-                        }
-                      }}
-                      placeholder="Enter new password (min 6 characters)"
-                      className={`${passwordErrors.newPassword ? "border-red-500" : ""} pr-10`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowNewPassword((prev) => !prev)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      aria-label={showNewPassword ? "Hide password" : "Show password"}
-                    >
-                      {showNewPassword ? (
-                        <EyeOff className="w-4 h-4" />
-                      ) : (
-                        <Eye className="w-4 h-4" />
-                      )}
-                    </button>
-                  </div>
-                  {passwordErrors.newPassword && (
-                    <p className="text-sm text-red-500">{passwordErrors.newPassword}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">
-                    Confirm New Password <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <Input
-                      type={showConfirmPassword ? "text" : "password"}
-                      value={passwordData.confirmPassword}
-                      onChange={(e) => {
-                        setPasswordData((prev) => ({
-                          ...prev,
-                          confirmPassword: e.target.value,
-                        }));
-                        if (passwordErrors.confirmPassword) {
-                          setPasswordErrors((prev) => ({
-                            ...prev,
-                            confirmPassword: "",
-                          }));
-                        }
-                      }}
-                      placeholder="Confirm new password"
-                      className={`${passwordErrors.confirmPassword ? "border-red-500" : ""} pr-10`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword((prev) => !prev)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      aria-label={showConfirmPassword ? "Hide password" : "Show password"}
-                    >
-                      {showConfirmPassword ? (
-                        <EyeOff className="w-4 h-4" />
-                      ) : (
-                        <Eye className="w-4 h-4" />
-                      )}
-                    </button>
-                  </div>
-                  {passwordErrors.confirmPassword && (
-                    <p className="text-sm text-red-500">{passwordErrors.confirmPassword}</p>
-                  )}
-                </div>
-
-                <Button
-                  type="button"
-                  onClick={handlePasswordChange}
-                  disabled={changingPassword}
-                  className="w-full bg-teal-600 hover:bg-teal-700 text-white"
-                >
-                  {changingPassword ? "Changing Password..." : "Change Password"}
-                </Button>
-              </div>
-              )}
-            </div>
           </div>
 
           {/* Actions */}

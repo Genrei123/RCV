@@ -218,15 +218,59 @@ export const TutorialHelper = ({ onClose, mode = "sidebar" }: TutorialHelperProp
 
   // Disable scroll when tutorial is open
   useEffect(() => {
-    if (isVisible) {
-      document.body.style.overflow = "hidden";
-      document.documentElement.style.overflow = "hidden";
-      document.body.style.position = "fixed";
-      document.body.style.width = "100%";
-      document.body.style.top = `-${window.scrollY}px`;
-    }
+    if (!isVisible) return;
+
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.width = "100%";
+    document.body.style.top = `-${window.scrollY}px`;
+
+    const preventScroll = (e: Event) => {
+      e.preventDefault();
+    };
+
+    const preventScrollKeys = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const isTypingTarget =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        !!target?.isContentEditable;
+      if (isTypingTarget) return;
+
+      const keysToBlock = new Set([
+        "ArrowUp",
+        "ArrowDown",
+        "PageUp",
+        "PageDown",
+        "Home",
+        "End",
+        " ",
+      ]);
+      if (keysToBlock.has(e.key)) {
+        e.preventDefault();
+      }
+    };
+
+    // Capture scroll events early so nested scroll containers don't move.
+    document.addEventListener("wheel", preventScroll, {
+      passive: false,
+      capture: true,
+    });
+    document.addEventListener("touchmove", preventScroll, {
+      passive: false,
+      capture: true,
+    });
+    document.addEventListener("keydown", preventScrollKeys, {
+      capture: true,
+    });
 
     return () => {
+      document.removeEventListener("wheel", preventScroll, true);
+      document.removeEventListener("touchmove", preventScroll, true);
+      document.removeEventListener("keydown", preventScrollKeys, true);
+
       const scrollY = document.body.style.top;
       document.body.style.overflow = "";
       document.documentElement.style.overflow = "";
