@@ -724,7 +724,10 @@ export function Dashboard(props: DashboardProps) {
 
   // Use the client-side arrays for display totals so UI text matches rendered rows
   // Use server pagination total if available, otherwise fallback to filtered array
-  const displayTotal = pagination?.total_items ?? filteredUsers.length;
+  // When using server pagination, subtract 1 if the total includes the hidden superadmin
+  const displayTotal = pagination?.total_items 
+    ? Math.max(0, pagination.total_items - 1)  // Subtract 1 to account for hidden superadmin
+    : filteredUsers.length;
   const totalPages = Math.max(1, Math.ceil(displayTotal / pageSize));
 
   // When using server pagination (pagination state exists), use data as-is from server
