@@ -11,6 +11,7 @@ import {
   Badge as BadgeIcon,
   Eye,
   Pencil,
+  HelpCircle,
 } from "lucide-react";
 import { UserPageService, type UserProfile } from "@/services/userPageService";
 import { AuthService } from "@/services/authService";
@@ -27,6 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "react-toastify";
 import type { ProfileUser } from "@/pages/Profile";
+import { TutorialHelper } from "@/components/TutorialHelper";
 
 // Read-only view of another user's profile+activities
 export function UserProfileView() {
@@ -48,6 +50,7 @@ export function UserProfileView() {
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showPageTutorial, setShowPageTutorial] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -350,10 +353,19 @@ export function UserProfileView() {
     <PageContainer
       title="Searched User"
       description="Viewing user information and activity"
+      titleAction={
+        <button
+          onClick={() => setShowPageTutorial(true)}
+          className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600 transition-colors"
+          title="Page tutorial"
+        >
+          <HelpCircle size={18} />
+        </button>
+      }
       headerAction={null}
     >
       <div className="grid w-full grid-cols-1 xl:grid-cols-2 gap-6 md:gap-8">
-        <Card className="w-full">
+        <Card className="w-full" data-tutorial="profile-info">
           <CardContent className="p-4 sm:p-6 w-full">
             <div className="mb-6 flex items-center justify-between">
               <div>
@@ -480,7 +492,7 @@ export function UserProfileView() {
             </div>
           </CardContent>
         </Card>
-        <Card className="w-full">
+        <Card className="w-full" data-tutorial="recent-activities">
           <CardContent className="p-4 sm:p-6 w-full">
             <div className="mb-4 w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <h2 className="text-xl font-semibold text-neutral-900">
@@ -765,6 +777,14 @@ export function UserProfileView() {
               throw error;
             }
           }}
+        />
+      )}
+
+      {/* Page Tutorial */}
+      {showPageTutorial && (
+        <TutorialHelper 
+          mode="page" 
+          onClose={() => setShowPageTutorial(false)} 
         />
       )}
     </PageContainer>

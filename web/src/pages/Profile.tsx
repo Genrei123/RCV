@@ -7,6 +7,7 @@ import {
   Badge as BadgeIcon,
   Archive,
   Eye,
+  HelpCircle,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import ExcelJS from "exceljs";
@@ -24,6 +25,7 @@ import {
 import { PageContainer } from "@/components/PageContainer";
 import { EditProfileModal } from "@/components/EditProfileModal";
 import { ArchiveAccountModal } from "@/components/ArchiveAccountModal";
+import { TutorialHelper } from "@/components/TutorialHelper";
 import { useEffect, useMemo, useState } from "react";
 import { UserPageService, type UserProfile } from "@/services/userPageService";
 import { AuditLogService, type AuditLog } from "@/services/auditLogService";
@@ -85,6 +87,7 @@ export function Profile({
     total_items: 0,
   });
   const [sortBy, setSortBy] = useState<"all" | "platform" | "action" | "compliance" | "scans">("all");
+  const [showPageTutorial, setShowPageTutorial] = useState(false);
 
   const sortedFullLogs = useMemo(() => {
     const arr = [...fullAuditLogs];
@@ -492,6 +495,15 @@ export function Profile({
     <PageContainer
       title="Profile"
       description="Manage your personal account information and activity"
+      titleAction={
+        <button
+          onClick={() => setShowPageTutorial(true)}
+          className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600 transition-colors"
+          title="Page tutorial"
+        >
+          <HelpCircle size={18} />
+        </button>
+      }
       headerAction={
         <div className="flex items-center gap-3 cursor-pointer">
           <Button
@@ -513,7 +525,7 @@ export function Profile({
     >
       <div className="grid w-full grid-cols-1 xl:grid-cols-2 gap-6 md:gap-8">
         {/* Profile Information */}
-        <Card className="w-full">
+        <Card className="w-full" data-tutorial="profile-info">
           <CardContent className="p-4 sm:p-6 w-full">
             <div className="mb-12">
               <h2 className="text-xl font-semibold text-neutral-900 mb-1">
@@ -642,7 +654,7 @@ export function Profile({
         </Card>
 
         {/* Recent Activities */}
-        <Card className="w-full">
+        <Card className="w-full" data-tutorial="recent-activities">
           <CardContent className="p-4 sm:p-6 w-full">
             <div className="mb-4 w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <h2 className="text-xl font-semibold text-neutral-900">
@@ -1297,6 +1309,14 @@ export function Profile({
       </Dialog>
 
       {/* Avatar Crop Dialog */}
+
+      {/* Page Tutorial */}
+      {showPageTutorial && (
+        <TutorialHelper 
+          mode="page" 
+          onClose={() => setShowPageTutorial(false)} 
+        />
+      )}
     </PageContainer>
   );
 }

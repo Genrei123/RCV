@@ -1,7 +1,7 @@
 export interface User {
   _id?: string;
   role?: 'AGENT' | 'ADMIN' | 'USER';
-  status?: 'Archived' | 'Active' | 'Pending' | 'Rejected';
+  status?: 'Archived' | 'Active' | 'Pending' | 'Rejected' | 'Revoked';
   rejectionReason?: string;
   webAccess?: boolean;
   appAccess?: boolean;

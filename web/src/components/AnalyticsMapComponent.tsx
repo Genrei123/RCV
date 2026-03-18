@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useMetaMask } from "@/contexts/MetaMaskContext";
-import { BarChart3, RefreshCw, Menu, X, Search, Filter, ChevronDown, Check, Maximize2, Minimize2 } from "lucide-react";
+import { BarChart3, RefreshCw, Menu, X, Search, Filter, ChevronDown, Check, Maximize2, Minimize2, Download } from "lucide-react";
+import { AuthService } from "@/services/authService";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -38,9 +39,12 @@ declare global {
 
 export function AnalyticsMapComponent() {
   const { isConnected: isWalletConnected, isAuthorized: isWalletAuthorized, connect: connectWallet } = useMetaMask();
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [apiResponse, setApiResponse] = useState<APIResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'clusters' | 'all'>('clusters');
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
@@ -143,6 +147,26 @@ export function AnalyticsMapComponent() {
     } finally {
       setIsResolving(false);
     }
+  };
+
+  // Fetch current user on mount
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const user = await AuthService.getCurrentUser();
+        setCurrentUser(user);
+      } catch (error) {
+        console.error('Failed to fetch current user:', error);
+      }
+    };
+    fetchUser();
+  }, []);
+
+  // Check if user is admin
+  const isAdmin = (): boolean => {
+    if (!currentUser) return false;
+    if (currentUser.isSuperAdmin) return true;
+    return currentUser.role === 'ADMIN';
   };
 
   // Store original parents for overlays on mount
@@ -862,7 +886,6 @@ export function AnalyticsMapComponent() {
 
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center gap-3">
-              
               <p className="text-sm">{error}</p>
             </div>
           )}
@@ -900,145 +923,222 @@ export function AnalyticsMapComponent() {
               {/* Left Column: Data Clusters (Reports) */}
               <div className="lg:col-span-2 space-y-6">
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                  <div className="px-5 py-4 border-b border-slate-100 bg-slate-50">
-                    <h3 className="font-semibold text-slate-800 flex items-center gap-2">
-                      
-                      Detailed Cluster Analysis ({allFilteredReports} Reports Mapped)
-                    </h3>
+                  <div className="flex flex-col border-b border-slate-100 bg-slate-50">
+                    <div className="flex items-center gap-6 px-5 pt-4">
+                      <button 
+                        onClick={() => setActiveTab('clusters')}
+                        className={`font-semibold text-sm pb-3 border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'clusters' ? 'border-indigo-500 text-indigo-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                      >
+                        Detailed Cluster Analysis ({allFilteredReports} Reports)
+                      </button>
+                      <button 
+                        onClick={() => setActiveTab('all')}
+                        className={`font-semibold text-sm pb-3 border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'all' ? 'border-indigo-500 text-indigo-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                      >
+                        All Reports
+                      </button>
+                    </div>
                   </div>
                   <div className="p-5 space-y-6">
-                    {filteredClusters.length === 0 && filteredNoise.length === 0 && (
-                       <div className="text-center py-10 text-slate-500">
-                         <Search className="h-10 w-10 mx-auto text-slate-300 mb-3" />
-                         <p>No reports match your current filters.</p>
-                       </div>
-                    )}
-                    
-                    {filteredClusters.map(cluster => {
-                      if (cluster.filteredPoints.length === 0) return null;
-                      const baseRed = 220;
-                      const green = Math.min(255, cluster.cluster_id * 40);
-                      const blue = Math.min(255, cluster.cluster_id * 20);
-                      const color = `rgb(${baseRed}, ${green}, ${blue})`;
-                      
-                      return (
-                        <div key={cluster.cluster_id} className="border border-slate-100 rounded-xl overflow-hidden">
-                          <div className="bg-slate-50 px-4 py-3 border-b border-slate-100 flex items-center gap-3">
-                            <div className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: color }}></div>
-                            <h4 className="font-medium text-slate-800">Cluster {cluster.cluster_id}</h4>
-                            <span className="bg-white border border-slate-200 text-slate-600 text-xs px-2 py-1 rounded-full">
-                              {cluster.filteredPoints.length} Items
-                            </span>
-                          </div>
-                          <div className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white">
-                            {cluster.filteredPoints.map((report: any, idx: number) => {
-                              const reportId = report._id ?? report.report?._id;
-                              const productName = report.product ?? report.report?.scannedData?.productName ?? "Unknown Product";
-                              const reportStatus = report.status ?? report.report?.status ?? "NON_COMPLIANT";
-                              const lat = report.lat ?? report.latitude ?? report.coordinates?.[1];
-                              const lng = report.lng ?? report.longitude ?? report.long ?? report.coordinates?.[0];
-                              
-                              return (
-                                <button
-                                  key={reportId || idx}
-                                  onClick={() => {
-                                    if (reportId) {
-                                      if (lat && lng && googleMapRef.current) {
-                                        googleMapRef.current.panTo({ lat: Number(lat), lng: Number(lng) });
-                                        googleMapRef.current.setZoom(15);
-                                      }
-                                      apiClient.get(`/analytics/reports/${reportId}`).then(res => {
-                                          const reportData = res.data.data;
-                                          setSelectedReport({ ...report, ...reportData, reportId, currentStatus: reportData.status, position: [lng, lat] });
-                                          setResolutionStatus(reportData.status);
-                                      }).catch(err => console.error(err));
-                                    }
-                                  }}
-                                  className="text-left p-3 rounded-lg hover:bg-blue-50 border border-slate-100 hover:border-blue-200 transition-all shadow-sm group bg-white"
-                                >
-                                  <div className="flex items-start justify-between gap-3">
-                                    <div className="flex-1 min-w-0">
-                                      <div className="text-sm font-semibold text-slate-800 truncate mb-1 group-hover:text-blue-700">
-                                        {productName}
+                    {activeTab === 'clusters' && (
+                      <>
+                        {filteredClusters.length === 0 && filteredNoise.length === 0 && (
+                           <div className="text-center py-10 text-slate-500">
+                             <Search className="h-10 w-10 mx-auto text-slate-300 mb-3" />
+                             <p>No reports match your current filters.</p>
+                           </div>
+                        )}
+                        
+                        {filteredClusters.map(cluster => {
+                          if (cluster.filteredPoints.length === 0) return null;
+                          const baseRed = 220;
+                          const green = Math.min(255, cluster.cluster_id * 40);
+                          const blue = Math.min(255, cluster.cluster_id * 20);
+                          const color = `rgb(${baseRed}, ${green}, ${blue})`;
+                          
+                          return (
+                            <div key={cluster.cluster_id} className="border border-slate-100 rounded-xl overflow-hidden">
+                              <div className="bg-slate-50 px-4 py-3 border-b border-slate-100 flex items-center gap-3">
+                                <div className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: color }}></div>
+                                <h4 className="font-medium text-slate-800">Cluster {cluster.cluster_id}</h4>
+                                <span className="bg-white border border-slate-200 text-slate-600 text-xs px-2 py-1 rounded-full">
+                                  {cluster.filteredPoints.length} Items
+                                </span>
+                              </div>
+                              <div className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white">
+                                {cluster.filteredPoints.map((report: any, idx: number) => {
+                                  const reportId = report._id ?? report.report?._id;
+                                  const productName = report.product ?? report.report?.scannedData?.productName ?? "Unknown Product";
+                                  const reportStatus = report.status ?? report.report?.status ?? "NON_COMPLIANT";
+                                  const lat = report.lat ?? report.latitude ?? report.coordinates?.[1];
+                                  const lng = report.lng ?? report.longitude ?? report.long ?? report.coordinates?.[0];
+                                  
+                                  return (
+                                    <button
+                                      key={reportId || idx}
+                                      onClick={() => {
+                                        if (reportId) {
+                                          if (lat && lng && googleMapRef.current) {
+                                            googleMapRef.current.panTo({ lat: Number(lat), lng: Number(lng) });
+                                            googleMapRef.current.setZoom(18);
+                                          }
+                                          apiClient.get(`/analytics/reports/${reportId}`).then(res => {
+                                              const reportData = res.data.data;
+                                              setSelectedReport({ ...report, ...reportData, reportId, currentStatus: reportData.status, position: [lng, lat] });
+                                              setResolutionStatus(reportData.status);
+                                          }).catch(err => console.error(err));
+                                        }
+                                      }}
+                                      className="text-left p-3 rounded-lg hover:bg-blue-50 border border-slate-100 hover:border-blue-200 transition-all shadow-sm group bg-white"
+                                    >
+                                      <div className="flex items-start justify-between gap-3">
+                                        <div className="flex-1 min-w-0">
+                                          <div className="text-sm font-semibold text-slate-800 truncate mb-1 group-hover:text-blue-700">
+                                            {productName}
+                                          </div>
+                                          <div className="text-xs text-slate-500 font-mono truncate">
+                                            ID: {reportId ? reportId.slice(0, 12) + '...' : 'Unknown'} {(report as any).createdAt || (report as any).report?.createdAt ? `[${new Date((report as any).createdAt || (report as any).report?.createdAt).toLocaleDateString()}]` : ''}
+                                          </div>
+                                        </div>
+                                        <span className={`flex-shrink-0 text-[11px] font-medium px-2 py-1 rounded-md ${
+                                          reportStatus === 'COMPLIANT' ? 'bg-green-100 text-green-700 border border-green-200' :
+                                          reportStatus === 'FRAUDULENT' ? 'bg-red-100 text-red-700 border border-red-200' :
+                                          'bg-amber-100 text-amber-700 border border-amber-200'
+                                        }`}>
+                                          {reportStatus === 'COMPLIANT' ? 'COMPLIANT' :
+                                           reportStatus === 'FRAUDULENT' ? 'FRAUDULENT' : 'NON-COMPLIANT'}
+                                        </span>
                                       </div>
-                                      <div className="text-xs text-slate-500 font-mono truncate">
-                                        ID: {reportId ? reportId.slice(0, 12) + '...' : 'Unknown'}
-                                      </div>
-                                    </div>
-                                    <span className={`flex-shrink-0 text-[11px] font-medium px-2 py-1 rounded-md ${
-                                      reportStatus === 'COMPLIANT' ? 'bg-green-100 text-green-700 border border-green-200' :
-                                      reportStatus === 'FRAUDULENT' ? 'bg-red-100 text-red-700 border border-red-200' :
-                                      'bg-amber-100 text-amber-700 border border-amber-200'
-                                    }`}>
-                                      {reportStatus === 'COMPLIANT' ? 'COMPLIANT' :
-                                       reportStatus === 'FRAUDULENT' ? 'FRAUDULENT' : 'NON-COMPLIANT'}
-                                    </span>
-                                  </div>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
 
-                    {filteredNoise.length > 0 && (
-                      <div className="border border-slate-100 rounded-xl overflow-hidden">
-                        <div className="bg-slate-100 px-4 py-3 border-b border-slate-200 flex items-center gap-3">
-                          <div className="w-4 h-4 rounded-full shadow-sm bg-slate-500"></div>
-                          <h4 className="font-medium text-slate-800">Noise Points</h4>
-                          <span className="bg-white border border-slate-200 text-slate-600 text-xs px-2 py-1 rounded-full">
-                            {filteredNoise.length} Items
-                          </span>
-                        </div>
-                        <div className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white">
-                          {filteredNoise.map((report: any, idx: number) => {
-                            const reportId = report._id ?? report.report?._id;
-                            const productName = report.product ?? report.report?.scannedData?.productName ?? "Unknown Product";
-                            const reportStatus = report.status ?? report.report?.status ?? "NON_COMPLIANT";
-                            const lat = report.lat ?? report.latitude ?? report.coordinates?.[1];
-                            const lng = report.lng ?? report.longitude ?? report.long ?? report.coordinates?.[0];
-                            
-                            return (
-                              <button
-                                key={reportId || idx}
-                                onClick={() => {
-                                  if (reportId) {
-                                    if (lat && lng && googleMapRef.current) {
-                                      googleMapRef.current.panTo({ lat: Number(lat), lng: Number(lng) });
-                                      googleMapRef.current.setZoom(15);
-                                    }
-                                    apiClient.get(`/analytics/reports/${reportId}`).then(res => {
-                                        const reportData = res.data.data;
-                                        setSelectedReport({ ...report, ...reportData, reportId, currentStatus: reportData.status, position: [lng, lat] });
-                                        setResolutionStatus(reportData.status);
-                                    }).catch(err => console.error(err));
+                        {filteredNoise.length > 0 && (
+                          <div className="border border-slate-100 rounded-xl overflow-hidden">
+                            <div className="bg-slate-100 px-4 py-3 border-b border-slate-200 flex items-center gap-3">
+                              <div className="w-4 h-4 rounded-full shadow-sm bg-slate-500"></div>
+                              <h4 className="font-medium text-slate-800">Noise Points</h4>
+                              <span className="bg-white border border-slate-200 text-slate-600 text-xs px-2 py-1 rounded-full">
+                                {filteredNoise.length} Items
+                              </span>
+                            </div>
+                            <div className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white">
+                              {filteredNoise.map((report: any, idx: number) => {
+                                const reportId = report._id ?? report.report?._id;
+                                const productName = report.product ?? report.report?.scannedData?.productName ?? "Unknown Product";
+                                const reportStatus = report.status ?? report.report?.status ?? "NON_COMPLIANT";
+                                const lat = report.lat ?? report.latitude ?? report.coordinates?.[1];
+                                const lng = report.lng ?? report.longitude ?? report.long ?? report.coordinates?.[0];
+                                
+                                return (
+                                  <button
+                                    key={reportId || idx}
+                                    onClick={() => {
+                                      if (reportId) {
+                                        if (lat && lng && googleMapRef.current) {
+                                          googleMapRef.current.panTo({ lat: Number(lat), lng: Number(lng) });
+                                          googleMapRef.current.setZoom(15);
+                                        }
+                                        apiClient.get(`/analytics/reports/${reportId}`).then(res => {
+                                            const reportData = res.data.data;
+                                            setSelectedReport({ ...report, ...reportData, reportId, currentStatus: reportData.status, position: [lng, lat] });
+                                            setResolutionStatus(reportData.status);
+                                        }).catch(err => console.error(err));
+                                      }
+                                    }}
+                                    className="text-left p-3 rounded-lg hover:bg-slate-50 border border-slate-100 hover:border-slate-300 transition-all shadow-sm group bg-white"
+                                  >
+                                    <div className="flex items-start justify-between gap-3">
+                                      <div className="flex-1 min-w-0">
+                                        <div className="text-sm font-semibold text-slate-800 truncate mb-1 group-hover:text-amber-700">
+                                          {productName}
+                                        </div>
+                                        <div className="text-xs text-slate-500 font-mono truncate">
+                                          ID: {reportId ? reportId.slice(0, 12) + '...' : 'Unknown'} {(report as any).createdAt || (report as any).report?.createdAt ? `[${new Date((report as any).createdAt || (report as any).report?.createdAt).toLocaleDateString()}]` : ''}
+                                        </div>
+                                      </div>
+                                      <span className={`flex-shrink-0 text-[11px] font-medium px-2 py-1 rounded-md ${
+                                        reportStatus === 'COMPLIANT' ? 'bg-green-100 text-green-700 border border-green-200' :
+                                        reportStatus === 'FRAUDULENT' ? 'bg-red-100 text-red-700 border border-red-200' :
+                                        'bg-amber-100 text-amber-700 border border-amber-200'
+                                      }`}>
+                                        {reportStatus === 'COMPLIANT' ? 'COMPLIANT' :
+                                         reportStatus === 'FRAUDULENT' ? 'FRAUDULENT' : 'NON-COMPLIANT'}
+                                      </span>
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {activeTab === 'all' && (
+                      <div className="space-y-4">
+                        {(apiResponse?.results?.clusters?.flatMap(c => c.points) || []).sort((a: any, b: any) => new Date(b.createdAt || b.report?.createdAt || b.scannedAt || b.report?.scannedAt || 0).getTime() - new Date(a.createdAt || a.report?.createdAt || a.scannedAt || a.report?.scannedAt || 0).getTime()).map((report: any, idx: number) => {
+                          const reportId = report._id ?? report.report?._id;
+                          const productName = report.product ?? report.report?.scannedData?.productName ?? "Unknown Product";
+                          const reportStatus = report.status ?? report.report?.status ?? "NON_COMPLIANT";
+                          const lat = report.lat ?? report.latitude ?? report.coordinates?.[1];
+                          const lng = report.lng ?? report.longitude ?? report.long ?? report.coordinates?.[0];
+                          const createdAt = report.createdAt ?? report.report?.createdAt;
+                          
+                          return (
+                            <button
+                              key={reportId || idx}
+                              onClick={() => {
+                                if (reportId) {
+                                  if (lat && lng && googleMapRef.current) {
+                                    googleMapRef.current.panTo({ lat: Number(lat), lng: Number(lng) });
+                                    googleMapRef.current.setZoom(15);
+                                    window.scrollTo({ top: 0, behavior: 'smooth' });
                                   }
-                                }}
-                                className="text-left p-3 rounded-lg hover:bg-slate-50 border border-slate-100 hover:border-slate-300 transition-all shadow-sm group bg-white"
-                              >
-                                <div className="flex items-start justify-between gap-3">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="text-sm font-semibold text-slate-800 truncate mb-1 group-hover:text-amber-700">
-                                      {productName}
-                                    </div>
-                                    <div className="text-xs text-slate-500 font-mono truncate">
-                                      ID: {reportId ? reportId.slice(0, 12) + '...' : 'Unknown'}
-                                    </div>
+                                  apiClient.get(`/analytics/reports/${reportId}`).then(res => {
+                                      const reportData = res.data.data;
+                                      setSelectedReport({ ...report, ...reportData, reportId, currentStatus: reportData.status, position: [lng, lat] });
+                                      setResolutionStatus(reportData.status);
+                                  }).catch(err => console.error(err));
+                                }
+                              }}
+                              className="w-full text-left p-4 rounded-xl hover:bg-slate-50 border border-slate-200 hover:border-indigo-300 transition-all shadow-sm group bg-white flex flex-col gap-2"
+                            >
+                              <div className="flex items-start justify-between gap-3 w-full">
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-base font-semibold text-slate-800 truncate mb-1 group-hover:text-indigo-700">
+                                    {productName}
                                   </div>
-                                  <span className={`flex-shrink-0 text-[11px] font-medium px-2 py-1 rounded-md ${
-                                    reportStatus === 'COMPLIANT' ? 'bg-green-100 text-green-700 border border-green-200' :
-                                    reportStatus === 'FRAUDULENT' ? 'bg-red-100 text-red-700 border border-red-200' :
-                                    'bg-amber-100 text-amber-700 border border-amber-200'
-                                  }`}>
-                                    {reportStatus === 'COMPLIANT' ? 'COMPLIANT' :
-                                     reportStatus === 'FRAUDULENT' ? 'FRAUDULENT' : 'NON-COMPLIANT'}
-                                  </span>
+                                  <div className="text-sm text-slate-500 font-mono truncate">
+                                    ID: {reportId ? reportId.slice(0, 12) + '...' : 'Unknown'}
+                                  </div>
                                 </div>
-                              </button>
-                            );
-                          })}
-                        </div>
+                                <span className={`flex-shrink-0 text-[11px] font-medium px-2 py-1 rounded-md ${
+                                  reportStatus === 'COMPLIANT' ? 'bg-green-100 text-green-700 border border-green-200' :
+                                  reportStatus === 'FRAUDULENT' ? 'bg-red-100 text-red-700 border border-red-200' :
+                                  'bg-amber-100 text-amber-700 border border-amber-200'
+                                }`}>
+                                  {reportStatus === 'COMPLIANT' ? 'COMPLIANT' :
+                                   reportStatus === 'FRAUDULENT' ? 'FRAUDULENT' : 'NON-COMPLIANT'}
+                                </span>
+                              </div>
+                              {createdAt && (
+                                <div className="text-xs text-slate-400 mt-1">
+                                  {new Date(createdAt).toLocaleString()}
+                                </div>
+                              )}
+                            </button>
+                          );
+                        })}
+                        {((apiResponse?.results?.clusters?.flatMap(c => c.points) || []).length === 0) && (
+                          <div className="text-center py-10 text-slate-500">
+                            <p>No reports found.</p>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1050,7 +1150,6 @@ export function AnalyticsMapComponent() {
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                   <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
                     <h3 className="font-semibold text-slate-800 flex items-center gap-2 text-sm">
-                      
                       DBSCAN Configuration
                     </h3>
                   </div>
@@ -1076,7 +1175,6 @@ export function AnalyticsMapComponent() {
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                   <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
                     <h3 className="font-semibold text-slate-800 flex items-center gap-2 text-sm">
-                      
                       Cluster Map Legend
                     </h3>
                   </div>
@@ -1188,7 +1286,6 @@ export function AnalyticsMapComponent() {
             {apiResponse?.results && (
               <Card className="shadow-md p-3 sm:p-4 bg-gradient-to-br from-blue-50 to-white border-2 border-blue-200">
                 <div className="flex items-center gap-2 mb-3 min-w-0">
-                  
                   <span className="text-base font-bold break-words">
                     Clustering Results
                   </span>
@@ -1238,7 +1335,6 @@ export function AnalyticsMapComponent() {
                     </>
                   ) : (
                     <>
-                      
                       Run Analysis
                     </>
                   )}
@@ -1269,7 +1365,6 @@ export function AnalyticsMapComponent() {
               <Card className="shadow-sm p-2 sm:p-3 bg-white border border-gray-200">
                 <div className="text-sm text-gray-600">
                   <p className="font-semibold mb-2 flex items-center gap-2 min-w-0">
-                    
                     <span className="break-words">DBSCAN Parameters</span>
                   </p>
                   <div className="space-y-1 text-xs">
@@ -1299,7 +1394,6 @@ export function AnalyticsMapComponent() {
               <Card className="shadow-sm p-2 sm:p-3 bg-white border border-gray-200">
                 <div className="text-sm">
                   <p className="font-medium mb-2 flex items-center gap-2">
-                    
                     <span className="break-words">Cluster Visualization</span>
                   </p>
                   <div className="space-y-2 text-xs">
@@ -1354,7 +1448,6 @@ export function AnalyticsMapComponent() {
             {apiResponse?.results && (
               <Card className="shadow-sm p-2 sm:p-3 bg-white border border-gray-200">
                 <div className="flex items-center gap-2 mb-2 min-w-0">
-                  
                   <span className="text-sm font-semibold break-words">
                     Clustering Results
                   </span>
@@ -1395,7 +1488,6 @@ export function AnalyticsMapComponent() {
             {apiResponse?.results && (
               <Card className="shadow-sm p-2 sm:p-3 bg-white border border-gray-200">
                 <div className="flex items-center gap-2 mb-2 min-w-0">
-                  
                   <span className="text-sm font-semibold break-words">
                     Reports List
                   </span>
@@ -2017,8 +2109,8 @@ export function AnalyticsMapComponent() {
                 </div>
               )}
 
-              {/* Status Change Controls */}
-              {true && (
+              {/* Status Change Controls - Admin only */}
+              {isAdmin() && (
                 <div className="border-b pb-3">
                   <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
                     <p className="text-sm font-medium text-amber-900 mb-2">
@@ -2081,41 +2173,70 @@ export function AnalyticsMapComponent() {
                 }
               }}
             >
-              
               View on Map
             </Button>
-            {!isWalletConnected ? (
-              <Button
-                onClick={() => connectWallet()}
-                className="bg-orange-500 hover:bg-orange-600 text-white"
-              >
-                Connect MetaMask
-              </Button>
-            ) : !isWalletAuthorized ? (
-              <Button
-                disabled
-                className="bg-neutral-300 text-neutral-500 cursor-not-allowed"
-              >
-                Unauthorized Wallet
-              </Button>
-            ) : (
-              <Button
-                onClick={() => {
-                  if (selectedReport?.reportId) {
-                    handleResolveReport(selectedReport.reportId);
-                  }
-                }}
-                disabled={isResolving}
-                className="bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center min-w-[140px]"
-              >
-                {isResolving ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing</>
+            {isAdmin() && (
+              <>
+                {!isWalletConnected ? (
+                  <Button
+                    onClick={() => connectWallet()}
+                    className="bg-orange-500 hover:bg-orange-600 text-white"
+                  >
+                    Connect MetaMask
+                  </Button>
+                ) : !isWalletAuthorized ? (
+                  <Button
+                    disabled
+                    className="bg-neutral-300 text-neutral-500 cursor-not-allowed"
+                  >
+                    Unauthorized Wallet
+                  </Button>
                 ) : (
-                  selectedReport?.isVerified ? 'Update Status' : 'Approve'
+                  <Button
+                    onClick={() => {
+                      if (selectedReport?.reportId) {
+                        handleResolveReport(selectedReport.reportId);
+                      }
+                    }}
+                    disabled={isResolving}
+                    className="bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center min-w-[140px]"
+                  >
+                    {isResolving ? (
+                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing</>
+                    ) : (
+                      selectedReport?.isVerified ? 'Update Status' : 'Approve'
+                    )}
+                  </Button>
                 )}
-              </Button>
+              </>
             )}
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+        <DialogContent className="max-w-4xl w-full h-[90vh] bg-slate-900 border-slate-800 p-0 overflow-hidden flex flex-col">
+          <div className="flex justify-between items-center p-4 border-b border-white/10 bg-slate-900/50 absolute top-0 left-0 right-0 z-10">
+            <h2 className="text-white font-medium">Report Image</h2>
+            <a 
+              href={selectedImage || ''} 
+              download="report-image.jpg"
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded flex items-center gap-2 transition-colors cursor-pointer"
+            >
+              <Download className="w-4 h-4" /> Download
+            </a>
+          </div>
+          {selectedImage && (
+            <div className="flex-1 w-full h-full relative flex flex-col items-center justify-center overflow-auto p-4 custom-scrollbar">
+              <img 
+                src={selectedImage} 
+                alt="Enlarged Report" 
+                className="max-w-full max-h-full object-contain rounded" 
+              />
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

@@ -66,10 +66,12 @@ export function Blockchain() {
 
   // Data states
   const [certificates, setCertificates] = useState<BlockchainCertificate[]>([]);
+  const [allCertificates, setAllCertificates] = useState<BlockchainCertificate[]>([]);
   const [stats, setStats] = useState<BlockchainStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [pagination, setPagination] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const pageSize = 10;
 
   // Certificate detail modal state
@@ -95,11 +97,47 @@ export function Blockchain() {
     fetchData();
   }, [currentPage, sortBy]);
 
+  // Reset page and refetch when search changes
   useEffect(() => {
-    if (activeTab === "sepolia") {
-      fetchSepoliaStatus();
+    setCurrentPage(1);
+    if (searchQuery.trim()) {
+      fetchAllCertificates();
     }
-  }, [activeTab]);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    // Only fetch paginated data when NOT searching
+    if (!searchQuery.trim()) {
+      fetchData();
+    }
+  }, [currentPage, sortBy]);
+
+  useEffect(() => {
+    // Fetch data on component mount
+    if (!searchQuery.trim()) {
+      fetchData();
+    }
+  }, []);
+
+  const fetchAllCertificates = async () => {
+    setLoading(true);
+    try {
+      // Fetch all certificates without pagination
+      const certResponse = await MetaMaskService.getBlockchainCertificates(
+        1,
+        1000, // Large number to get all certificates
+        sortBy
+      );
+      if (certResponse.success) {
+        setAllCertificates(certResponse.certificates);
+        setPagination(certResponse.pagination);
+      }
+    } catch (error) {
+      console.error("Error fetching all certificates:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -122,6 +160,13 @@ export function Blockchain() {
     }
 
     setLoading(false);
+  };
+
+  // Determine display data - pass all certificates when searching so DataTable can filter them
+  const displayData = searchQuery.trim() ? allCertificates : certificates;
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
   };
 
   const fetchSepoliaStatus = async () => {
@@ -288,7 +333,9 @@ export function Blockchain() {
     },
   ];
 
-  const totalPages = pagination ? pagination.total_pages : 1;
+  const totalPages = searchQuery.trim() 
+    ? Math.ceil(allCertificates.length / pageSize)
+    : (pagination ? pagination.total_pages : 1);
 
   return (
     <PageContainer
@@ -526,8 +573,9 @@ export function Blockchain() {
             <DataTable
               title="Blockchain Certificates"
               columns={columns}
-              data={certificates}
+              data={displayData}
               searchPlaceholder="Search certificates..."
+              onSearch={handleSearch}
               loading={loading}
               emptyStateTitle="No Certificates Found"
               emptyStateDescription="Blockchain-verified certificates will appear here once products or companies are registered with blockchain verification."
@@ -562,7 +610,7 @@ export function Blockchain() {
                 <Pagination
                   currentPage={currentPage}
                   totalPages={totalPages}
-                  totalItems={pagination.total_items}
+                  totalItems={searchQuery.trim() ? allCertificates.length : pagination.total_items}
                   itemsPerPage={pageSize}
                   onPageChange={setCurrentPage}
                   showingPosition="left"

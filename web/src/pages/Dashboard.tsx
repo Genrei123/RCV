@@ -137,8 +137,13 @@ export function Dashboard(props: DashboardProps) {
   const [rejectLoading, setRejectLoading] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
 
+  // Revoke confirmation dialog state
+  const [revokeDialogOpen, setRevokeDialogOpen] = useState(false);
+  const [userToRevoke, setUserToRevoke] = useState<User | null>(null);
+  const [revokeUserLoading, setRevokeUserLoading] = useState(false);
+
   // Status filter state
-  const [statusFilter, setStatusFilter] = useState<"all" | "Pending" | "Active" | "Rejected" | "Archived">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "Pending" | "Active" | "Rejected" | "Revoked" | "Archived">("all");
   const [statusFilterOpen, setStatusFilterOpen] = useState(false);
   const [sortFilterOpen, setSortFilterOpen] = useState(false);
   const statusFilterRef = useRef<HTMLDivElement>(null);
@@ -230,7 +235,7 @@ export function Dashboard(props: DashboardProps) {
       key: "status",
       label: "Status",
       sortable: true,
-      render: (value: "Archived" | "Active" | "Pending" | "Rejected") => {
+      render: (value: "Archived" | "Active" | "Pending" | "Rejected" | "Revoked") => {
         const statusConfig: {
           [key: string]: {
             label: string;
@@ -254,6 +259,11 @@ export function Dashboard(props: DashboardProps) {
           },
           Rejected: {
             label: "Rejected",
+            className:
+              "border-red-500 text-red-700 bg-red-50 hover:bg-red-100",
+          },
+          Revoked: {
+            label: "Revoked",
             className:
               "border-red-500 text-red-700 bg-red-50 hover:bg-red-100",
           },
@@ -379,65 +389,70 @@ export function Dashboard(props: DashboardProps) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="overflow-visible">
-            {/* Edit - only for pending/badge_verified */}
-            {['pending', 'badge_verified'].includes(row.status) && (
-              <DropdownMenuItem onClick={() => handleEditInvite(row)}>
-                <Pencil className="h-4 w-4 mr-2" />
-                Edit
-              </DropdownMenuItem>
-            )}
-            {/* Resend - only for pending */}
-            {row.status === 'pending' && (
-              <DropdownMenuItem onClick={() => handleResendInvite(row._id)}>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Resend Email
-              </DropdownMenuItem>
-            )}
-            {/* Revoke - only for pending/badge_verified */}
-            {['pending', 'badge_verified'].includes(row.status) && (
+            {/* Admin-only actions - Edit, Resend, Revoke, Archive */}
+            {isAdmin() && (
               <>
+                {/* Edit - only for pending/badge_verified */}
+                {['pending', 'badge_verified'].includes(row.status) && (
+                  <DropdownMenuItem onClick={() => handleEditInvite(row)}>
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Edit
+                  </DropdownMenuItem>
+                )}
+                {/* Resend - only for pending */}
+                {row.status === 'pending' && (
+                  <DropdownMenuItem onClick={() => handleResendInvite(row._id)}>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Resend Email
+                  </DropdownMenuItem>
+                )}
+                {/* Revoke - only for pending/badge_verified */}
+                {['pending', 'badge_verified'].includes(row.status) && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={() => handleRevokeInvite(row._id)}
+                      className="text-red-600"
+                      variant="destructive"
+                    >
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Revoke
+                    </DropdownMenuItem>
+                  </>
+                )}
+                {/* Archive - for any status except archived */}
+                {row.status !== 'archived' && (
+                  <DropdownMenuItem 
+                    onClick={() => handleArchiveInvite(row._id)}
+                    className="app-text-archived"
+                    variant="archived"
+                  >
+                    <Archive className="h-4 w-4 mr-2" />
+                    Archive
+                  </DropdownMenuItem>
+                )}
+                {/* Unarchive - only for archived */}
+                {row.status === 'archived' && (
+                  <DropdownMenuItem 
+                    onClick={() => handleUnarchiveInvite(row._id)}
+                    className="app-text-archived"
+                    variant="archived"
+                  >
+                    <ArchiveRestore className="h-4 w-4 mr-2" />
+                    Unarchive
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
+                {/* Delete - admin only */}
                 <DropdownMenuItem 
-                  onClick={() => handleRevokeInvite(row._id)}
+                  onClick={() => handleDeleteInvite(row._id)}
                   className="text-red-600"
-                  variant="destructive"
                 >
-                  <XCircle className="h-4 w-4 mr-2" />
-                  Revoke
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
                 </DropdownMenuItem>
               </>
             )}
-            {/* Archive - for any status except archived */}
-            {row.status !== 'archived' && (
-              <DropdownMenuItem 
-                onClick={() => handleArchiveInvite(row._id)}
-                className="app-text-archived"
-                variant="archived"
-              >
-                <Archive className="h-4 w-4 mr-2" />
-                Archive
-              </DropdownMenuItem>
-            )}
-            {/* Unarchive - only for archived */}
-            {row.status === 'archived' && (
-              <DropdownMenuItem 
-                onClick={() => handleUnarchiveInvite(row._id)}
-                className="app-text-archived"
-                variant="archived"
-              >
-                <ArchiveRestore className="h-4 w-4 mr-2" />
-                Unarchive
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuSeparator />
-            {/* Delete - always available */}
-            <DropdownMenuItem 
-              onClick={() => handleDeleteInvite(row._id)}
-              className="text-red-600"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete
-            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       ),
@@ -649,6 +664,35 @@ export function Dashboard(props: DashboardProps) {
       toast.error("Failed to reject user. Please try again.");
     } finally {
       setRejectLoading(false);
+    }
+  };
+
+  const handleRevoke = async (user: User) => {
+    // Open revoke confirmation dialog
+    setUserToRevoke(user);
+    setRevokeDialogOpen(true);
+  };
+
+  const confirmRevoke = async () => {
+    if (!userToRevoke?._id) {
+      toast.error("User ID is missing");
+      return;
+    }
+
+    setRevokeUserLoading(true);
+    try {
+      await UserPageService.revokeUser(userToRevoke._id);
+      toast.success(`${userToRevoke.firstName} ${userToRevoke.lastName}'s access has been revoked.`);
+      setRevokeDialogOpen(false);
+      setUserToRevoke(null);
+      setIsModalOpen(false);
+      // Refresh the user list
+      await fetchPage(currentPage);
+    } catch (error) {
+      console.error("Error revoking user:", error);
+      toast.error("Failed to revoke user access. Please try again.");
+    } finally {
+      setRevokeUserLoading(false);
     }
   };
 
@@ -996,7 +1040,7 @@ export function Dashboard(props: DashboardProps) {
                   {statusFilterOpen && (
                     <div className="absolute left-0 top-full z-50 mt-1 w-full min-w-[8rem] rounded-md border bg-white py-1 shadow-lg">
                       <p className="px-3 py-1.5 text-xs text-muted-foreground">Status Filter</p>
-                      {(["all", "Pending", "Active", "Rejected", "Archived"] as const).map((v) => (
+                      {(["all", "Pending", "Active", "Rejected", "Revoked", "Archived"] as const).map((v) => (
                         <button
                           key={v}
                           type="button"
@@ -1181,6 +1225,7 @@ export function Dashboard(props: DashboardProps) {
         onClose={() => setIsModalOpen(false)}
         onApprove={handleApprove}
         onReject={handleReject}
+        onRevoke={handleRevoke}
         onAccessUpdate={(updatedUser) => {
           // Update the selected user and refresh the list
           setSelectedUser(updatedUser);
@@ -1348,6 +1393,77 @@ export function Dashboard(props: DashboardProps) {
                 <>
                   <XCircle className="w-4 h-4 mr-2" />
                   Reject Account
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Revoke User Access Confirmation Dialog */}
+      <Dialog open={revokeDialogOpen} onOpenChange={(open) => {
+        setRevokeDialogOpen(open);
+        if (!open) {
+          setUserToRevoke(null);
+        }
+      }}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <XCircle className="w-5 h-5" />
+              Revoke User Access
+            </DialogTitle>
+            <DialogDescription>
+              Revoke this user's access to the system. Super Admin can restore access later.
+            </DialogDescription>
+          </DialogHeader>
+          {userToRevoke && (
+            <div className="py-4 space-y-4">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <p className="text-sm text-gray-700">
+                  <strong>User:</strong> {userToRevoke.firstName} {userToRevoke.lastName}
+                </p>
+                <p className="text-sm text-gray-700">
+                  <strong>Email:</strong> {userToRevoke.email}
+                </p>
+                {userToRevoke.badgeId && (
+                  <p className="text-sm text-gray-700">
+                    <strong>Badge ID:</strong> {userToRevoke.badgeId}
+                  </p>
+                )}
+              </div>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <p className="text-sm text-red-700">
+                  <strong>Warning:</strong> This will immediately revoke the user's access to the system. They will be unable to log in until their access is restored by a Super Admin.
+                </p>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setRevokeDialogOpen(false);
+                setUserToRevoke(null);
+              }}
+              disabled={revokeUserLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmRevoke}
+              disabled={revokeUserLoading}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {revokeUserLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Revoking...
+                </>
+              ) : (
+                <>
+                  <XCircle className="w-4 h-4 mr-2" />
+                  Revoke Access
                 </>
               )}
             </Button>

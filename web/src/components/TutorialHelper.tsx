@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { X, ChevronRight, ChevronLeft } from "lucide-react";
 import "../styles/tutorial.css";
+import { AuthService } from "@/services/authService";
 
 interface TutorialStep {
   elementSelector: string;
@@ -115,6 +116,34 @@ const COMPANIES_STEPS: TutorialStep[] = [
   },
 ];
 
+// Profile page specific steps
+const PROFILE_STEPS: TutorialStep[] = [
+  {
+    elementSelector: '[data-tutorial="profile-info"]',
+    title: "Profile Information",
+    description: "View and edit your personal account information including name, email, location, and badge ID.",
+  },
+  {
+    elementSelector: '[data-tutorial="recent-activities"]',
+    title: "Recent Activities",
+    description: "Review your recent activities and audit logs. Filter by platform and action type to find specific events.",
+  },
+];
+
+// User Profile View page specific steps
+const USER_PROFILE_STEPS: TutorialStep[] = [
+  {
+    elementSelector: '[data-tutorial="profile-info"]',
+    title: "Profile Information",
+    description: "View the user's personal account information including name, email, location, and badge ID.",
+  },
+  {
+    elementSelector: '[data-tutorial="recent-activities"]',
+    title: "Recent Activities",
+    description: "Review the user's recent activities and audit logs. Filter by platform and action type to find specific events.",
+  },
+];
+
 // Get steps based on mode and current page
 const getStepsForMode = (mode: "sidebar" | "page", pathname: string): TutorialStep[] => {
   if (mode === "sidebar") {
@@ -129,6 +158,12 @@ const getStepsForMode = (mode: "sidebar" | "page", pathname: string): TutorialSt
   }
   if (pathname === "/companies") {
     return COMPANIES_STEPS;
+  }
+  if (pathname === "/profile") {
+    return PROFILE_STEPS;
+  }
+  if (pathname.startsWith("/users/")) {
+    return USER_PROFILE_STEPS;
   }
   return SIDEBAR_STEPS;
 };
@@ -218,7 +253,13 @@ export const TutorialHelper = ({ onClose, mode = "sidebar" }: TutorialHelperProp
 
   const closeTutorial = () => {
     setIsVisible(false);
-    localStorage.setItem("tutorial_completed", "true");
+    // Persist completion flag scoped to the current user so it applies across browsers
+    AuthService.getCurrentUser().then((user) => {
+      const key = user?._id
+        ? `tutorial_completed_${user._id}`
+        : "tutorial_completed";
+      localStorage.setItem(key, "true");
+    });
     onClose?.();
   };
 
