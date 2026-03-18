@@ -1898,7 +1898,7 @@ export function AnalyticsMapComponent() {
                           src={selectedReport.frontImageUrl} 
                           alt="Front" 
                           className="w-full h-32 object-cover rounded border"
-                          onClick={() => window.open(selectedReport.frontImageUrl, '_blank')}
+                          onClick={() => setSelectedImage(selectedReport.frontImageUrl)}
                           style={{ cursor: 'pointer' }}
                         />
                       </div>
@@ -1910,7 +1910,7 @@ export function AnalyticsMapComponent() {
                           src={selectedReport.backImageUrl} 
                           alt="Back" 
                           className="w-full h-32 object-cover rounded border"
-                          onClick={() => window.open(selectedReport.backImageUrl, '_blank')}
+                          onClick={() => setSelectedImage(selectedReport.backImageUrl)}
                           style={{ cursor: 'pointer' }}
                         />
                       </div>
@@ -1935,7 +1935,7 @@ export function AnalyticsMapComponent() {
                                 src={url} 
                                 alt={sideName} 
                                 className="w-full h-24 object-cover rounded border cursor-pointer hover:opacity-80"
-                                onClick={() => window.open(url, '_blank')}
+                                onClick={() => setSelectedImage(url)}
                               />
                             </div>
                           );
@@ -2163,13 +2163,13 @@ export function AnalyticsMapComponent() {
             <Button
               variant="outline"
               onClick={() => {
-                if (selectedReport) {
+                if (selectedReport && googleMapRef.current) {
                   const lat = selectedReport.position?.[1] || selectedReport.location?.latitude || 0;
                   const lng = selectedReport.position?.[0] || selectedReport.location?.longitude || 0;
-                  window.open(
-                    `https://www.google.com/maps?q=${lat},${lng}`,
-                    "_blank"
-                  );
+                  googleMapRef.current.panTo({ lat, lng });
+                  googleMapRef.current.setZoom(18);
+                  setSelectedReport(null);
+                  setIntegrityCheckResult(null);
                 }
               }}
             >
@@ -2215,21 +2215,12 @@ export function AnalyticsMapComponent() {
       </Dialog>
       
       <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
-        <DialogContent className="max-w-4xl w-full h-[90vh] bg-slate-900 border-slate-800 p-0 overflow-hidden flex flex-col">
-          <div className="flex justify-between items-center p-4 border-b border-white/10 bg-slate-900/50 absolute top-0 left-0 right-0 z-10">
+        <DialogContent className="max-w-4xl w-full h-[90vh] bg-white border-slate-800 p-0 overflow-hidden flex flex-col">
+          <div className="flex justify-between items-center p-4 border-b border-white/10 bg-black absolute top-0 left-0 right-0 z-10">
             <h2 className="text-white font-medium">Report Image</h2>
-            <a 
-              href={selectedImage || ''} 
-              download="report-image.jpg"
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded flex items-center gap-2 transition-colors cursor-pointer"
-            >
-              <Download className="w-4 h-4" /> Download
-            </a>
           </div>
           {selectedImage && (
-            <div className="flex-1 w-full h-full relative flex flex-col items-center justify-center overflow-auto p-4 custom-scrollbar">
+            <div className="flex-1 w-full h-full relative flex flex-col items-center justify-center overflow-auto pt-16 p-4 custom-scrollbar">
               <img 
                 src={selectedImage} 
                 alt="Enlarged Report" 
