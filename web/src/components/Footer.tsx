@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Facebook, Twitter, Linkedin } from "lucide-react";
+import { Facebook, Mail } from "lucide-react";
 
 export function Footer() {
   const location = useLocation();
@@ -85,31 +85,21 @@ export function Footer() {
                   <Facebook className="w-5 h-5" />
                 </a>
                 <a
-                  href="https://twitter.com"
+                  href="https://mail.google.com/mail/?view=cm&to=rcvsteel.connect@gmail.com"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-10 h-10 app-bg-primary rounded-lg flex items-center justify-center text-white hover:opacity-90 transition-colors"
-                  aria-label="X (Twitter)"
-                  title="X (Twitter)"
+                  aria-label="Email"
+                  title="Email"
                 >
-                  <Twitter className="w-5 h-5" />
-                </a>
-                <a
-                  href="https://linkedin.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-10 h-10 app-bg-primary rounded-lg flex items-center justify-center text-white hover:opacity-90 transition-colors"
-                  aria-label="LinkedIn"
-                  title="LinkedIn"
-                >
-                  <Linkedin className="w-5 h-5" />
+                  <Mail className="w-5 h-5" />
                 </a>
               </div>
             </div>
           </div>
 
           {/* Copyright */}
-          <div className="border-t border-[color:var(--app-primary)] mt-8 pt-6 text-center w-full">
+          <div className="border-t border-(--app-primary) mt-8 pt-6 text-center w-full">
             <p className="text-sm text-white/80">
               &copy; {new Date().getFullYear()} Proof of Vision All rights
               reserved.

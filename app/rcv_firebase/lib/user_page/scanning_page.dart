@@ -1174,7 +1174,11 @@ class _QRScannerPageState extends State<QRScannerPage>
       },
     );
 
-    _showExtractedInfoModal(extractedInfo, searchText);
+    _showExtractedInfoModal(
+      extractedInfo,
+      searchText,
+      showScanOnlyActions: false,
+    );
   }
 
   void _showManualSearchNotFoundModal(String cfpr, String lto) {
@@ -2657,6 +2661,7 @@ class _QRScannerPageState extends State<QRScannerPage>
   void _showExtractedInfoModal(
     Map<String, dynamic> extractedInfo,
     String ocrText,
+    {bool showScanOnlyActions = true}
   ) {
     final isCompliant = extractedInfo['isCompliant'] ?? true;
     final violations = extractedInfo['violations'] as List<dynamic>? ?? [];
@@ -2719,7 +2724,9 @@ class _QRScannerPageState extends State<QRScannerPage>
                         ),
                         IconButton(
                           icon: const Icon(Icons.close, color: Colors.white),
-                          onPressed: () => _handleCloseOCRResults(extractedInfo, ocrText),
+                          onPressed: showScanOnlyActions
+                              ? () => _handleCloseOCRResults(extractedInfo, ocrText)
+                              : () => Navigator.of(context).pop(),
                         ),
                       ],
                     ),
@@ -3026,84 +3033,100 @@ class _QRScannerPageState extends State<QRScannerPage>
                       ),
                     ),
                   ),
-                  // Sticky Action Buttons
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: () => _conductReport(extractedInfo, ocrText),
-                            icon: const Icon(Icons.assignment, size: 18),
-                            label: const Text(
-                              'Conduct Report',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
+                  // Sticky Action Buttons (scan/OCR results only)
+                  if (showScanOnlyActions)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () =>
+                                  _conductReport(extractedInfo, ocrText),
+                              icon: const Icon(Icons.assignment, size: 18),
+                              label: const Text(
+                                'Conduct Report',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF005440),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF005440),
+                                foregroundColor: Colors.white,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 2,
                               ),
-                              elevation: 2,
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: () => _saveAsDraft(extractedInfo, ocrText),
-                                icon: const Icon(Icons.save_outlined, size: 18),
-                                label: const Text('Save Draft'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.orange.shade600,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: () =>
+                                      _saveAsDraft(extractedInfo, ocrText),
+                                  icon: const Icon(
+                                    Icons.save_outlined,
+                                    size: 18,
+                                  ),
+                                  label: const Text('Save Draft'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.orange.shade600,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () {
-                                  if (_frontOcrText != null) {
-                                    _showOCRModal(
-                                      _frontOcrText!,
-                                      _backOcrText,
-                                      _additionalOcrTexts,
-                                    );
-                                  } else {
-                                    _showOCRModal(ocrText);
-                                  }
-                                },
-                                icon: const Icon(Icons.article_outlined, size: 18),
-                                label: const Text('Raw Text'),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: const Color(0xFF005440),
-                                  side: const BorderSide(color: Color(0xFF005440)),
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () {
+                                    if (_frontOcrText != null) {
+                                      _showOCRModal(
+                                        _frontOcrText!,
+                                        _backOcrText,
+                                        _additionalOcrTexts,
+                                      );
+                                    } else {
+                                      _showOCRModal(ocrText);
+                                    }
+                                  },
+                                  icon: const Icon(
+                                    Icons.article_outlined,
+                                    size: 18,
+                                  ),
+                                  label: const Text('Raw Text'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: const Color(0xFF005440),
+                                    side: const BorderSide(
+                                      color: Color(0xFF005440),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ],
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),

@@ -7,7 +7,7 @@ import {
   type BlockchainCertificateDetail 
 } from "@/services/metaMaskService";
 import { DataTable, type Column } from "@/components/DataTable";
-import { Pagination } from "@/components/Pagination";
+import { Pagination as SimplePagination } from "@/components/Pagination";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -69,6 +69,7 @@ export function Blockchain() {
   const [allCertificates, setAllCertificates] = useState<BlockchainCertificate[]>([]);
   const [stats, setStats] = useState<BlockchainStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [paginationLoading, setPaginationLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pagination, setPagination] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -140,7 +141,12 @@ export function Blockchain() {
   };
 
   const fetchData = async () => {
-    setLoading(true);
+    // Use paginationLoading if we're already loaded (pagination change)
+    if (pagination) {
+      setPaginationLoading(true);
+    } else {
+      setLoading(true);
+    }
 
     // Fetch certificates from Sepolia-verified products/companies
     const certResponse = await MetaMaskService.getBlockchainCertificates(
@@ -160,6 +166,13 @@ export function Blockchain() {
     }
 
     setLoading(false);
+    setPaginationLoading(false);
+  };
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage === currentPage) return;
+    setPaginationLoading(true);
+    setCurrentPage(newPage);
   };
 
   // Determine display data - pass all certificates when searching so DataTable can filter them
@@ -576,7 +589,7 @@ export function Blockchain() {
               data={displayData}
               searchPlaceholder="Search certificates..."
               onSearch={handleSearch}
-              loading={loading}
+              loading={loading || paginationLoading}
               emptyStateTitle="No Certificates Found"
               emptyStateDescription="Blockchain-verified certificates will appear here once products or companies are registered with blockchain verification."
               customControls={
@@ -604,17 +617,22 @@ export function Blockchain() {
                 </Select>
               }
             />
-
             {pagination && (
-              <div className="p-4 border-t flex flex-col sm:flex-row items-center justify-between gap-3">
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  totalItems={searchQuery.trim() ? allCertificates.length : pagination.total_items}
-                  itemsPerPage={pageSize}
-                  onPageChange={setCurrentPage}
-                  showingPosition="left"
-                />
+              <div className="mt-4 flex items-center justify-between w-full p-4 border-t">
+                <div className="text-sm text-muted-foreground">
+                  Showing {displayData.slice((currentPage - 1) * pageSize, currentPage * pageSize).length} of {searchQuery.trim() ? allCertificates.length : pagination.total_items} certificates • Page {currentPage} of {totalPages}
+                </div>
+                <div>
+                  <SimplePagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={searchQuery.trim() ? allCertificates.length : pagination.total_items}
+                    itemsPerPage={pageSize}
+                    onPageChange={handlePageChange}
+                    alwaysShowControls
+                    showingText={null}
+                  />
+                </div>
               </div>
             )}
           </div>

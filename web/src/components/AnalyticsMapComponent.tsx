@@ -1076,6 +1076,17 @@ export function AnalyticsMapComponent() {
 
                 <div className="space-y-2">
                   {(() => {
+                    const getReportTimeMs = (report: any): number => {
+                      const raw =
+                        report?.createdAt ??
+                        report?.scannedAt ??
+                        report?.report?.createdAt ??
+                        report?.report?.scannedAt;
+                      if (!raw) return 0;
+                      const ms = Date.parse(String(raw));
+                      return Number.isFinite(ms) ? ms : 0;
+                    };
+
                     // Calculate total filtered reports across all clusters
                     const allFilteredReports = apiResponse?.results?.clusters?.reduce((total, cluster) => {
                       const filteredReports = cluster.points?.filter((report: any) => {
@@ -1120,32 +1131,49 @@ export function AnalyticsMapComponent() {
                     }
 
                     // Show filtered clusters
-                    return apiResponse?.results?.clusters?.map((cluster) => {
-                      // Filter reports based on search and status
-                      const filteredReports = cluster.points?.filter((report: any) => {
-                        const reportId = report._id ?? report.report?._id;
-                        const productName = report.product ?? report.report?.scannedData?.productName ?? "Unknown Product";
-                        const reportStatus = report.status ?? report.report?.status ?? "NON_COMPLIANT";
-                        
-                        // Search filter
-                        const matchesSearch = searchQuery === "" || 
-                          productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          reportId?.toLowerCase().includes(searchQuery.toLowerCase());
-                        
-                        // Status filter
-                        const matchesStatus = statusFilter === "ALL" || reportStatus === statusFilter;
-                        
-                        return matchesSearch && matchesStatus;
-                      }) ?? [];
+                    const preparedClusters = (apiResponse?.results?.clusters ?? [])
+                      .map((cluster) => {
+                        const filteredReports =
+                          cluster.points?.filter((report: any) => {
+                            const reportId = report._id ?? report.report?._id;
+                            const productName =
+                              report.product ??
+                              report.report?.scannedData?.productName ??
+                              "Unknown Product";
+                            const reportStatus =
+                              report.status ?? report.report?.status ?? "NON_COMPLIANT";
 
-                      if (filteredReports.length === 0) return null;
+                            const matchesSearch =
+                              searchQuery === "" ||
+                              productName
+                                .toLowerCase()
+                                .includes(searchQuery.toLowerCase()) ||
+                              reportId
+                                ?.toLowerCase()
+                                .includes(searchQuery.toLowerCase());
 
-                      return (
-                    <div key={cluster.cluster_id} className="space-y-1">
-                      <div className="text-xs font-medium text-gray-700 sticky top-0 bg-white py-1">
-                        Cluster {cluster.cluster_id} ({filteredReports.length} reports)
-                      </div>
-                      {filteredReports.map((report: any, idx: number) => {
+                            const matchesStatus =
+                              statusFilter === "ALL" || reportStatus === statusFilter;
+
+                            return matchesSearch && matchesStatus;
+                          }) ?? [];
+
+                        const sortedReports = [...filteredReports].sort(
+                          (a: any, b: any) => getReportTimeMs(b) - getReportTimeMs(a)
+                        );
+                        const latestTimeMs =
+                          sortedReports.length > 0 ? getReportTimeMs(sortedReports[0]) : 0;
+                        return { cluster, sortedReports, latestTimeMs };
+                      })
+                      .filter((x) => x.sortedReports.length > 0)
+                      .sort((a, b) => b.latestTimeMs - a.latestTimeMs);
+
+                    return preparedClusters.map(({ cluster, sortedReports }) => (
+                      <div key={cluster.cluster_id} className="space-y-1">
+                        <div className="text-xs font-medium text-gray-700 sticky top-0 bg-white py-1">
+                          Cluster {cluster.cluster_id} ({sortedReports.length} reports)
+                        </div>
+                        {sortedReports.map((report: any, idx: number) => {
                         const reportId = report._id ?? report.report?._id;
                         const productName = report.product ?? report.report?.scannedData?.productName ?? "Unknown Product";
                         const reportStatus = report.status ?? report.report?.status ?? "NON_COMPLIANT";
@@ -1202,10 +1230,9 @@ export function AnalyticsMapComponent() {
                             </div>
                           </button>
                         );
-                      })}
-                    </div>
-                    );
-                  });
+                        })}
+                      </div>
+                    ));
                 })()}
 
                   {/* Noise Points Section */}

@@ -7,8 +7,36 @@ class Company {
 
   factory Company.fromJson(Map<String, dynamic>? json) {
     if (json == null) return Company();
-    return Company(id: json['_id'], name: json['name']);
+    return Company(id: _parseString(json['_id']), name: _parseString(json['name']));
   }
+}
+
+String? _parseString(dynamic value) {
+  if (value == null) return null;
+  if (value is String) return value;
+  return value.toString();
+}
+
+int _parseInt(dynamic value, {int fallback = 0}) {
+  if (value == null) return fallback;
+  if (value is int) return value;
+  if (value is double) return value.round();
+  if (value is String) return int.tryParse(value) ?? fallback;
+  return int.tryParse(value.toString()) ?? fallback;
+}
+
+DateTime _parseDate(dynamic value, {DateTime? fallback}) {
+  if (value == null) return fallback ?? DateTime.now();
+  if (value is DateTime) return value;
+  if (value is String) {
+    return DateTime.tryParse(value) ?? (fallback ?? DateTime.now());
+  }
+  if (value is int) {
+    // Heuristic: treat 10-digit as seconds, 13-digit as milliseconds.
+    final milliseconds = value < 1000000000000 ? value * 1000 : value;
+    return DateTime.fromMillisecondsSinceEpoch(milliseconds);
+  }
+  return fallback ?? DateTime.now();
 }
 
 /// Product Model
@@ -47,25 +75,24 @@ class Product {
 
   // From JSON
   factory Product.fromJson(Map<String, dynamic> json) {
+    final dynamic companyJson = json['company'];
     return Product(
-      id: json['_id'] ?? '',
-      ltoNumber: json['LTONumber'] ?? '',
-      cfprNumber: json['CFPRNumber'] ?? '',
-      lotNumber: json['lotNumber'] ?? '',
-      brandName: json['brandName'] ?? '',
-      productName: json['productName'] ?? '',
-      productClassification: json['productClassification'] ?? 0,
-      productSubClassification: json['productSubClassification'] ?? 0,
-      expirationDate: json['expirationDate'] != null
-          ? DateTime.parse(json['expirationDate'])
-          : DateTime.now(),
-      dateOfRegistration: json['dateOfRegistration'] != null
-          ? DateTime.parse(json['dateOfRegistration'])
-          : DateTime.now(),
-      companyId: json['company']?['_id'],
-      companyName: json['company']?['name'],
-      company: json['company'] != null
-          ? Company.fromJson(json['company'])
+      id: _parseString(json['_id']) ?? '',
+      ltoNumber: _parseString(json['LTONumber']) ?? '',
+      cfprNumber: _parseString(json['CFPRNumber']) ?? '',
+      lotNumber: _parseString(json['lotNumber']) ?? '',
+      brandName: _parseString(json['brandName']) ?? '',
+      productName: _parseString(json['productName']) ?? '',
+      productClassification: _parseInt(json['productClassification']),
+      productSubClassification: _parseInt(json['productSubClassification']),
+      expirationDate: _parseDate(json['expirationDate']),
+      dateOfRegistration: _parseDate(json['dateOfRegistration']),
+        companyId:
+          companyJson is Map ? _parseString(companyJson['_id']) : _parseString(companyJson),
+        companyName:
+          companyJson is Map ? _parseString(companyJson['name']) : null,
+        company: companyJson is Map
+          ? Company.fromJson(Map<String, dynamic>.from(companyJson))
           : null,
     );
   }
@@ -114,13 +141,17 @@ class ScanProductResponse {
     // Try to parse products from 'Product' first, then 'data' as fallback
     List<Product> productsList = [];
     
-    if (json['Product'] != null) {
+    if (json['Product'] != null && json['Product'] is List) {
       productsList = (json['Product'] as List)
-          .map((item) => Product.fromJson(item))
+          .where((item) => item is Map)
+          .map((item) =>
+              Product.fromJson(Map<String, dynamic>.from(item as Map)))
           .toList();
     } else if (json['data'] != null && json['data'] is List) {
       productsList = (json['data'] as List)
-          .map((item) => Product.fromJson(item))
+          .where((item) => item is Map)
+          .map((item) =>
+              Product.fromJson(Map<String, dynamic>.from(item as Map)))
           .toList();
     }
     

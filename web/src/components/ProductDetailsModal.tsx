@@ -1104,7 +1104,6 @@ export function ProductDetailsModal({
           onClose={() => setShowEditModal(false)}
           onSuccess={() => {
             if (onRenewalSuccess) onRenewalSuccess(); // Reuse refresh logic
-            toast.success("Update request submitted.");
           }}
           product={product}
           companies={companies || []}
