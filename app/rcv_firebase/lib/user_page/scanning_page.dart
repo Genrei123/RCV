@@ -70,7 +70,7 @@ class _QRScannerPageState extends State<QRScannerPage>
   _additionalImagePaths; // Additional images for box products (top, bottom, left, right)
   String? _frontImageUrl; // Firebase URL
   String? _backImageUrl; // Firebase URL
-  List<String>? _additionalImageUrls; // Firebase URLs for additional images
+  // Firebase URLs for additional images
   String? _ocrBlobText; // Store raw OCR text for compliance reports
   String? _frontOcrText; // Store front OCR text separately
   String? _backOcrText; // Store back OCR text separately
@@ -4106,7 +4106,6 @@ class _QRScannerPageState extends State<QRScannerPage>
           _additionalImagePaths = null;
           _frontImageUrl = null;
           _backImageUrl = null;
-          _additionalImageUrls = null;
           _ocrBlobText = null;
           _frontOcrText = null;
           _backOcrText = null;
