@@ -10,7 +10,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../services/ocr_service.dart';
-import '../services/firebase_storage_service.dart';
 // import '../widgets/gradient_header_app_bar.dart';
 import '../widgets/title_logo_header_app_bar.dart';
 import '../widgets/navigation_bar.dart';
