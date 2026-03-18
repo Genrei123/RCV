@@ -13,7 +13,7 @@ export interface FieldComparison {
 export interface IntegrityCheckResult {
   productId: string;
   productName: string;
-  status: 'intact' | 'tampered' | 'no_blockchain' | 'error';
+  status: 'intact' | 'tampered' | 'no_blockchain' | 'error' | 'data_loss';
   message: string;
   txHash: string | null;
   etherscanUrl: string | null;
@@ -35,6 +35,7 @@ export interface BulkIntegrityResult {
   tamperedCount: number;
   noBlockchainCount: number;
   errorCount: number;
+  dataLossCount: number;
   results: IntegrityCheckResult[];
 }
 
@@ -76,8 +77,29 @@ export const checkAllProductsIntegrity = async (): Promise<BulkIntegrityResult> 
   return response.data.data;
 };
 
+/**
+ * Restore a deleted product from the blockchain record
+ */
+export const restoreDeletedProduct = async (
+  productId: string,
+  txHash: string
+): Promise<{ success: boolean; message: string; product?: any }> => {
+  try {
+    const response = await axios.post(
+      `${API_URL}/integrity/restore/product/${productId}`,
+      { txHash },
+      { withCredentials: true }
+    );
+    return response.data;
+  } catch (error: any) {
+    console.error('Error restoring product:', error);
+    throw error;
+  }
+};
+
 export const IntegrityService = {
   checkProductIntegrity,
   revertProductIntegrity,
   checkAllProductsIntegrity,
+  restoreDeletedProduct,
 };

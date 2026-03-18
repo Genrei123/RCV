@@ -120,6 +120,13 @@ export class ComplianceReport {
     address?: string;
   } | null;
 
+  // Blockchain fields for data integrity
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  txHash?: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  blockchainVerifiedAt?: Date | null;
+
   @CreateDateColumn()
   createdAt!: Date;
 }

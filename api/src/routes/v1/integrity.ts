@@ -1,10 +1,12 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { verifyUser } from '../../middleware/verifyUser';
 import { verifyAdmin } from '../../middleware/verifyAdmin';
 import {
   checkProductIntegrity,
   revertProductFromBlockchain,
   checkAllProductsIntegrity,
+  restoreDeletedProduct,
+  checkReportIntegrity
 } from '../../services/integrityCheckService';
 
 const router = Router();
@@ -98,4 +100,59 @@ router.post(
   }
 );
 
+/**
+ * Restore a deleted product from the blockchain
+ * POST /api/v1/integrity/restore/product/:id
+ */
+router.post('/restore/product/:id', verifyUser, verifyAdmin, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const { txHash } = req.body;
+    
+    if (!txHash) {
+      return res.status(400).json({ success: false, message: 'Transaction hash (txHash) is required to restore.' });
+    }
+
+    const result = await restoreDeletedProduct(id, txHash);
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;
+
+
+/**
+ * GET /api/v1/integrity/check/report/:id
+ * Compare a report's DB resolution record against its blockchain data.
+ * Requires: Admin authentication
+ */
+router.get(
+  '/check/report/:id',
+  verifyUser,
+  verifyAdmin,
+  async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const result = await checkReportIntegrity(id);
+
+      return res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      console.error('Error checking report integrity:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to check report integrity',
+        error: error instanceof Error ? error.message : 'Unknown error',        
+      });
+    }
+  }
+);

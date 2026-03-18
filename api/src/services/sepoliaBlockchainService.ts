@@ -997,3 +997,69 @@ export default {
   renewProductCertificate,
   updateProductCertificate
 };
+
+export interface BlockchainReportData {
+  reportId: string;
+  originalStatus: string;
+  newStatus: string;
+  notes?: string;
+  agent: {
+    id: string;
+    name?: string;
+    email?: string;
+  };
+}
+
+export const storeReportResolutionOnBlockchain = async (
+  reportData: BlockchainReportData,
+  approvers?: BlockchainApprover[]
+): Promise<BlockchainTransaction | null> => {
+  if (!provider || !wallet) {
+    console.error('Sepolia blockchain not initialized');
+    return null;
+  }
+
+  try {
+    console.log('Storing Report Resolution on Sepolia blockchain...');
+
+    const dataPayload = JSON.stringify({
+      type: 'RCV_REPORT_RESOLUTION',
+      version: '1.0',
+      timestamp: new Date().toISOString(),
+      reportData,
+      approvers: approvers?.map(a => ({
+        wallet: a.wallet,
+        name: a.name,
+        date: a.date
+      }))
+    });
+
+    const dataInHex = ethers.hexlify(ethers.toUtf8Bytes(dataPayload));
+    const feeData = await provider.getFeeData();
+
+    const tx = await wallet.sendTransaction({
+      to: wallet.address,
+      value: 0,
+      data: dataInHex,
+      gasLimit: 150000,
+      maxFeePerGas: feeData.maxFeePerGas,
+      maxPriorityFeePerGas: feeData.maxPriorityFeePerGas
+    });
+
+    console.log(`Transaction sent! Tx Hash: ${tx.hash}`);
+    const receipt = await tx.wait();
+    if (!receipt) throw new Error('Transaction receipt is null');
+
+    return {
+      txHash: receipt.hash,
+      blockNumber: receipt.blockNumber,
+      pdfHash: 'N/A', // no pdf hash for reports
+      certificateId: reportData.reportId,
+      timestamp: new Date(),
+      etherscanUrl: `https://sepolia.etherscan.io/tx/${receipt.hash}`
+    };
+  } catch (error) {
+    console.error('Error storing report resolution on blockchain:', error);
+    return null;
+  }
+};
