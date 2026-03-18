@@ -446,7 +446,6 @@ export function CertificateVerifier() {
               <div className="flex gap-3 pt-2">
                 <Button
                   id="auto-verify-btn"
-                  id="auto-verify-btn"
                   onClick={handleSepoliaVerify}
                   disabled={!txHash.trim() || sepoliaVerifying}
                   className="flex-1 bg-purple-600 hover:bg-purple-700"
