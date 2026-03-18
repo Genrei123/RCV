@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { Footer } from "./Footer";
 import { TutorialHelper } from "./TutorialHelper";
+import { AuthService } from "@/services/authService";
 import { Search, X, Users, Monitor } from "lucide-react";
 import { useMapSearch } from "@/contexts/MapSearchContext";
 import { useViewMode } from "@/contexts/ViewModeContext";
@@ -42,19 +43,35 @@ export const AppLayout = ({
     setMapSearchQuery(value);
   };
 
-  // Check if tutorial should be shown on first visit
+  // Check if tutorial should be shown on first visit (scoped per user)
   useEffect(() => {
-    const tutorialCompleted = localStorage.getItem("tutorial_completed");
-    const hasVisited = localStorage.getItem("app_first_visit");
-    
-    if (!tutorialCompleted && !hasVisited) {
-      // Small delay to ensure layout is rendered
-      const timer = setTimeout(() => {
-        setShowTutorial(true);
-      }, 500);
-      localStorage.setItem("app_first_visit", "true");
-      return () => clearTimeout(timer);
-    }
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+
+    AuthService.getCurrentUser().then((user) => {
+      if (cancelled || !user?._id) return;
+
+      // Use user-scoped keys so tutorial state follows the user, not the browser
+      const userId = user._id;
+      const completedKey = `tutorial_completed_${userId}`;
+      const visitedKey = `app_first_visit_${userId}`;
+
+      const tutorialCompleted = localStorage.getItem(completedKey);
+      const hasVisited = localStorage.getItem(visitedKey);
+
+      if (!tutorialCompleted && !hasVisited) {
+        // Small delay to ensure layout is rendered
+        timer = setTimeout(() => {
+          setShowTutorial(true);
+        }, 500);
+        localStorage.setItem(visitedKey, "true");
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, []);
 
   // Lock body scroll when sidebar is open (mobile)
