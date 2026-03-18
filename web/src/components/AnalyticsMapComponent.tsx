@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { BarChart3, RefreshCw, MapPin, Activity, Menu, X, Search, Filter, ChevronDown, Check } from "lucide-react";
+import { useMetaMask } from "@/contexts/MetaMaskContext";
+import { BarChart3, RefreshCw, Menu, X, Search, Filter, ChevronDown, Check, Maximize2, Minimize2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Loader2 } from "lucide-react";
+import { checkReportIntegrity, type ReportIntegrityCheckResult } from "../services/integrityReportService";
+import { toast } from "react-toastify";
 import analyticsService from "../services/analyticsService";
 import { apiClient } from "../services/axiosConfig";
 import type { APIResponse } from "../services/analyticsService";
@@ -33,6 +37,7 @@ declare global {
 }
 
 export function AnalyticsMapComponent() {
+  const { isConnected: isWalletConnected, isAuthorized: isWalletAuthorized, connect: connectWallet } = useMetaMask();
   const [loading, setLoading] = useState(false);
   const [apiResponse, setApiResponse] = useState<APIResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -43,9 +48,13 @@ export function AnalyticsMapComponent() {
   const deckOverlayRef = useRef<any>(null);
   const [show3DHeatmap, setShow3DHeatmap] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [isDrawerFullscreen, setIsDrawerFullscreen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<any>(null);
   const [resolutionStatus, setResolutionStatus] = useState<string>("COMPLIANT");
+  const [integrityCheckResult, setIntegrityCheckResult] = useState<ReportIntegrityCheckResult | null>(null);
+  const [isCheckingIntegrity, setIsCheckingIntegrity] = useState(false);
+  const [isResolving, setIsResolving] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
@@ -75,7 +84,23 @@ export function AnalyticsMapComponent() {
     }
   };
 
+  
+  const handleCheckIntegrity = async (reportId: string) => {
+    setIsCheckingIntegrity(true);
+    setIntegrityCheckResult(null);
+    try {
+      const result = await checkReportIntegrity(reportId);
+      setIntegrityCheckResult(result);
+    } catch (err: any) {
+      console.error('Integrity check failed:', err);
+      toast.error(err?.response?.data?.message || 'Failed to check integrity. Make sure you are authorized.');
+    } finally {
+      setIsCheckingIntegrity(false);
+    }
+  };
+
   const handleResolveReport = async (reportId: string) => {
+    setIsResolving(true);
     try {
       // Use the selected resolution status
       const response = await apiClient.post(`/analytics/reports/${reportId}/resolve`, {
@@ -87,18 +112,36 @@ export function AnalyticsMapComponent() {
         setSelectedReport({
           ...selectedReport,
           isVerified: true,
-          currentStatus: resolutionStatus
+          currentStatus: resolutionStatus,
+          txHash: response.data.data?.txHash || selectedReport.txHash
         });
       }
 
-      // Show success message
-      alert(response.data.message || 'Report approved successfully!');
-      
+      // Show success message inside toast with link if txHash is provided
+      toast.success(
+        <div>
+          <p>{response.data.message || 'Report resolved successfully!'}</p>
+          {response.data.data?.etherscanUrl && (
+            <a
+              href={response.data.data.etherscanUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs flex items-center gap-1 mt-2 text-blue-600 font-semibold"
+            >
+              Verify on Etherscan
+            </a>
+          )}
+        </div>,
+        { autoClose: 5000 }
+      );
+
       // Refresh the analysis to get updated data
       callDBSCANAPI();
     } catch (err: any) {
       const errorMsg = err?.response?.data?.message || err?.message || 'Failed to resolve report';
-      alert(errorMsg);
+      toast.error(errorMsg);
+    } finally {
+      setIsResolving(false);
     }
   };
 
@@ -730,6 +773,343 @@ export function AnalyticsMapComponent() {
     };
   }, [showStatusDropdown]);
 
+
+  const renderFullscreenDashboard = () => {
+    // Filter reports for the dashboard grid
+    let allFilteredReports = 0;
+    const filteredClusters = apiResponse?.results?.clusters?.map(cluster => {
+      const filteredPts = cluster.points?.filter((report: any) => {
+        const reportId = report._id ?? report.report?._id;
+        const productName = report.product ?? report.report?.scannedData?.productName ?? "Unknown Product";
+        const reportStatus = report.status ?? report.report?.status ?? "NON_COMPLIANT";
+        const matchesSearch = searchQuery === "" || 
+          productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          reportId?.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesStatus = statusFilter === "ALL" || reportStatus === statusFilter;
+        return matchesSearch && matchesStatus;
+      }) ?? [];
+      allFilteredReports += filteredPts.length;
+      return { ...cluster, filteredPoints: filteredPts };
+    }) ?? [];
+
+    const filteredNoise = apiResponse?.results?.noise_points?.filter((report: any) => {
+      const reportId = report._id ?? report.report?._id;
+      const productName = report.product ?? report.report?.scannedData?.productName ?? "Unknown Product";
+      const reportStatus = report.status ?? report.report?.status ?? "NON_COMPLIANT";
+      const matchesSearch = searchQuery === "" || 
+        productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        reportId?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = statusFilter === "ALL" || reportStatus === statusFilter;
+      return matchesSearch && matchesStatus;
+    }) ?? [];
+
+    return (
+      <div className="p-4 sm:p-6 bg-slate-50 h-full overflow-y-auto flex-1">
+        <div className="max-w-7xl mx-auto space-y-6">
+          
+          {/* Top Bar: Search, Filters, Execute */}
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex-1 w-full flex items-center gap-4">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                <Input
+                  type="text"
+                  placeholder="Search products or IDs..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 h-11 text-sm bg-slate-50 border-slate-200"
+                />
+              </div>
+              <div className="flex items-center gap-2 relative z-50">
+                <Filter className="h-5 w-5 text-slate-500" />
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[160px] h-11 bg-slate-50 border-slate-200">
+                    <SelectValue placeholder="All Reports" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">All Reports</SelectItem>
+                    <SelectItem value="COMPLIANT">Compliant</SelectItem>
+                    <SelectItem value="NON_COMPLIANT">Non-Compliant</SelectItem>
+                    <SelectItem value="FRAUDULENT">Fraudulent</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2 text-sm text-slate-700 bg-slate-100 px-3 py-2 rounded-lg cursor-pointer hover:bg-slate-200 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={show3DHeatmap}
+                  onChange={(e) => setShow3DHeatmap(e.target.checked)}
+                  className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                />
+                3D Heatmap
+              </label>
+              <Button
+                onClick={callDBSCANAPI}
+                disabled={loading}
+                className="h-11 px-6 bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm transition-all"
+              >
+                {loading ? (
+                  <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Analyzing</>
+                ) : (
+                  <><RefreshCw className="mr-2 h-5 w-5" /> Run Analytics</>
+                )}
+              </Button>
+            </div>
+          </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center gap-3">
+              
+              <p className="text-sm">{error}</p>
+            </div>
+          )}
+
+          {/* Stats Grid */}
+          {apiResponse?.results && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200 flex flex-col justify-center relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-16 h-16 bg-blue-50 rounded-full translate-x-8 -translate-y-8"></div>
+                <p className="text-sm text-slate-500 font-medium mb-1 relative z-10">Total Reports</p>
+                <p className="text-3xl font-bold text-slate-800 relative z-10">{apiResponse.results.summary?.total_points ?? 0}</p>
+              </div>
+              <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200 flex flex-col justify-center relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-16 h-16 bg-teal-50 rounded-full translate-x-8 -translate-y-8"></div>
+                <p className="text-sm text-slate-500 font-medium mb-1 relative z-10">Clusters</p>
+                <p className="text-3xl font-bold text-teal-600 relative z-10">{apiResponse.results.summary?.n_clusters ?? 0}</p>
+              </div>
+              <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200 flex flex-col justify-center relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-16 h-16 bg-orange-50 rounded-full translate-x-8 -translate-y-8"></div>
+                <p className="text-sm text-slate-500 font-medium mb-1 relative z-10">Noise Points</p>
+                <p className="text-3xl font-bold text-orange-600 relative z-10">{apiResponse.results.summary?.n_noise_points ?? 0}</p>
+              </div>
+              <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200 flex flex-col justify-center relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-16 h-16 bg-red-50 rounded-full translate-x-8 -translate-y-8"></div>
+                <p className="text-sm text-slate-500 font-medium mb-1 relative z-10">Noise Percentage</p>
+                <p className="text-3xl font-bold text-red-600 relative z-10">{(apiResponse.results.summary?.noise_percentage ?? 0).toFixed(1)}%</p>
+              </div>
+            </div>
+          )}
+
+          {/* Main Dashboard Area */}
+          {apiResponse?.results && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start pb-10">
+              
+              {/* Left Column: Data Clusters (Reports) */}
+              <div className="lg:col-span-2 space-y-6">
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                  <div className="px-5 py-4 border-b border-slate-100 bg-slate-50">
+                    <h3 className="font-semibold text-slate-800 flex items-center gap-2">
+                      
+                      Detailed Cluster Analysis ({allFilteredReports} Reports Mapped)
+                    </h3>
+                  </div>
+                  <div className="p-5 space-y-6">
+                    {filteredClusters.length === 0 && filteredNoise.length === 0 && (
+                       <div className="text-center py-10 text-slate-500">
+                         <Search className="h-10 w-10 mx-auto text-slate-300 mb-3" />
+                         <p>No reports match your current filters.</p>
+                       </div>
+                    )}
+                    
+                    {filteredClusters.map(cluster => {
+                      if (cluster.filteredPoints.length === 0) return null;
+                      const baseRed = 220;
+                      const green = Math.min(255, cluster.cluster_id * 40);
+                      const blue = Math.min(255, cluster.cluster_id * 20);
+                      const color = `rgb(${baseRed}, ${green}, ${blue})`;
+                      
+                      return (
+                        <div key={cluster.cluster_id} className="border border-slate-100 rounded-xl overflow-hidden">
+                          <div className="bg-slate-50 px-4 py-3 border-b border-slate-100 flex items-center gap-3">
+                            <div className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: color }}></div>
+                            <h4 className="font-medium text-slate-800">Cluster {cluster.cluster_id}</h4>
+                            <span className="bg-white border border-slate-200 text-slate-600 text-xs px-2 py-1 rounded-full">
+                              {cluster.filteredPoints.length} Items
+                            </span>
+                          </div>
+                          <div className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white">
+                            {cluster.filteredPoints.map((report: any, idx: number) => {
+                              const reportId = report._id ?? report.report?._id;
+                              const productName = report.product ?? report.report?.scannedData?.productName ?? "Unknown Product";
+                              const reportStatus = report.status ?? report.report?.status ?? "NON_COMPLIANT";
+                              const lat = report.lat ?? report.latitude ?? report.coordinates?.[1];
+                              const lng = report.lng ?? report.longitude ?? report.long ?? report.coordinates?.[0];
+                              
+                              return (
+                                <button
+                                  key={reportId || idx}
+                                  onClick={() => {
+                                    if (reportId) {
+                                      if (lat && lng && googleMapRef.current) {
+                                        googleMapRef.current.panTo({ lat: Number(lat), lng: Number(lng) });
+                                        googleMapRef.current.setZoom(15);
+                                      }
+                                      apiClient.get(`/analytics/reports/${reportId}`).then(res => {
+                                          const reportData = res.data.data;
+                                          setSelectedReport({ ...report, ...reportData, reportId, currentStatus: reportData.status, position: [lng, lat] });
+                                          setResolutionStatus(reportData.status);
+                                      }).catch(err => console.error(err));
+                                    }
+                                  }}
+                                  className="text-left p-3 rounded-lg hover:bg-blue-50 border border-slate-100 hover:border-blue-200 transition-all shadow-sm group bg-white"
+                                >
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="text-sm font-semibold text-slate-800 truncate mb-1 group-hover:text-blue-700">
+                                        {productName}
+                                      </div>
+                                      <div className="text-xs text-slate-500 font-mono truncate">
+                                        ID: {reportId ? reportId.slice(0, 12) + '...' : 'Unknown'}
+                                      </div>
+                                    </div>
+                                    <span className={`flex-shrink-0 text-[11px] font-medium px-2 py-1 rounded-md ${
+                                      reportStatus === 'COMPLIANT' ? 'bg-green-100 text-green-700 border border-green-200' :
+                                      reportStatus === 'FRAUDULENT' ? 'bg-red-100 text-red-700 border border-red-200' :
+                                      'bg-amber-100 text-amber-700 border border-amber-200'
+                                    }`}>
+                                      {reportStatus === 'COMPLIANT' ? 'COMPLIANT' :
+                                       reportStatus === 'FRAUDULENT' ? 'FRAUDULENT' : 'NON-COMPLIANT'}
+                                    </span>
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {filteredNoise.length > 0 && (
+                      <div className="border border-slate-100 rounded-xl overflow-hidden">
+                        <div className="bg-slate-100 px-4 py-3 border-b border-slate-200 flex items-center gap-3">
+                          <div className="w-4 h-4 rounded-full shadow-sm bg-slate-500"></div>
+                          <h4 className="font-medium text-slate-800">Noise Points</h4>
+                          <span className="bg-white border border-slate-200 text-slate-600 text-xs px-2 py-1 rounded-full">
+                            {filteredNoise.length} Items
+                          </span>
+                        </div>
+                        <div className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white">
+                          {filteredNoise.map((report: any, idx: number) => {
+                            const reportId = report._id ?? report.report?._id;
+                            const productName = report.product ?? report.report?.scannedData?.productName ?? "Unknown Product";
+                            const reportStatus = report.status ?? report.report?.status ?? "NON_COMPLIANT";
+                            const lat = report.lat ?? report.latitude ?? report.coordinates?.[1];
+                            const lng = report.lng ?? report.longitude ?? report.long ?? report.coordinates?.[0];
+                            
+                            return (
+                              <button
+                                key={reportId || idx}
+                                onClick={() => {
+                                  if (reportId) {
+                                    if (lat && lng && googleMapRef.current) {
+                                      googleMapRef.current.panTo({ lat: Number(lat), lng: Number(lng) });
+                                      googleMapRef.current.setZoom(15);
+                                    }
+                                    apiClient.get(`/analytics/reports/${reportId}`).then(res => {
+                                        const reportData = res.data.data;
+                                        setSelectedReport({ ...report, ...reportData, reportId, currentStatus: reportData.status, position: [lng, lat] });
+                                        setResolutionStatus(reportData.status);
+                                    }).catch(err => console.error(err));
+                                  }
+                                }}
+                                className="text-left p-3 rounded-lg hover:bg-slate-50 border border-slate-100 hover:border-slate-300 transition-all shadow-sm group bg-white"
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="text-sm font-semibold text-slate-800 truncate mb-1 group-hover:text-amber-700">
+                                      {productName}
+                                    </div>
+                                    <div className="text-xs text-slate-500 font-mono truncate">
+                                      ID: {reportId ? reportId.slice(0, 12) + '...' : 'Unknown'}
+                                    </div>
+                                  </div>
+                                  <span className={`flex-shrink-0 text-[11px] font-medium px-2 py-1 rounded-md ${
+                                    reportStatus === 'COMPLIANT' ? 'bg-green-100 text-green-700 border border-green-200' :
+                                    reportStatus === 'FRAUDULENT' ? 'bg-red-100 text-red-700 border border-red-200' :
+                                    'bg-amber-100 text-amber-700 border border-amber-200'
+                                  }`}>
+                                    {reportStatus === 'COMPLIANT' ? 'COMPLIANT' :
+                                     reportStatus === 'FRAUDULENT' ? 'FRAUDULENT' : 'NON-COMPLIANT'}
+                                  </span>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Parameters and Visualization Map */}
+              <div className="lg:col-span-1 space-y-6">
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
+                    <h3 className="font-semibold text-slate-800 flex items-center gap-2 text-sm">
+                      
+                      DBSCAN Configuration
+                    </h3>
+                  </div>
+                  <div className="p-4 space-y-3 text-sm">
+                    <div className="flex justify-between py-2 border-b border-slate-50">
+                      <span className="text-slate-500">EPS Distance:</span>
+                      <span className="font-medium text-slate-800">{apiResponse.results.clustering_params?.eps_km ?? 0} km</span>
+                    </div>
+                    <div className="flex justify-between py-2 border-b border-slate-50">
+                      <span className="text-slate-500">Min Samples:</span>
+                      <span className="font-medium text-slate-800">{apiResponse.results.clustering_params?.min_samples ?? 0}</span>
+                    </div>
+                    <div className="flex justify-between py-2">
+                      <span className="text-slate-500">Processing Time:</span>
+                      <span className="font-medium text-slate-800 text-right">
+                        {apiResponse.metadata?.processing_time ? new Date(apiResponse.metadata.processing_time).toLocaleString() : "N/A"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Legend */}
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
+                    <h3 className="font-semibold text-slate-800 flex items-center gap-2 text-sm">
+                      
+                      Cluster Map Legend
+                    </h3>
+                  </div>
+                  <div className="p-4 space-y-3 text-sm">
+                    {apiResponse.results.clusters?.map((cluster, index) => {
+                      const baseRed = 220;
+                      const green = Math.min(255, index * 40);
+                      const blue = Math.min(255, index * 20);
+                      const color = `rgb(${baseRed}, ${green}, ${blue})`;
+                      return (
+                        <div key={cluster.cluster_id} className="flex items-center gap-3">
+                          <div className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: color }}></div>
+                          <span className="text-slate-700">Cluster {cluster.cluster_id} <span className="text-slate-400">({cluster.size} pts)</span></span>
+                        </div>
+                      );
+                    })}
+                    {(apiResponse.results.summary?.n_noise_points ?? 0) > 0 && (
+                      <div className="flex items-center gap-3 pt-2 border-t border-slate-100 mt-2">
+                        <div className="w-4 h-4 rounded-full shadow-sm bg-slate-500"></div>
+                        <span className="text-slate-700">Noise Points <span className="text-slate-400">({apiResponse.results.summary?.n_noise_points} pts)</span></span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+        </div>
+      </div>
+    );
+  };
+
   if (mapError) {
     return (
       <div className="w-full h-full flex items-center justify-center">
@@ -765,7 +1145,9 @@ export function AnalyticsMapComponent() {
       {/* Right-side Drawer */}
       <div
         ref={drawerRef}
-        className={`fixed top-[56px] lg:top-0 right-0 left-0 sm:left-auto h-[calc(100vh-56px)] lg:h-full w-full sm:w-80 z-50 transform transition-transform duration-300 mr-2 sm:mr-0 ${
+        className={`fixed top-[56px] lg:top-0 right-0 h-[calc(100vh-56px)] lg:h-full z-50 transform transition-all duration-300 bg-white shadow-xl ${
+          isDrawerFullscreen ? "w-full" : "w-full sm:w-[450px]"
+        } ${
           drawerOpen ? "translate-x-0" : "translate-x-full"
         }`}
         style={{ pointerEvents: "auto" }}
@@ -776,22 +1158,37 @@ export function AnalyticsMapComponent() {
               <BarChart3 className="h-4 w-4 text-blue-600 flex-shrink-0" />
               <span className="text-sm font-semibold truncate">DBSCAN Analytics</span>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setDrawerOpen(false)}
-              className="flex-shrink-0"
-            >
-              <X className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsDrawerFullscreen(!isDrawerFullscreen)}
+                className="flex-shrink-0"
+                title={isDrawerFullscreen ? "Minimize" : "Maximize"}
+              >
+                {isDrawerFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  setDrawerOpen(false);
+                  setIsDrawerFullscreen(false); // Reset on close
+                }}
+                className="flex-shrink-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
 
-          <div className="p-2 sm:p-3 space-y-3 overflow-y-auto">
+          {isDrawerFullscreen ? renderFullscreenDashboard() : (
+            <div className="p-2 sm:p-3 space-y-3 overflow-y-auto h-full flex-1">
             {/* Statistics Card - Now prominently at the top */}
             {apiResponse?.results && (
               <Card className="shadow-md p-3 sm:p-4 bg-gradient-to-br from-blue-50 to-white border-2 border-blue-200">
                 <div className="flex items-center gap-2 mb-3 min-w-0">
-                  <Activity className="h-5 w-5 text-teal-600 flex-shrink-0" />
+                  
                   <span className="text-base font-bold break-words">
                     Clustering Results
                   </span>
@@ -841,7 +1238,7 @@ export function AnalyticsMapComponent() {
                     </>
                   ) : (
                     <>
-                      <MapPin className="mr-2 h-4 w-4" />
+                      
                       Run Analysis
                     </>
                   )}
@@ -872,7 +1269,7 @@ export function AnalyticsMapComponent() {
               <Card className="shadow-sm p-2 sm:p-3 bg-white border border-gray-200">
                 <div className="text-sm text-gray-600">
                   <p className="font-semibold mb-2 flex items-center gap-2 min-w-0">
-                    <MapPin className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                    
                     <span className="break-words">DBSCAN Parameters</span>
                   </p>
                   <div className="space-y-1 text-xs">
@@ -902,7 +1299,7 @@ export function AnalyticsMapComponent() {
               <Card className="shadow-sm p-2 sm:p-3 bg-white border border-gray-200">
                 <div className="text-sm">
                   <p className="font-medium mb-2 flex items-center gap-2">
-                    <Activity className="h-4 w-4 text-green-600 flex-shrink-0" />
+                    
                     <span className="break-words">Cluster Visualization</span>
                   </p>
                   <div className="space-y-2 text-xs">
@@ -957,7 +1354,7 @@ export function AnalyticsMapComponent() {
             {apiResponse?.results && (
               <Card className="shadow-sm p-2 sm:p-3 bg-white border border-gray-200">
                 <div className="flex items-center gap-2 mb-2 min-w-0">
-                  <Activity className="h-4 w-4 text-teal-600 flex-shrink-0" />
+                  
                   <span className="text-sm font-semibold break-words">
                     Clustering Results
                   </span>
@@ -998,7 +1395,7 @@ export function AnalyticsMapComponent() {
             {apiResponse?.results && (
               <Card className="shadow-sm p-2 sm:p-3 bg-white border border-gray-200">
                 <div className="flex items-center gap-2 mb-2 min-w-0">
-                  <MapPin className="h-4 w-4 text-purple-600 flex-shrink-0" />
+                  
                   <span className="text-sm font-semibold break-words">
                     Reports List
                   </span>
@@ -1299,20 +1696,102 @@ export function AnalyticsMapComponent() {
               </Card>
             )}
           </div>
+          )}
         </div>
       </div>
 
       {/* Report Details Dialog */}
-      <Dialog open={!!selectedReport} onOpenChange={() => setSelectedReport(null)}>
+      <Dialog open={!!selectedReport} onOpenChange={() => { setSelectedReport(null); setIntegrityCheckResult(null); }}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
+          <DialogHeader className="flex flex-row items-center justify-between mt-4 mb-4">
             <DialogTitle>
               {selectedReport?.product || "Compliance Report"}
             </DialogTitle>
+            {selectedReport && selectedReport.isVerified && (
+              <Button
+                variant="outline"
+                size="sm"
+                className={`flex items-center gap-2 ${
+                  integrityCheckResult?.status === "intact"
+                    ? "border-green-500 text-green-700 bg-green-50"
+                    : integrityCheckResult?.status === "tampered"
+                    ? "border-red-500 text-red-700 bg-red-50"
+                    : integrityCheckResult?.status === "no_blockchain"
+                    ? "border-yellow-500 text-yellow-700 bg-yellow-50"
+                    : ""
+                }`}
+                onClick={() => handleCheckIntegrity(selectedReport._id || selectedReport.reportId)}
+                disabled={isCheckingIntegrity}
+              >
+                {isCheckingIntegrity ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : null }
+                {isCheckingIntegrity
+                  ? "Checking..."
+                  : integrityCheckResult?.status === "intact"
+                  ? "Data Intact"
+                  : integrityCheckResult?.status === "tampered"
+                  ? "Data Tampered"
+                  : "Check Integrity"}
+              </Button>
+            )}
           </DialogHeader>
 
           {selectedReport && (
             <div className="space-y-4">
+              
+              {/* Integrity Check Result */}
+              {integrityCheckResult && (
+                <div className={`p-4 rounded-lg border ${
+                  integrityCheckResult.status === 'intact' ? 'bg-green-50 border-green-200' :
+                  integrityCheckResult.status === 'tampered' ? 'bg-red-50 border-red-200' :
+                  'bg-yellow-50 border-yellow-200'
+                }`}>
+                  <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    Integrity Status: {integrityCheckResult.status.toUpperCase()}
+                  </h4>
+                  <p className="text-sm mb-3">{integrityCheckResult.message}</p>
+                  
+                  {integrityCheckResult.fields.length > 0 && (
+                    <div className="mt-3 overflow-x-auto">
+                      <table className="min-w-full text-xs text-left">
+                        <thead className="bg-white bg-opacity-50">
+                          <tr>
+                            <th className="p-2 font-medium">Field</th>
+                            <th className="p-2 font-medium">Current Database</th>
+                            <th className="p-2 font-medium">Blockchain Found</th>
+                            <th className="p-2 font-medium text-center">Match</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200 bg-white bg-opacity-40">
+                          {integrityCheckResult.fields.map((field) => (
+                            <tr key={field.field} className={!field.match ? 'text-red-700 font-medium' : ''}>
+                              <td className="p-2 truncate max-w-[100px]" title={field.label}>{field.label}</td>
+                              <td className="p-2 break-words max-w-[150px]">{field.dbValue}</td>
+                              <td className="p-2 break-words max-w-[150px]">{field.blockchainValue}</td>
+                              <td className="p-2 text-center">
+                                {field.match ? "Yes" : "No"}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  {integrityCheckResult.etherscanUrl && (
+                    <a
+                      href={integrityCheckResult.etherscanUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs text-blue-600 hover:underline mt-2 inline-block flex items-center"
+                    >
+                      View Transaction on Etherscan
+                    </a>
+                  )}
+                </div>
+              )}
+
               {/* Report Images */}
               {(selectedReport.frontImageUrl || selectedReport.backImageUrl || (selectedReport.additionalImageUrls && selectedReport.additionalImageUrls.length > 0)) && (
                 <div className="border-b pb-3">
@@ -1387,6 +1866,26 @@ export function AnalyticsMapComponent() {
                 </div>
               )}
 
+              {/* Blockchain Transaction */}
+              <div className="border-b pb-3">
+                <p className="text-sm font-medium text-neutral-500 mb-1">Blockchain Transaction</p>
+                {selectedReport.txHash ? (
+                  <a
+                    href={`https://sepolia.etherscan.io/tx/${selectedReport.txHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-600 hover:text-blue-800 hover:underline font-mono break-all flex items-center gap-1"
+                  >
+                    {selectedReport.txHash}
+                  </a>
+                ) : (
+                  <p className="text-sm text-neutral-500 italic">
+                    No blockchain transaction found.
+                  </p>
+                )}
+              </div>
+
+
               {/* Reporter Info */}
               {(selectedReport.agent || selectedReport.agentId || selectedReport.kioskId) && (
                 <div className="border-b pb-3">
@@ -1408,7 +1907,7 @@ export function AnalyticsMapComponent() {
                       </p>
                       {selectedReport.location?.address && (
                         <p className="text-xs text-emerald-700 mt-1">
-                          📍 {selectedReport.location.address}
+                          {selectedReport.location.address}
                         </p>
                       )}
                     </div>
@@ -1506,7 +2005,7 @@ export function AnalyticsMapComponent() {
                   </p>
                   <div className="flex items-center gap-2">
                     <p className={`text-base font-medium ${
-                      selectedReport.isVerified ? 'text-red-600' : 'text-neutral-900'
+                      selectedReport.isVerified ? '' : 'text-neutral-900'
                     }`}>
                       {selectedReport.currentStatus === 'COMPLIANT' 
                         ? 'Compliant'
@@ -1514,21 +2013,16 @@ export function AnalyticsMapComponent() {
                         ? 'Non-Compliant'
                         : 'Fraudulent'}
                     </p>
-                    {selectedReport.isVerified && (
-                      <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded">
-                        APPROVED
-                      </span>
-                    )}
                   </div>
                 </div>
               )}
 
               {/* Status Change Controls */}
-              {!selectedReport.isVerified && (
+              {true && (
                 <div className="border-b pb-3">
                   <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
                     <p className="text-sm font-medium text-amber-900 mb-2">
-                      📋 Review & Change Status
+                      Review & Change Status
                     </p>
                     <p className="text-xs text-amber-700 mb-3">
                       Select a new status to change the report classification, or keep the current status to approve as-is.
@@ -1538,9 +2032,9 @@ export function AnalyticsMapComponent() {
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="COMPLIANT">✅ Compliant</SelectItem>
-                        <SelectItem value="NON_COMPLIANT">⚠️ Non-Compliant</SelectItem>
-                        <SelectItem value="FRAUDULENT">🚫 Fraudulent</SelectItem>
+                        <SelectItem value="COMPLIANT">Compliant</SelectItem>
+                        <SelectItem value="NON_COMPLIANT">Non-Compliant</SelectItem>
+                        <SelectItem value="FRAUDULENT">Fraudulent</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1587,20 +2081,40 @@ export function AnalyticsMapComponent() {
                 }
               }}
             >
-              <MapPin className="h-4 w-4 mr-2" />
+              
               View on Map
             </Button>
-            <Button
-              onClick={() => {
-                if (selectedReport?.reportId) {
-                  handleResolveReport(selectedReport.reportId);
-                }
-              }}
-              disabled={selectedReport?.isVerified}
-              className={selectedReport?.isVerified ? 'bg-red-600 hover:bg-red-600 cursor-not-allowed' : ''}
-            >
-              {selectedReport?.isVerified ? 'Already Approved' : 'Approve'}
-            </Button>
+            {!isWalletConnected ? (
+              <Button
+                onClick={() => connectWallet()}
+                className="bg-orange-500 hover:bg-orange-600 text-white"
+              >
+                Connect MetaMask
+              </Button>
+            ) : !isWalletAuthorized ? (
+              <Button
+                disabled
+                className="bg-neutral-300 text-neutral-500 cursor-not-allowed"
+              >
+                Unauthorized Wallet
+              </Button>
+            ) : (
+              <Button
+                onClick={() => {
+                  if (selectedReport?.reportId) {
+                    handleResolveReport(selectedReport.reportId);
+                  }
+                }}
+                disabled={isResolving}
+                className="bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center min-w-[140px]"
+              >
+                {isResolving ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing</>
+                ) : (
+                  selectedReport?.isVerified ? 'Update Status' : 'Approve'
+                )}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
