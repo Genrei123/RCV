@@ -1463,7 +1463,7 @@ class _QRScannerPageState extends State<QRScannerPage>
                             decoration: BoxDecoration(
                               color: const Color(
                                 0xFF005440,
-                              ).withOpacity(0.1),
+                              ).withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
                                 color: const Color(0xFF005440),
@@ -2862,10 +2862,10 @@ class _QRScannerPageState extends State<QRScannerPage>
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF005440).withOpacity(0.1),
+                                color: const Color(0xFF005440).withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
-                                  color: const Color(0xFF005440).withOpacity(0.3),
+                                  color: const Color(0xFF005440).withValues(alpha: 0.3),
                                 ),
                               ),
                               child: Row(
@@ -3634,7 +3634,7 @@ class _QRScannerPageState extends State<QRScannerPage>
         border: Border.all(color: Colors.grey[300]!),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -3702,8 +3702,8 @@ class _QRScannerPageState extends State<QRScannerPage>
         boxShadow: [
           BoxShadow(
             color: isViolation
-                ? Colors.red.withOpacity(0.1)
-                : Colors.black.withOpacity(0.03),
+                ? Colors.red.withValues(alpha: 0.1)
+                : Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -4281,7 +4281,7 @@ class _QRScannerPageState extends State<QRScannerPage>
         border: Border.all(color: Colors.grey[300]!),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -4589,7 +4589,7 @@ class _QRScannerPageState extends State<QRScannerPage>
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF005440).withOpacity(0.15),
+                        color: const Color(0xFF005440).withValues(alpha: 0.15),
                         blurRadius: 30,
                         offset: const Offset(0, 10),
                       ),
@@ -4602,7 +4602,7 @@ class _QRScannerPageState extends State<QRScannerPage>
                       Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF005440).withOpacity(0.05),
+                          color: const Color(0xFF005440).withValues(alpha: 0.05),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
@@ -4652,7 +4652,7 @@ class _QRScannerPageState extends State<QRScannerPage>
                               borderRadius: BorderRadius.circular(10),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(0xFF00A47D).withOpacity(0.3),
+                                  color: const Color(0xFF00A47D).withValues(alpha:0.3),
                                   blurRadius: 8,
                                   offset: const Offset(0, 2),
                                 ),
@@ -4679,7 +4679,7 @@ class _QRScannerPageState extends State<QRScannerPage>
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF005440).withOpacity(0.1),
+                          color: const Color(0xFF005440).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
@@ -5402,7 +5402,7 @@ class ScannerOverlayPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.black.withOpacity(0.5)
+      ..color = Colors.black.withValues(alpha: 0.5)
       ..style = PaintingStyle.fill;
 
     final scanAreaSize = size.width * 0.7;
