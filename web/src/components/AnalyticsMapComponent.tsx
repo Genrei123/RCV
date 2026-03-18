@@ -886,7 +886,6 @@ export function AnalyticsMapComponent() {
 
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center gap-3">
-              
               <p className="text-sm">{error}</p>
             </div>
           )}
@@ -943,140 +942,140 @@ export function AnalyticsMapComponent() {
                   <div className="p-5 space-y-6">
                     {activeTab === 'clusters' && (
                       <>
-                    {filteredClusters.length === 0 && filteredNoise.length === 0 && (
-                       <div className="text-center py-10 text-slate-500">
-                         <Search className="h-10 w-10 mx-auto text-slate-300 mb-3" />
-                         <p>No reports match your current filters.</p>
-                       </div>
-                    )}
-                    
-                    {filteredClusters.map(cluster => {
-                      if (cluster.filteredPoints.length === 0) return null;
-                      const baseRed = 220;
-                      const green = Math.min(255, cluster.cluster_id * 40);
-                      const blue = Math.min(255, cluster.cluster_id * 20);
-                      const color = `rgb(${baseRed}, ${green}, ${blue})`;
-                      
-                      return (
-                        <div key={cluster.cluster_id} className="border border-slate-100 rounded-xl overflow-hidden">
-                          <div className="bg-slate-50 px-4 py-3 border-b border-slate-100 flex items-center gap-3">
-                            <div className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: color }}></div>
-                            <h4 className="font-medium text-slate-800">Cluster {cluster.cluster_id}</h4>
-                            <span className="bg-white border border-slate-200 text-slate-600 text-xs px-2 py-1 rounded-full">
-                              {cluster.filteredPoints.length} Items
-                            </span>
-                          </div>
-                          <div className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white">
-                            {cluster.filteredPoints.map((report: any, idx: number) => {
-                              const reportId = report._id ?? report.report?._id;
-                              const productName = report.product ?? report.report?.scannedData?.productName ?? "Unknown Product";
-                              const reportStatus = report.status ?? report.report?.status ?? "NON_COMPLIANT";
-                              const lat = report.lat ?? report.latitude ?? report.coordinates?.[1];
-                              const lng = report.lng ?? report.longitude ?? report.long ?? report.coordinates?.[0];
-                              
-                              return (
-                                <button
-                                  key={reportId || idx}
-                                  onClick={() => {
-                                    if (reportId) {
-                                      if (lat && lng && googleMapRef.current) {
-                                        googleMapRef.current.panTo({ lat: Number(lat), lng: Number(lng) });
-                                        googleMapRef.current.setZoom(18);
-                                      }
-                                      apiClient.get(`/analytics/reports/${reportId}`).then(res => {
-                                          const reportData = res.data.data;
-                                          setSelectedReport({ ...report, ...reportData, reportId, currentStatus: reportData.status, position: [lng, lat] });
-                                          setResolutionStatus(reportData.status);
-                                      }).catch(err => console.error(err));
-                                    }
-                                  }}
-                                  className="text-left p-3 rounded-lg hover:bg-blue-50 border border-slate-100 hover:border-blue-200 transition-all shadow-sm group bg-white"
-                                >
-                                  <div className="flex items-start justify-between gap-3">
-                                    <div className="flex-1 min-w-0">
-                                      <div className="text-sm font-semibold text-slate-800 truncate mb-1 group-hover:text-blue-700">
-                                        {productName}
+                        {filteredClusters.length === 0 && filteredNoise.length === 0 && (
+                           <div className="text-center py-10 text-slate-500">
+                             <Search className="h-10 w-10 mx-auto text-slate-300 mb-3" />
+                             <p>No reports match your current filters.</p>
+                           </div>
+                        )}
+                        
+                        {filteredClusters.map(cluster => {
+                          if (cluster.filteredPoints.length === 0) return null;
+                          const baseRed = 220;
+                          const green = Math.min(255, cluster.cluster_id * 40);
+                          const blue = Math.min(255, cluster.cluster_id * 20);
+                          const color = `rgb(${baseRed}, ${green}, ${blue})`;
+                          
+                          return (
+                            <div key={cluster.cluster_id} className="border border-slate-100 rounded-xl overflow-hidden">
+                              <div className="bg-slate-50 px-4 py-3 border-b border-slate-100 flex items-center gap-3">
+                                <div className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: color }}></div>
+                                <h4 className="font-medium text-slate-800">Cluster {cluster.cluster_id}</h4>
+                                <span className="bg-white border border-slate-200 text-slate-600 text-xs px-2 py-1 rounded-full">
+                                  {cluster.filteredPoints.length} Items
+                                </span>
+                              </div>
+                              <div className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white">
+                                {cluster.filteredPoints.map((report: any, idx: number) => {
+                                  const reportId = report._id ?? report.report?._id;
+                                  const productName = report.product ?? report.report?.scannedData?.productName ?? "Unknown Product";
+                                  const reportStatus = report.status ?? report.report?.status ?? "NON_COMPLIANT";
+                                  const lat = report.lat ?? report.latitude ?? report.coordinates?.[1];
+                                  const lng = report.lng ?? report.longitude ?? report.long ?? report.coordinates?.[0];
+                                  
+                                  return (
+                                    <button
+                                      key={reportId || idx}
+                                      onClick={() => {
+                                        if (reportId) {
+                                          if (lat && lng && googleMapRef.current) {
+                                            googleMapRef.current.panTo({ lat: Number(lat), lng: Number(lng) });
+                                            googleMapRef.current.setZoom(18);
+                                          }
+                                          apiClient.get(`/analytics/reports/${reportId}`).then(res => {
+                                              const reportData = res.data.data;
+                                              setSelectedReport({ ...report, ...reportData, reportId, currentStatus: reportData.status, position: [lng, lat] });
+                                              setResolutionStatus(reportData.status);
+                                          }).catch(err => console.error(err));
+                                        }
+                                      }}
+                                      className="text-left p-3 rounded-lg hover:bg-blue-50 border border-slate-100 hover:border-blue-200 transition-all shadow-sm group bg-white"
+                                    >
+                                      <div className="flex items-start justify-between gap-3">
+                                        <div className="flex-1 min-w-0">
+                                          <div className="text-sm font-semibold text-slate-800 truncate mb-1 group-hover:text-blue-700">
+                                            {productName}
+                                          </div>
+                                          <div className="text-xs text-slate-500 font-mono truncate">
+                                            ID: {reportId ? reportId.slice(0, 12) + '...' : 'Unknown'} {(report as any).createdAt || (report as any).report?.createdAt ? `[${new Date((report as any).createdAt || (report as any).report?.createdAt).toLocaleDateString()}]` : ''}
+                                          </div>
+                                        </div>
+                                        <span className={`flex-shrink-0 text-[11px] font-medium px-2 py-1 rounded-md ${
+                                          reportStatus === 'COMPLIANT' ? 'bg-green-100 text-green-700 border border-green-200' :
+                                          reportStatus === 'FRAUDULENT' ? 'bg-red-100 text-red-700 border border-red-200' :
+                                          'bg-amber-100 text-amber-700 border border-amber-200'
+                                        }`}>
+                                          {reportStatus === 'COMPLIANT' ? 'COMPLIANT' :
+                                           reportStatus === 'FRAUDULENT' ? 'FRAUDULENT' : 'NON-COMPLIANT'}
+                                        </span>
                                       </div>
-                                      <div className="text-xs text-slate-500 font-mono truncate">
-                                        ID: {reportId ? reportId.slice(0, 12) + '...' : 'Unknown'} {(report as any).createdAt || (report as any).report?.createdAt ? `[${new Date((report as any).createdAt || (report as any).report?.createdAt).toLocaleDateString()}]` : ''}
-                                      </div>
-                                    </div>
-                                    <span className={`flex-shrink-0 text-[11px] font-medium px-2 py-1 rounded-md ${
-                                      reportStatus === 'COMPLIANT' ? 'bg-green-100 text-green-700 border border-green-200' :
-                                      reportStatus === 'FRAUDULENT' ? 'bg-red-100 text-red-700 border border-red-200' :
-                                      'bg-amber-100 text-amber-700 border border-amber-200'
-                                    }`}>
-                                      {reportStatus === 'COMPLIANT' ? 'COMPLIANT' :
-                                       reportStatus === 'FRAUDULENT' ? 'FRAUDULENT' : 'NON-COMPLIANT'}
-                                    </span>
-                                  </div>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
 
-                    {filteredNoise.length > 0 && (
-                      <div className="border border-slate-100 rounded-xl overflow-hidden">
-                        <div className="bg-slate-100 px-4 py-3 border-b border-slate-200 flex items-center gap-3">
-                          <div className="w-4 h-4 rounded-full shadow-sm bg-slate-500"></div>
-                          <h4 className="font-medium text-slate-800">Noise Points</h4>
-                          <span className="bg-white border border-slate-200 text-slate-600 text-xs px-2 py-1 rounded-full">
-                            {filteredNoise.length} Items
-                          </span>
-                        </div>
-                        <div className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white">
-                          {filteredNoise.map((report: any, idx: number) => {
-                            const reportId = report._id ?? report.report?._id;
-                            const productName = report.product ?? report.report?.scannedData?.productName ?? "Unknown Product";
-                            const reportStatus = report.status ?? report.report?.status ?? "NON_COMPLIANT";
-                            const lat = report.lat ?? report.latitude ?? report.coordinates?.[1];
-                            const lng = report.lng ?? report.longitude ?? report.long ?? report.coordinates?.[0];
-                            
-                            return (
-                              <button
-                                key={reportId || idx}
-                                onClick={() => {
-                                  if (reportId) {
-                                    if (lat && lng && googleMapRef.current) {
-                                      googleMapRef.current.panTo({ lat: Number(lat), lng: Number(lng) });
-                                      googleMapRef.current.setZoom(15);
-                                    }
-                                    apiClient.get(`/analytics/reports/${reportId}`).then(res => {
-                                        const reportData = res.data.data;
-                                        setSelectedReport({ ...report, ...reportData, reportId, currentStatus: reportData.status, position: [lng, lat] });
-                                        setResolutionStatus(reportData.status);
-                                    }).catch(err => console.error(err));
-                                  }
-                                }}
-                                className="text-left p-3 rounded-lg hover:bg-slate-50 border border-slate-100 hover:border-slate-300 transition-all shadow-sm group bg-white"
-                              >
-                                <div className="flex items-start justify-between gap-3">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="text-sm font-semibold text-slate-800 truncate mb-1 group-hover:text-amber-700">
-                                      {productName}
+                        {filteredNoise.length > 0 && (
+                          <div className="border border-slate-100 rounded-xl overflow-hidden">
+                            <div className="bg-slate-100 px-4 py-3 border-b border-slate-200 flex items-center gap-3">
+                              <div className="w-4 h-4 rounded-full shadow-sm bg-slate-500"></div>
+                              <h4 className="font-medium text-slate-800">Noise Points</h4>
+                              <span className="bg-white border border-slate-200 text-slate-600 text-xs px-2 py-1 rounded-full">
+                                {filteredNoise.length} Items
+                              </span>
+                            </div>
+                            <div className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white">
+                              {filteredNoise.map((report: any, idx: number) => {
+                                const reportId = report._id ?? report.report?._id;
+                                const productName = report.product ?? report.report?.scannedData?.productName ?? "Unknown Product";
+                                const reportStatus = report.status ?? report.report?.status ?? "NON_COMPLIANT";
+                                const lat = report.lat ?? report.latitude ?? report.coordinates?.[1];
+                                const lng = report.lng ?? report.longitude ?? report.long ?? report.coordinates?.[0];
+                                
+                                return (
+                                  <button
+                                    key={reportId || idx}
+                                    onClick={() => {
+                                      if (reportId) {
+                                        if (lat && lng && googleMapRef.current) {
+                                          googleMapRef.current.panTo({ lat: Number(lat), lng: Number(lng) });
+                                          googleMapRef.current.setZoom(15);
+                                        }
+                                        apiClient.get(`/analytics/reports/${reportId}`).then(res => {
+                                            const reportData = res.data.data;
+                                            setSelectedReport({ ...report, ...reportData, reportId, currentStatus: reportData.status, position: [lng, lat] });
+                                            setResolutionStatus(reportData.status);
+                                        }).catch(err => console.error(err));
+                                      }
+                                    }}
+                                    className="text-left p-3 rounded-lg hover:bg-slate-50 border border-slate-100 hover:border-slate-300 transition-all shadow-sm group bg-white"
+                                  >
+                                    <div className="flex items-start justify-between gap-3">
+                                      <div className="flex-1 min-w-0">
+                                        <div className="text-sm font-semibold text-slate-800 truncate mb-1 group-hover:text-amber-700">
+                                          {productName}
+                                        </div>
+                                        <div className="text-xs text-slate-500 font-mono truncate">
+                                          ID: {reportId ? reportId.slice(0, 12) + '...' : 'Unknown'} {(report as any).createdAt || (report as any).report?.createdAt ? `[${new Date((report as any).createdAt || (report as any).report?.createdAt).toLocaleDateString()}]` : ''}
+                                        </div>
+                                      </div>
+                                      <span className={`flex-shrink-0 text-[11px] font-medium px-2 py-1 rounded-md ${
+                                        reportStatus === 'COMPLIANT' ? 'bg-green-100 text-green-700 border border-green-200' :
+                                        reportStatus === 'FRAUDULENT' ? 'bg-red-100 text-red-700 border border-red-200' :
+                                        'bg-amber-100 text-amber-700 border border-amber-200'
+                                      }`}>
+                                        {reportStatus === 'COMPLIANT' ? 'COMPLIANT' :
+                                         reportStatus === 'FRAUDULENT' ? 'FRAUDULENT' : 'NON-COMPLIANT'}
+                                      </span>
                                     </div>
-                                    <div className="text-xs text-slate-500 font-mono truncate">
-                                      ID: {reportId ? reportId.slice(0, 12) + '...' : 'Unknown'} {(report as any).createdAt || (report as any).report?.createdAt ? `[${new Date((report as any).createdAt || (report as any).report?.createdAt).toLocaleDateString()}]` : ''}
-                                    </div>
-                                  </div>
-                                  <span className={`flex-shrink-0 text-[11px] font-medium px-2 py-1 rounded-md ${
-                                    reportStatus === 'COMPLIANT' ? 'bg-green-100 text-green-700 border border-green-200' :
-                                    reportStatus === 'FRAUDULENT' ? 'bg-red-100 text-red-700 border border-red-200' :
-                                    'bg-amber-100 text-amber-700 border border-amber-200'
-                                  }`}>
-                                    {reportStatus === 'COMPLIANT' ? 'COMPLIANT' :
-                                     reportStatus === 'FRAUDULENT' ? 'FRAUDULENT' : 'NON-COMPLIANT'}
-                                  </span>
-                                </div>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
                       </>
                     )}
 
@@ -1151,7 +1150,6 @@ export function AnalyticsMapComponent() {
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                   <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
                     <h3 className="font-semibold text-slate-800 flex items-center gap-2 text-sm">
-                      
                       DBSCAN Configuration
                     </h3>
                   </div>
@@ -1177,7 +1175,6 @@ export function AnalyticsMapComponent() {
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                   <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
                     <h3 className="font-semibold text-slate-800 flex items-center gap-2 text-sm">
-                      
                       Cluster Map Legend
                     </h3>
                   </div>
@@ -1289,7 +1286,6 @@ export function AnalyticsMapComponent() {
             {apiResponse?.results && (
               <Card className="shadow-md p-3 sm:p-4 bg-gradient-to-br from-blue-50 to-white border-2 border-blue-200">
                 <div className="flex items-center gap-2 mb-3 min-w-0">
-                  
                   <span className="text-base font-bold break-words">
                     Clustering Results
                   </span>
@@ -1339,7 +1335,6 @@ export function AnalyticsMapComponent() {
                     </>
                   ) : (
                     <>
-                      
                       Run Analysis
                     </>
                   )}
@@ -1370,7 +1365,6 @@ export function AnalyticsMapComponent() {
               <Card className="shadow-sm p-2 sm:p-3 bg-white border border-gray-200">
                 <div className="text-sm text-gray-600">
                   <p className="font-semibold mb-2 flex items-center gap-2 min-w-0">
-                    
                     <span className="break-words">DBSCAN Parameters</span>
                   </p>
                   <div className="space-y-1 text-xs">
@@ -1400,7 +1394,6 @@ export function AnalyticsMapComponent() {
               <Card className="shadow-sm p-2 sm:p-3 bg-white border border-gray-200">
                 <div className="text-sm">
                   <p className="font-medium mb-2 flex items-center gap-2">
-                    
                     <span className="break-words">Cluster Visualization</span>
                   </p>
                   <div className="space-y-2 text-xs">
@@ -1455,7 +1448,6 @@ export function AnalyticsMapComponent() {
             {apiResponse?.results && (
               <Card className="shadow-sm p-2 sm:p-3 bg-white border border-gray-200">
                 <div className="flex items-center gap-2 mb-2 min-w-0">
-                  
                   <span className="text-sm font-semibold break-words">
                     Clustering Results
                   </span>
@@ -1496,7 +1488,6 @@ export function AnalyticsMapComponent() {
             {apiResponse?.results && (
               <Card className="shadow-sm p-2 sm:p-3 bg-white border border-gray-200">
                 <div className="flex items-center gap-2 mb-2 min-w-0">
-                  
                   <span className="text-sm font-semibold break-words">
                     Reports List
                   </span>
@@ -2182,7 +2173,6 @@ export function AnalyticsMapComponent() {
                 }
               }}
             >
-              
               View on Map
             </Button>
             {isAdmin() && (
