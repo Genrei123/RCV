@@ -218,12 +218,20 @@ export function Sidebar({
     { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { path: "/products", label: "Products", icon: Package },
     { path: "/companies", label: "Companies", icon: Building2 },
-    { path: "/maps", label: "Maps", icon: MapPin },
+    { path: "/maps", label: "Maps", icon: MapPin, adminOnly: true },
     { path: "/analytics", label: "Analytics", icon: BarChart3 },
-    { path: "/remote-config", label: "Mobile Config", icon: Sliders },
+    { path: "/remote-config", label: "Mobile Config", icon: Sliders, adminOnly: true },
     // { path: "/blockchain", label: "Blockchain", icon: Verified },
     { path: "/wallet", label: "Connect Wallet", icon: Verified, isWallet: true },
   ];
+
+  // Filter menu items based on user role
+  const visibleMenuItems = menuItems.filter(item => {
+    if ((item as any).adminOnly && currentUser?.role === 'AGENT') {
+      return false;
+    }
+    return true;
+  });
 
   const handleLogout = async () => {
     setShowLogoutModal(false);
@@ -324,7 +332,7 @@ export function Sidebar({
         {/* Navigation Menu */}
         <nav className="flex-1 p-4">
           <div className="space-y-1">
-            {menuItems.map((item) => {
+            {visibleMenuItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
 
@@ -558,7 +566,7 @@ export function Sidebar({
 
           {/* Drawer nav: reuse menuItems, ensure links call closeDrawer */}
           <nav className="px-4 py-4 space-y-1 flex-1">
-            {menuItems.map((m) => {
+            {visibleMenuItems.map((m) => {
               const Icon = m.icon;
               const isActive = location.pathname === m.path;
 

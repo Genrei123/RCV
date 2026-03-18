@@ -36,6 +36,7 @@ interface UserDetailModalProps {
   currentUser?: User | null; // Add current user to check if they're admin
   onApprove?: (user: User) => void;
   onReject?: (user: User) => void;
+  onRevoke?: (user: User) => void;
   onAccessUpdate?: (user: User) => void;
 }
 
@@ -46,6 +47,7 @@ export function UserDetailModal({
   currentUser,
   onApprove,
   onReject,
+  onRevoke,
   onAccessUpdate,
 }: UserDetailModalProps) {
   const navigate = useNavigate();
@@ -62,10 +64,11 @@ export function UserDetailModal({
   // Demotion state
   const [demotionLoading, setDemotionLoading] = useState(false);
 
-  // Archive/Delete/Unreject state (Super Admin)
+  // Archive/Delete/Unreject/Revoke state (Super Admin)
   const [archiveLoading, setArchiveLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [unrejectLoading, setUnrejectLoading] = useState(false);
+  const [revokeRestoreLoading, setRevokeRestoreLoading] = useState(false);
 
   // Confirmation dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -124,8 +127,9 @@ export function UserDetailModal({
 
   if (!isOpen || !user) return null;
 
-  // Check if user is rejected - rejected users have no access and cannot be modified
+  // Check if user is rejected or revoked - these users have no access and cannot be modified
   const isRejected = user.status === "Rejected";
+  const isRevoked = user.status === "Revoked";
 
   // Copy wallet address to clipboard
   const handleCopyWallet = () => {
@@ -287,6 +291,26 @@ export function UserDetailModal({
     }
   };
 
+  // Handle revoke user access (Admin/Super Admin)
+  const handleRevokeUser = async () => {
+    if (!user?._id) return;
+
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Revoke User Access',
+      message: `Are you sure you want to revoke ${user.fullName}'s access? This will immediately disable their access to the system. Super Admin can restore their access later.`,
+      confirmText: 'Revoke',
+      cancelText: 'Cancel',
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmDialog({ ...confirmDialog, isOpen: false });
+        if (onRevoke) {
+          onRevoke(user);
+        }
+      },
+    });
+  };
+
   // Handle archive user (Super Admin)
   const handleArchiveUser = async () => {
     if (!user?._id) return;
@@ -431,6 +455,40 @@ export function UserDetailModal({
     }
   };
 
+  // Handle restore revoked user (Super Admin only)
+  const handleRestoreRevokedUser = async () => {
+    if (!user?._id) return;
+
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Restore Revoked User',
+      message: `Are you sure you want to restore ${user.fullName}'s access? Their status will be changed from Revoked to Active.`,
+      confirmText: 'Restore',
+      cancelText: 'Cancel',
+      variant: 'warning',
+      onConfirm: async () => {
+        setConfirmDialog({ ...confirmDialog, isOpen: false });
+        await executeRestoreRevokedUser();
+      },
+    });
+  };
+
+  const executeRestoreRevokedUser = async () => {
+    if (!user?._id) return;
+
+    setRevokeRestoreLoading(true);
+    try {
+      await UserPageService.unrevokeUser(user._id);
+      toast.success(`${user.fullName}'s access has been restored.`);
+      onAccessUpdate?.({ ...user, status: 'Active', approved: true });
+    } catch (error) {
+      console.error("Error restoring revoked user:", error);
+      toast.error("Failed to restore user access");
+    } finally {
+      setRevokeRestoreLoading(false);
+    }
+  };
+
   const formatDate = (date: Date | string | undefined): string => {
     if (!date) return "N/A";
     try {
@@ -477,6 +535,7 @@ export function UserDetailModal({
     if (status === "Active") return "default";
     if (status === "Pending") return "secondary";
     if (status === "Rejected") return "destructive";
+    if (status === "Revoked") return "destructive";
     if (status === "Inactive") return "destructive";
     return "outline";
   };
@@ -802,7 +861,8 @@ export function UserDetailModal({
               </div>
             </div>
 
-            {/* Blockchain Wallet Section */}
+            {/* Blockchain Wallet Section - Admin only */}
+            {(currentUser?.isSuperAdmin || currentUser?.role === 'ADMIN') && (
             <div className="border-t pt-6">
               <h3 className="text-lg font-semibold app-text mb-4 flex items-center gap-2">
                 <Wallet className="h-5 w-5" />
@@ -828,7 +888,7 @@ export function UserDetailModal({
                         onChange={(e) => setWalletAddress(e.target.value)}
                         placeholder="0x..."
                         className="pl-10 font-mono text-sm"
-                        disabled={walletLoading || isRejected}
+                        disabled={walletLoading || isRejected || isRevoked}
                       />
                     </div>
                     {walletAddress && (
@@ -853,7 +913,7 @@ export function UserDetailModal({
                       id="authorize-wallet"
                       checked={authorizeWallet}
                       onCheckedChange={(checked) => setAuthorizeWallet(checked as boolean)}
-                      disabled={walletLoading || isRejected || !walletAddress}
+                      disabled={walletLoading || isRejected || isRevoked || !walletAddress}
                     />
                     <Label htmlFor="authorize-wallet" className="text-sm cursor-pointer">
                       Authorize wallet for blockchain operations
@@ -863,7 +923,7 @@ export function UserDetailModal({
                   <div className="flex gap-2">
                     <Button
                       onClick={handleUpdateWallet}
-                      disabled={walletLoading || isRejected || !walletAddress}
+                      disabled={walletLoading || isRejected || isRevoked || !walletAddress}
                       size="sm"
                       className="app-bg-primary hover:app-bg-secondary"
                     >
@@ -921,6 +981,7 @@ export function UserDetailModal({
                 )}
               </div>
             </div>
+            )}
 
             {/* Account Timestamps */}
             <div className="border-t pt-6">
@@ -1012,6 +1073,50 @@ export function UserDetailModal({
                     </div>
                   )}
                 </>
+              ) : isRevoked ? (
+                <>
+                  {/* Revoked User Section */}
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                    <p className="text-sm text-red-700">
+                      This user's access has been revoked.
+                      {currentUser?.isSuperAdmin ? (
+                        <> As Super Admin, you can restore this account to active status.</>
+                      ) : (
+                        <> Contact a Super Admin to restore this account.</>
+                      )}
+                    </p>
+                  </div>
+                  {currentUser?.isSuperAdmin ? (
+                    <div className="flex gap-3">
+                      <Button
+                        onClick={handleRestoreRevokedUser}
+                        disabled={revokeRestoreLoading}
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        {revokeRestoreLoading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Restoring...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Restore Access
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      disabled
+                      className="w-full opacity-50 cursor-not-allowed"
+                    >
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Access Revoked
+                    </Button>
+                  )}
+                </>
               ) : !user.approved ? (
                 <>
                   {/* Pending Approval Section */}
@@ -1095,14 +1200,16 @@ export function UserDetailModal({
                         </Button>
                       </>
                     )}
-                    <Button
-                      onClick={() => onReject(user)}
-                      variant="outline"
-                      className="border-[color:var(--app-error)]/50 app-text-error hover:bg-[color:var(--app-error)]/10 hover:border-[color:var(--app-error)]/70"
-                    >
-                      <XCircle className="h-4 w-4 mr-2" />
-                      Revoke Access
-                    </Button>
+                    {(currentUser?.isSuperAdmin || currentUser?.role === 'ADMIN') && (
+                      <Button
+                        onClick={handleRevokeUser}
+                        variant="outline"
+                        className="border-[color:var(--app-error)]/50 app-text-error hover:bg-[color:var(--app-error)]/10 hover:border-[color:var(--app-error)]/70"
+                      >
+                        <XCircle className="h-4 w-4 mr-2" />
+                        Revoke Access
+                      </Button>
+                    )}
                   </div>
                 </>
               )}

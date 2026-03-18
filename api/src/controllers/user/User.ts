@@ -480,6 +480,46 @@ export const rejectUser = async (
   }
 };
 
+// Revoke user access (admin only)
+export const revokeUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const idResult = IdSchema.safeParse(req.params.id);
+  if (!idResult.success) {
+    return res.status(400).json({ success: false, message: "Invalid User ID" });
+  }
+
+  try {
+    const user = await UserRepo.findOneBy({ _id: idResult.data });
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    user.approved = false;
+    user.status = "Revoked";
+
+    const saved = await UserRepo.save(user);
+
+    // Log the revocation action
+    const currentUserId = req.user?._id;
+    if (currentUserId) {
+      await AuditLogService.logRevokeAccess(currentUserId, user._id, req);
+    }
+
+    return res.status(200).json({
+      success: true,
+      user: saved,
+      message: "User access has been revoked",
+    });
+  } catch (error) {
+    return next(CustomError.security(500, "Server Error"));
+  }
+};
+
 // Update user access permissions (admin only)
 export const updateUserAccess = async (
   req: Request,
@@ -1200,6 +1240,61 @@ export const unrejectUser = async (
       success: true,
       user: saved,
       message: "User restored to pending status",
+    });
+  } catch (error) {
+    return next(CustomError.security(500, "Server Error"));
+  }
+};
+
+// Restore revoked user access (Super Admin only)
+export const unrevokeUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const idResult = IdSchema.safeParse(req.params.id);
+  if (!idResult.success) {
+    return res.status(400).json({ success: false, message: "Invalid User ID" });
+  }
+
+  try {
+    const user = await UserRepo.findOneBy({ _id: idResult.data });
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    if (user.status !== "Revoked") {
+      return res.status(400).json({
+        success: false,
+        message: "User is not in revoked status",
+      });
+    }
+
+    // Restore to active status and re-approve
+    user.status = "Active";
+    user.approved = true;
+
+    const saved = await UserRepo.save(user);
+
+    // Log the unrevoke action
+    const currentUserId = req.user?._id;
+    if (currentUserId) {
+      await AuditLogService.createLog({
+        action: "User account access restored from revoked status",
+        actionType: "UPDATE_USER",
+        userId: currentUserId,
+        targetUserId: user._id,
+        platform: "WEB",
+        req,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      user: saved,
+      message: "User access restored to active status",
     });
   } catch (error) {
     return next(CustomError.security(500, "Server Error"));

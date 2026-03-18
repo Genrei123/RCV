@@ -192,7 +192,7 @@ const MySubmissions: React.FC<MySubmissionsProps> = ({
           </div>
 
           {/* Show approvers list */}
-          {approval.approvers && approval.approvers.length > 0 && (
+          {Array.isArray(approval.approvers) && approval.approvers.length > 0 && (
             <div className="text-xs text-muted-foreground mt-2 p-2 bg-muted rounded space-y-1">
               <span className="font-medium">Approvers:</span>
               {approval.approvers.map((approver, index) => (
@@ -232,7 +232,7 @@ const MySubmissions: React.FC<MySubmissionsProps> = ({
           )}
 
           {/* Show submission version if resubmitted */}
-          {approval.submissionVersion && approval.submissionVersion > 1 && (
+          {approval.submissionVersion !== undefined && approval.submissionVersion !== null && approval.submissionVersion > 1 && (
             <div className="text-xs mt-1 text-orange-600">
               Resubmission #{approval.submissionVersion}
             </div>

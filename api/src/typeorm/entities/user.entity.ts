@@ -17,7 +17,7 @@ export const UserValidation = z.object({
   _id: z.string().optional(),
   role: z.enum(['AGENT', 'ADMIN', 'USER']).optional(),
   isSuperAdmin: z.boolean().optional().default(false),
-  status: z.enum(['Archived', 'Active', 'Pending', 'Rejected']).default('Pending'),
+  status: z.enum(['Archived', 'Active', 'Pending', 'Rejected', 'Revoked']).default('Pending'),
   rejectionReason: z.string().optional(),
   webAccess: z.boolean().optional().default(false),
   appAccess: z.boolean().optional().default(true),
@@ -61,8 +61,8 @@ export class User {
   @Column({ type: 'boolean', default: false })
   isSuperAdmin!: boolean;
 
-  @Column({ type: 'enum', enum: ['Archived', 'Active', 'Pending', 'Rejected'], default: 'Pending' })
-  status!: 'Archived' | 'Active' | 'Pending' | 'Rejected';
+  @Column({ type: 'enum', enum: ['Archived', 'Active', 'Pending', 'Rejected', 'Revoked'], default: 'Pending' })
+  status!: 'Archived' | 'Active' | 'Pending' | 'Rejected' | 'Revoked';
 
   @Column({ nullable: true })
   rejectionReason?: string;
