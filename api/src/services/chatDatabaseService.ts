@@ -15,6 +15,7 @@ interface ProductResult {
   classification: string;
   subClassification: string;
   expirationDate: string;
+  registeredBy: string;
   registrationDate: string;
   blockchainHash: string | null;
 }
@@ -52,11 +53,21 @@ export class ChatDatabaseService {
         { productClassification: ILike(`%${keyword}%`), isArchived: false },
       ]).flat();
 
-      const products = await productRepo.find({
+      let products = await productRepo.find({
         where: whereConditions,
-        relations: ['company'],
+        relations: ['company', 'registeredBy'],
         take: 10,
       });
+
+      // Fallback: if user asked for a "list" but filters didn't match anything specific, fetch recent products
+      if (products.length === 0 && keywords.some(k => ['all', 'list', 'registered', 'recent', 'latest', 'products', 'give'].includes(k.toLowerCase()))) {
+        products = await productRepo.find({
+          where: { isArchived: false },
+          relations: ['company', 'registeredBy'],
+          order: { dateOfRegistration: 'DESC' },
+          take: 10,
+        });
+      }
 
       return products.map((p: Product) => {
         // Safely handle dates which might be strings from the database
@@ -82,6 +93,7 @@ export class ChatDatabaseService {
           classification: p.productClassification,
           subClassification: p.productSubClassification,
           expirationDate: formatDate(p.expirationDate),
+          registeredBy: p.registeredBy ? `${p.registeredBy.firstName} ${p.registeredBy.lastName}` : 'Unknown',
           registrationDate: formatDate(p.dateOfRegistration),
           blockchainHash: p.sepoliaTransactionId || null,
         };
@@ -181,6 +193,7 @@ export class ChatDatabaseService {
   formatProductData(product: ProductResult): string {
     return `
 **${product.productName}** (${product.brandName})
+- Product ID: ${product.id}
 - CFPR Number: ${product.cfprNumber}
 - LTO Number: ${product.ltoNumber}
 - Lot Number: ${product.lotNumber}
@@ -188,6 +201,7 @@ export class ChatDatabaseService {
 - Classification: ${product.classification} > ${product.subClassification}
 - Expiration Date: ${product.expirationDate}
 - Registration Date: ${product.registrationDate}
+- Registered By: ${product.registeredBy}
 ${product.blockchainHash ? `- Blockchain Hash: \`${product.blockchainHash}\`` : ''}
     `.trim();
   }

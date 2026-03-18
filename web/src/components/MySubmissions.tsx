@@ -231,13 +231,6 @@ const MySubmissions: React.FC<MySubmissionsProps> = ({
             </div>
           )}
 
-          {/* Show submission version if resubmitted */}
-          {approval.submissionVersion && approval.submissionVersion > 1 && (
-            <div className="text-xs mt-1 text-orange-600">
-              Resubmission #{approval.submissionVersion}
-            </div>
-          )}
-
           <div className="text-xs text-muted-foreground mt-2">
             Submitted: {CertificateApprovalService.formatDate(approval.createdAt)}
           </div>

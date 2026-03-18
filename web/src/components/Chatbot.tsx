@@ -3,6 +3,7 @@ import { MessageCircle, X, Send, Maximize2, Minimize2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { ChatService } from "@/services/chatService";
 import { useChatbot } from "@/context/ChatbotContext";
+import CertificateTimelineModal from "./CertificateTimelineModal";
 
 interface Message {
   id: string;
@@ -24,6 +25,7 @@ export function Chatbot() {
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<{id: string, name: string} | null>(null);
   const { isExpanded, setIsExpanded } = useChatbot();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const streamingIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -238,6 +240,35 @@ export function Chatbot() {
                           ul: ({ children }) => <ul className="list-disc ml-4 mb-2">{children}</ul>,
                           ol: ({ children }) => <ol className="list-decimal ml-4 mb-2">{children}</ol>,
                           li: ({ children }) => <li className="mb-1">{children}</li>,
+                          a: ({ href, children }) => {
+                            if (href?.startsWith('product://')) {
+                              const url = new URL(href);
+                              const id = url.searchParams.get('id');
+                              const name = url.searchParams.get('name') || 'Product';
+                              return (
+                                <button 
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    setSelectedProduct({ id: id as string, name: decodeURIComponent(name) });
+                                  }}
+                                  className="text-emerald-700 underline font-medium hover:text-emerald-800 cursor-pointer"
+                                  type="button"
+                                >
+                                  {children}
+                                </button>
+                              );
+                            }
+                            return (
+                            <a 
+                              href={href} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="text-emerald-700 underline font-medium hover:text-emerald-800"
+                            >
+                              {children}
+                            </a>
+                            );
+                          },
                         }}
                       >
                         {message.text}
@@ -312,6 +343,16 @@ export function Chatbot() {
           </div>
           </div>
         </>
+      )}
+
+      {selectedProduct && (
+        <CertificateTimelineModal
+          isOpen={true}
+          onClose={() => setSelectedProduct(null)}
+          productId={selectedProduct.id}
+          productName={selectedProduct.name}
+          isPublic={true}
+        />
       )}
     </>
   );
