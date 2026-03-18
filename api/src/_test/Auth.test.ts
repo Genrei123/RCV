@@ -236,7 +236,7 @@ describe("Sign In", () => {
       expect(res.cookie).toHaveBeenCalledWith("token", mockEncryptedCookie, {
         httpOnly: true,
         secure: false,
-        sameSite: "none",
+        sameSite: "lax",
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
         path: "/",
       });
