@@ -98,7 +98,7 @@ export const userSignIn = async (req: Request, res: Response, next: NextFunction
     res.cookie('token', encryptedCookie, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'none',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: cookieMaxAge,
       path: '/'
     });

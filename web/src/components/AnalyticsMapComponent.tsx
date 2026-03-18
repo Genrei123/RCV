@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useMetaMask } from "@/contexts/MetaMaskContext";
+import { BarChart3, RefreshCw, Menu, X, Search, Filter, ChevronDown, Check, Maximize2, Minimize2, Download } from "lucide-react";
 import { AuthService } from "@/services/authService";
-import { BarChart3, RefreshCw, Menu, X, Search, Filter, ChevronDown, Check, Maximize2, Minimize2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,8 @@ export function AnalyticsMapComponent() {
   const [loading, setLoading] = useState(false);
   const [apiResponse, setApiResponse] = useState<APIResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'clusters' | 'all'>('clusters');
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapError, setMapError] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
@@ -922,13 +924,25 @@ export function AnalyticsMapComponent() {
               {/* Left Column: Data Clusters (Reports) */}
               <div className="lg:col-span-2 space-y-6">
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                  <div className="px-5 py-4 border-b border-slate-100 bg-slate-50">
-                    <h3 className="font-semibold text-slate-800 flex items-center gap-2">
-                      
-                      Detailed Cluster Analysis ({allFilteredReports} Reports Mapped)
-                    </h3>
+                  <div className="flex flex-col border-b border-slate-100 bg-slate-50">
+                    <div className="flex items-center gap-6 px-5 pt-4">
+                      <button 
+                        onClick={() => setActiveTab('clusters')}
+                        className={`font-semibold text-sm pb-3 border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'clusters' ? 'border-indigo-500 text-indigo-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                      >
+                        Detailed Cluster Analysis ({allFilteredReports} Reports)
+                      </button>
+                      <button 
+                        onClick={() => setActiveTab('all')}
+                        className={`font-semibold text-sm pb-3 border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'all' ? 'border-indigo-500 text-indigo-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                      >
+                        All Reports
+                      </button>
+                    </div>
                   </div>
                   <div className="p-5 space-y-6">
+                    {activeTab === 'clusters' && (
+                      <>
                     {filteredClusters.length === 0 && filteredNoise.length === 0 && (
                        <div className="text-center py-10 text-slate-500">
                          <Search className="h-10 w-10 mx-auto text-slate-300 mb-3" />
@@ -967,7 +981,7 @@ export function AnalyticsMapComponent() {
                                     if (reportId) {
                                       if (lat && lng && googleMapRef.current) {
                                         googleMapRef.current.panTo({ lat: Number(lat), lng: Number(lng) });
-                                        googleMapRef.current.setZoom(15);
+                                        googleMapRef.current.setZoom(18);
                                       }
                                       apiClient.get(`/analytics/reports/${reportId}`).then(res => {
                                           const reportData = res.data.data;
@@ -984,7 +998,7 @@ export function AnalyticsMapComponent() {
                                         {productName}
                                       </div>
                                       <div className="text-xs text-slate-500 font-mono truncate">
-                                        ID: {reportId ? reportId.slice(0, 12) + '...' : 'Unknown'}
+                                        ID: {reportId ? reportId.slice(0, 12) + '...' : 'Unknown'} {(report as any).createdAt || (report as any).report?.createdAt ? `[${new Date((report as any).createdAt || (report as any).report?.createdAt).toLocaleDateString()}]` : ''}
                                       </div>
                                     </div>
                                     <span className={`flex-shrink-0 text-[11px] font-medium px-2 py-1 rounded-md ${
@@ -1045,7 +1059,7 @@ export function AnalyticsMapComponent() {
                                       {productName}
                                     </div>
                                     <div className="text-xs text-slate-500 font-mono truncate">
-                                      ID: {reportId ? reportId.slice(0, 12) + '...' : 'Unknown'}
+                                      ID: {reportId ? reportId.slice(0, 12) + '...' : 'Unknown'} {(report as any).createdAt || (report as any).report?.createdAt ? `[${new Date((report as any).createdAt || (report as any).report?.createdAt).toLocaleDateString()}]` : ''}
                                     </div>
                                   </div>
                                   <span className={`flex-shrink-0 text-[11px] font-medium px-2 py-1 rounded-md ${
@@ -1061,6 +1075,71 @@ export function AnalyticsMapComponent() {
                             );
                           })}
                         </div>
+                      </div>
+                    )}
+                      </>
+                    )}
+
+                    {activeTab === 'all' && (
+                      <div className="space-y-4">
+                        {(apiResponse?.results?.clusters?.flatMap(c => c.points) || []).sort((a: any, b: any) => new Date(b.createdAt || b.report?.createdAt || b.scannedAt || b.report?.scannedAt || 0).getTime() - new Date(a.createdAt || a.report?.createdAt || a.scannedAt || a.report?.scannedAt || 0).getTime()).map((report: any, idx: number) => {
+                          const reportId = report._id ?? report.report?._id;
+                          const productName = report.product ?? report.report?.scannedData?.productName ?? "Unknown Product";
+                          const reportStatus = report.status ?? report.report?.status ?? "NON_COMPLIANT";
+                          const lat = report.lat ?? report.latitude ?? report.coordinates?.[1];
+                          const lng = report.lng ?? report.longitude ?? report.long ?? report.coordinates?.[0];
+                          const createdAt = report.createdAt ?? report.report?.createdAt;
+                          
+                          return (
+                            <button
+                              key={reportId || idx}
+                              onClick={() => {
+                                if (reportId) {
+                                  if (lat && lng && googleMapRef.current) {
+                                    googleMapRef.current.panTo({ lat: Number(lat), lng: Number(lng) });
+                                    googleMapRef.current.setZoom(15);
+                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                  }
+                                  apiClient.get(`/analytics/reports/${reportId}`).then(res => {
+                                      const reportData = res.data.data;
+                                      setSelectedReport({ ...report, ...reportData, reportId, currentStatus: reportData.status, position: [lng, lat] });
+                                      setResolutionStatus(reportData.status);
+                                  }).catch(err => console.error(err));
+                                }
+                              }}
+                              className="w-full text-left p-4 rounded-xl hover:bg-slate-50 border border-slate-200 hover:border-indigo-300 transition-all shadow-sm group bg-white flex flex-col gap-2"
+                            >
+                              <div className="flex items-start justify-between gap-3 w-full">
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-base font-semibold text-slate-800 truncate mb-1 group-hover:text-indigo-700">
+                                    {productName}
+                                  </div>
+                                  <div className="text-sm text-slate-500 font-mono truncate">
+                                    ID: {reportId ? reportId.slice(0, 12) + '...' : 'Unknown'}
+                                  </div>
+                                </div>
+                                <span className={`flex-shrink-0 text-[11px] font-medium px-2 py-1 rounded-md ${
+                                  reportStatus === 'COMPLIANT' ? 'bg-green-100 text-green-700 border border-green-200' :
+                                  reportStatus === 'FRAUDULENT' ? 'bg-red-100 text-red-700 border border-red-200' :
+                                  'bg-amber-100 text-amber-700 border border-amber-200'
+                                }`}>
+                                  {reportStatus === 'COMPLIANT' ? 'COMPLIANT' :
+                                   reportStatus === 'FRAUDULENT' ? 'FRAUDULENT' : 'NON-COMPLIANT'}
+                                </span>
+                              </div>
+                              {createdAt && (
+                                <div className="text-xs text-slate-400 mt-1">
+                                  {new Date(createdAt).toLocaleString()}
+                                </div>
+                              )}
+                            </button>
+                          );
+                        })}
+                        {((apiResponse?.results?.clusters?.flatMap(c => c.points) || []).length === 0) && (
+                          <div className="text-center py-10 text-slate-500">
+                            <p>No reports found.</p>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -2142,6 +2221,32 @@ export function AnalyticsMapComponent() {
               </>
             )}
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+        <DialogContent className="max-w-4xl w-full h-[90vh] bg-slate-900 border-slate-800 p-0 overflow-hidden flex flex-col">
+          <div className="flex justify-between items-center p-4 border-b border-white/10 bg-slate-900/50 absolute top-0 left-0 right-0 z-10">
+            <h2 className="text-white font-medium">Report Image</h2>
+            <a 
+              href={selectedImage || ''} 
+              download="report-image.jpg"
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded flex items-center gap-2 transition-colors cursor-pointer"
+            >
+              <Download className="w-4 h-4" /> Download
+            </a>
+          </div>
+          {selectedImage && (
+            <div className="flex-1 w-full h-full relative flex flex-col items-center justify-center overflow-auto p-4 custom-scrollbar">
+              <img 
+                src={selectedImage} 
+                alt="Enlarged Report" 
+                className="max-w-full max-h-full object-contain rounded" 
+              />
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Plus, Grid, List, Search, Download, Link2, HelpCircle, ShieldCheck, Loader2,   } from "lucide-react";
 import { PageContainer } from "@/components/PageContainer";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,8 @@ export interface ProductsProps {
 }
 
 export function Products(props: ProductsProps) {
+  const [searchParams] = useSearchParams();
+  const defaultSearchQuery = searchParams.get('search') || "";
   const [pageTab] = useState<PageTab>("products");
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [showAddModal, setShowAddModal] = useState(false);
@@ -45,7 +48,7 @@ export function Products(props: ProductsProps) {
   const [pagination, setPagination] = useState<any | null>(null);
   const pageSize = 10;
   // Unified search term (server-side for both list & grid views)
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(defaultSearchQuery);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [productStatus, setProductStatus] = useState<"active" | "archived">(
     "active",
