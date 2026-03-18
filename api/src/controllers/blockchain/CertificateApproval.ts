@@ -1505,10 +1505,14 @@ export async function submitArchiveForCompany(req: Request, res: Response, next:
       email: company.email,
       website: company.website,
       businessType: company.businessType,
-      registrationDate: company.registrationDate?.toISOString(),
+      registrationDate: company.registrationDate instanceof Date 
+        ? company.registrationDate.toISOString() 
+        : typeof company.registrationDate === 'string' 
+          ? company.registrationDate 
+          : undefined,
       description: company.description,
       sepoliaTransactionId: company.sepoliaTransactionId,
-      
+
       // Archive-specific field
       willBeArchived: true
     };
@@ -1671,10 +1675,14 @@ export async function submitUnarchiveForCompany(req: Request, res: Response, nex
       email: company.email,
       website: company.website,
       businessType: company.businessType,
-      registrationDate: company.registrationDate?.toISOString(),
+      registrationDate: company.registrationDate instanceof Date 
+        ? company.registrationDate.toISOString() 
+        : typeof company.registrationDate === 'string' 
+          ? company.registrationDate 
+          : undefined,
       description: company.description,
       sepoliaTransactionId: company.sepoliaTransactionId,
-      
+
       // Unarchive-specific field
       willBeUnarchived: true
     };

@@ -81,6 +81,8 @@ class _KioskDashboardState extends State<KioskDashboard> with SingleTickerProvid
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
           tabs: [
             const Tab(
               icon: Icon(Icons.dashboard, size: 20),
