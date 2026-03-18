@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { X, ChevronRight, ChevronLeft } from "lucide-react";
 import "../styles/tutorial.css";
+import { AuthService } from "@/services/authService";
 
 interface TutorialStep {
   elementSelector: string;
@@ -252,7 +253,13 @@ export const TutorialHelper = ({ onClose, mode = "sidebar" }: TutorialHelperProp
 
   const closeTutorial = () => {
     setIsVisible(false);
-    localStorage.setItem("tutorial_completed", "true");
+    // Persist completion flag scoped to the current user so it applies across browsers
+    AuthService.getCurrentUser().then((user) => {
+      const key = user?._id
+        ? `tutorial_completed_${user._id}`
+        : "tutorial_completed";
+      localStorage.setItem(key, "true");
+    });
     onClose?.();
   };
 
