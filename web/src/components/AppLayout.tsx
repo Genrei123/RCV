@@ -106,7 +106,7 @@ export const AppLayout = ({
           </button>
         )}
         {isMapPage && (
-          <div className="ml-auto flex items-center gap-2">
+          <div className={`${mobileSearchOpen ? 'hidden' : 'ml-auto'} flex items-center gap-2`}>
           <button
             onClick={() => setViewMode("agents")}
             className={`p-2 rounded-md transition ${
@@ -138,12 +138,12 @@ export const AppLayout = ({
       {/* mobile search overlay - only on maps pages */}
       {isMapPage && mobileSearchOpen && (
         <div
-          className="lg:hidden fixed top-1 left-14 right-0 bg-white border-b"
-          style={{ zIndex: 99999, pointerEvents: 'auto', touchAction: 'manipulation' }}
+          className="lg:hidden fixed top-1 left-14 bg-white border-b"
+          style={{ zIndex: 99999, pointerEvents: 'auto', touchAction: 'manipulation', right: '56px' }}
         >
           {/* Search input row */}
-          <div className="flex items-center gap-2 px-4 py-3 h-14">
-            <div className="flex-1 relative">
+          <div className="flex items-center gap-2 px-4 py-2 h-14">
+            <div className="w-[80%] relative">
               <input
                 type="text"
                 autoFocus
