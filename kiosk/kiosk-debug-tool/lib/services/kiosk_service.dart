@@ -436,11 +436,15 @@ class KioskService extends ChangeNotifier {
         .listen((snapshot) {
           if (_isLogsPaused) return;
           
-          _logs = snapshot.docs
-              .map((doc) => KioskLog.fromFirestore(doc))
-              .toList();
-          
-          notifyListeners();
+          try {
+            _logs = snapshot.docs
+                .map((doc) => KioskLog.fromFirestore(doc))
+                .toList();
+            
+            notifyListeners();
+          } catch (e, stack) {
+            debugPrint('❌ Error parsing logs: $e\n$stack');
+          }
         }, onError: (e) {
           debugPrint('❌ Error listening to logs: $e');
         });

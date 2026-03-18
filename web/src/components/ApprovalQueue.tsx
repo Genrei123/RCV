@@ -442,19 +442,47 @@ const ApprovalQueue: React.FC<ApprovalQueueProps> = ({ isAdmin = false, onSucces
                   </div>
 
                   {/* Show entity creation status */}
-                  {approval.pendingEntityData && !approval.entityCreated && (
+                  {approval.pendingEntityData?.isArchive ? (
+                    <div className="flex items-center gap-2 text-red-600 bg-red-50 p-2 rounded text-xs">
+                      <Clock className="w-3 h-3" />
+                      <span>
+                        {approval.entityType === "product"
+                          ? "Product"
+                          : "Company"}{" "}
+                        will be archived
+                      </span>
+                    </div>
+                  ) : approval.pendingEntityData?.isUnarchive ? (
+                    <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 p-2 rounded text-xs">
+                      <Clock className="w-3 h-3" />
+                      <span>
+                        {approval.entityType === "product"
+                          ? "Product"
+                          : "Company"}{" "}
+                        will be restored
+                      </span>
+                    </div>
+                  ) : approval.pendingEntityData?.isUpdate ? (
+                    <div className="flex items-center gap-2 text-blue-600 bg-blue-50 p-2 rounded text-xs">
+                      <Clock className="w-3 h-3" />
+                      <span>
+                        {approval.entityType === "product"
+                          ? "Product"
+                          : "Company"}{" "}
+                        will be updated
+                      </span>
+                    </div>
+                  ) : approval.pendingEntityData && !approval.entityCreated ? (
                     <div className="flex items-center gap-2 text-amber-600 bg-amber-50 p-2 rounded text-xs">
                       <Clock className="w-3 h-3" />
                       <span>
                         {approval.entityType === "product"
                           ? "Product"
                           : "Company"}{" "}
-                        will be created after full approval
+                        will be created
                       </span>
                     </div>
-                  )}
-
-                  {approval.entityCreated && (
+                  ) : approval.entityCreated && !approval.isRenewal && !approval.pendingEntityData?.isRenewal ? (
                     <div className="flex items-center gap-2 text-green-600 bg-green-50 p-2 rounded text-xs">
                       <CheckCircle className="w-3 h-3" />
                       <span>
@@ -464,7 +492,7 @@ const ApprovalQueue: React.FC<ApprovalQueueProps> = ({ isAdmin = false, onSucces
                         has been created
                       </span>
                     </div>
-                  )}
+                  ) : null}
 
                   {/* Show approvers list */}
                   {approval.approvers && approval.approvers.length > 0 && (

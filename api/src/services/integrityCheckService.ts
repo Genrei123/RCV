@@ -1,6 +1,6 @@
 import { DB } from '../typeorm/data-source';
 import { ComplianceReport } from '../typeorm/entities/complianceReport.entity';
-import { ProductRepo, CompanyRepo } from '../typeorm/data-source';
+import { ProductRepo, CompanyRepo, UserRepo } from '../typeorm/data-source';
 import { verifyTransactionOnBlockchain } from './sepoliaBlockchainService';
 import {
   getWalletTransactions,
@@ -291,7 +291,13 @@ export const restoreDeletedProduct = async (
   const bcData = verification.data;
   const entityPayload = bcData.entity || bcData;
 
-  // 3. Recreate the product instance using the exact same ID
+  // 3. Find an admin user to assign as the registeredBy (required field)
+  const adminUser = await UserRepo.findOne({ where: { role: 'ADMIN' } }) || await UserRepo.findOne({ where: {} });
+  if (!adminUser) {
+    return { success: false, message: 'System error: Cannot restore product as no users exist in the database to assign registration to.' };
+  }
+  
+  // Recreate the product instance using the exact same ID
   const newProduct = ProductRepo.create({
     _id: productId, // Restore original ID
     sepoliaTransactionId: txHash,
@@ -304,21 +310,46 @@ export const restoreDeletedProduct = async (
     productSubClassification: entityPayload.subClassification || entityPayload.productSubClassification || '',
     productImageFront: entityPayload.productImageFront || '',
     productImageBack: entityPayload.productImageBack || '',
-    expirationDate: entityPayload.expirationDate ? new Date(entityPayload.expirationDate) : undefined,
+    expirationDate: entityPayload.expirationDate ? new Date(entityPayload.expirationDate) : new Date('2099-12-31'),
+    isArchived: false,
     dateOfRegistration: new Date(bcData.timestamp || Date.now()),
+    registeredById: adminUser._id,
+    registeredAt: new Date(),
   });
 
   // 4. Try to re-link the company if it still exists
+  let companyFound = false;
   if (entityPayload.companyName) {
     const company = await CompanyRepo.findOne({ where: { name: entityPayload.companyName } });
     if (company) {
       newProduct.companyId = company._id;
       newProduct.company = company;
+      companyFound = true;
     }
+  }
+  
+  // If no company found but it's required, we need a fallback
+  if (!companyFound) {
+    let fallbackCompany = await CompanyRepo.findOne({ where: { name: 'Restored Company' } });
+    if (!fallbackCompany) {
+      fallbackCompany = CompanyRepo.create({
+        name: 'Restored Company',
+        address: 'Restored from blockchain',
+        licenseNumber: 'RESTORED-123'
+      });
+      await CompanyRepo.save(fallbackCompany);
+    }
+    newProduct.companyId = fallbackCompany._id;
+    newProduct.company = fallbackCompany;
   }
 
   // 5. Save the restored product to DB
-  await ProductRepo.save(newProduct);
+  try {
+    await ProductRepo.save(newProduct);
+  } catch (error) {
+    console.error("RESTORE ERROR:", error);
+    return { success: false, message: "RESTORE ERROR: " + (error instanceof Error ? error.message : String(error)) };
+  }
 
   return {
     success: true,

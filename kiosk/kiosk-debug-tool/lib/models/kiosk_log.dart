@@ -25,15 +25,26 @@ class KioskLog {
 
   factory KioskLog.fromFirestore(DocumentSnapshot doc) {
     final d = doc.data() as Map<String, dynamic>? ?? {};
+    
+    DateTime parsedTimestamp = DateTime.now();
+    final rawTimestamp = d['timestamp'];
+    if (rawTimestamp is Timestamp) {
+      parsedTimestamp = rawTimestamp.toDate();
+    } else if (rawTimestamp is String) {
+      parsedTimestamp = DateTime.tryParse(rawTimestamp) ?? DateTime.now();
+    } else if (rawTimestamp is int) {
+      parsedTimestamp = DateTime.fromMillisecondsSinceEpoch(rawTimestamp);
+    }
+    
     return KioskLog(
       id: doc.id,
       level: d['level'] ?? 'info',
       message: d['message'] ?? '',
       category: d['category'] ?? 'general',
       kioskId: d['kioskId'] ?? '',
-      timestamp: (d['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      localTime: d['localTime'] ?? '',
-      data: d['data'] as Map<String, dynamic>?,
+      timestamp: parsedTimestamp,
+      localTime: d['localTime']?.toString() ?? '',
+      data: d['data'] is Map ? Map<String, dynamic>.from(d['data']) : null,
     );
   }
 
