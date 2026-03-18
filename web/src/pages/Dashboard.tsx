@@ -379,65 +379,70 @@ export function Dashboard(props: DashboardProps) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="overflow-visible">
-            {/* Edit - only for pending/badge_verified */}
-            {['pending', 'badge_verified'].includes(row.status) && (
-              <DropdownMenuItem onClick={() => handleEditInvite(row)}>
-                <Pencil className="h-4 w-4 mr-2" />
-                Edit
-              </DropdownMenuItem>
-            )}
-            {/* Resend - only for pending */}
-            {row.status === 'pending' && (
-              <DropdownMenuItem onClick={() => handleResendInvite(row._id)}>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Resend Email
-              </DropdownMenuItem>
-            )}
-            {/* Revoke - only for pending/badge_verified */}
-            {['pending', 'badge_verified'].includes(row.status) && (
+            {/* Admin-only actions - Edit, Resend, Revoke, Archive */}
+            {isAdmin() && (
               <>
+                {/* Edit - only for pending/badge_verified */}
+                {['pending', 'badge_verified'].includes(row.status) && (
+                  <DropdownMenuItem onClick={() => handleEditInvite(row)}>
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Edit
+                  </DropdownMenuItem>
+                )}
+                {/* Resend - only for pending */}
+                {row.status === 'pending' && (
+                  <DropdownMenuItem onClick={() => handleResendInvite(row._id)}>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Resend Email
+                  </DropdownMenuItem>
+                )}
+                {/* Revoke - only for pending/badge_verified */}
+                {['pending', 'badge_verified'].includes(row.status) && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={() => handleRevokeInvite(row._id)}
+                      className="text-red-600"
+                      variant="destructive"
+                    >
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Revoke
+                    </DropdownMenuItem>
+                  </>
+                )}
+                {/* Archive - for any status except archived */}
+                {row.status !== 'archived' && (
+                  <DropdownMenuItem 
+                    onClick={() => handleArchiveInvite(row._id)}
+                    className="app-text-archived"
+                    variant="archived"
+                  >
+                    <Archive className="h-4 w-4 mr-2" />
+                    Archive
+                  </DropdownMenuItem>
+                )}
+                {/* Unarchive - only for archived */}
+                {row.status === 'archived' && (
+                  <DropdownMenuItem 
+                    onClick={() => handleUnarchiveInvite(row._id)}
+                    className="app-text-archived"
+                    variant="archived"
+                  >
+                    <ArchiveRestore className="h-4 w-4 mr-2" />
+                    Unarchive
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
+                {/* Delete - admin only */}
                 <DropdownMenuItem 
-                  onClick={() => handleRevokeInvite(row._id)}
+                  onClick={() => handleDeleteInvite(row._id)}
                   className="text-red-600"
-                  variant="destructive"
                 >
-                  <XCircle className="h-4 w-4 mr-2" />
-                  Revoke
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
                 </DropdownMenuItem>
               </>
             )}
-            {/* Archive - for any status except archived */}
-            {row.status !== 'archived' && (
-              <DropdownMenuItem 
-                onClick={() => handleArchiveInvite(row._id)}
-                className="app-text-archived"
-                variant="archived"
-              >
-                <Archive className="h-4 w-4 mr-2" />
-                Archive
-              </DropdownMenuItem>
-            )}
-            {/* Unarchive - only for archived */}
-            {row.status === 'archived' && (
-              <DropdownMenuItem 
-                onClick={() => handleUnarchiveInvite(row._id)}
-                className="app-text-archived"
-                variant="archived"
-              >
-                <ArchiveRestore className="h-4 w-4 mr-2" />
-                Unarchive
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuSeparator />
-            {/* Delete - always available */}
-            <DropdownMenuItem 
-              onClick={() => handleDeleteInvite(row._id)}
-              className="text-red-600"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete
-            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       ),

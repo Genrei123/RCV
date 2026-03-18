@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useMetaMask } from "@/contexts/MetaMaskContext";
+import { AuthService } from "@/services/authService";
 import { BarChart3, RefreshCw, Menu, X, Search, Filter, ChevronDown, Check, Maximize2, Minimize2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -38,6 +39,7 @@ declare global {
 
 export function AnalyticsMapComponent() {
   const { isConnected: isWalletConnected, isAuthorized: isWalletAuthorized, connect: connectWallet } = useMetaMask();
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [apiResponse, setApiResponse] = useState<APIResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -143,6 +145,26 @@ export function AnalyticsMapComponent() {
     } finally {
       setIsResolving(false);
     }
+  };
+
+  // Fetch current user on mount
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const user = await AuthService.getCurrentUser();
+        setCurrentUser(user);
+      } catch (error) {
+        console.error('Failed to fetch current user:', error);
+      }
+    };
+    fetchUser();
+  }, []);
+
+  // Check if user is admin
+  const isAdmin = (): boolean => {
+    if (!currentUser) return false;
+    if (currentUser.isSuperAdmin) return true;
+    return currentUser.role === 'ADMIN';
   };
 
   // Store original parents for overlays on mount
@@ -2017,8 +2039,8 @@ export function AnalyticsMapComponent() {
                 </div>
               )}
 
-              {/* Status Change Controls */}
-              {true && (
+              {/* Status Change Controls - Admin only */}
+              {isAdmin() && (
                 <div className="border-b pb-3">
                   <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
                     <p className="text-sm font-medium text-amber-900 mb-2">
@@ -2084,36 +2106,40 @@ export function AnalyticsMapComponent() {
               
               View on Map
             </Button>
-            {!isWalletConnected ? (
-              <Button
-                onClick={() => connectWallet()}
-                className="bg-orange-500 hover:bg-orange-600 text-white"
-              >
-                Connect MetaMask
-              </Button>
-            ) : !isWalletAuthorized ? (
-              <Button
-                disabled
-                className="bg-neutral-300 text-neutral-500 cursor-not-allowed"
-              >
-                Unauthorized Wallet
-              </Button>
-            ) : (
-              <Button
-                onClick={() => {
-                  if (selectedReport?.reportId) {
-                    handleResolveReport(selectedReport.reportId);
-                  }
-                }}
-                disabled={isResolving}
-                className="bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center min-w-[140px]"
-              >
-                {isResolving ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing</>
+            {isAdmin() && (
+              <>
+                {!isWalletConnected ? (
+                  <Button
+                    onClick={() => connectWallet()}
+                    className="bg-orange-500 hover:bg-orange-600 text-white"
+                  >
+                    Connect MetaMask
+                  </Button>
+                ) : !isWalletAuthorized ? (
+                  <Button
+                    disabled
+                    className="bg-neutral-300 text-neutral-500 cursor-not-allowed"
+                  >
+                    Unauthorized Wallet
+                  </Button>
                 ) : (
-                  selectedReport?.isVerified ? 'Update Status' : 'Approve'
+                  <Button
+                    onClick={() => {
+                      if (selectedReport?.reportId) {
+                        handleResolveReport(selectedReport.reportId);
+                      }
+                    }}
+                    disabled={isResolving}
+                    className="bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center min-w-[140px]"
+                  >
+                    {isResolving ? (
+                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing</>
+                    ) : (
+                      selectedReport?.isVerified ? 'Update Status' : 'Approve'
+                    )}
+                  </Button>
                 )}
-              </Button>
+              </>
             )}
           </DialogFooter>
         </DialogContent>

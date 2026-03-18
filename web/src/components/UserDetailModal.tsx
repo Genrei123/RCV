@@ -802,7 +802,8 @@ export function UserDetailModal({
               </div>
             </div>
 
-            {/* Blockchain Wallet Section */}
+            {/* Blockchain Wallet Section - Admin only */}
+            {(currentUser?.isSuperAdmin || currentUser?.role === 'ADMIN') && (
             <div className="border-t pt-6">
               <h3 className="text-lg font-semibold app-text mb-4 flex items-center gap-2">
                 <Wallet className="h-5 w-5" />
@@ -921,6 +922,7 @@ export function UserDetailModal({
                 )}
               </div>
             </div>
+            )}
 
             {/* Account Timestamps */}
             <div className="border-t pt-6">
@@ -1095,14 +1097,16 @@ export function UserDetailModal({
                         </Button>
                       </>
                     )}
-                    <Button
-                      onClick={() => onReject(user)}
-                      variant="outline"
-                      className="border-[color:var(--app-error)]/50 app-text-error hover:bg-[color:var(--app-error)]/10 hover:border-[color:var(--app-error)]/70"
-                    >
-                      <XCircle className="h-4 w-4 mr-2" />
-                      Revoke Access
-                    </Button>
+                    {(currentUser?.isSuperAdmin || currentUser?.role === 'ADMIN') && (
+                      <Button
+                        onClick={() => onReject(user)}
+                        variant="outline"
+                        className="border-[color:var(--app-error)]/50 app-text-error hover:bg-[color:var(--app-error)]/10 hover:border-[color:var(--app-error)]/70"
+                      >
+                        <XCircle className="h-4 w-4 mr-2" />
+                        Revoke Access
+                      </Button>
+                    )}
                   </div>
                 </>
               )}
