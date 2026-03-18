@@ -11,11 +11,16 @@ import {
   Camera,
   ExternalLink,
   Shield,
+  ShieldCheck,
+  ShieldAlert,
   Wallet,
   Link2,
   Loader2,
   RefreshCw,
   AlertCircle,
+  RotateCcw,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +32,10 @@ import { EditProductModal } from "@/components/EditProductModal";
 import { Edit, Archive } from "lucide-react";
 import CertificateTimelineModal from "@/components/CertificateTimelineModal";
 import { ProductArchiveConfirmationModal } from "@/components/ProductArchiveConfirmationModal";
+import {
+  IntegrityService,
+  type IntegrityCheckResult,
+} from "@/services/integrityService";
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
 
@@ -75,6 +84,12 @@ export function ProductDetailsModal({
   const [hasPendingApproval, setHasPendingApproval] = useState(false);
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [archiveAction, setArchiveAction] = useState<"archive" | "unarchive">("archive");
+
+  // Data integrity check state
+  const [integrityResult, setIntegrityResult] = useState<IntegrityCheckResult | null>(null);
+  const [isCheckingIntegrity, setIsCheckingIntegrity] = useState(false);
+  const [isReverting, setIsReverting] = useState(false);
+  const [integrityExpanded, setIntegrityExpanded] = useState(false);
 
   // Check for pending approvals when product changes
   useEffect(() => {
@@ -785,6 +800,202 @@ export function ProductDetailsModal({
                 <p className="text-sm app-text-subtle">No approval history available</p>
               )}
             </div>
+
+            {/* Data Integrity Check Section */}
+            {product.sepoliaTransactionId && (
+              <div className="border-t pt-6">
+                <h3 className="text-lg font-semibold app-text mb-4 flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5 app-text-primary" />
+                  Data Integrity Check
+                </h3>
+
+                {/* Check button */}
+                {!integrityResult && (
+                  <div className="p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg">
+                    <p className="text-sm app-text-subtle mb-3">
+                      Compare this product's current database data against the immutable blockchain record to detect any unauthorized changes.
+                    </p>
+                    <Button
+                      onClick={async () => {
+                        setIsCheckingIntegrity(true);
+                        try {
+                          const result = await IntegrityService.checkProductIntegrity(product._id!);
+                          setIntegrityResult(result);
+                          setIntegrityExpanded(true);
+                        } catch (err: any) {
+                          toast.error(err.response?.data?.message || 'Failed to check integrity');
+                        } finally {
+                          setIsCheckingIntegrity(false);
+                        }
+                      }}
+                      disabled={isCheckingIntegrity}
+                      variant="outline"
+                      size="sm"
+                    >
+                      {isCheckingIntegrity ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Checking...
+                        </>
+                      ) : (
+                        <>
+                          <ShieldCheck className="h-4 w-4 mr-2" />
+                          Verify Data Integrity
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+
+                {/* Result panel */}
+                {integrityResult && (
+                  <div className="space-y-3">
+                    {/* Status banner */}
+                    {integrityResult.status === 'intact' && (
+                      <div className="p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="h-5 w-5 text-green-600" />
+                          <span className="text-sm font-medium text-green-700 dark:text-green-300">
+                            Data Integrity Verified
+                          </span>
+                        </div>
+                        <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                          {integrityResult.message}
+                        </p>
+                      </div>
+                    )}
+
+                    {integrityResult.status === 'tampered' && (
+                      <div className="p-4 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <ShieldAlert className="h-5 w-5 text-red-600" />
+                          <span className="text-sm font-medium text-red-700 dark:text-red-300">
+                            Data Tampering Detected!
+                          </span>
+                          <Badge variant="destructive" className="ml-auto">
+                            {integrityResult.mismatchCount} field(s) altered
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                          {integrityResult.message}
+                        </p>
+                      </div>
+                    )}
+
+                    {(integrityResult.status === 'error' || integrityResult.status === 'no_blockchain') && (
+                      <div className="p-4 bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <AlertCircle className="h-5 w-5 text-yellow-600" />
+                          <span className="text-sm font-medium text-yellow-700 dark:text-yellow-300">
+                            {integrityResult.message}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Field-by-field comparison (toggle) */}
+                    {integrityResult.fields.length > 0 && (
+                      <div>
+                        <button
+                          onClick={() => setIntegrityExpanded(!integrityExpanded)}
+                          className="text-xs font-medium app-text-primary underline cursor-pointer"
+                        >
+                          {integrityExpanded ? 'Hide details' : 'Show field comparison'}
+                        </button>
+
+                        {integrityExpanded && (
+                          <div className="mt-2 rounded-lg border overflow-hidden">
+                            <table className="w-full text-xs">
+                              <thead className="bg-slate-100 dark:bg-slate-800">
+                                <tr>
+                                  <th className="text-left px-3 py-2 font-medium app-text-subtle">Field</th>
+                                  <th className="text-left px-3 py-2 font-medium app-text-subtle">Database</th>
+                                  <th className="text-left px-3 py-2 font-medium app-text-subtle">Blockchain</th>
+                                  <th className="text-center px-3 py-2 font-medium app-text-subtle">Status</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y">
+                                {integrityResult.fields.map((f) => (
+                                  <tr
+                                    key={f.field}
+                                    className={f.match ? '' : 'bg-red-50 dark:bg-red-950/40'}
+                                  >
+                                    <td className="px-3 py-2 font-medium app-text">{f.label}</td>
+                                    <td className={`px-3 py-2 ${f.match ? 'app-text' : 'text-red-600 dark:text-red-400 font-semibold'}`}>
+                                      {f.dbValue || '—'}
+                                    </td>
+                                    <td className="px-3 py-2 app-text">{f.blockchainValue || '—'}</td>
+                                    <td className="px-3 py-2 text-center">
+                                      {f.match ? (
+                                        <CheckCircle2 className="h-4 w-4 text-green-500 inline" />
+                                      ) : (
+                                        <XCircle className="h-4 w-4 text-red-500 inline" />
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Action buttons */}
+                    <div className="flex items-center gap-2">
+                      {integrityResult.status === 'tampered' && (
+                        <Button
+                          onClick={async () => {
+                            setIsReverting(true);
+                            try {
+                              const res = await IntegrityService.revertProductIntegrity(product._id!);
+                              if (res.success) {
+                                toast.success(res.message);
+                                setIntegrityResult(null);
+                                if (onRenewalSuccess) onRenewalSuccess();
+                              } else {
+                                toast.error(res.message);
+                              }
+                            } catch (err: any) {
+                              toast.error(err.response?.data?.message || 'Failed to revert data');
+                            } finally {
+                              setIsReverting(false);
+                            }
+                          }}
+                          disabled={isReverting}
+                          variant="default"
+                          size="sm"
+                          className="bg-orange-600 hover:bg-orange-700 text-white"
+                        >
+                          {isReverting ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Reverting...
+                            </>
+                          ) : (
+                            <>
+                              <RotateCcw className="h-4 w-4 mr-2" />
+                              Revert to Blockchain Data
+                            </>
+                          )}
+                        </Button>
+                      )}
+
+                      <Button
+                        onClick={() => {
+                          setIntegrityResult(null);
+                          setIntegrityExpanded(false);
+                        }}
+                        variant="outline"
+                        size="sm"
+                      >
+                        Dismiss
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Renewal Section */}
             <div className="border-t pt-6">

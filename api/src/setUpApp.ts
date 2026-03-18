@@ -31,6 +31,7 @@ import BrandNameRouter from "./routes/v1/brandName";
 import ProductClassificationRouter from "./routes/v1/productClassification";
 import PublicRouter from "./routes/v1/public";
 import BlockchainRecoveryRouter from "./routes/v1/blockchainRecovery";
+import IntegrityRouter from "./routes/v1/integrity";
 import ChatRouter from "./routes/v1/chat";
 import KioskRouter from "./routes/kiosk";
 import KioskReportRouter from "./routes/v1/kioskReport";
@@ -82,6 +83,7 @@ const setUpApp = async () => {
   app.use("/api/v1/brand-name", verifyUser, BrandNameRouter);
   app.use("/api/v1/classification", verifyUser, ProductClassificationRouter);
   app.use("/api/v1/blockchain-recovery", BlockchainRecoveryRouter); // Blockchain data recovery - some routes public
+  app.use("/api/v1/integrity", IntegrityRouter); // Data integrity check & revert (admin only)
   app.use("/api/v1/chat", ChatRouter); // AI Chatbot - no auth required for now
   app.use("/api/v1/kiosks", KioskRouter); // Kiosk machine management - no auth for heartbeat
 
