@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useMetaMask } from "@/contexts/MetaMaskContext";
-import { BarChart3, RefreshCw, Menu, X, Search, Filter, ChevronDown, Check, Maximize2, Minimize2, Download } from "lucide-react";
+import { BarChart3, RefreshCw, Menu, X, Search, Filter, ChevronDown, Check, Maximize2, Minimize2 } from "lucide-react";
 import { AuthService } from "@/services/authService";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
