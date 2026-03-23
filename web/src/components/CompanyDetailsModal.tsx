@@ -132,9 +132,24 @@ export function CompanyDetailsModal({ isOpen, onClose, company }: CompanyDetails
 
     const center = { lat: Number(company.latitude), lng: Number(company.longitude) };
 
+    // Philippines boundary restrictions
+    const philippinesBounds = {
+      north: 21.3,
+      south: 4.5,
+      west: 114.2,
+      east: 127.0,
+    };
+
+
     const map = new window.google.maps.Map(mapContainerRef.current, {
       center,
       zoom: 16,
+      minZoom: 5,
+      maxZoom: 18,
+      restriction: {
+        latLngBounds: philippinesBounds,
+        strictBounds: false,
+      },
       mapTypeControl: false,
       streetViewControl: false,
       fullscreenControl: true,

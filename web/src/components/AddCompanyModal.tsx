@@ -218,9 +218,24 @@ export function AddCompanyModal({
     // Default to Philippines (Manila)
     const defaultCenter = { lat: 14.5995, lng: 120.9842 };
 
+    // Philippines boundary restrictions
+    const philippinesBounds = {
+      north: 21.3,
+      south: 4.5,
+      west: 114.2,
+      east: 127.0,
+    };
+
+
     const map = new window.google.maps.Map(mapContainerRef.current, {
       center: defaultCenter,
       zoom: 12,
+      minZoom: 5,
+      maxZoom: 18,
+      restriction: {
+        latLngBounds: philippinesBounds,
+        strictBounds: false,
+      },
       mapTypeControl: false,
       streetViewControl: false,
       fullscreenControl: false,
