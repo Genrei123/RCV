@@ -12,9 +12,7 @@ import * as ExcelJS from "exceljs";
 import {
   Pagination,
   PaginationContent,
-  PaginationEllipsis,
   PaginationItem,
-  PaginationLink,
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
@@ -26,7 +24,7 @@ export function AuditTrail() {
     current_page: 1,
     total_pages: 1,
     total_items: 0,
-    per_page: 10, // increased for global view
+    per_page: 10,
   });
   
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
@@ -37,11 +35,8 @@ export function AuditTrail() {
     fetchLogs();
   }, [pagination.current_page]);
   
-  // Also fetch all for export properly
   const [allLogs, setAllLogs] = useState<AuditLog[]>([]);
   useEffect(() => {
-    // optionally fetch everything for accurate sorting over the full dataset if wanted, 
-    // or just rely on server.
     fetchAllLogsForExport();
   }, []);
 
@@ -70,7 +65,6 @@ export function AuditTrail() {
       if (!first || !first.pagination) return;
       let all: AuditLog[] = [...(first.data || [])];
       const totalPages = first.pagination.total_pages || 1;
-      // We might want to cap this if it's too large, but for now we fetch all
       for (let p = 2; p <= totalPages; p++) {
         const resp = await AuditLogService.getAllLogs(p, 100);
         all = all.concat(resp.data || []);
@@ -198,7 +192,7 @@ export function AuditTrail() {
       key: "createdAt",
       label: "Date/Time",
       sortable: true,
-      render: (_, row: any) => (
+      render: (_: unknown, row: any) => (
         <span className="text-sm text-neutral-600">
           {new Date(row.createdAt).toLocaleDateString()}
           <br />
@@ -210,7 +204,7 @@ export function AuditTrail() {
       key: "personName",
       label: "Person",
       sortable: true,
-      render: (_, row: any) => (
+      render: (_: unknown, row: any) => (
         <span className="text-sm font-medium text-neutral-900">
           {row.personName}
         </span>
@@ -220,7 +214,7 @@ export function AuditTrail() {
       key: "personEmail",
       label: "Email",
       sortable: true,
-      render: (_, row: any) => (
+      render: (_: unknown, row: any) => (
         <span className="text-sm text-neutral-500">
           {row.personEmail}
         </span>
@@ -230,7 +224,7 @@ export function AuditTrail() {
       key: "action",
       label: "Action",
       sortable: true,
-      render: (_, row: any) => (
+      render: (_: unknown, row: any) => (
         <span className="text-sm text-neutral-900 block max-w-sm truncate" title={row.action}>
           {row.action}
         </span>
@@ -240,7 +234,7 @@ export function AuditTrail() {
       key: "actionType",
       label: "Type",
       sortable: true,
-      render: (_, row: any) => (
+      render: (_: unknown, row: any) => (
         <span className="text-xs font-medium px-2 py-1 bg-neutral-100 rounded-md">
           {row.actionType}
         </span>
@@ -249,7 +243,7 @@ export function AuditTrail() {
     {
       key: "actions",
       label: "",
-      render: (_, row: any) => (
+      render: (_: unknown, row: any) => (
         <div className="flex justify-end">
           <Button
             variant="ghost"
@@ -304,6 +298,7 @@ export function AuditTrail() {
           </div>
 
           <DataTable
+            title="Audit Trail"
             columns={columns}
             data={filteredLogs.map(log => ({
               ...log,
