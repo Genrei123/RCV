@@ -5,6 +5,7 @@ import { Companies, type CompaniesProps } from "./pages/Companies";
 import { Maps } from "./pages/Maps";
 import { Analytics } from "./pages/Analytics";
 import { Profile } from "./pages/Profile";
+import { AuditTrail } from "./pages/AuditTrail";
 import { UserProfileView } from "./pages/UserProfileView";
 import { Blockchain } from "./pages/Blockchain";
 import { BlockchainRecovery } from "./pages/BlockchainRecovery";
@@ -270,6 +271,17 @@ function App() {
               </AccessibleRoute>
             }/>
           {/* Protected Routes wrapped with AppLayout */}
+          <Route
+            path="/audit-trail"
+            element={
+              <ProtectedRoutes>
+                <AppLayout>
+                  <AuditTrail />
+                </AppLayout>
+              </ProtectedRoutes>
+            }
+          />
+
           <Route
             path="/dashboard"
             element={

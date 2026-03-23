@@ -1,6 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import {
+  List,
   LayoutDashboard,
   Package,
   MapPin,
@@ -219,6 +220,8 @@ export function Sidebar({
     { path: "/products", label: "Products", icon: Package },
     { path: "/companies", label: "Companies", icon: Building2 },
     { path: "/maps", label: "Maps", icon: MapPin, adminOnly: true },
+    
+    { path: "/audit-trail", label: "Audit Trail", icon: List, adminOnly: true },
     { path: "/analytics", label: "Analytics", icon: BarChart3 },
     { path: "/remote-config", label: "Mobile Config", icon: Sliders, adminOnly: true },
     // { path: "/blockchain", label: "Blockchain", icon: Verified },

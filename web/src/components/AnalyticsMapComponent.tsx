@@ -386,9 +386,23 @@ export function AnalyticsMapComponent() {
       },
     ];
 
+    // Philippines boundary restrictions
+    const philippinesBounds = {
+      north: 21.3,
+      south: 4.5,
+      west: 114.2,
+      east: 127.0,
+    };
+
     googleMapRef.current = new window.google.maps.Map(mapRef.current, {
       center,
       zoom: 6,
+      minZoom: 5,
+      maxZoom: 18,
+      restriction: {
+        latLngBounds: philippinesBounds,
+        strictBounds: false,
+      },
       gestureHandling: "greedy",
       mapTypeControl: true,
       streetViewControl: false,
